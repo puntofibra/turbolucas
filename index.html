@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TURBOLUCAS</title>
+<meta name="description" content="El juego de plataformas espacial de Lucas. Un juego de FuturMovil.">
+<meta name="theme-color" content="#070a1e">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TURBOLUCAS">
+<meta property="og:description" content="Ayuda a Lucas a cruzar la estación orbital. ¡Juega gratis!">
+<meta property="og:url" content="https://puntofibra.github.io/turbolucas/">
+<meta property="og:image" content="https://puntofibra.github.io/turbolucas/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon/icon-32.png">
+<link rel="apple-touch-icon" href="img/icon/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root{--cy:#29e6ff;--mg:#c63cff;--gr:#35ff8a;--bg:#070a1e}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;padding:16px;text-align:center}
+.ov.on{display:flex}
+#title{background:linear-gradient(180deg,rgba(7,10,30,.35),rgba(7,10,30,.78))}
+#title .logo{width:min(78vw,620px);max-height:26vh;object-fit:contain;filter:drop-shadow(0 0 18px rgba(80,120,255,.55))}
+#title .hero{height:min(34vh,300px);margin:1vh 0;animation:bob 2.2s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(41,230,255,.35))}
+@keyframes bob{50%{transform:translateY(-10px)}}
+.btn{font:inherit;font-weight:800;letter-spacing:.06em;color:#fff;border:2px solid var(--cy);background:rgba(12,20,52,.82);border-radius:14px;padding:12px 22px;cursor:pointer;box-shadow:0 0 14px rgba(41,230,255,.45),inset 0 0 12px rgba(41,230,255,.18);transition:transform .08s}
+.btn:active{transform:scale(.95)}
+.btn.big{font-size:clamp(20px,4.2vh,30px);padding:14px 54px;border-color:var(--gr);box-shadow:0 0 20px rgba(53,255,138,.6),inset 0 0 14px rgba(53,255,138,.25);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 34px rgba(53,255,138,.9),inset 0 0 18px rgba(53,255,138,.35)}}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.row .btn{font-size:14px;padding:9px 14px}
+.credit{margin-top:12px;font-size:12px;letter-spacing:.22em;color:#9fb4ff;text-shadow:0 0 8px rgba(120,150,255,.7)}
+.ver{position:fixed;right:8px;bottom:6px;font-size:10px;color:#56659c}
+#panel{background:rgba(5,8,24,.8);backdrop-filter:blur(3px)}
+.card{background:rgba(14,20,52,.95);border:2px solid var(--cy);border-radius:18px;padding:18px 26px;min-width:min(86vw,360px);max-width:92vw;box-shadow:0 0 30px rgba(41,230,255,.4)}
+.card h2{margin:0 0 6px;font-size:clamp(22px,5vh,34px);letter-spacing:.05em;text-shadow:0 0 14px var(--cy)}
+.stars{font-size:clamp(34px,8vh,54px);letter-spacing:8px;margin:4px 0}
+.stars span{color:#2b345e;transition:all .3s}
+.stars span.on{color:#ffd23c;text-shadow:0 0 18px #ffb400}
+.stat{display:flex;justify-content:space-between;gap:30px;font-size:15px;padding:3px 0;color:#cfe0ff}
+.stat b{color:#fff}
+.small{font-size:12px;color:#8ea3e6;margin-top:8px}
+#rot{background:var(--bg);z-index:30}
+#rot .ph{width:70px;height:120px;border:4px solid var(--cy);border-radius:14px;margin-bottom:18px;animation:rot 1.8s ease-in-out infinite;box-shadow:0 0 18px rgba(41,230,255,.5)}
+@keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+#touch{position:fixed;inset:0;z-index:5;display:none;pointer-events:none}
+#touch.on{display:block}
+.tb{position:absolute;pointer-events:auto;border-radius:50%;border:2px solid rgba(41,230,255,.75);background:rgba(12,20,52,.42);color:#dff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 12px rgba(41,230,255,.35)}
+.tb.dn{background:rgba(41,230,255,.42);transform:scale(.94)}
+#bL{left:calc(14px + env(safe-area-inset-left));bottom:22px;width:76px;height:76px}
+#bR{left:calc(102px + env(safe-area-inset-left));bottom:22px;width:76px;height:76px}
+#bD{left:calc(58px + env(safe-area-inset-left));bottom:106px;width:56px;height:56px;font-size:18px}
+#bA{right:calc(14px + env(safe-area-inset-right));bottom:22px;width:92px;height:92px;border-color:rgba(53,255,138,.85);font-size:15px}
+#bB{right:calc(116px + env(safe-area-inset-right));bottom:22px;width:68px;height:68px;border-color:rgba(198,60,255,.85);font-size:13px}
+#top{position:fixed;top:calc(6px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;display:none;gap:8px}
+#top.on{display:flex}
+#top .btn{padding:6px 11px;font-size:14px;border-radius:10px}
+#ios{z-index:40;background:rgba(5,8,24,.9)}
+#ios .card{font-size:15px;line-height:1.5}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="title" class="ov on">
+  <img class="logo" id="logoImg" alt="TURBOLUCAS">
+  <img class="hero" id="heroImg" alt="Lucas">
+  <button class="btn big" id="btnPlay">JUGAR</button>
+  <div class="row">
+    <button class="btn" id="btnInstall">INSTALAR</button>
+    <button class="btn" id="btnShare">COMPARTIR</button>
+    <button class="btn" id="btnSnd">SONIDO: SÍ</button>
+  </div>
+  <div class="credit">UN JUEGO DE FUTURMOVIL</div>
+  <div class="ver" id="ver"></div>
+</div>
+
+<div id="top">
+  <button class="btn" id="btnMute" aria-label="Sonido">♪</button>
+  <button class="btn" id="btnPause" aria-label="Pausa">II</button>
+</div>
+
+<div id="touch">
+  <div class="tb" id="bL">◀</div>
+  <div class="tb" id="bR">▶</div>
+  <div class="tb" id="bD">▼</div>
+  <div class="tb" id="bB">LÁSER</div>
+  <div class="tb" id="bA">SALTAR</div>
+</div>
+
+<div id="panel" class="ov"><div class="card" id="card"></div></div>
+
+<div id="rot" class="ov"><div class="ph"></div><b>Gira el móvil para jugar</b></div>
+
+<div id="ios" class="ov"><div class="card">
+  <h2>Instalar en iPhone</h2>
+  <p>1. Abre esta página en <b>Safari</b>.<br>2. Pulsa el botón <b>Compartir</b> (el cuadrado con la flecha).<br>3. Elige <b>Añadir a pantalla de inicio</b>.</p>
+  <button class="btn" id="iosOk">ENTENDIDO</button>
+</div></div>
+
+<script src="game.js?v=1"></script>
+<script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+</script>
+</body>
+</html>
