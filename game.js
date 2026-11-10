@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.3';
+const VERSION = '0.4';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -24,7 +24,7 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 /* ---------- imagenes ---------- */
 const NAMES = ['lucas-quieto', 'lucas-avanzando', 'lucas-saltando', 'lucas-cayendo', 'lucas-golpeado', 'lucas-celebrando', 'lucas-agachado',
   'enemigo-patrulla', 'enemigo-dron', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien',
-  'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
+  'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
   'poder-laser', 'poder-escudo', 'poder-turbo', 'poder-iman', 'poder-mini', 'poder-estrella5g'];
 const IMG = {};
 let loaded = 0;
@@ -205,7 +205,9 @@ function buildLevel() {
   for (let i = 1; i <= 4; i++) block(139 + i, 139 + i, 14 - i, 13);
   chipRow(140, 143, 8);
   const goal = { x: 148 * T + T / 2, y: 14 * T };
-  return { W, H, g, boxes, chips, gears, ents, portals, checkpoint, goal, spawn: { x: 3 * T, y: 14 * T } };
+  const plats = [];
+  for (let y = 0; y < H; y++) { let x = 0; while (x < W) { if (g[y][x] === '=') { let x1 = x; while (x1 + 1 < W && g[y][x1 + 1] === '=') x1++; plats.push({ x0: x, x1, ty: y }); x = x1 + 1; } else x++; } }
+  return { W, H, g, plats, boxes, chips, gears, ents, portals, checkpoint, goal, spawn: { x: 3 * T, y: 14 * T } };
 }
 const tileAt = (tx, ty) => (tx < 0 || tx >= L.W) ? '#' : (ty < 0 || ty >= L.H) ? ' ' : L.g[ty][tx];
 const isSolid = c => c === '#' || c === '?' || c === 'U' || c === 'B';
@@ -298,7 +300,7 @@ function hitBlock(tx, ty) {
   } else if (c === 'B') {
     if (P.power === 'mini') { bumps.push({ tx, ty, t: 0 }); SFX.bump(); }
     else { L.g[ty][tx] = ' '; SFX.brk(); addScore(10); shake = 0.12;
-      for (let i = 0; i < 8; i++) parts.push({ x: cx + (Math.random() - 0.5) * 30, y: cy + 24 + (Math.random() - 0.5) * 30, vx: (Math.random() - 0.5) * 320, vy: -200 - Math.random() * 260, life: 0.9, max: 0.9, col: i % 2 ? '#5a6aa0' : '#8090c8', size: 7, grav: 1500, sqr: true }); }
+      for (let i = 0; i < 8; i++) parts.push({ x: cx + (Math.random() - 0.5) * 30, y: cy + 24 + (Math.random() - 0.5) * 30, vx: (Math.random() - 0.5) * 320, vy: -200 - Math.random() * 260, life: 0.9, max: 0.9, col: i % 2 ? '#5b7f9c' : '#aab4c4', size: 7, grav: 1500, sqr: true }); }
     knockAbove(tx, ty);
   } else if (c === 'U' || c === '#') SFX.bump();
 }
@@ -504,6 +506,15 @@ let MOON = null;
   im.src = '/leoconlucas/img/luna.png';
 })();
 const NEB = [{ x: 150, y: 0.25, r: 260, c: '198,60,255' }, { x: 700, y: 0.55, r: 320, c: '41,120,255' }, { x: 1250, y: 0.2, r: 240, c: '53,255,190' }, { x: 1700, y: 0.5, r: 300, c: '255,70,160' }];
+function bgLayer(im, h, bottom, par) {
+  if (!im || !im.naturalWidth) return;
+  const w = im.naturalWidth / im.naturalHeight * h, off = cam.x * par;
+  let i = Math.floor(off / w), x = i * w - off;
+  for (; x < VW; x += w, i++) {
+    if (i % 2) { ctx.save(); ctx.translate(x + w, bottom - h); ctx.scale(-1, 1); ctx.drawImage(im, -0.5, 0, w + 1, h); ctx.restore(); }
+    else ctx.drawImage(im, x - 0.5, bottom - h, w + 1, h);
+  }
+}
 function drawBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, VHv);
   g.addColorStop(0, '#05071a'); g.addColorStop(0.6, '#0d1036'); g.addColorStop(1, '#241046');
@@ -539,56 +550,60 @@ function drawBackground() {
     ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
     ctx.strokeStyle = 'rgba(198,60,255,.55)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(px, py, r * 1.55, r * 0.34, -0.35, 0, 6.283); ctx.stroke();
   }
-  // estructuras lejanas de la estación
-  for (let l = 0; l < 2; l++) {
-    const par = l ? 0.38 : 0.2, base = VHv - (l ? 0 : 40) + (L.H * T - VHv - cam.y) * par * 0.4;
-    ctx.fillStyle = l ? '#161d44' : '#10153a';
-    for (const t of TOWERS) { if (t.l !== l) continue;
-      const x = t.x - cam.x * par; if (x > VW || x + t.w < 0) continue;
-      ctx.fillRect(x, base - t.h, t.w, t.h + 60);
-      ctx.fillRect(x + t.w * 0.2, base - t.h - 14, t.w * 0.6, 14);
-      if (t.win & 1) { ctx.fillRect(x + t.w / 2 - 1.5, base - t.h - 60, 3, 50); ctx.fillStyle = (Math.sin(time * 3 + t.x) > 0) ? '#ff4a5a' : '#5a1a2a'; ctx.fillRect(x + t.w / 2 - 3, base - t.h - 64, 6, 6); }
-      ctx.fillStyle = l ? 'rgba(90,110,200,.35)' : 'rgba(70,80,170,.3)';
-      for (let yy = base - t.h + 8; yy < base; yy += 46) ctx.fillRect(x, yy, t.w, 2);
-      ctx.fillStyle = l ? 'rgba(41,230,255,.5)' : 'rgba(198,60,255,.4)';
-      for (let k = 0; k < 6; k++) if ((t.win >> k) & 1) ctx.fillRect(x + 10 + (k % 3) * (t.w - 26) / 2, base - t.h + 16 + Math.floor(k / 3) * 34 + ((t.win >> (k + 6)) % 3) * 20, 6, 10);
-      ctx.fillStyle = l ? '#161d44' : '#10153a';
-    }
-  }
+  // ciudad espacial: dos capas dibujadas, repetidas en espejo para que no se note la unión
+  const up = (L.H * T - VHv - cam.y) * 0.12;
+  bgLayer(IMG['fondo-lejos'], 250, VHv - 78 + up, 0.12);
+  ctx.fillStyle = 'rgba(40,24,96,.28)'; ctx.fillRect(0, 0, VW, VHv);
+  bgLayer(IMG['fondo-cerca'], 330, VHv + 26 + up * 2, 0.3);
   const fg = ctx.createLinearGradient(0, VHv * 0.55, 0, VHv); fg.addColorStop(0, 'rgba(60,30,120,0)'); fg.addColorStop(1, 'rgba(70,40,150,.38)');
   ctx.fillStyle = fg; ctx.fillRect(0, VHv * 0.55, VW, VHv * 0.45);
 }
 function drawTiles() {
-  const x0 = Math.max(0, Math.floor(cam.x / T)), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T));
-  const y0 = Math.max(0, Math.floor(cam.y / T)), y1 = Math.min(L.H - 1, Math.floor((cam.y + VHv) / T));
+  const x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1);
+  const y0 = Math.max(0, Math.floor(cam.y / T) - 1), y1 = Math.min(L.H - 1, Math.floor((cam.y + VHv) / T));
+  const G = IMG.suelo, gOk = G && G.naturalWidth, gw = gOk ? G.naturalWidth / 8 : 0, gh = gOk ? G.naturalHeight / 2 : 0;
+  // plataformas flotantes (una imagen por tramo)
+  const PI = IMG.plataforma;
+  for (const pl of L.plats) {
+    if (pl.x1 < x0 - 1 || pl.x0 > x1 + 1) continue;
+    const w = (pl.x1 - pl.x0 + 1) * T + 10, x = pl.x0 * T - 5, y = pl.ty * T - 2 + Math.sin(time * 2 + pl.x0) * 1.2;
+    if (PI && PI.naturalWidth) {
+      const h = w * PI.naturalHeight / PI.naturalWidth, a = 0.3 + 0.14 * Math.sin(time * 7 + pl.x0);
+      ctx.globalCompositeOperation = 'lighter';
+      for (const fx of [0.165, 0.835]) { const g2 = ctx.createRadialGradient(x + w * fx, y + h, 0, x + w * fx, y + h, w * 0.13); g2.addColorStop(0, 'rgba(60,230,255,' + a + ')'); g2.addColorStop(1, 'rgba(60,230,255,0)'); ctx.fillStyle = g2; ctx.fillRect(x + w * fx - w * 0.13, y + h - 4, w * 0.26, w * 0.14); }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(PI, x, y, w, h);
+    } else { ctx.fillStyle = '#2c386e'; ctx.fillRect(x, y, w, 14); ctx.fillStyle = '#35ff8a'; ctx.fillRect(x, y, w, 2.5); }
+  }
+  // suelo y bloques macizos
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
-    const c = L.g[ty][tx]; if (c === ' ') continue;
-    const x = tx * T; let y = ty * T;
-    const b = bumps.find(q => q.tx === tx && q.ty === ty); if (b) y -= Math.sin(b.t / 0.2 * Math.PI) * 10;
-    if (c === '#') {
-      const top = tileAt(tx, ty - 1) !== '#';
-      ctx.fillStyle = top ? '#1c2448' : '#141a38'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
-      ctx.fillStyle = top ? '#2a3568' : '#1e264e'; ctx.fillRect(x + 3, y + 3, T - 6, T - 6);
-      if ((tx * 5 + ty * 11) % 7 === 0) { ctx.fillStyle = 'rgba(41,230,255,.55)'; ctx.fillRect(x + 14, y + 20, 12, 3); }
-      if ((tx * 3 + ty * 7) % 11 === 0) { ctx.fillStyle = (Math.sin(time * 4 + tx) > 0) ? '#35ff8a' : '#1a5a3a'; ctx.fillRect(x + 32, y + 32, 5, 5); }
-      ctx.fillStyle = '#1c2448'; ctx.fillRect(x + ((tx * 7 + ty * 3) % 2 ? 22 : 30), y + 3, 2, T - 6);
-      ctx.fillStyle = '#4a5898'; ctx.fillRect(x + 7, y + 7, 3, 3); ctx.fillRect(x + T - 10, y + T - 10, 3, 3);
-      if (top) { ctx.fillStyle = '#3c4a8c'; ctx.fillRect(x, y, T + 0.5, 9); ctx.fillStyle = 'rgba(41,230,255,.28)'; ctx.fillRect(x, y - 2, T + 0.5, 6); ctx.fillStyle = '#29e6ff'; ctx.fillRect(x, y, T + 0.5, 2.5); }
-    } else if (c === '=') {
-      ctx.fillStyle = '#2c386e'; ctx.fillRect(x, y, T + 0.5, 14); ctx.fillStyle = '#1c2448'; ctx.fillRect(x + 4, y + 14, 6, 6); ctx.fillRect(x + T - 10, y + 14, 6, 6);
-      ctx.fillStyle = 'rgba(53,255,138,.28)'; ctx.fillRect(x, y - 2, T + 0.5, 6); ctx.fillStyle = '#35ff8a'; ctx.fillRect(x, y, T + 0.5, 2.5);
-    } else if (c === 'B') {
-      ctx.fillStyle = '#3a4880'; ctx.fillRect(x, y, T, T); ctx.fillStyle = '#5868a8'; ctx.fillRect(x + 3, y + 3, T - 6, T - 6);
-      ctx.strokeStyle = '#3a4880'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + 6); ctx.lineTo(x + T - 6, y + T - 6); ctx.moveTo(x + T - 6, y + 6); ctx.lineTo(x + 6, y + T - 6); ctx.stroke();
-      ctx.fillStyle = '#9fb0e6'; ctx.fillRect(x + 5, y + 5, 3, 3); ctx.fillRect(x + T - 8, y + 5, 3, 3); ctx.fillRect(x + 5, y + T - 8, 3, 3); ctx.fillRect(x + T - 8, y + T - 8, 3, 3);
-    } else if (c === 'U') {
-      ctx.fillStyle = '#20253c'; ctx.fillRect(x, y, T, T); ctx.fillStyle = '#343b58'; ctx.fillRect(x + 4, y + 4, T - 8, T - 8);
-      ctx.fillStyle = '#20253c'; ctx.fillRect(x + 12, y + 12, T - 24, T - 24);
-    } else if (c === '?') {
-      const pu = 1 + Math.sin(time * 4 + tx) * 0.03;
-      ctx.fillStyle = 'rgba(255,210,60,.16)'; ctx.beginPath(); ctx.arc(x + T / 2, y + T / 2, 34, 0, 6.283); ctx.fill();
-      spr(IMG['obj-caja'], x + T / 2, y + T / 2, 56 * pu, 0.5, 0.5);
-    }
+    if (L.g[ty][tx] !== '#') continue;
+    const x = tx * T, y = ty * T;
+    let d = 0; while (d < 9 && ty - 1 - d >= 0 && L.g[ty - 1 - d][tx] === '#') d++;
+    if (gOk) {
+      const sx = (tx % 8) * gw;
+      if (d === 0) ctx.drawImage(G, sx, 0, gw, gh, x, y, T + 0.5, T + 0.5);
+      else if (d % 2) ctx.drawImage(G, sx, gh, gw, gh, x, y, T + 0.5, T + 0.5);
+      else { ctx.save(); ctx.translate(x, y + T); ctx.scale(1, -1); ctx.drawImage(G, sx, gh, gw, gh, 0, -0.5, T + 0.5, T + 0.5); ctx.restore(); }
+    } else { ctx.fillStyle = '#263060'; ctx.fillRect(x, y, T + 0.5, T + 0.5); if (d === 0) { ctx.fillStyle = '#29e6ff'; ctx.fillRect(x, y, T + 0.5, 2.5); } }
+    ctx.fillStyle = '#080b1c';
+    if (tx > 0 && L.g[ty][tx - 1] !== '#') ctx.fillRect(x, y, 2.5, T + 0.5);
+    if (tx < L.W - 1 && L.g[ty][tx + 1] !== '#') ctx.fillRect(x + T - 2.5, y, 2.5, T + 0.5);
+    if (ty < L.H - 1 && L.g[ty + 1][tx] !== '#') ctx.fillRect(x, y + T - 2.5, T + 0.5, 2.5);
+  }
+  // cajas (de izquierda a derecha, para que cada una tape el lateral de la anterior)
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+    const c = L.g[ty][tx]; if (c !== '?' && c !== 'B' && c !== 'U') continue;
+    const cx = tx * T + T / 2; let cy = ty * T + T / 2;
+    const b = bumps.find(q => q.tx === tx && q.ty === ty); if (b) cy -= Math.sin(b.t / 0.2 * Math.PI) * 10;
+    if (c === '?') {
+      const pu = 0.5 + 0.5 * Math.sin(time * 4 + tx);
+      ctx.globalCompositeOperation = 'lighter';
+      const g2 = ctx.createRadialGradient(cx, cy, 14, cx, cy, 46); g2.addColorStop(0, 'rgba(255,190,60,' + (0.2 + 0.14 * pu) + ')'); g2.addColorStop(1, 'rgba(255,190,60,0)');
+      ctx.fillStyle = g2; ctx.fillRect(cx - 46, cy - 46, 92, 92);
+      ctx.globalCompositeOperation = 'source-over';
+      spr(IMG['obj-caja'], cx, cy, 57 * (1 + pu * 0.03), 0.5, 0.5);
+    } else spr(IMG[c === 'B' ? 'caja-x' : 'caja-usada'], cx, cy, c === 'B' ? 53 : 54, 0.5, 0.5);
   }
 }
 // posición de las 3 bocas de los cañones en cada pose (píxeles HD desde el ancla y desde abajo)
@@ -741,7 +756,7 @@ function togglePause() {
   if (paused) { $('card').innerHTML = '<h2>PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MENÚ</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = toMenu; }
   else show('panel', false);
 }
-function toMenu() { paused = false; state = 'title'; resetLevel(true); show('panel', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
+function toMenu() { setTimeout(updApply, 300); paused = false; state = 'title'; resetLevel(true); show('panel', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
 function levelDone() {
   state = 'done'; show('touch', false);
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
@@ -786,6 +801,21 @@ $('btnShare').onclick = () => {
   if (navigator.share) navigator.share({ title: 'TURBOLUCAS', text, url }).catch(() => {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank');
 };
+
+/* ---------- actualización automática ---------- */
+// Mira cada minuto si hay versión nueva. Nunca recarga en mitad de una partida: espera a que el jugador vuelva al menú.
+let updPending = null;
+function updCheck() {
+  if (document.hidden) return;
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.v && j.v !== VERSION) { updPending = j.v; updApply(); } }).catch(() => {});
+}
+function updApply() {
+  if (!updPending || state !== 'title') return;
+  try { const k = 'tl_upd_' + updPending, last = +sessionStorage.getItem(k) || 0; if (Date.now() - last < 300000) return; sessionStorage.setItem(k, Date.now()); } catch (e) {}
+  location.replace(location.pathname + '?u=' + encodeURIComponent(updPending));
+}
+setInterval(updCheck, 60000); setTimeout(updCheck, 4000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) updCheck(); });
 
 /* ---------- arranque ---------- */
 setSnd(sndOn); resize();
