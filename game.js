@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.2';
+const VERSION = '0.3';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -488,6 +488,21 @@ function update(dt) {
 const STARS = []; for (let i = 0; i < 160; i++) STARS.push({ x: Math.random(), y: Math.random(), s: Math.random() * 1.6 + 0.4, l: 1 + (i % 3), tw: Math.random() * 6 });
 const TOWERS = []; { let x = 0, seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < 60; i++) { const w = 60 + rnd() * 120, h = 80 + rnd() * 260; TOWERS.push({ x, w, h, l: i % 2, win: Math.floor(rnd() * 1e6) }); x += w + 40 + rnd() * 160; } }
+// la luna se comparte con Leo con Lucas (mismo dominio); se reduce una vez y se le hornea el brillo
+let MOON = null;
+(() => {
+  const im = new Image();
+  im.onload = () => { try {
+    const q = im.naturalWidth / 256, bx = 46 * q, by = 32 * q, bw = 163 * q, bh = 183 * q;
+    const S = TIER === 'hd' ? 560 : 340, w = Math.round(S * bw / bh), pad = Math.round(S * 0.42), f = S / 156;
+    const mk = (b, a) => { const c = document.createElement('canvas'); c.width = w + pad * 2; c.height = S + pad * 2; const x = c.getContext('2d');
+      x.imageSmoothingQuality = 'high';
+      [[b[2], 'rgba(200,225,255,' + a[2] + ')'], [b[1], 'rgba(255,255,255,' + a[1] + ')'], [b[0], 'rgba(255,255,255,' + a[0] + ')']].forEach(([bl, col]) => { x.shadowColor = col; x.shadowBlur = bl * f; x.drawImage(im, bx, by, bw, bh, pad, pad, w, S); });
+      x.shadowColor = 'transparent'; x.shadowBlur = 0; x.drawImage(im, bx, by, bw, bh, pad, pad, w, S); return c; };
+    MOON = { lo: mk([6, 18, 38], [0.95, 0.75, 0.55]), hi: mk([9, 26, 54], [1, 0.9, 0.7]), w, h: S, pad };
+  } catch (e) {} };
+  im.src = '/leoconlucas/img/luna.png';
+})();
 const NEB = [{ x: 150, y: 0.25, r: 260, c: '198,60,255' }, { x: 700, y: 0.55, r: 320, c: '41,120,255' }, { x: 1250, y: 0.2, r: 240, c: '53,255,190' }, { x: 1700, y: 0.5, r: 300, c: '255,70,160' }];
 function drawBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, VHv);
@@ -504,12 +519,26 @@ function drawBackground() {
     const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, n.r); ng.addColorStop(0, 'rgba(' + n.c + ',.17)'); ng.addColorStop(1, 'rgba(' + n.c + ',0)');
     ctx.fillStyle = ng; ctx.fillRect(nx - n.r, ny - n.r, n.r * 2, n.r * 2);
   }
-  // planeta
-  const px = VW * 0.78 - cam.x * 0.02, py = VHv * 0.24, r = 74;
-  const pg = ctx.createRadialGradient(px - 24, py - 26, 8, px, py, r);
-  pg.addColorStop(0, '#7fe9ff'); pg.addColorStop(0.5, '#3d6bff'); pg.addColorStop(1, '#2a1670');
-  ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
-  ctx.strokeStyle = 'rgba(198,60,255,.55)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(px, py, r * 1.55, r * 0.34, -0.35, 0, 6.283); ctx.stroke();
+  // luna (la de Leo con Lucas, con su brillo blanco que late) o, si no carga, el planeta
+  const px = VW * 0.78 - cam.x * 0.02, py = VHv * 0.25;
+  if (MOON) {
+    const pu = 0.5 - 0.5 * Math.cos(time * 6.283 / 3), fl = 0.5 - 0.5 * Math.cos(time * 6.283 / 4), hm = 172, u = hm / MOON.h;
+    ctx.globalCompositeOperation = 'lighter';
+    const hr = hm * 0.5 * (1.5 + 0.22 * pu) * 1.25, hg = ctx.createRadialGradient(px, py, 0, px, py, hr);
+    hg.addColorStop(0, 'rgba(255,255,255,' + (0.42 - 0.08 * pu) + ')'); hg.addColorStop(0.45, 'rgba(220,235,255,.2)'); hg.addColorStop(0.75, 'rgba(200,225,255,0)');
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(px, py, hr, 0, 6.283); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.translate(px, py - 8 * fl); ctx.rotate(0.07 * fl);
+    const dw = (MOON.w + MOON.pad * 2) * u, dh = (MOON.h + MOON.pad * 2) * u;
+    ctx.drawImage(MOON.lo, -dw / 2, -dh / 2, dw, dh);
+    ctx.globalAlpha = pu; ctx.drawImage(MOON.hi, -dw / 2, -dh / 2, dw, dh); ctx.globalAlpha = 1;
+    ctx.restore();
+  } else {
+    const r = 74, pg = ctx.createRadialGradient(px - 24, py - 26, 8, px, py, r);
+    pg.addColorStop(0, '#7fe9ff'); pg.addColorStop(0.5, '#3d6bff'); pg.addColorStop(1, '#2a1670');
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = 'rgba(198,60,255,.55)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(px, py, r * 1.55, r * 0.34, -0.35, 0, 6.283); ctx.stroke();
+  }
   // estructuras lejanas de la estación
   for (let l = 0; l < 2; l++) {
     const par = l ? 0.38 : 0.2, base = VHv - (l ? 0 : 40) + (L.H * T - VHv - cam.y) * par * 0.4;
