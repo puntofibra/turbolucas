@@ -58,6 +58,16 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 #rot p b{color:var(--gr)}
 #rot .ph{width:38px;height:66px;border:3px solid var(--cy);border-radius:9px;margin-top:20px;animation:rot 2.4s ease-in-out infinite;box-shadow:0 0 14px rgba(41,230,255,.5)}
 @keyframes rot{0%,15%{transform:rotate(0)}45%,70%{transform:rotate(90deg)}85%,100%{transform:rotate(0)}}
+#rotBtn{display:none;margin-top:18px;font-size:16px;border-color:var(--gr);box-shadow:0 0 16px rgba(53,255,138,.55),inset 0 0 12px rgba(53,255,138,.2)}
+#rotBtn.on{display:inline-block}
+#rotHint{display:none;margin-top:16px;padding:12px 16px 14px;border:2px solid #ffb400;border-radius:16px;background:rgba(58,36,0,.6);box-shadow:0 0 20px rgba(255,180,0,.5);animation:aviso 1.3s ease-in-out infinite}
+#rotHint.on{display:block}
+#rot.hint img{height:min(20vh,140px)}
+#rot.hint .ph{display:none}
+#rotHint h3{margin:4px 0 6px;font-size:19px;color:#ffd23c;letter-spacing:.03em}
+#rotHint p{font-size:15px;color:#fff3d0}
+#rotHint p b{color:#ffd23c}
+@keyframes aviso{50%{box-shadow:0 0 34px rgba(255,180,0,.85);transform:scale(1.02)}}
 #touch{position:fixed;inset:0;z-index:5;display:none;pointer-events:none}
 #touch.on{display:block}
 .tb{position:absolute;pointer-events:auto;border-radius:50%;border:2px solid rgba(41,230,255,.75);background:rgba(12,20,52,.42);color:#dff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 12px rgba(41,230,255,.35)}
@@ -105,7 +115,14 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 
 <div id="panel" class="ov"><div class="card" id="card"></div></div>
 
-<div id="rot"><div class="rbox"><img id="rotImg" alt=""><h2>¡EH, QUE ME MAREO!</h2><p>Lucas no sabe volar de pie.<br><b>Gira el móvil</b> y juega en horizontal.</p><div class="ph"></div></div></div>
+<div id="rot"><div class="rbox"><img id="rotImg" alt=""><h2>¡EH, QUE ME MAREO!</h2><p>Lucas no sabe volar de pie.<br><b>Gira el móvil</b> y juega en horizontal.</p><div class="ph"></div>
+  <button class="btn" id="rotBtn">GIRAR LA PANTALLA</button>
+  <div id="rotHint">
+    <svg viewBox="0 0 48 48" width="42" height="42" aria-hidden="true"><rect x="10" y="21" width="28" height="21" rx="4" fill="#ffb400"/><path d="M16 21v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#ffb400" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="31" r="3.4" fill="#2a1a00"/></svg>
+    <h3 id="rotHintT"></h3>
+    <p id="rotHintP"></p>
+  </div>
+</div></div>
 
 <div id="ios" class="ov"><div class="card">
   <h2>Instalar en iPhone</h2>
@@ -113,7 +130,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
   <button class="btn" id="iosOk">ENTENDIDO</button>
 </div></div>
 
-<script src="game.js?v=5"></script>
+<script src="game.js?v=6"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 </script>

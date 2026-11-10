@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.5';
+const VERSION = '0.6';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -751,6 +751,41 @@ function frame(ts) {
 /* ---------- pantallas ---------- */
 let rotBlock = false;
 function checkRot() { const was = rotBlock; rotBlock = TOUCH && innerHeight > innerWidth; $('rot').classList.toggle('on', rotBlock); if (rotBlock && !was) for (const k in K) K[k] = false; }
+// --- aviso de giro automático bloqueado ---
+// Si el móvil está físicamente tumbado pero la pantalla sigue en vertical, es que tiene el giro bloqueado: se lo decimos.
+let rotSince = 0, tiltSince = 0, hintOn = false, motionAsked = false;
+const IOS_DEV = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const canForce = !IOS_DEV && screen.orientation && screen.orientation.lock && document.documentElement.requestFullscreen;
+addEventListener('devicemotion', e => {
+  const g = e.accelerationIncludingGravity; if (!g || g.x == null) return;
+  const lying = Math.abs(g.x) > 6.5 && Math.abs(g.y) < 5;
+  if (lying) { if (!tiltSince) tiltSince = Date.now(); } else tiltSince = 0;
+});
+function rotHint(kind) {
+  if (hintOn === kind) return; hintOn = kind;
+  $('rotHintT').textContent = kind === 'sensor' ? '¡TIENES EL GIRO BLOQUEADO!' : '¿LO HAS GIRADO Y SIGUE IGUAL?';
+  const pre = kind === 'sensor' ? 'Ya has girado el móvil, pero la pantalla no gira. ' : 'Seguro que tienes el giro de pantalla bloqueado. ';
+  $('rotHintP').innerHTML = pre + (IOS_DEV
+    ? 'Desliza hacia abajo desde la <b>esquina de arriba a la derecha</b> y toca el <b>candado con la flecha</b> para quitarlo.'
+    : (canForce ? 'Pulsa <b>GIRAR LA PANTALLA</b>, o desliza' : 'Desliza') + ' hacia abajo desde arriba del todo y activa <b>Giro automático</b>.');
+  $('rotHint').classList.add('on'); $('rot').classList.add('hint');
+  if (kind === 'sensor') { try { navigator.vibrate && navigator.vibrate([60, 60, 60]); } catch (e) {} }
+}
+setInterval(() => {
+  if (!rotBlock) { if (rotSince) { rotSince = 0; tiltSince = 0; hintOn = false; $('rotHint').classList.remove('on'); $('rot').classList.remove('hint'); } return; }
+  if (!rotSince) { rotSince = Date.now(); $('rotBtn').classList.toggle('on', !!canForce); }
+  if (tiltSince && Date.now() - tiltSince > 900) rotHint('sensor');
+  else if (!hintOn && Date.now() - rotSince > 8000) rotHint('time');
+}, 300);
+// en iPhone hay que pedir permiso para leer el sensor: se pide al primer toque sobre el cartel
+$('rot').addEventListener('touchend', () => {
+  if (motionAsked) return; motionAsked = true;
+  try { if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
+});
+// en Android se puede girar la pantalla aunque el giro automático esté bloqueado
+$('rotBtn').onclick = () => {
+  try { document.documentElement.requestFullscreen().then(() => screen.orientation.lock('landscape')).catch(() => rotHint('time')); } catch (e) { rotHint('time'); }
+};
 function show(id, on) { $(id).classList.toggle('on', on); }
 function startGame() {
   audio(); startMusic();
