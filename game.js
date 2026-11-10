@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.1';
+const VERSION = '0.2';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -355,7 +355,7 @@ function updatePlayer(dt) {
     else if (!p.crouch || canStand(p)) {
       if (p.crouch) { p.crouch = false; setSize(p); }
       p.vy = p.power === 'mini' ? -700 : -780; p.jbuf = 0; p.coyote = 0; p.onGround = false; p.sq = 1; SFX.jump();
-      burst(p.x + p.w / 2, p.y + p.h, 8, '#7fe9ff', 120, 0.3, 0, 3);
+      burst(p.x + p.w / 2, p.y + p.h, 8, '#ffb347', 120, 0.3, 0, 3);
     }
   }
   if (!K.jump && p.vy < -260) p.vy = -260;               // salto corto si sueltas
@@ -469,7 +469,8 @@ function update(dt) {
     updatePlayer(dt);
     if (state !== 'play') return;
     updateEnemies(dt);
-    for (const it of items) { it.t += dt; if (it.rise < 1) { it.rise = Math.min(1, it.rise + dt * 2.5); it.y -= 46 * dt * 2.5; } }
+    for (const it of items) { it.t += dt; if (it.rise < 1) { it.rise = Math.min(1, it.rise + dt * 2.5); it.y -= 46 * dt * 2.5; }
+      else if (it.t > 0.8 && !P.dead) { const dx = P.x + P.w / 2 - (it.x + 20), dy = P.y + P.h / 2 - (it.y + 20), d = Math.hypot(dx, dy) || 1, v = Math.min(760, 220 + (it.t - 0.8) * 1100); it.x += dx / d * v * dt; it.y += dy / d * v * dt; } }
     const p = P;
     const tx = p.x + p.w / 2 - VW * 0.4 + p.face * 50, ty = p.y + p.h - VHv * 0.7;
     cam.x += (tx - cam.x) * Math.min(1, dt * 5); cam.y += (ty - cam.y) * Math.min(1, dt * 4);
@@ -561,11 +562,21 @@ function drawTiles() {
     }
   }
 }
-function flame(x, y, len, w, a = 1) {
-  const f = len * (0.75 + Math.random() * 0.5);
-  const g = ctx.createLinearGradient(0, y, 0, y + f);
-  g.addColorStop(0, 'rgba(255,255,255,' + a + ')'); g.addColorStop(0.3, 'rgba(120,240,255,' + 0.9 * a + ')'); g.addColorStop(1, 'rgba(60,120,255,0)');
-  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.lineTo(x + w / 2, y); ctx.lineTo(x, y + f); ctx.closePath(); ctx.fill();
+// posición de las 3 bocas de los cañones en cada pose (píxeles HD desde el ancla y desde abajo)
+const CAN = { 'lucas-quieto': [[-61, 14], [-7.5, 0], [45.5, 15]], 'lucas-avanzando': [[-61.7, 14], [-7.7, 0], [45.3, 15]], 'lucas-saltando': [[-60, 14], [-6, 0], [46.5, 14]],
+  'lucas-cayendo': [[-70, 14], [-16, 0], [37, 15]], 'lucas-golpeado': [[-70, 14], [-16, 0], [37, 15]], 'lucas-celebrando': [[-60, 14], [-6.5, 0], [46.5, 14]], 'lucas-agachado': [[-61, 5], [-7.5, 0], [45.5, 5]] };
+function flame(x, y, len, w, seed) {
+  const fl = 0.8 + 0.2 * Math.sin(time * 47 + seed * 3.1) + 0.12 * Math.sin(time * 83 + seed * 7.7);
+  const ll = len * fl, sway = Math.sin(time * 31 + seed * 5) * w * 0.25, gr = ll * 0.8 + w;
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(x, y + ll * 0.35, 0, x, y + ll * 0.35, gr);
+  g.addColorStop(0, 'rgba(255,140,40,.42)'); g.addColorStop(1, 'rgba(255,70,20,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y + ll * 0.35, gr, 0, 6.283); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  const layer = (ww, l2, col, sw) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x - ww / 2, y);
+    ctx.bezierCurveTo(x - ww * 0.72, y + l2 * 0.38, x - ww * 0.18 + sw, y + l2 * 0.78, x + sw, y + l2);
+    ctx.bezierCurveTo(x + ww * 0.18 + sw, y + l2 * 0.78, x + ww * 0.72, y + l2 * 0.38, x + ww / 2, y); ctx.closePath(); ctx.fill(); };
+  layer(w * 1.1, ll, 'rgba(255,74,24,.82)', sway); layer(w * 0.82, ll * 0.76, 'rgba(255,176,44,.95)', sway * 0.7); layer(w * 0.48, ll * 0.5, 'rgba(255,248,214,.98)', sway * 0.4);
 }
 const ANCH = { 'lucas-quieto': 0.5, 'lucas-avanzando': 0.47, 'lucas-saltando': 0.44, 'lucas-cayendo': 0.5, 'lucas-golpeado': 0.5, 'lucas-celebrando': 0.5, 'lucas-agachado': 0.5 };
 function drawPlayer() {
@@ -582,12 +593,12 @@ function drawPlayer() {
   const sx = (1 - p.sq * 0.12) * (p.crouch ? 0.9 : 1), sy = (1 + p.sq * 0.14) * (p.crouch ? 0.72 : 1);
   // llamas de los 3 propulsores
   if (!p.dead) {
-    const fl = p.win ? 10 : p.tTurbo > 0 && K.jump ? 54 : !p.onGround ? (p.vy < 0 ? 40 : 14) : (Math.abs(p.vx) > 40 ? 12 : 7);
-    ctx.globalCompositeOperation = 'lighter';
-    for (const dx of [-13, 0, 13]) flame(cx + dx * mini, by - 3 * mini, fl * mini, 11 * mini);
-    ctx.globalCompositeOperation = 'source-over';
-    if (p.onGround && Math.abs(p.vx) > 150 && Math.random() < 0.35) parts.push({ x: cx - p.face * 14, y: p.y + p.h, vx: -p.face * (40 + Math.random() * 80), vy: -20 - Math.random() * 70, life: 0.28, max: 0.28, col: Math.random() < 0.5 ? '#7fe9ff' : '#fff', size: 2.4, grav: 300 });
-    if (!p.onGround && p.vy < -100 && Math.random() < 0.6) parts.push({ x: cx + (Math.random() - 0.5) * 26, y: by + 10, vx: (Math.random() - 0.5) * 40, vy: 120 + Math.random() * 120, life: 0.3, max: 0.3, col: '#7fe9ff', size: 3, grav: 0 });
+    const fl = p.win ? 14 : p.tTurbo > 0 && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
+    const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = CAN[pose].map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
+    if (p.onGround) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,130,40,' + (0.2 + 0.08 * Math.sin(time * 40)) + ')'; ctx.beginPath(); ctx.ellipse(mouths[1][0], p.y + p.h + 1, 30 * mini, 5 * mini, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+    mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 ? 1.1 : 1), 9 * mini, i + 1));
+    if (p.onGround && Math.abs(p.vx) > 150 && Math.random() < 0.35) parts.push({ x: cx - p.face * 14, y: p.y + p.h, vx: -p.face * (40 + Math.random() * 80), vy: -20 - Math.random() * 70, life: 0.28, max: 0.28, col: Math.random() < 0.5 ? '#ffb347' : '#fff2c0', size: 2.2, grav: 300 });
+    if (!p.onGround && p.vy < -100 && Math.random() < 0.7) { const m = mouths[Math.floor(Math.random() * 3)]; parts.push({ x: m[0] + (Math.random() - 0.5) * 6, y: m[1] + 20 + Math.random() * 20, vx: (Math.random() - 0.5) * 50, vy: 140 + Math.random() * 140, life: 0.32, max: 0.32, col: Math.random() < 0.6 ? '#ff9a3c' : '#ffe08a', size: 2.6, grav: 0 }); }
   }
   if (p.tStar > 0) { ctx.globalAlpha = 0.35; ctx.fillStyle = 'hsl(' + (time * 400 % 360) + ',100%,60%)'; ctx.beginPath(); ctx.ellipse(cx, p.y + p.h / 2, p.w * 1.05, p.h * 0.72, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     if (Math.random() < 0.6) parts.push({ x: cx + (Math.random() - 0.5) * 40, y: p.y + Math.random() * p.h, vx: 0, vy: -30, life: 0.5, max: 0.5, col: 'hsl(' + Math.random() * 360 + ',100%,65%)', size: 3.5, grav: 0 }); }
