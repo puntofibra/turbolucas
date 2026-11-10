@@ -22,8 +22,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{--cy:#29e6ff;--mg:#c63cff;--gr:#35ff8a;--bg:#070a1e}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
+*{touch-action:none;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-size-adjust:100%;background:var(--bg);overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
 #cv{position:fixed;inset:0;width:100%;height:100%;display:block}
 .ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;padding:16px;text-align:center}
 .ov.on{display:flex}
@@ -48,9 +48,16 @@ html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;font-family:
 .stat{display:flex;justify-content:space-between;gap:30px;font-size:15px;padding:3px 0;color:#cfe0ff}
 .stat b{color:#fff}
 .small{font-size:12px;color:#8ea3e6;margin-top:8px}
-#rot{background:var(--bg);z-index:30}
-#rot .ph{width:70px;height:120px;border:4px solid var(--cy);border-radius:14px;margin-bottom:18px;animation:rot 1.8s ease-in-out infinite;box-shadow:0 0 18px rgba(41,230,255,.5)}
-@keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+#rot{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:60;background:radial-gradient(circle at 50% 35%,#1a1f5c,#070a1e 70%);display:none;align-items:center;justify-content:center;text-align:center;padding:20px}
+#rot.on{display:flex}
+#rot .rbox{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:340px;margin:0 auto}
+#rot img{height:min(34vh,230px);width:auto;transform-origin:50% 55%;animation:mareo 2.4s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(41,230,255,.5))}
+@keyframes mareo{0%,15%{transform:rotate(0)}45%,70%{transform:rotate(90deg)}85%,100%{transform:rotate(0)}}
+#rot h2{margin:18px 0 6px;font-size:26px;letter-spacing:.04em;text-shadow:0 0 14px var(--cy)}
+#rot p{margin:0;font-size:16px;line-height:1.45;color:#cfe0ff}
+#rot p b{color:var(--gr)}
+#rot .ph{width:38px;height:66px;border:3px solid var(--cy);border-radius:9px;margin-top:20px;animation:rot 2.4s ease-in-out infinite;box-shadow:0 0 14px rgba(41,230,255,.5)}
+@keyframes rot{0%,15%{transform:rotate(0)}45%,70%{transform:rotate(90deg)}85%,100%{transform:rotate(0)}}
 #touch{position:fixed;inset:0;z-index:5;display:none;pointer-events:none}
 #touch.on{display:block}
 .tb{position:absolute;pointer-events:auto;border-radius:50%;border:2px solid rgba(41,230,255,.75);background:rgba(12,20,52,.42);color:#dff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 12px rgba(41,230,255,.35)}
@@ -98,7 +105,7 @@ html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;font-family:
 
 <div id="panel" class="ov"><div class="card" id="card"></div></div>
 
-<div id="rot" class="ov"><div class="ph"></div><b>Gira el móvil para jugar</b></div>
+<div id="rot"><div class="rbox"><img id="rotImg" alt=""><h2>¡EH, QUE ME MAREO!</h2><p>Lucas no sabe volar de pie.<br><b>Gira el móvil</b> y juega en horizontal.</p><div class="ph"></div></div></div>
 
 <div id="ios" class="ov"><div class="card">
   <h2>Instalar en iPhone</h2>
@@ -106,7 +113,7 @@ html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;font-family:
   <button class="btn" id="iosOk">ENTENDIDO</button>
 </div></div>
 
-<script src="game.js?v=4"></script>
+<script src="game.js?v=5"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 </script>

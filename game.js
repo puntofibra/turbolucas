@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.4';
+const VERSION = '0.5';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -38,6 +38,7 @@ function loadImages(done) {
 }
 $('logoImg').src = 'img/' + TIER + '/logo.webp';
 $('heroImg').src = 'img/' + TIER + '/lucas-celebrando.webp';
+$('rotImg').src = 'img/' + TIER + '/lucas-golpeado.webp';
 // dibuja una imagen con altura h (unidades de mundo), anclada en (ax, ay) de la imagen
 function spr(im, x, y, h, ax = 0.5, ay = 1, flip = false, rot = 0, sx = 1, sy = 1) {
   if (!im || !im.naturalWidth) return;
@@ -135,6 +136,13 @@ addEventListener('blur', () => { for (const k in K) K[k] = false; });
   el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
+// nada de ampliar la pantalla: ni pellizco, ni doble toque, ni Ctrl+rueda
+const noZoom = e => { if (e.touches && e.touches.length > 1 || e.scale !== undefined && e.scale !== 1) e.preventDefault(); };
+document.addEventListener('touchstart', noZoom, { passive: false }); document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
+let lastTap = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTap < 320) e.preventDefault(); lastTap = n; }, { passive: false });
+document.addEventListener('dblclick', e => e.preventDefault());
+addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
 const padPrev = { jump: false, act: false, left: false, right: false, down: false }; let padUsed = false;
 function pollPad() {
   const gp = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).find(g => g);
@@ -742,7 +750,7 @@ function frame(ts) {
 
 /* ---------- pantallas ---------- */
 let rotBlock = false;
-function checkRot() { rotBlock = state === 'play' && TOUCH && innerHeight > innerWidth; $('rot').classList.toggle('on', rotBlock); }
+function checkRot() { const was = rotBlock; rotBlock = TOUCH && innerHeight > innerWidth; $('rot').classList.toggle('on', rotBlock); if (rotBlock && !was) for (const k in K) K[k] = false; }
 function show(id, on) { $(id).classList.toggle('on', on); }
 function startGame() {
   audio(); startMusic();
