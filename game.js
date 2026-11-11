@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.34';
+const VERSION = '0.35';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -865,6 +865,24 @@ LEVELS['2-6'] = function () {
   P(8, 12, 12); P(3, 7, 9); B.block(9, 30, 8, 9); B.en('patrulla', 16, 7); B.arc(10, 24, 6, 3); B.crystal(29, 8, 1, 1.3); B.box(20, 4, 'chip');
   return B.done({ name: 'POZO DE LA MINA', time: 230, theme: 'ice', vert: true, spawn: { x: 5 * T, y: 110 * T }, goal: { x: 26 * T + T / 2, y: 8 * T }, rise: { y: H * T + 400, speed: 42, startY: 104 * T, on: false, style: 'water' } });
 };
+/* ---------- fase secreta 2-B: AURORA (sobre las nubes del planeta, con gravedad lunar: escaleras de luz, estrellas fugaces de hielo y una lluvia de chips) ---------- */
+LEVELS['2-B'] = function () {
+  const H = 22, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  const shape = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') B.chip(x + i, y + j); }));
+  // A · el "2" de chips sobre las nubes
+  B.ground(0, 14); P(7, 12, 15); shape(8, 8, ['###', '..#', '###', '#..', '###']); B.hid(16, 16, 'vida'); B.crystal(2, 20, 1, 1.3);
+  // B · islas y cristales saltarines
+  B.arc(14, 20, 16, 3); B.ground(20, 26); B.spring(24, 20); P(28, 33, 10); B.gear(31, 8); B.row(28, 33, 9); B.crystal(21, 20, 0);
+  // C · estrellas fugaces
+  B.arc(26, 34, 15, 3); B.ground(34, 50); B.en('alien', 42, 19); B.box(46, 16, 'laser'); B.mover(52, 18, 3, 90, 0, 0.9, 0); B.arc(50, 58, 14, 3);
+  B.ground(58, 76); B.cp(60, 20); B.en('dron', 66, 15, { x0: 60, x1: 74 }); P(63, 66, 14); P(69, 72, 9); P(74, 77, 5); B.gear(76, 3); B.row(69, 72, 8); B.crystal(70, 20, 2, 1.2);
+  // D · escalera de luz sobre el vacío
+  for (let i = 0; i < 8; i++) { const x = 80 + i * 4, y = 17 - Math.round(Math.sin(i * 0.9) * 4); P(x, x + 1, y); B.chip(x, y - 1); B.chip(x + 1, y - 1); }
+  B.ground(113, 165); B.cp(115, 20); B.box(120, 16, 'iman'); B.spring(126, 20); P(128, 132, 9); B.gear(130, 7); B.en('erizo', 140, 19); B.crystal(118, 20, 1, 1.3); B.crystal(150, 20, 0, 1.2);
+  for (let i = 1; i <= 4; i++) B.block(150 + i, 150 + i, 20 - i, 19); B.row(151, 154, 14); B.block(162, 165, 0, 21);
+  return B.done({ name: 'AURORA', time: 170, theme: 'ice', sky: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
+    meteors: { zones: [[34 * T, 112 * T]], every: 1.05, acc: 0, style: 'comet' }, rain: { x0: 121 * T, x1: 148 * T, dur: 9, t: 0, st: 0, acc: 0 } });
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -1201,10 +1219,10 @@ function updateStage(dt) {
   const mt = L.meteors;
   if (mt) {
     const cxp = p.x + p.w / 2, inZone = mt.zones.some(z => cxp > z[0] && cxp < z[1]);
-    if (inZone && !p.dead && !p.win) { mt.acc += dt; if (mt.acc > mt.every) { mt.acc = Math.random() * 0.3; L.mets.push({ x: cxp - 150 + Math.random() * 800, y: cam.y - 50, vx: -50 - Math.random() * 70, vy: 230 + Math.random() * 110, r: 13 + Math.random() * 9, rot: Math.random() * 6, sp: (Math.random() - 0.5) * 6 }); if (!mt.warned) { mt.warned = 1; pop(cxp, p.y - 40, '¡METEORITOS!', '#ff9a3c'); [600, 450, 600, 450].forEach((f, i) => tone(f, f, 0.12, 'sawtooth', 0.08, i * 0.14)); } } }
+    if (inZone && !p.dead && !p.win) { mt.acc += dt; if (mt.acc > mt.every) { mt.acc = Math.random() * 0.3; L.mets.push({ x: cxp - 150 + Math.random() * 800, y: cam.y - 50, vx: -50 - Math.random() * 70, vy: 230 + Math.random() * 110, r: 13 + Math.random() * 9, rot: Math.random() * 6, sp: (Math.random() - 0.5) * 6 }); if (!mt.warned) { mt.warned = 1; pop(cxp, p.y - 40, mt.style === 'comet' ? '¡ESTRELLAS FUGACES!' : '¡METEORITOS!', mt.style === 'comet' ? '#9ff0ff' : '#ff9a3c'); [600, 450, 600, 450].forEach((f, i) => tone(f, f, 0.12, 'sawtooth', 0.08, i * 0.14)); } } }
     for (const m of L.mets) {
       m.x += m.vx * dt; m.y += m.vy * dt; m.rot += m.sp * dt;
-      if (Math.random() < 0.9) parts.push({ x: m.x + (Math.random() - 0.5) * m.r, y: m.y + (Math.random() - 0.5) * m.r, vx: -m.vx * 0.3 + (Math.random() - 0.5) * 40, vy: -m.vy * 0.3, life: 0.4, max: 0.4, col: Math.random() < 0.5 ? '#ff9a3c' : '#ffe08a', size: 2.5 + Math.random() * 2, grav: 0 });
+      if (Math.random() < 0.9) parts.push({ x: m.x + (Math.random() - 0.5) * m.r, y: m.y + (Math.random() - 0.5) * m.r, vx: -m.vx * 0.3 + (Math.random() - 0.5) * 40, vy: -m.vy * 0.3, life: 0.4, max: 0.4, col: mt.style === 'comet' ? (Math.random() < 0.5 ? '#9ff0ff' : '#ffffff') : Math.random() < 0.5 ? '#ff9a3c' : '#ffe08a', size: 2.5 + Math.random() * 2, grav: 0 });
       let boom = isSolid(tileAt(Math.floor(m.x / T), Math.floor((m.y + m.r * 0.6) / T))) || m.y > L.H * T + 40;
       if (!boom && !p.dead && !p.win && Math.abs(m.x - (p.x + p.w / 2)) < m.r * 0.8 + p.w / 2 && Math.abs(m.y - (p.y + p.h / 2)) < m.r * 0.8 + p.h / 2) { if (CHEAT.kill || p.tStar > 0) { boom = true; addScore(50, m.x, m.y); } else if (!CHEAT.ghost) { hurt(); boom = true; } }
       if (!boom) for (const s2 of shots) if (s2.mine && Math.hypot(s2.x - m.x, s2.y - m.y) < m.r + 12) { s2.life = 0; boom = true; addScore(50, m.x, m.y - 10); break; }
@@ -1284,12 +1302,12 @@ function drawStageFront() {         // por delante: láseres, muro, plasma
     if (m.x < cam.x - 80 || m.x > cam.x + VW + 80) continue;
     const sp = Math.hypot(m.vx, m.vy), ux = m.vx / sp, uy = m.vy / sp, tl = m.r * 5;
     ctx.globalCompositeOperation = 'lighter';
-    const tg = ctx.createLinearGradient(m.x, m.y, m.x - ux * tl, m.y - uy * tl); tg.addColorStop(0, 'rgba(255,170,60,.85)'); tg.addColorStop(1, 'rgba(255,60,20,0)');
+    const tg = ctx.createLinearGradient(m.x, m.y, m.x - ux * tl, m.y - uy * tl); const cm = L.meteors && L.meteors.style === 'comet'; tg.addColorStop(0, cm ? 'rgba(170,240,255,.9)' : 'rgba(255,170,60,.85)'); tg.addColorStop(1, cm ? 'rgba(120,120,255,0)' : 'rgba(255,60,20,0)');
     ctx.strokeStyle = tg; ctx.lineCap = 'round'; ctx.lineWidth = m.r * 1.5; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x - ux * tl, m.y - uy * tl); ctx.stroke();
-    const gg = ctx.createRadialGradient(m.x, m.y, m.r * 0.4, m.x, m.y, m.r * 2.2); gg.addColorStop(0, 'rgba(255,150,50,.6)'); gg.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * 2.2, 0, 6.283); ctx.fill();
+    const gg = ctx.createRadialGradient(m.x, m.y, m.r * 0.4, m.x, m.y, m.r * 2.2); gg.addColorStop(0, cm ? 'rgba(150,230,255,.7)' : 'rgba(255,150,50,.6)'); gg.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * 2.2, 0, 6.283); ctx.fill();
     ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'butt';
     ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.rot);
-    const rg = ctx.createRadialGradient(-m.r * 0.3, -m.r * 0.3, 1, 0, 0, m.r); rg.addColorStop(0, '#a77d62'); rg.addColorStop(0.7, '#5d3f33'); rg.addColorStop(1, '#2e1d18'); ctx.fillStyle = rg;
+    const rg = ctx.createRadialGradient(-m.r * 0.3, -m.r * 0.3, 1, 0, 0, m.r); if (cm) { rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.6, '#9fe8ff'); rg.addColorStop(1, '#3a6ab0'); } else { rg.addColorStop(0, '#a77d62'); rg.addColorStop(0.7, '#5d3f33'); rg.addColorStop(1, '#2e1d18'); } ctx.fillStyle = rg;
     ctx.beginPath(); for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283, rr = m.r * (0.82 + 0.18 * Math.sin(k * 2.7 + m.r)); k ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill();
     ctx.fillStyle = 'rgba(30,18,14,.55)'; ctx.beginPath(); ctx.arc(m.r * 0.25, m.r * 0.1, m.r * 0.22, 0, 6.283); ctx.arc(-m.r * 0.3, m.r * 0.35, m.r * 0.15, 0, 6.283); ctx.fill();
     ctx.strokeStyle = 'rgba(255,190,90,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, m.r * 0.9, -0.3 + Math.atan2(uy, ux) - m.rot - 1, Math.atan2(uy, ux) - m.rot + 1); ctx.stroke();
@@ -1437,6 +1455,8 @@ function drawIceBg() {
     ctx.strokeStyle = 'rgba(180,220,255,.45)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(px, py, r * 2, r * 0.42, -0.35, Math.PI, 2 * Math.PI); ctx.stroke();
     const pg = ctx.createRadialGradient(px - 14, py - 16, 4, px, py, r); pg.addColorStop(0, '#e6f4ff'); pg.addColorStop(0.6, '#7fa8d8'); pg.addColorStop(1, '#2c4a80'); ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
     ctx.strokeStyle = 'rgba(180,220,255,.6)'; ctx.beginPath(); ctx.ellipse(px, py, r * 2, r * 0.42, -0.35, 0, Math.PI); ctx.stroke(); }
+  if (L.sky) { const up2 = (L.H * T - VHv - cam.y) * 0.1; for (let l = 0; l < 3; l++) { const by = VHv * (0.72 + l * 0.1) + up2 * (l + 1), off = cam.x * (0.05 + l * 0.08); ctx.fillStyle = ['rgba(150,190,240,.55)', 'rgba(190,220,250,.7)', 'rgba(235,245,255,.85)'][l];
+    ctx.beginPath(); ctx.moveTo(0, VHv); for (let x = -((off) % 160) - 160; x < VW + 160; x += 80) ctx.arc(x + 40, by + Math.sin((x + off) * 0.01 + l) * 8, 52 + l * 6, Math.PI, 0); ctx.lineTo(VW, VHv); ctx.closePath(); ctx.fill(); ctx.fillRect(0, by + 10, VW, VHv); } return; }
   const up = (L.H * T - VHv - cam.y) * 0.1;
   [[0.06, VHv * 0.66, VHv * 0.36, ['#2f5288', '#8fbbe6'], 0], [0.16, VHv * 0.82, VHv * 0.3, ['#22406f', '#bfe0fb'], 1]].forEach(([par, base, hh, cols, l]) => {
     const off = cam.x * par; ctx.beginPath(); ctx.moveTo(0, VHv); const pts = MTN[l];
@@ -1959,7 +1979,7 @@ const MAP2 = [
   { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, built: true, way: [[0.53, 0.555], [0.585, 0.627]] },
   { id: '2-6', n: '6', name: 'POZO DE LA MINA', x: 0.651, y: 0.351, rx: 0.036, gold: true, built: true, way: [[0.67, 0.555], [0.666, 0.45]] },
   { id: '2-J', n: '', name: 'JEFE · GUARDIÁN DE HIELO', x: 0.8725, y: 0.401, rx: 0.058, boss: true, way: [[0.71, 0.33], [0.775, 0.315], [0.83, 0.355]] },
-  { id: '2-B', n: '★', name: 'FASE SECRETA · AURORA', x: 0.618, y: 0.19, rx: 0.024, bonus: true, prev: 5, way: [[0.635, 0.305], [0.613, 0.26], [0.615, 0.224]] }
+  { id: '2-B', n: '★', name: 'FASE SECRETA · AURORA', x: 0.618, y: 0.19, rx: 0.024, bonus: true, built: true, prev: 5, way: [[0.635, 0.305], [0.613, 0.26], [0.615, 0.224]] }
 ];
 const WORLDS = [
   { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff' },
