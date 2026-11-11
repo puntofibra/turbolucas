@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.22';
+const VERSION = '0.23';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -164,7 +164,9 @@ function pollPad() {
   const gp = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).find(g => g);
   if (!gp) return;
   const b = i => gp.buttons[i] && gp.buttons[i].pressed, ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
-  if (CON.on) return;
+  if (CON.on) { padConsole(gp, b, ax, ay); return; }
+  if (b(3) && !padPrev.tri && paused && $('pauseT')) pauseTapOn(true);
+  padPrev.tri = b(3);
   const now = { left: ax < -0.4 || b(14), right: ax > 0.4 || b(15), down: ay > 0.55 || b(13), jump: b(0) || b(3), act: b(2) || b(1) || b(5) };
   const up = ay < -0.55 || b(12);
   for (const k in now) { if (now[k] !== padPrev[k]) { padUsed = true; press(k, now[k]); padPrev[k] = now[k]; } }
@@ -245,6 +247,63 @@ const CODES = [
   document.body.appendChild(d);
 })();
 const conOut = $('conOut'), conIn = $('conIn');
+/* ---------- teclado virtual de la consola (para jugar con mando): ○/□ lo muestra u oculta, △ sale, ✕ escribe, OPTIONS acepta, L1/R1 lo suben o bajan ---------- */
+const VKB_ROWS = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKLÑ', 'ZXCVBNM⌫', ['ESPACIO', 'ACEPTAR']];
+let vkbOn = false, vkbR = 1, vkbC = 0, vkbTop = false;
+(() => {
+  const st = document.createElement('style'); st.textContent = `
+#vkb{position:absolute;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));display:none;flex-direction:column;gap:5px;padding:9px 10px 7px;background:rgba(2,10,30,.92);border:1px solid #29e6ff;border-radius:12px;box-shadow:0 0 22px rgba(41,230,255,.45),inset 0 0 18px rgba(41,230,255,.12);width:min(96vw,560px)}
+#vkb.on{display:flex}#vkb.top{bottom:auto;top:calc(48px + env(safe-area-inset-top))}
+#vkb .r{display:flex;gap:5px;justify-content:center}
+#vkb .k{flex:1;max-width:46px;height:clamp(26px,6.4vh,38px);display:flex;align-items:center;justify-content:center;border:1px solid rgba(41,230,255,.55);border-radius:7px;color:#cfe0ff;font:800 clamp(12px,2.8vh,16px) "Lucida Console","Courier New",monospace;background:rgba(41,230,255,.07);cursor:pointer;touch-action:manipulation}
+#vkb .k.w{max-width:none;flex:3;font-size:clamp(11px,2.4vh,14px);letter-spacing:.12em}
+#vkb .k.sel{background:#29e6ff;color:#010309;box-shadow:0 0 14px #29e6ff,0 0 4px #fff;transform:scale(1.08)}
+#vkb .k.ok{border-color:#35ff8a;color:#35ff8a}#vkb .k.ok.sel{background:#35ff8a;color:#010309;box-shadow:0 0 14px #35ff8a}
+#vkb .h{font:700 10px "Lucida Console",monospace;color:#5f86b0;text-align:center;letter-spacing:.06em}`;
+  document.head.appendChild(st);
+  const d = document.createElement('div'); d.id = 'vkb'; $('con').appendChild(d);
+  d.innerHTML = VKB_ROWS.map((r, i) => '<div class="r">' + [...(typeof r === 'string' ? r : r)].map((k, j) => { const kk = typeof r === 'string' ? k : r[j]; return '<div class="k' + (kk.length > 1 ? ' w' : '') + (kk === 'ACEPTAR' ? ' ok' : '') + '" data-r="' + i + '" data-c="' + j + '">' + kk + '</div>'; }).join('') + '</div>').join('') + '<div class="h">✕ ESCRIBIR · ○/□ OCULTAR · △ SALIR · OPTIONS ACEPTAR · L1/R1 MOVER</div>';
+  d.addEventListener('pointerdown', e => { const k = e.target.closest('.k'); if (!k) return; e.preventDefault(); e.stopPropagation(); vkbR = +k.dataset.r; vkbC = +k.dataset.c; vkbPaint(); vkbPress(); });
+})();
+const vkbRow = r => typeof VKB_ROWS[r] === 'string' ? [...VKB_ROWS[r]] : VKB_ROWS[r];
+function vkbPaint() { $('vkb').querySelectorAll('.k').forEach(el => el.classList.toggle('sel', +el.dataset.r === vkbR && +el.dataset.c === vkbC)); }
+function vkbShow(on) { vkbOn = on; const v = $('vkb'); v.classList.toggle('on', on); v.classList.toggle('top', vkbTop); if (on) { try { conIn.blur(); } catch (e) {} vkbPaint(); }
+  const hgt = on ? v.offsetHeight + 24 : 0; conOut.style.paddingBottom = (on && !vkbTop ? hgt : 30) + 'px'; conOut.style.paddingTop = (on && vkbTop ? hgt : 0) + 'px'; conScroll(true); }      // el texto nunca queda tapado por el teclado
+function vkbType(txt) { conIn.value = (conIn.value + txt).toUpperCase().slice(0, 30); const tx = $('conTx'); if (tx && !CON.busy) tx.textContent = conIn.value; tone(2200, 2200, 0.012, 'square', 0.03); }
+function vkbEnter() { if (!conIn.value.trim()) return; if (!CON.busy) conRun(conIn.value); else { CON.pend.push(conIn.value); conIn.value = ''; } }
+function vkbPress() {
+  const k = vkbRow(vkbR)[vkbC];
+  if (k === '⌫') { conIn.value = conIn.value.slice(0, -1); const tx = $('conTx'); if (tx && !CON.busy) tx.textContent = conIn.value; tone(900, 600, 0.04, 'square', 0.04); }
+  else if (k === 'ESPACIO') vkbType(' ');
+  else if (k === 'ACEPTAR') vkbEnter();
+  else vkbType(k);
+}
+const padRep = {};
+function padHeld(name, on) {         // pulsación con repetición si se mantiene
+  const t = performance.now(), st = padRep[name];
+  if (!on) { padRep[name] = null; return false; }
+  if (!st) { padRep[name] = { next: t + 340 }; return true; }
+  if (t >= st.next) { st.next = t + 110; return true; }
+  return false;
+}
+function padConsole(gp, b, ax, ay) {
+  const P0 = padPrev, edge = (i, k) => { const v = b(i), r = v && !P0[k]; P0[k] = v; return r; };
+  if (edge(3, 'ctri')) { closeConsole(); return; }
+  if (edge(1, 'ccir') | edge(2, 'csq')) { vkbShow(!vkbOn); tone(700, 1000, 0.06, 'square', 0.05); }
+  if (edge(9, 'cst')) vkbEnter();
+  const sy = gp.axes[3] || 0; if (Math.abs(sy) > 0.3) { conOut.scrollTop += sy * 14; conHold = performance.now() + 4000; }
+  const L = padHeld('l', ax < -0.5 || b(14)), R = padHeld('r', ax > 0.5 || b(15)), U = padHeld('u', ay < -0.5 || b(12)), D = padHeld('d', ay > 0.5 || b(13));
+  if (!vkbOn) { if (U || D) { conOut.scrollTop += U ? -60 : 60; conHold = performance.now() + 4000; } if (edge(0, 'cx')) vkbEnter(); return; }
+  if (edge(4, 'cl1') | edge(5, 'cr1')) { vkbTop = !vkbTop; vkbShow(true); }
+  if (L || R || U || D) {
+    const old = vkbRow(vkbR).length;
+    if (L) vkbC = (vkbC - 1 + old) % old; if (R) vkbC = (vkbC + 1) % old;
+    if (U || D) { const nr = (vkbR + (U ? -1 : 1) + VKB_ROWS.length) % VKB_ROWS.length, nl = vkbRow(nr).length; vkbC = Math.min(nl - 1, Math.round(vkbC * (nl - 1) / Math.max(1, old - 1))); vkbR = nr; }
+    vkbPaint(); tone(1300, 1300, 0.02, 'square', 0.03);
+  }
+  if (edge(0, 'cx')) { vkbPress(); const el = $('vkb').querySelector('.k.sel'); if (el) { el.style.transform = 'scale(.9)'; setTimeout(() => el.style.transform = '', 90); } }
+}
+
 let conLine = null, conTimer = null;
 let conHold = 0;      // si el jugador sube a leer, no le bajamos de golpe
 function conScroll(force) { if (force) conHold = 0; if (!force && conHold > performance.now()) return; conOut.scrollTop = conOut.scrollHeight; }
@@ -269,15 +328,16 @@ function conPump() {
   step();
 }
 let pauseTap = { n: 0, t: 0 };
-function pauseTapOn() {
+function pauseTapOn(pad) {
   const now = performance.now(); pauseTap = now - pauseTap.t < 600 ? { n: pauseTap.n + 1, t: now } : { n: 1, t: now };
-  if (pauseTap.n >= 10) { pauseTap = { n: 0, t: 0 }; openConsole(); }
+  if (pauseTap.n >= 10) { pauseTap = { n: 0, t: 0 }; openConsole(pad === true); }
 }
-function openConsole() {
+function openConsole(fromPad) {
   audio(); CON.on = true; CON.q = []; CON.typing = false; CON.busy = true; CON.pend = []; conIn.value = ''; clearTimeout(conTimer); conOut.innerHTML = '';
   for (const k in K) K[k] = false;
   const c = $('con'); c.classList.remove('off'); c.classList.add('on', 'boot'); setTimeout(() => c.classList.remove('boot'), 800);
-  try { conIn.focus({ preventScroll: true }); } catch (e) {}
+  padPrev.ctri = true; padPrev.cx = true;
+  if (fromPad) setTimeout(() => vkbShow(true), 900); else { try { conIn.focus({ preventScroll: true }); } catch (e) {} }
   tone(60, 900, 0.5, 'sawtooth', 0.06); tone(3000, 3000, 0.25, 'sine', 0.03, 0.3);
   setTimeout(() => {
     say('TURBO-OS 5G  ·  (C) FUTURMOVIL SYSTEMS', 'w big', 22);
@@ -292,7 +352,7 @@ function openConsole() {
 }
 function closeConsole() {
   if (!CON.on) return; CON.on = false; CON.q = []; clearTimeout(conTimer); try { conIn.blur(); } catch (e) {}
-  const c = $('con'); c.classList.add('off'); tone(900, 50, 0.35, 'sawtooth', 0.06);
+  vkbShow(false); const c = $('con'); c.classList.add('off'); tone(900, 50, 0.35, 'sawtooth', 0.06);
   setTimeout(() => { c.classList.remove('on', 'off'); }, 460);
 }
 const activeTxt = () => { const a = CODES.filter(c => CHEAT[c[0].toLowerCase()]).map(c => c[0]); return 'TRUCOS ACTIVOS: ' + (a.length ? a.join(' · ') : 'NINGUNO'); };
@@ -330,7 +390,7 @@ conIn.addEventListener('input', () => { conIn.value = conIn.value.toUpperCase().
 conIn.addEventListener('keydown', e => { e.stopPropagation();
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') { e.preventDefault(); const st = /Page/.test(e.key) ? conOut.clientHeight * 0.8 : 60; conOut.scrollTop += /Up/.test(e.key) ? -st : st; conHold = conOut.scrollHeight - conOut.scrollTop - conOut.clientHeight > 20 ? performance.now() + 4000 : 0; return; }
   if (e.key === 'Enter') { e.preventDefault(); if (!CON.busy) conRun(conIn.value); else if (conIn.value.trim()) { CON.pend.push(conIn.value); conIn.value = ''; } } else if (e.key === 'Escape') closeConsole(); });
-const conKb = e => { if (e.target.id === 'conX') return; try { conIn.blur(); conIn.focus({ preventScroll: true }); conIn.click(); } catch (x) {} };      // tocar la pantalla vuelve a sacar el teclado
+const conKb = e => { if (e.target.id === 'conX' || (e.target.closest && e.target.closest('#vkb'))) return; try { conIn.blur(); conIn.focus({ preventScroll: true }); conIn.click(); } catch (x) {} };      // tocar la pantalla vuelve a sacar el teclado
 let conTy = 0, conMoved = false;
 $('con').addEventListener('touchstart', e => { conTy = e.touches[0].clientY; conMoved = false; }, { passive: true });
 $('con').addEventListener('touchmove', e => { if (Math.abs(e.touches[0].clientY - conTy) > 10) conMoved = true; }, { passive: true });
@@ -1462,9 +1522,8 @@ function startGame() {
   show('title', false); show('panel', false); show('mapUI', false); show('top', true); show('touch', TOUCH && !padUsed); checkRot();
 }
 function togglePause() {
-  if (state !== 'play') return;
+  if (state !== 'play' || CON.on) return;
   paused = !paused;
-  if (CON.on) return;
   if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
   else show('panel', false);
 }
