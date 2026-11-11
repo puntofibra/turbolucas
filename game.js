@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.9';
+const VERSION = '0.10';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -23,16 +23,18 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 
 /* ---------- imagenes ---------- */
 const NAMES = ['lucas-quieto', 'lucas-avanzando', 'lucas-saltando', 'lucas-cayendo', 'lucas-golpeado', 'lucas-celebrando', 'lucas-agachado',
-  'enemigo-patrulla', 'enemigo-dron', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien',
+  'enemigo-patrulla', 'enemigo-dron-anim', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien',
   'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'jefe1', 'mapa1', 'ico-candado', 'ico-estrella', 'ico-estrella-off', 'ico-bandera', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
   'poder-laser', 'poder-escudo', 'poder-turbo', 'poder-iman', 'poder-mini', 'poder-estrella5g'];
 const IMG = {};
+const FRAMES = { 'enemigo-dron-anim': 4 };      // imágenes que son una tira de fotogramas de animación
 let loaded = 0;
 function loadImages(done) {
   NAMES.forEach(n => {
     const im = new Image();
     im.onload = im.onerror = () => { if (++loaded === NAMES.length) done(); };
     im.src = 'img/' + TIER + '/' + n + '.webp';
+    if (FRAMES[n]) im._n = FRAMES[n];
     IMG[n] = im;
   });
 }
@@ -42,11 +44,12 @@ $('rotImg').src = 'img/' + TIER + '/lucas-golpeado.webp';
 // dibuja una imagen con altura h (unidades de mundo), anclada en (ax, ay) de la imagen
 function spr(im, x, y, h, ax = 0.5, ay = 1, flip = false, rot = 0, sx = 1, sy = 1) {
   if (!im || !im.naturalWidth) return;
-  const w = im.naturalWidth / im.naturalHeight * h;
+  const n = im._n || 1, fw = im.naturalWidth / n, w = fw / im.naturalHeight * h;
   ctx.save(); ctx.translate(x, y);
   if (rot) ctx.rotate(rot);
   ctx.scale(flip ? -sx : sx, sy);
-  ctx.drawImage(im, -w * ax, -h * ay, w, h);
+  if (n > 1) ctx.drawImage(im, fw * ((im._f | 0) % n), 0, fw, im.naturalHeight, -w * ax, -h * ay, w, h);
+  else ctx.drawImage(im, -w * ax, -h * ay, w, h);
   ctx.restore();
 }
 
@@ -259,7 +262,7 @@ const ENEMY = {
   patrulla: { img: 'enemigo-patrulla', h: 66, w: 40, bh: 58, speed: 62, stomp: true, pts: 100 },
   alien: { img: 'enemigo-alien', h: 58, w: 48, bh: 46, speed: 30, stomp: true, pts: 100 },
   erizo: { img: 'enemigo-erizo', h: 56, w: 50, bh: 44, speed: 48, stomp: false, pts: 300 },
-  dron: { img: 'enemigo-dron', h: 60, w: 46, bh: 40, speed: 80, stomp: true, pts: 200, fly: true },
+  dron: { img: 'enemigo-dron-anim', h: 61.8, ax: 0.5216, w: 46, bh: 40, speed: 80, stomp: true, pts: 200, fly: true },
   torreta: { img: 'enemigo-torreta', h: 64, w: 54, bh: 56, speed: 0, stomp: true, pts: 300 }
 };
 function newPlayer(x, y) {
@@ -695,10 +698,11 @@ function drawWorld() {
   // enemigos
   for (const e of enemies) {
     if (!vis(e.x)) continue;
-    const cx = e.x + e.w / 2, by = e.y + e.h;
-    if (e.dead) { if (e.how === 'squish') spr(IMG[e.d.img], cx, by, e.d.h, 0.5, 1, e.dir > 0, 0, 1.25, 0.25); else spr(IMG[e.d.img], cx, by - e.d.h / 2, e.d.h, 0.5, 0.5, e.dir > 0, e.dead * 9); continue; }
+    const cx = e.x + e.w / 2, by = e.y + e.h, eim = IMG[e.d.img], eax = e.d.ax || 0.5;
+    if (eim._n) eim._f = e.dead ? 0 : Math.floor(e.t * 22);
+    if (e.dead) { if (e.how === 'squish') spr(IMG[e.d.img], cx, by, e.d.h, eax, 1, e.dir > 0, 0, 1.25, 0.25); else spr(IMG[e.d.img], cx, by - e.d.h / 2, e.d.h, 0.5, 0.5, e.dir > 0, e.dead * 9); continue; }
     const wob = e.d.fly || e.type === 'torreta' ? 0 : Math.sin(e.t * 9) * 0.04;
-    spr(IMG[e.d.img], cx, by + (e.type === 'alien' ? 4 : 2), e.d.h, 0.5, 1, e.dir > 0, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1);
+    spr(IMG[e.d.img], cx, by + (e.type === 'alien' ? 4 : 2), e.d.h, eax, 1, e.dir > 0, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1);
   }
   drawPlayer();
   // disparos
