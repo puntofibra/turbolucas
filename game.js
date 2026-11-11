@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.46';
+const VERSION = '0.47';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -109,17 +109,27 @@ const SFX = {
   win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, f, i === 6 ? 0.5 : 0.13, 'square', 0.1, i * 0.13)); },
   over() { [392, 370, 349, 262].forEach((f, i) => tone(f, f, 0.3, 'triangle', 0.13, i * 0.28)); }
 };
-// musica: bajo + arpegio en bucle
-const BASS = [110, 110, 131, 131, 98, 98, 123, 123], ARP = [0, 3, 7, 12, 7, 3, 7, 12];
+// música: cada mundo tiene la suya (bajo, melodía, instrumento y ritmo propios)
+const SONGS = {
+  base: { bass: [110, 110, 131, 131, 98, 98, 123, 123], arp: [0, 3, 7, 12, 7, 3, 7, 12], step: 0.17, lead: 'square', bw: 'triangle', lv: 0.022, drum: 2 },
+  ice: { bass: [147, 147, 117, 117, 131, 131, 98, 110], arp: [12, 7, 3, 0, 15, 12, 7, 3], step: 0.21, lead: 'sine', bw: 'sine', lv: 0.05, drum: 0, bell: true },
+  lava: { bass: [82, 82, 87, 82, 98, 87, 82, 73], arp: [0, 1, 0, 7, 0, 1, 10, 7], step: 0.135, lead: 'sawtooth', bw: 'sawtooth', lv: 0.016, drum: 1, heavy: true },
+  boss: { bass: [98, 104, 98, 92, 98, 104, 117, 110], arp: [0, 6, 12, 6, 0, 6, 13, 6], step: 0.14, lead: 'square', bw: 'sawtooth', lv: 0.02, drum: 1, heavy: true }
+};
 function musicTick() {
   if (!AC || !sndOn || state !== 'play' || paused) { mNext = 0; return; }
   if (!mNext || mNext < AC.currentTime) mNext = AC.currentTime + 0.05;
-  const stepDur = 0.17 * (L && L.boss && L.boss.fight && !L.boss.gone ? 0.82 : 1) * (P && P.tStar > 0 ? 0.72 : 1) * (G.tleft <= 10 ? 0.6 : G.tleft <= 30 ? 0.74 : 1);
+  const S = L && L.boss && L.boss.fight && !L.boss.gone ? SONGS.boss : SONGS[L && L.theme] || SONGS.base;
+  const stepDur = S.step * (P && P.tStar > 0 ? 0.72 : 1) * (G.tleft <= 10 ? 0.6 : G.tleft <= 30 ? 0.74 : 1);
   while (mNext < AC.currentTime + 0.25) {
-    const bar = Math.floor(mStep / 8) % 8, root = BASS[bar], dl = mNext - AC.currentTime;
-    if (mStep % 4 === 0) tone(root / 2, root / 2, stepDur * 3.2, 'triangle', 0.11, dl);
-    tone(root * 2 * Math.pow(2, ARP[mStep % 8] / 12), root * 2 * Math.pow(2, ARP[mStep % 8] / 12), stepDur * 0.9, 'square', 0.022, dl);
-    if (mStep % 2 === 1) noise(0.03, 0.03, 6000, dl);
+    const bar = Math.floor(mStep / 8) % 8, root = S.bass[bar], dl = mNext - AC.currentTime, nf = root * 2 * Math.pow(2, S.arp[mStep % 8] / 12);
+    if (mStep % 4 === 0) tone(root / 2, root / 2, stepDur * 3.2, S.bw, S.heavy ? 0.07 : 0.11, dl);
+    if (S.heavy && mStep % 2 === 0) tone(root / 2, root / 2, stepDur * 0.8, 'square', 0.05, dl);
+    tone(nf, nf, stepDur * (S.bell ? 1.8 : 0.9), S.lead, S.lv, dl);
+    if (S.bell && mStep % 8 === 0) tone(nf * 2, nf * 2, stepDur * 4, 'triangle', 0.025, dl);
+    if (S.drum === 2 && mStep % 2 === 1) noise(0.03, 0.03, 6000, dl);
+    if (S.drum === 1) { if (mStep % 4 === 0) { tone(120, 40, 0.12, 'sine', 0.16, dl); } if (mStep % 4 === 2) noise(0.06, 0.06, 2500, dl); if (mStep % 2 === 1) noise(0.02, 0.025, 8000, dl); }
+    if (S.bell && mStep % 16 === 12) noise(0.3, 0.015, 9000, dl);
     mStep++; mNext += stepDur;
   }
 }
@@ -518,6 +528,13 @@ function LB(W, H) {
   B.fake = (x0, x1, y0, y1) => B.block(x0, x1, y0, y1, 'F');                                                                   // pared falsa: se atraviesa
   B.pitWarp = (a, b, tox, toty) => (B.warps = B.warps || []).push({ x0: a * T, x1: (b + 1) * T, tox: tox * T + T / 2, toy: toty * T });  // agujero que lleva a una zona secreta
   B.crystal = (x, ty, c, h) => (B.crys = B.crys || []).push({ x: x * T + T / 2, y: ty * T, c: c || 0, h: h || 1 });
+  B.key = (x, y) => (B.keys = B.keys || []).push({ x: x * T + T / 2, y: y * T + T / 2, got: false });          // llave: hacen falta todas para abrir la puerta 'D'
+  B.door = (x, y0, y1) => B.block(x, x, y0, y1, 'D');
+  B.pipe = (x, ty, tox, toty, hid) => (B.pipes = B.pipes || []).push({ x: x * T, y: ty * T, tox: tox * T + T / 2, toy: toty * T, hid: !!hid });   // tubería: agáchate encima para viajar (las ocultas no se ven)
+  B.jumper = (x, ty, h, ph = 0, per = 2.6) => (B.jumpers = B.jumpers || []).push({ x: x * T + T / 2, by: ty * T, h: h * T, ph, per, y: ty * T });   // bola de magma que salta de la lava
+  B.lavafall = (tx, r0, r1, ph = 0, on = 1.6, off = 1.8) => B.lasers.push({ x: tx * T + T / 2, y0: r0 * T, y1: (r1 + 1) * T, ph, on, off, lava: true });  // cortina de lava que se abre y se cierra
+  B.snowgun = (x, ty, dir, per = 3, ph = 0) => (B.guns = B.guns || []).push({ x: x * T + T / 2, y: ty * T, dir, per, ph, t: ph });     // cañón de bolas de nieve
+  B.kitp = (x, ty, kind) => (B.kitP = B.kitP || []).push({ x: x * T + T / 2, y: ty * T, kind, st: 0, t: 0 });          // poder para el jefe (cristal de hielo o forja)
   B.cog = (x, ty, r) => (B.cogs = B.cogs || []).push({ x: x * T + T / 2, y: ty * T + T / 2, r: r * T });                    // engranaje gigante de fondo
   B.geyser = (x, ty, h, ph = 0, per = 3.2) => (B.geysers = B.geysers || []).push({ x: x * T + T / 2, y: ty * T, h: h * T, ph, per });   // géiser de fuego que sale del suelo
   B.fall = (x, ty, wt) => B.movers.push({ bx: x * T, by: ty * T, w: wt * T, ax: 0, ay: 0, sp: 0, ph: 0, x: x * T, y: ty * T, dx: 0, dy: 0, fall: true, st: 0, ft: 0, vy: 0 });   // roca que se hunde al pisarla
@@ -653,67 +670,115 @@ LEVELS['1-J'] = function () {
   B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13);
   return B.done({ name: 'EL GUARDIÁN', time: 240, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
 };
-function bossInit(l) { const hp = l.bossHp || 6; l.boss = { x: (l.arena.x0 + l.arena.x1) / 2, y: 9.8 * T, hover0: 9.8 * T, hp, max: hp, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, shotT: 1, vy: 0, dieT: 0, boomT: 0, gone: false }; l.waves = []; }
+/* ---------- jefes: cada mundo tiene su propio jefe, con su forma de luchar ---------- */
+// regla para todos: si lo tocas cuando NO está atacando (no brilla en rojo) le quitas vida; si lo tocas mientras ataca, te hace daño a ti
+function bossInit(l) { const hp = l.bossHp || 6; l.boss = { style: l.bossStyle || 'guard', x: (l.arena.x0 + l.arena.x1) / 2, y: 9.8 * T, hover0: 9.8 * T, hp, max: hp, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, shotT: 1, vy: 0, vx: 0, dieT: 0, boomT: 0, gone: false, cyc: 0, fireT: 0, side: 1 }; if (l.boss.style !== 'guard') l.boss.y = 14 * T; if (l.boss.style === 'magma') { l.boss.y = 9.2 * T; l.boss.hover0 = 9.2 * T; } l.waves = []; }
 function bossGate(close) { for (let y = 11; y <= 13; y++) for (let x = 42; x <= 43; x++) L.g[y][x] = close ? '#' : ' '; }
-function bossReset() { const b = L.boss; if (!b || b.gone) return; bossGate(false); Object.assign(b, { x: (L.arena.x0 + L.arena.x1) / 2, y: b.hover0, hp: b.max, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, vy: 0 }); L.waves = []; }
-const BOSS_H = 200, bossRect = b => ({ x: b.x - 68, y: b.y - 172, w: 136, h: 166 });
+function bossReset() { const b = L.boss; if (!b || b.gone) return; bossGate(false); Object.assign(b, { x: (L.arena.x0 + L.arena.x1) / 2, y: b.style === 'ice' ? 14 * T : b.hover0, hp: b.max, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, vy: 0, vx: 0, cyc: 0, fireT: 0 }); L.waves = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; }); }
+const BOSS_H = 200, bossRect = b => ({ x: b.x - 64, y: b.y - 168, w: 128, h: 160 });
+const bossDanger = b => b.fireT > 0 || ['aim', 'slam', 'wind', 'charge', 'erupt'].includes(b.st);
 function bossHit() {
   const b = L.boss; if (b.inv > 0) return;
-  b.hp--; b.flash = 0.3; b.inv = 0.7; shake = 0.4; addScore(1000, b.x, b.y - 210);
+  b.hp--; b.flash = 0.3; b.inv = 1.0; shake = 0.4; addScore(1000, b.x, b.y - 210);
   [880, 660, 440, 220].forEach((f, i) => tone(f, f * 0.7, 0.12, 'sawtooth', 0.12, i * 0.06)); noise(0.4, 0.2, 1200);
   burst(b.x, b.y - 110, 30, '#ffd23c', 320, 0.7, 400, 4); burst(b.x, b.y - 110, 16, '#fff', 260, 0.4, 0, 3);
   if (b.hp <= 0) { b.st = 'die'; b.dieT = 0; L.waves = []; enemies.forEach(e => killEnemy(e, 'fly')); shots = shots.filter(s2 => s2.mine); return; }
-  if (b.hp === b.max / 2) { pop(b.x, b.y - 230, '¡SE HA ENFADADO!', '#ff4a5a'); tone(80, 40, 1.2, 'sawtooth', 0.12); }
-  b.st = 'rise'; b.t = 0;
+  if (b.hp === Math.ceil(b.max / 2)) { pop(b.x, b.y - 230, '¡SE HA ENFADADO!', '#ff4a5a'); tone(80, 40, 1.2, 'sawtooth', 0.12); }
+  if (b.style === 'guard') { b.st = 'rise'; b.t = 0; }
+  else if (b.style === 'ice') { b.st = 'walk'; b.t = 0; b.vx = 0; }
+  else { b.st = 'rise'; b.t = 0; }
 }
 function bossUpdate(dt) {
   const b = L.boss, p = P; if (!b || b.gone) return;
-  b.t += dt; b.flash = Math.max(0, b.flash - dt); b.inv = Math.max(0, b.inv - dt);
-  const a = L.arena, mid = (a.x0 + a.x1) / 2, ph2 = b.hp <= b.max / 2, gy = 14 * T;
-  if (b.st === 'wait') { b.y = b.hover0 + Math.sin(time * 2) * 10;
-    if (!p.dead && p.x > a.x0 + 3 * T) { bossGate(true); b.fight = true; b.st = 'intro'; b.t = 0; shake = 0.6; pop(mid, b.y - 260, '¡EL GUARDIÁN!', '#ff4a5a'); tone(90, 45, 1.4, 'sawtooth', 0.14); noise(0.8, 0.2, 400); }
+  b.t += dt; b.flash = Math.max(0, b.flash - dt); b.inv = Math.max(0, b.inv - dt); b.fireT = Math.max(0, b.fireT - dt);
+  const a = L.arena, mid = (a.x0 + a.x1) / 2, ph2 = b.hp <= b.max / 2, gy = 14 * T, px = p.x + p.w / 2;
+  if (b.st === 'wait') { if (b.style === 'guard' || b.style === 'magma') b.y = b.hover0 + Math.sin(time * 2) * 10;
+    if (!p.dead && p.x > a.x0 + 3 * T) { bossGate(true); b.fight = true; b.st = 'intro'; b.t = 0; shake = 0.6; pop(mid, b.y - 260, '¡' + (L.bossName || 'EL GUARDIÁN') + '!', b.style === 'ice' ? '#9ff0ff' : b.style === 'magma' ? '#ffb040' : '#ff4a5a'); tone(90, 45, 1.4, 'sawtooth', 0.14); noise(0.8, 0.2, 400);
+      if (b.style === 'ice') for (let k = 0; k < 40; k++) parts.push({ x: a.x0 + Math.random() * (a.x1 - a.x0), y: cam.y + Math.random() * 60, vx: (Math.random() - 0.5) * 60, vy: 80 + Math.random() * 120, life: 2, max: 2, col: '#ffffff', size: 2 + Math.random() * 2, grav: 0 });
+      if (b.style === 'magma') for (let k = 0; k < 8; k++) L.waves.push({ x: a.x0 + (k + 0.5) * (a.x1 - a.x0) / 8, dir: 0, sp: 0, life: 0.6 + k * 0.08, lava: true }); }
     return; }
-  if (b.st === 'intro') { b.y = b.hover0 + Math.sin(time * 9) * 4; if (b.t > 1.7) { b.st = 'hover'; b.t = 0; b.shotT = 0.6; } }
-  else if (b.st === 'hover') {
-    const tx = mid + Math.sin(b.t * (ph2 ? 1.25 : 0.9)) * ((a.x1 - a.x0) / 2 - 190);
-    b.x += (tx - b.x) * Math.min(1, dt * 1.6); b.y = b.hover0 + Math.sin(time * 2.5) * 14;
-    b.shotT -= dt;
-    if (b.shotT <= 0 && !p.dead) { const n = ph2 ? 5 : 3, sp = ph2 ? 330 : 270, cx0 = b.x, cy0 = b.y - 130, an = Math.atan2(p.y + p.h / 2 - cy0, p.x + p.w / 2 - cx0);
-      for (let k = 0; k < n; k++) { const aa = an + (k - (n - 1) / 2) * 0.24; shots.push({ mine: false, x: cx0, y: cy0, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, w: 16, h: 16, life: 4, ice: L.theme === 'ice' }); }
-      b.shotT = ph2 ? 1.05 : 1.45; tone(300, 120, 0.25, 'sawtooth', 0.09); burst(cx0, cy0, 12, '#ff9a3c', 160, 0.35, 0, 3); }
-    if (b.t > (ph2 ? 4.2 : 5.5)) { b.st = 'aim'; b.t = 0; tone(200, 1400, 0.8, 'square', 0.05); }
-  } else if (b.st === 'aim') {
-    b.x += (Math.max(a.x0 + 110, Math.min(a.x1 - 110, p.x + p.w / 2)) - b.x) * Math.min(1, dt * 5); b.y = b.hover0 - 30 * Math.min(1, b.t * 2);
-    if (b.t > (ph2 ? 0.7 : 0.95)) { b.st = 'slam'; b.vy = 200; b.t = 0; }
-  } else if (b.st === 'slam') {
-    b.vy += 3800 * dt; b.y += b.vy * dt;
-    if (b.y >= gy) { b.y = gy; b.st = 'stun'; b.t = 0; shake = 0.7; noise(0.6, 0.3, 500); tone(70, 35, 0.6, 'sawtooth', 0.15);
-      if (L.theme === 'ice') { for (let k = 0; k < (ph2 ? 6 : 4); k++) L.icicles.push({ x0: 0, y0: 0, x: a.x0 + 60 + Math.random() * (a.x1 - a.x0 - 120), y: cam.y - 60 - Math.random() * 160, st: 2, vy: 0, big: Math.random() < 0.5 }); pop(b.x, b.y - 300, '¡CUIDADO ARRIBA!', '#9ff0ff'); }
-      const ws = ph2 ? 520 : 420; L.waves.push({ x: b.x - 70, dir: -1, sp: ws }, { x: b.x + 70, dir: 1, sp: ws });
-      burst(b.x - 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4); burst(b.x + 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4);
-      if (ph2 && enemies.filter(e => !e.dead).length < 3) { const tx = b.x < mid ? a.x1 - 2 * T : a.x0 + T, d = ENEMY.patrulla; enemies.push({ type: 'patrulla', d, w: d.w, h: d.bh, x: tx, y: 4 * T, vx: 0, vy: 0, dir: b.x < mid ? -1 : 1, dead: 0, t: 0, timer: 1 }); } }
-  } else if (b.st === 'stun') { if (b.t > (ph2 ? 2.1 : 2.9)) { b.st = 'rise'; b.t = 0; } }
-  else if (b.st === 'rise') { b.y -= 420 * dt; if (b.y <= b.hover0) { b.y = b.hover0; b.st = 'hover'; b.t = 0; b.shotT = 0.9; } }
+  if (b.st === 'intro') { if (b.style !== 'ice') b.y = b.hover0 + Math.sin(time * 9) * 4; if (b.t > 1.7) { b.st = b.style === 'ice' ? 'walk' : 'hover'; b.t = 0; b.shotT = 1.2; } }
   else if (b.st === 'die') {
     b.dieT += dt; b.boomT -= dt; shake = Math.max(shake, 0.2);
-    if (b.boomT <= 0) { b.boomT = 0.11; const ex = b.x + (Math.random() - 0.5) * 180, ey = b.y - 20 - Math.random() * 200; burst(ex, ey, 16, Math.random() < 0.5 ? '#ff9a3c' : '#ffd23c', 240, 0.5, 200, 4); noise(0.25, 0.18, 900); }
+    if (b.boomT <= 0) { b.boomT = 0.11; const ex = b.x + (Math.random() - 0.5) * 180, ey = b.y - 20 - Math.random() * 200; burst(ex, ey, 16, b.style === 'ice' ? (Math.random() < 0.5 ? '#bff4ff' : '#ffffff') : Math.random() < 0.5 ? '#ff9a3c' : '#ffd23c', 240, 0.5, 200, 4); noise(0.25, 0.18, 900); }
     if (b.y < gy) b.y = Math.min(gy, b.y + 120 * dt);
     if (b.dieT > 2.8) { b.gone = true; shake = 1; for (let k = 0; k < 6; k++) burst(b.x, b.y - 110, 30, ['#fff', '#ffd23c', '#ff9a3c', '#29e6ff', '#35ff8a', '#c63cff'][k], 420, 1.2, 250, 5);
-      SFX.win(); L.goal = { x: mid, y: gy }; pop(mid, b.y - 260, '¡GUARDIÁN DERROTADO!', '#35ff8a'); bossGate(false); }
+      SFX.win(); L.goal = { x: mid, y: gy }; pop(mid, b.y - 260, '¡' + (L.bossName || 'GUARDIÁN') + ' DERROTADO!', '#35ff8a'); bossGate(false); }
     return;
   }
-  // golpes
-  const r = bossRect(b);
-  if (CHEAT.kill && !p.dead && !p.win && overlap(p, r) && b.inv <= 0) bossHit();
-  else if (!p.dead && !p.win && overlap(p, r)) {
-    if ((b.st === 'stun' || p.tStar > 0 && b.st === 'stun') && p.vy > 0 && p.y + p.h - p.vy * dt * 1.5 <= r.y + 40) { bossHit(); p.vy = -760; p.y = r.y - p.h - 1; p.sq = 1; }
-    else if (b.st !== 'stun') hurt();
+  else if (b.style === 'guard') bossGuard(dt, b, p, a, mid, ph2, gy, px);
+  else if (b.style === 'ice') bossIce(dt, b, p, a, mid, ph2, gy, px);
+  else bossMagma(dt, b, p, a, mid, ph2, gy, px);
+  // golpes: tocarlo cuando no ataca le quita vida; si está atacando, te la quita a ti
+  const r = bossRect(b), dang = bossDanger(b);
+  if (!p.dead && !p.win && overlap(p, r)) {
+    if (CHEAT.kill || p.tStar > 0) { if (b.inv <= 0) bossHit(); }
+    else if (!dang && b.inv <= 0) { bossHit(); const dir = px < b.x ? -1 : 1; p.vy = -720; p.vx = dir * 420; p.inv = Math.max(p.inv, 0.9); p.sq = 1; }
+    else if (dang) hurt();
   }
   for (const s2 of shots) if (s2.mine && s2.life > 0 && overlap({ x: s2.x - s2.w / 2, y: s2.y - s2.h / 2, w: s2.w, h: s2.h }, r)) {
-    s2.life = 0; if (b.st === 'stun') bossHit(); else { b.lz = (b.lz || 0) + 1; b.flash = Math.max(b.flash, 0.08); if (b.lz >= 4) { b.lz = 0; bossHit(); } else { burst(s2.x, s2.y, 8, '#ffd23c', 140, 0.25, 0, 2.5); tone(2400, 1800, 0.05, 'square', 0.05); } } }
-  for (const w of L.waves) { w.x += w.dir * w.sp * dt; if (w.x < a.x0 - 20 || w.x > a.x1 + 20) w.dead = true;
-    if (!p.dead && !p.win && p.y + p.h > gy - 38 && Math.abs(p.x + p.w / 2 - w.x) < 30) hurt(); }
+    s2.life = 0; b.lz = (b.lz || 0) + (b.st === 'stun' || b.st === 'cool' ? 3 : 1); b.flash = Math.max(b.flash, 0.08);
+    if (b.lz >= 3) { b.lz = 0; bossHit(); } else { burst(s2.x, s2.y, 8, '#ffd23c', 140, 0.25, 0, 2.5); tone(2400, 1800, 0.05, 'square', 0.05); } }
+  for (const w of L.waves) { if (w.lava) { w.life -= dt; if (w.life <= 0) w.dead = true; else if (w.life < 0.5 && !p.dead && !p.win && Math.abs(px - w.x) < 34 && p.y + p.h > gy - 170) hurt(); continue; }
+    w.x += w.dir * w.sp * dt; if (w.x < a.x0 - 20 || w.x > a.x1 + 20) w.dead = true;
+    if (!p.dead && !p.win && p.y + p.h > gy - 38 && Math.abs(px - w.x) < 30) hurt(); }
   L.waves = L.waves.filter(w => !w.dead);
+}
+// mundo 1 · EL GUARDIÁN: flota, dispara ráfagas y cae en picado sobre ti
+function bossGuard(dt, b, p, a, mid, ph2, gy, px) {
+  if (b.st === 'hover') {
+    const tx = mid + Math.sin(b.t * (ph2 ? 1.0 : 0.75)) * ((a.x1 - a.x0) / 2 - 190);
+    b.x += (tx - b.x) * Math.min(1, dt * 1.4); b.y = b.hover0 + Math.sin(time * 2.5) * 14;
+    b.shotT -= dt;
+    if (b.shotT < 0.55 && b.shotT + dt >= 0.55) b.fireT = 1.0;          // avisa medio segundo antes de disparar
+    if (b.shotT <= 0 && !p.dead) { const n = ph2 ? 4 : 3, sp = ph2 ? 230 : 190, cx0 = b.x, cy0 = b.y - 130, an = Math.atan2(p.y + p.h / 2 - cy0, px - cx0);
+      for (let k = 0; k < n; k++) { const aa = an + (k - (n - 1) / 2) * 0.3; shots.push({ mine: false, x: cx0, y: cy0, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, w: 14, h: 14, life: 4.5 }); }
+      b.shotT = ph2 ? 2.2 : 2.8; tone(300, 120, 0.25, 'sawtooth', 0.09); burst(cx0, cy0, 12, '#ff9a3c', 160, 0.35, 0, 3); }
+    if (b.t > (ph2 ? 6 : 7.5)) { b.st = 'aim'; b.t = 0; tone(200, 1400, 0.8, 'square', 0.05); }
+  } else if (b.st === 'aim') {
+    b.x += (Math.max(a.x0 + 110, Math.min(a.x1 - 110, px)) - b.x) * Math.min(1, dt * 3); b.y = b.hover0 - 30 * Math.min(1, b.t * 2);
+    if (b.t > (ph2 ? 1.0 : 1.3)) { b.st = 'slam'; b.vy = 200; b.t = 0; }
+  } else if (b.st === 'slam') {
+    b.vy += 3200 * dt; b.y += b.vy * dt;
+    if (b.y >= gy) { b.y = gy; b.st = 'stun'; b.t = 0; shake = 0.7; noise(0.6, 0.3, 500); tone(70, 35, 0.6, 'sawtooth', 0.15);
+      const ws = ph2 ? 380 : 320; L.waves.push({ x: b.x - 70, dir: -1, sp: ws }, { x: b.x + 70, dir: 1, sp: ws });
+      burst(b.x - 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4); burst(b.x + 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4); }
+  } else if (b.st === 'stun') { if (b.t > 3.4) { b.st = 'rise'; b.t = 0; } }
+  else if (b.st === 'rise') { b.y -= 360 * dt; if (b.y <= b.hover0) { b.y = b.hover0; b.st = 'hover'; b.t = 0; b.shotT = 1.6; } }
+}
+// mundo 2 · GUARDIÁN DE HIELO: anda por el suelo helado, lanza bolas de nieve rodando y embiste hasta chocar con la pared
+function bossIce(dt, b, p, a, mid, ph2, gy, px) {
+  b.y = gy;
+  if (b.st === 'walk') { const d = Math.sign(px - b.x) || 1; b.side = d; b.x += d * (ph2 ? 70 : 55) * dt; b.x = Math.max(a.x0 + 100, Math.min(a.x1 - 100, b.x));
+    if (b.t > (ph2 ? 2.2 : 2.8)) { b.cyc++; b.t = 0; b.st = b.cyc % 2 ? 'throw' : 'wind'; if (b.st === 'wind') tone(150, 600, 0.9, 'sawtooth', 0.05); } }
+  else if (b.st === 'throw') { if (b.t < 0.05) b.fireT = 0.9;
+    if (b.t > 0.6 && !b.thrown) { b.thrown = true; const n = ph2 ? 2 : 1; for (let k = 0; k < n; k++) shots.push({ mine: false, x: b.x + b.side * 80, y: gy - 22 - k * 70, vx: b.side * (190 + k * 40), vy: 0, w: 34, h: 34, life: 6, ball: true, ice: true });
+      tone(220, 110, 0.3, 'triangle', 0.1); burst(b.x + b.side * 80, gy - 40, 14, '#ffffff', 180, 0.4, 300, 3); }
+    if (b.t > 1.4) { b.st = 'walk'; b.t = 0; b.thrown = false; } }
+  else if (b.st === 'wind') { b.side = Math.sign(px - b.x) || 1; if (Math.random() < 0.6) parts.push({ x: b.x - b.side * 60, y: gy - 6, vx: -b.side * 200, vy: -60 - Math.random() * 80, life: 0.4, max: 0.4, col: '#dff8ff', size: 3, grav: 600 });
+    if (b.t > (ph2 ? 0.8 : 1.1)) { b.st = 'charge'; b.t = 0; b.vx = b.side * (ph2 ? 520 : 440); } }
+  else if (b.st === 'charge') { b.x += b.vx * dt; if (Math.random() < 0.7) parts.push({ x: b.x - Math.sign(b.vx) * 50, y: gy - 4, vx: -b.vx * 0.3, vy: -80, life: 0.4, max: 0.4, col: '#ffffff', size: 3, grav: 500 });
+    if (b.x < a.x0 + 90 || b.x > a.x1 - 90) { b.x = Math.max(a.x0 + 90, Math.min(a.x1 - 90, b.x)); b.st = 'stun'; b.t = 0; shake = 0.8; noise(0.6, 0.3, 500); tone(70, 35, 0.6, 'sawtooth', 0.15);
+      for (let k = 0; k < (ph2 ? 5 : 3); k++) L.icicles.push({ x0: 0, y0: 0, x: a.x0 + 80 + Math.random() * (a.x1 - a.x0 - 160), y: cam.y - 60 - Math.random() * 200, st: 2, vy: 0, big: Math.random() < 0.5 });
+      pop(b.x, b.y - 260, '¡SE HA CHOCADO!', '#9ff0ff'); } }
+  else if (b.st === 'stun') { if (b.t > 3.4) { b.st = 'walk'; b.t = 0; } }
+}
+// mundo 3 · SEÑOR DEL MAGMA: vuela de un lado a otro lanzando bolas de magma en parábola; luego cae, hace estallar géiseres en el suelo y se queda enfriándose
+function bossMagma(dt, b, p, a, mid, ph2, gy, px) {
+  const sx = b.side > 0 ? a.x1 - 170 : a.x0 + 170;
+  if (b.st === 'hover') { b.x += (sx - b.x) * Math.min(1, dt * 1.6); b.y = b.hover0 + Math.sin(time * 2.2) * 16; b.shotT -= dt;
+    if (b.shotT < 0.6 && b.shotT + dt >= 0.6) b.fireT = 1.1;
+    if (b.shotT <= 0 && !p.dead) { const n = ph2 ? 3 : 2; for (let k = 0; k < n; k++) { const tx = px + (k - (n - 1) / 2) * 140, ft = 1.5, vx = (tx - b.x) / ft, vy = (gy - 20 - (b.y - 120) - 0.5 * 900 * ft * ft) / ft;
+        shots.push({ mine: false, x: b.x, y: b.y - 120, vx, vy, g: 900, w: 22, h: 22, life: 3, magma: true }); }
+      tone(160, 80, 0.4, 'sawtooth', 0.1); burst(b.x, b.y - 120, 14, '#ff8a20', 200, 0.4, 0, 3); b.shotT = ph2 ? 2.0 : 2.6; b.cyc++;
+      if (b.cyc % 2 === 0) { b.side = -b.side; } if (b.cyc % (ph2 ? 3 : 4) === 0) { b.st = 'aim'; b.t = 0; tone(200, 900, 0.8, 'square', 0.05); } } }
+  else if (b.st === 'aim') { b.x += (Math.max(a.x0 + 120, Math.min(a.x1 - 120, px)) - b.x) * Math.min(1, dt * 2.5); b.y = b.hover0 - 40 * Math.min(1, b.t * 2); if (b.t > 1.2) { b.st = 'slam'; b.vy = 200; b.t = 0; } }
+  else if (b.st === 'slam') { b.vy += 3000 * dt; b.y += b.vy * dt;
+    if (b.y >= gy) { b.y = gy; b.st = 'erupt'; b.t = 0; shake = 0.8; noise(0.7, 0.3, 400); tone(60, 30, 0.8, 'sawtooth', 0.15);
+      const n = ph2 ? 6 : 4; for (let k = 1; k <= n; k++) for (const d of [-1, 1]) { const x = b.x + d * k * 110; if (x > a.x0 + 20 && x < a.x1 - 20) L.waves.push({ x, dir: 0, sp: 0, life: 0.5 + k * 0.22, lava: true }); } } }
+  else if (b.st === 'erupt') { if (b.t > 0.9) { b.st = 'cool'; b.t = 0; pop(b.x, b.y - 250, '¡SE ESTÁ ENFRIANDO!', '#9fb4ff'); } }
+  else if (b.st === 'cool') { if (b.t > 3.6) { b.st = 'rise'; b.t = 0; } }
+  else if (b.st === 'rise') { b.y -= 380 * dt; if (b.y <= b.hover0) { b.y = b.hover0; b.st = 'hover'; b.t = 0; b.shotT = 1.5; b.side = px < mid ? 1 : -1; } }
 }
 const TINT = {};
 function tintOf(im, col) { const k = col + '|' + im.src; if (TINT[k] || !im.naturalWidth) return TINT[k]; const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height); return (TINT[k] = c); }
@@ -725,146 +790,150 @@ function drawBoss() {
   let x = b.x, y = b.y; if (b.st === 'aim' || b.st === 'die' || b.st === 'intro') { x += (Math.random() - 0.5) * 8; y += (Math.random() - 0.5) * 6; }
   const air = Math.max(0, gy - y);
   ctx.fillStyle = 'rgba(0,0,10,' + Math.max(0.12, 0.45 - air / 900) + ')'; ctx.beginPath(); ctx.ellipse(b.x, gy + 2, 110 - Math.min(60, air / 8), 14, 0, 0, 6.283); ctx.fill();
+  if (b.st === 'cool') { const t6 = tintOf(im, 'rgba(110,120,160,1)'); if (t6) { /* se pinta tras la imagen */ } }
   if (b.st === 'aim') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,40,60,' + (0.25 + 0.25 * Math.sin(time * 30)) + ')'; ctx.fillRect(b.x - 90, gy - 6, 180, 8); ctx.globalCompositeOperation = 'source-over'; }
-  if (b.st !== 'stun' && b.st !== 'die') flame(x + fs * -0.04 * w, y - 22, b.st === 'slam' ? 26 : 78 + (ph2 ? 20 : 0), 46, 9);
+  const BP = j3 ? { fx: 0.515, fy: 0.925, cx: 0.5, cy: 0.467, ex: 0.5, ey: 0.216 } : j2 ? { fx: 0.478, fy: 0.985, cx: 0.43, cy: 0.42, ex: 0.425, ey: 0.14 } : { fx: 0.455, fy: 0.885, cx: 0.457, cy: 0.453, ex: 0.495, ey: 0.19 }, dang = bossDanger(b), cool = b.st === 'stun' || b.st === 'cool';
+  if (dang && b.st !== 'die') { ctx.globalCompositeOperation = 'lighter'; const ag = ctx.createRadialGradient(x, y - h * 0.5, h * 0.2, x, y - h * 0.5, h * 0.75); ag.addColorStop(0, 'rgba(255,40,40,0)'); ag.addColorStop(0.7, 'rgba(255,40,40,' + (0.22 + 0.12 * Math.sin(time * 20)) + ')'); ag.addColorStop(1, 'rgba(255,40,40,0)'); ctx.fillStyle = ag; ctx.beginPath(); ctx.arc(x, y - h * 0.5, h * 0.75, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+  const onFloor = b.style === 'ice' && b.st !== 'die';
+  if (!cool && b.st !== 'die') flame(x + fs * (BP.fx - 0.5) * w, y - h * (1 - BP.fy) - 2, onFloor ? (b.st === 'charge' ? 22 : 12) : b.st === 'slam' ? 26 : 70 + (ph2 ? 18 : 0), j3 ? 52 : 44, 9);
   const rot = b.st === 'stun' ? 0.1 * Math.sin(time * 3) : b.st === 'die' ? (Math.random() - 0.5) * 0.12 : Math.sin(time * 2) * 0.03;
   const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(fs, 1); ctx.drawImage(src, -w / 2, -h, w, h); ctx.restore(); };
   draw(im, 1);
   if (L.theme === 'lava' && !j3) { const t5 = tintOf(im, 'rgba(255,90,30,1)'); if (t5) draw(t5, 0.3 + 0.08 * Math.sin(time * 4)); }
   if (L.theme === 'ice' && !j2) { const t4 = tintOf(im, 'rgba(120,225,255,1)'); if (t4) draw(t4, 0.32 + 0.06 * Math.sin(time * 3)); }
   if (ph2 || b.st === 'die') { const t2 = tintOf(im, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(time * 8))); if (Math.random() < 0.3) parts.push({ x: x + (Math.random() - 0.5) * 140, y: y - Math.random() * 200, vx: (Math.random() - 0.5) * 60, vy: -60 - Math.random() * 60, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#ffd23c' : '#8a8fa8', size: 2.5, grav: 0 }); }
+  if (b.st === 'cool') { const t6 = tintOf(im, 'rgba(100,110,150,1)'); if (t6) draw(t6, 0.45); }
   if (b.flash > 0) { const t3 = tintOf(im, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); }
   // núcleo (el punto débil) y ojo
-  const cx = x + fs * ((j3 ? 0.46 : j2 ? 0.43 : 0.457) - 0.5) * w, cy = y - h * (1 - (j3 ? 0.39 : j2 ? 0.42 : 0.453)), stun = b.st === 'stun';
+  const cx = x + fs * (BP.cx - 0.5) * w, cy = y - h * (1 - BP.cy), stun = cool;
   ctx.globalCompositeOperation = 'lighter';
   const R = stun ? 60 + 14 * Math.sin(time * 14) : 26, cg = ctx.createRadialGradient(cx, cy, 2, cx, cy, R); cg.addColorStop(0, stun ? 'rgba(255,255,200,1)' : 'rgba(255,120,60,.6)'); cg.addColorStop(0.35, stun ? 'rgba(255,200,60,.8)' : 'rgba(255,60,40,.35)'); cg.addColorStop(1, 'rgba(255,60,40,0)');
   ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fill();
-  const ex = x + fs * ((j3 ? 0.47 : j2 ? 0.425 : 0.495) - 0.5) * w, ey = y - h * (1 - (j3 ? 0.18 : j2 ? 0.14 : 0.19)), eg = ctx.createRadialGradient(ex, ey, 1, ex, ey, stun ? 10 : 22); eg.addColorStop(0, 'rgba(255,80,80,.9)'); eg.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 22, 0, 6.283); ctx.fill();
+  const ex = x + fs * (BP.ex - 0.5) * w, ey = y - h * (1 - BP.ey), eg = ctx.createRadialGradient(ex, ey, 1, ex, ey, stun ? 10 : 22); eg.addColorStop(0, 'rgba(255,80,80,.9)'); eg.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 22, 0, 6.283); ctx.fill();
   if (b.st === 'aim') { ctx.strokeStyle = 'rgba(255,40,60,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(b.x, gy); ctx.stroke(); }
   ctx.globalCompositeOperation = 'source-over';
   if (stun) { ctx.font = '900 26px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let k = 0; k < 3; k++) { const aa = time * 4 + k * 2.094; ctx.fillStyle = '#ffd23c'; ctx.fillText('★', b.x + Math.cos(aa) * 60, y - h - 6 + Math.sin(aa) * 12); }
-    ctx.font = '800 13px system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! SALTA ENCIMA', b.x, y - h - 34); ctx.textBaseline = 'alphabetic'; }
+    ctx.font = '800 13px system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! ¡GOLPÉALE!', b.x, y - h - 34); ctx.textBaseline = 'alphabetic'; }
 }
 function drawWaves() {
   if (!L.waves) return; const gy = 14 * T; ctx.globalCompositeOperation = 'lighter';
-  for (const w of L.waves) { const g2 = ctx.createRadialGradient(w.x, gy, 2, w.x, gy, 46); g2.addColorStop(0, 'rgba(255,255,255,.95)'); g2.addColorStop(0.4, 'rgba(255,120,60,.7)'); g2.addColorStop(1, 'rgba(255,60,40,0)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.ellipse(w.x, gy, 30, 42, 0, Math.PI, 0); ctx.fill();
+  for (const w of L.waves) { if (w.lava) { if (w.life > 0.5) { const a = 0.3 + 0.3 * Math.sin(time * 30); ctx.fillStyle = 'rgba(255,140,40,' + a + ')'; ctx.beginPath(); ctx.ellipse(w.x, gy, 26, 6, 0, 0, 6.283); ctx.fill(); if (Math.random() < 0.4) parts.push({ x: w.x + (Math.random() - 0.5) * 30, y: gy - 2, vx: 0, vy: -100 - Math.random() * 100, life: 0.3, max: 0.3, col: '#ffb040', size: 2, grav: 600 }); }
+      else { const hh = 170 * Math.min(1, (0.5 - w.life) * 8), g3 = ctx.createLinearGradient(0, gy - hh, 0, gy); g3.addColorStop(0, 'rgba(255,90,20,0)'); g3.addColorStop(0.3, 'rgba(255,140,40,.8)'); g3.addColorStop(1, 'rgba(255,240,180,.95)'); ctx.fillStyle = g3; ctx.beginPath(); ctx.moveTo(w.x - 22, gy); ctx.quadraticCurveTo(w.x - 26, gy - hh * 0.6, w.x, gy - hh); ctx.quadraticCurveTo(w.x + 26, gy - hh * 0.6, w.x + 22, gy); ctx.closePath(); ctx.fill();
+        if (Math.random() < 0.8) parts.push({ x: w.x + (Math.random() - 0.5) * 20, y: gy - hh * Math.random(), vx: (Math.random() - 0.5) * 140, vy: -100 - Math.random() * 100, life: 0.5, max: 0.5, col: Math.random() < 0.5 ? '#ffd060' : '#ff6a1a', size: 2.5, grav: 500 }); } continue; }
+    const g2 = ctx.createRadialGradient(w.x, gy, 2, w.x, gy, 46); g2.addColorStop(0, 'rgba(255,255,255,.95)'); g2.addColorStop(0.4, 'rgba(255,120,60,.7)'); g2.addColorStop(1, 'rgba(255,60,40,0)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.ellipse(w.x, gy, 30, 42, 0, Math.PI, 0); ctx.fill();
     if (Math.random() < 0.8) parts.push({ x: w.x, y: gy - Math.random() * 20, vx: -w.dir * 60, vy: -80 - Math.random() * 120, life: 0.4, max: 0.4, col: Math.random() < 0.5 ? '#ff9a3c' : '#fff', size: 2.5, grav: 600 }); }
   ctx.globalCompositeOperation = 'source-over';
 }
 /* ======================= MUNDO 2 · PLANETA DE CRISTAL ======================= */
 /* ---------- fase 2-1: LLANURA HELADA (suelo que resbala, carámbanos que caen, cristales saltarines, una pared que no es lo que parece y un agujero con sorpresa) ---------- */
-LEVELS['2-1'] = function () {
-  const B = LB(200, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  // A · primeros pasos sobre el hielo
-  B.ground(0, 32); B.row(5, 9, 12); B.hid(10, 10, 'vida'); B.crystal(2, 14, 0, 1.2); B.crystal(29, 14, 1);
-  B.set(13, 10, 'B'); B.box(14, 10, 'chip'); B.set(15, 10, 'B'); B.box(16, 10, 'escudo'); B.set(17, 10, 'B'); B.en('patrulla', 24, 13);
-  // B · cristal saltarín y la repisa de los carámbanos
-  B.arc(32, 36, 11, 2); B.ground(36, 62); B.spring(38, 14); B.block(40, 46, 9, 9); B.row(40, 46, 8);
-  B.icicle(41, 10); B.icicle(43, 10); B.icicle(45, 10); B.row(41, 45, 13); B.crystal(49, 14, 2); B.en('alien', 52, 13); B.en('erizo', 58, 13);
-  // C · torreta helada y lluvia de carámbanos
-  B.arc(62, 67, 11, 2); B.ground(67, 96); B.block(72, 74, 12, 13); B.en('torreta', 73, 11); B.box(78, 10, 'turbo');
-  B.block(81, 89, 9, 9); B.icicle(82, 10, 1); B.icicle(85, 10, 1); B.icicle(88, 10, 1); B.row(82, 88, 13); B.row(81, 89, 8); B.crystal(91, 14, 0); B.cp(93, 14);
-  // D · el agujero sospechoso (lleva a la cueva secreta) y la torre con pared falsa
-  B.arc(96, 101, 11, 2); B.pitWarp(97, 100, 180, 13); B.ground(101, 140);
-  B.en('patrulla', 106, 13); B.en('dron', 112, 10, { x0: 105, x1: 120 }); B.spring(116, 14); P(117, 121, 9); B.row(117, 120, 8); B.gear(121, 7);
-  B.block(126, 132, 11, 13); B.fake(126, 132, 12, 13); B.row(127, 131, 12); B.gear(129, 13); B.crystal(124, 14, 1, 0.9); B.en('alien', 137, 13);
-  // E · recta final
-  B.arc(140, 144, 11, 2); B.ground(144, 171); B.spring(147, 14); B.block(150, 158, 9, 9); B.icicle(151, 10, 1); B.icicle(154, 10, 1); B.icicle(157, 10, 1); B.row(150, 158, 8);
-  B.en('erizo', 161, 13); for (let i = 1; i <= 4; i++) B.block(163 + i, 163 + i, 14 - i, 13); B.row(164, 167, 8); B.crystal(171, 14, 2, 1.3); B.block(172, 177, 0, 15);
-  // cueva secreta: chips por todas partes y el tercer engranaje
-  B.ground(178, 199); B.block(178, 199, 0, 3); B.icicle(185, 4); B.icicle(190, 4);
-  for (let r = 6; r <= 11; r += 2) B.row(181, 191, r); P(193, 197, 10); B.gear(195, 8); B.crystal(180, 14, 1, 1.4); B.crystal(188, 14, 0, 1.1); B.portal(197, 14, 103, 14);
-  return B.done({ name: 'LLANURA HELADA', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 169 * T + T / 2, y: 14 * T } });
-};
 
 /* ---------- fase 2-2: CUEVAS DE CRISTAL (a oscuras: solo brillan los cristales; carámbanos en el techo, un abismo con cristales saltarines y una cámara secreta dentro de la roca) ---------- */
-LEVELS['2-2'] = function () {
-  const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.block(0, 209, 0, 2);
-  // A · entrada a la cueva
-  B.ground(0, 30); B.crystal(4, 14, 0, 1.2); B.crystal(13, 14, 1); B.crystal(23, 14, 2); B.row(6, 10, 12); B.hid(16, 10, 'vida'); B.box(20, 10, 'escudo'); B.en('patrulla', 26, 13); B.block(7, 20, 3, 4); B.icicle(9, 5); B.icicle(14, 5); B.icicle(18, 5);
-  // B · techo bajo con carámbanos
-  B.mover(31, 12, 3, 72, 0, 1.2, 0); B.arc(31, 35, 10, 1); B.ground(36, 70); B.block(40, 60, 3, 7); B.icicle(44, 8, 1); B.icicle(49, 8, 1); B.icicle(54, 8, 1);
-  B.row(41, 59, 12); B.en('alien', 47, 13); B.en('erizo', 57, 13); B.crystal(42, 14, 1); B.crystal(59, 14, 0); B.spring(64, 14); P(65, 69, 9); B.row(65, 68, 8); B.gear(67, 6); B.crystal(70, 9, 2, 0.8);
-  // C · el abismo de las plataformas que suben y bajan
-  B.mover(72, 13, 2, 0, 60, 1.3, 0); B.mover(75, 11, 2, 0, 60, 1.3, 1.6); B.arc(71, 78, 9, 2); B.crystal(73, 15, 1, 1.5);
-  B.ground(78, 150); B.cp(80, 14); B.en('dron', 88, 9, { x0: 82, x1: 96 }); B.box(90, 10, 'laser'); B.set(93, 10, 'B'); B.box(94, 10, 'chip'); B.set(95, 10, 'B'); B.en('patrulla', 100, 13); B.crystal(97, 14, 2);
-  // la roca con cámara secreta: túnel por abajo… y una pared falsa por arriba
-  P(104, 106, 10); B.block(108, 113, 3, 11); B.fake(108, 112, 6, 10); B.gear(111, 8); B.row(109, 111, 7); B.row(109, 112, 10); B.row(108, 113, 13); B.crystal(115, 14, 1);
-  // D · galería de carámbanos gigantes
-  B.block(124, 142, 3, 5); B.icicle(127, 6, 1); B.icicle(131, 6, 1); B.icicle(135, 6, 1); B.icicle(139, 6, 1); B.row(126, 140, 13); B.crystal(122, 14, 0, 1.3); B.crystal(130, 14, 1); B.en('erizo', 145, 13); B.crystal(148, 14, 2);
-  // E · abismo de cristales saltarines
-  B.block(153, 154, 12, 15); B.spring(153, 12); B.block(157, 159, 10, 15); B.spring(158, 10); B.arc(151, 160, 7, 3); B.gear(155, 5); B.crystal(154, 12, 0, 0.7);
-  B.ground(161, 205); B.cp(164, 14); B.en('dron', 172, 8, { x0: 166, x1: 180 }); B.en('alien', 178, 13); B.box(184, 10, 'estrella'); B.en('patrulla', 186, 13); B.crystal(182, 14, 1, 1.2);
-  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.crystal(203, 14, 2, 1.4); B.block(206, 209, 0, 15);
-  return B.done({ name: 'CUEVAS DE CRISTAL', time: 230, theme: 'ice', cave: true, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } });
-};
 /* ---------- fase 2-3: BAJO EL HIELO (¡a nado! cada salto es una brazada: corrientes, anguilas eléctricas, géiseres de burbujas y una cámara de hielo sellada) ---------- */
-LEVELS['2-3'] = function () {
-  const B = LB(230, 16);
-  B.block(0, 229, 0, 1); B.ground(0, 229);
-  // A · zambullida
-  B.arc(5, 20, 8, 4); B.hid(12, 9, 'vida'); B.box(18, 11, 'escudo'); B.crystal(3, 14, 0, 1.3); B.crystal(24, 14, 2); B.en('alien', 26, 13);
-  // B · zigzag entre columnas de hielo
-  B.block(32, 33, 2, 9); B.row(30, 35, 12); B.en('erizo', 36, 13); B.block(40, 41, 6, 13); B.row(38, 43, 4); B.en('dron', 44, 4, { x0: 42, x1: 47 });
-  B.block(48, 49, 2, 9); B.row(46, 51, 12); B.en('dron', 52, 11, { x0: 50, x1: 55 }); B.block(56, 57, 6, 13); B.row(54, 59, 4); B.crystal(45, 14, 1);
-  // C · corrientes y anguilas eléctricas
-  B.cp(63, 14); B.wind(64, 98, 2, 7, 520, 0); B.wind(64, 98, 9, 13, -520, 0); B.laser(72, 2, 13, 0, 1.0, 1.7); B.laser(85, 2, 13, 0.9, 1.0, 1.7);
-  B.row(66, 70, 4); B.row(74, 83, 5); B.row(87, 90, 4); B.en('erizo', 78, 13); B.crystal(68, 14, 2, 1.2); B.crystal(80, 14, 0);
-  B.block(92, 99, 8, 13); B.fake(92, 98, 10, 12); B.gear(96, 11); B.row(93, 95, 11);                   // roca hueca: engranaje escondido
-  // D · gran caverna con géiser
-  B.box(104, 10, 'laser'); B.en('erizo', 108, 13); B.en('erizo', 115, 13); B.lift(117, 118, 3, 13); B.block(120, 122, 4, 13); B.row(117, 118, 6); B.gear(121, 2);
-  B.en('alien', 130, 13); B.en('dron', 135, 5, { x0: 126, x1: 144 }); B.arc(126, 146, 9, 4); B.crystal(126, 14, 1, 1.4); B.crystal(140, 14, 0, 1.1); B.box(143, 11, 'iman');
-  // E · la cámara sellada (rompe el techo de hielo desde abajo) y la salida
-  B.cp(150, 14); B.block(159, 159, 2, 9); B.block(171, 171, 2, 9); B.block(160, 170, 9, 9, 'B'); B.row(160, 170, 12);
-  for (let r = 3; r <= 7; r += 2) B.row(161, 169, r); B.gear(165, 5); B.crystal(165, 14, 2, 1.2);
-  B.en('dron', 180, 6, { x0: 175, x1: 190 }); B.en('erizo', 186, 13); B.laser(193, 2, 13, 0.4, 1.0, 1.4); B.row(196, 204, 8); B.box(198, 11, 'estrella'); B.en('alien', 202, 13);
-  B.crystal(212, 14, 1, 1.3); B.block(226, 229, 0, 15);
-  return B.done({ name: 'BAJO EL HIELO', time: 240, theme: 'ice', cave: true, water: { y: 2 * T }, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 216 * T + T / 2, y: 14 * T } });
-};
 /* ---------- fase 2-4: TORMENTA DE NIEVE (ráfagas de ventisca que te frenan o te lanzan contra los bichos, plataformas en pleno vendaval y un agujero que esconde una gruta) ---------- */
-LEVELS['2-4'] = function () {
-  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  // A · empieza a soplar
-  B.ground(0, 28); B.hid(8, 10, 'vida'); B.row(4, 7, 12); B.box(14, 10, 'escudo'); B.set(13, 10, 'B'); B.set(15, 10, 'B'); B.en('patrulla', 22, 13); B.crystal(3, 14, 1); B.wind(10, 28, 2, 13, -380, 0);
-  // B · plataformas en pleno vendaval
-  B.mover(30, 12, 3, 60, 0, 1.1, 0); B.mover(34, 11, 2, 0, 48, 1.3, 1); B.arc(29, 37, 9, 2); B.wind(29, 40, 2, 13, -560, 1.5);
-  B.ground(37, 70); B.block(45, 52, 9, 9); B.icicle(46, 10); B.icicle(49, 10); B.icicle(52, 10, 1); B.row(45, 52, 13); B.en('alien', 58, 13); B.spring(62, 14); P(63, 67, 9); B.row(63, 66, 8); B.gear(66, 7); B.crystal(55, 14, 0, 1.2);
-  // C · viento a favor… directo hacia los erizos (y un agujero sospechoso)
-  B.arc(70, 75, 11, 2); B.pitWarp(71, 74, 192, 13); B.ground(75, 110); B.cp(77, 14); B.wind(80, 110, 2, 13, 560, 3);
-  B.set(79, 10, 'B'); B.box(80, 10, 'turbo'); B.set(81, 10, 'B'); B.en('erizo', 86, 13); B.en('erizo', 96, 13); B.en('patrulla', 103, 13); B.row(84, 104, 9); B.crystal(91, 14, 2); B.crystal(107, 14, 1, 1.2);
-  // D · el gran abismo de la ventisca
-  B.mover(112, 12, 3, 90, 0, 0.9, 0); B.mover(118, 11, 3, 0, 60, 1.2, 1); B.arc(111, 123, 8, 3); B.wind(111, 122, 2, 13, -620, 0.7);
-  B.ground(123, 165); B.cp(125, 14); B.en('dron', 135, 9, { x0: 128, x1: 142 }); B.box(132, 10, 'laser');
-  B.block(146, 152, 11, 13); B.fake(147, 151, 12, 13); B.gear(149, 13); B.row(147, 151, 12);                 // montículo de nieve hueco
-  B.block(155, 162, 9, 9); B.icicle(156, 10, 1); B.icicle(159, 10, 1); B.icicle(162, 10, 1); B.row(155, 162, 8); B.wind(140, 165, 2, 13, -450, 2.2); B.en('alien', 160, 13);
-  // E · llegada
-  B.ground(166, 185); for (let i = 1; i <= 4; i++) B.block(170 + i, 170 + i, 14 - i, 13); B.row(171, 174, 8); B.crystal(184, 14, 2, 1.3); B.block(186, 189, 0, 15);
-  // gruta secreta bajo la nieve
-  B.ground(190, 219); B.block(190, 219, 0, 3); for (let r = 6; r <= 10; r += 2) B.arc(194, 204, r, 1); P(206, 210, 10); B.gear(208, 8); B.crystal(196, 14, 0, 1.3); B.crystal(212, 14, 1, 1.2); B.portal(216, 14, 78, 14);
-  return B.done({ name: 'TORMENTA DE NIEVE', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 180 * T + T / 2, y: 14 * T } });
-};
 /* ---------- fase 2-5: AVALANCHA (¡una avalancha te persigue! sobre hielo que resbala, con cintas turbo, cristales saltarines y carámbanos) ---------- */
-LEVELS['2-5'] = function () {
-  const B = LB(300, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  // A · el rugido de la montaña
-  B.ground(0, 24); B.hid(6, 10, 'vida'); B.box(10, 10, 'escudo'); B.row(13, 20, 12); B.crystal(3, 14, 0, 1.3);
-  // B · primeros saltos sobre el hielo
-  B.arc(24, 28, 11, 2); B.ground(28, 44); B.en('patrulla', 36, 13); B.strip(30, 43); B.arc(44, 48, 10, 2); B.ground(48, 72);
-  B.block(54, 61, 9, 9); B.icicle(55, 10); B.icicle(58, 10); B.icicle(61, 10); B.row(54, 61, 13); B.spring(64, 14); P(66, 70, 9); B.gear(68, 7); B.row(66, 70, 8); B.en('alien', 70, 13);
-  // C · abismo con plataformas
-  B.mover(74, 12, 3, 0, 40, 1.8, 0); B.mover(79, 12, 3, 0, 40, 1.8, 1.6); B.arc(72, 84, 9, 3); B.ground(84, 135); B.cp(86, 14); B.box(90, 10, 'iman');
-  B.strip(92, 110); B.row(93, 109, 12); B.en('erizo', 113, 13); B.block(117, 119, 12, 13); B.en('torreta', 118, 11); B.en('patrulla', 125, 13); B.crystal(130, 14, 1, 1.2);
-  // D · dos caminos: arriba con cristales (engranaje) o abajo entre carámbanos
-  B.spring(136, 14); B.block(138, 170, 9, 9); B.row(140, 168, 8); B.gear(160, 7); B.en('dron', 152, 6, { x0: 142, x1: 166 });
-  B.ground(136, 175); B.icicle(142, 10, 1); B.icicle(147, 10, 1); B.icicle(152, 10, 1); B.icicle(157, 10, 1); B.icicle(162, 10, 1); B.icicle(167, 10, 1); B.row(140, 168, 13); B.cp(174, 14);
-  // E · sprint final
-  B.strip(176, 198); B.row(177, 197, 12); B.arc(199, 205, 10, 3); B.ground(205, 232); B.strip(206, 230); B.box(212, 10, 'estrella'); B.en('patrulla', 220, 13); B.en('patrulla', 226, 13);
-  B.arc(233, 238, 10, 3); B.gear(235, 8); B.ground(238, 299); B.en('alien', 246, 13); B.block(252, 254, 12, 13); B.block(258, 260, 10, 13); B.en('erizo', 266, 13);
-  for (let i = 1; i <= 4; i++) B.block(271 + i, 271 + i, 14 - i, 13); B.row(272, 275, 8); B.crystal(290, 14, 2, 1.4); B.block(294, 299, 0, 15);
-  return B.done({ name: 'AVALANCHA', time: 200, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 284 * T + T / 2, y: 14 * T }, chase: { x: -9999, speed: 178, startX: 15 * T, on: false, style: 'snow' } });
-};
 /* ---------- fase 2-6: POZO DE LA MINA (escalada por un pozo helado mientras sube el agua congelada; géiser de vapor, plataformas que bailan, techo de hielo… y un agujero en el suelo que esconde un portal) ---------- */
+/* ======================= PLANETA 2 · CRISTAL (cada fase con su propia idea) ======================= */
+// 2-1 · colinas nevadas con cañones de bolas de nieve; la antena está en lo alto de una torre de hielo
+LEVELS['2-1'] = function () {
+  const B = LB(214, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 34); B.crystal(2, 14, 0, 1.2); B.row(5, 9, 12); B.hid(10, 10, 'vida'); B.set(13, 10, 'B'); B.box(14, 10, 'escudo'); B.set(15, 10, 'B'); B.en('patrulla', 24, 13);
+  B.block(28, 34, 12, 13); B.snowgun(33, 12, -1, 3.4); B.arc(27, 35, 9, 2);                          // colina 1 con cañón
+  B.arc(35, 39, 11, 2); B.ground(39, 78); B.block(44, 50, 11, 13); B.en('alien', 47, 10); B.crystal(52, 14, 1);
+  B.block(56, 58, 10, 13); B.block(59, 66, 12, 13); B.snowgun(65, 12, -1, 3, 1); B.gear(57, 7); B.row(59, 66, 10);   // pico con engranaje
+  B.hid(70, 10, 'chip'); B.en('erizo', 72, 13); B.pipe(75, 14, 200, 14, true);                       // escotilla oculta → iglú secreto
+  B.arc(78, 83, 11, 2); B.ground(83, 120); B.cp(85, 14); B.snowgun(118, 14, -1, 2.6); B.block(92, 93, 12, 13); B.block(100, 101, 12, 13); B.block(108, 109, 12, 13); B.row(94, 99, 11); B.row(102, 107, 11);
+  P(112, 116, 10); B.box(114, 7, 'turbo'); B.en('dron', 105, 8, { x0: 95, x1: 115 });
+  B.mover(121, 13, 3, 72, 0, 1.0, 0); B.arc(121, 128, 9, 2); B.ground(129, 176); B.block(132, 140, 11, 13); B.fake(134, 138, 12, 13); B.gear(136, 13); B.row(133, 139, 10);     // colina hueca
+  B.en('patrulla', 146, 13); B.snowgun(172, 14, -1, 2.4, 0.5); B.crystal(150, 14, 2, 1.3); B.en('alien', 158, 13); B.cp(164, 14);
+  // la torre de hielo: se sube con cristales saltarines
+  B.spring(168, 14); P(170, 173, 9); B.row(170, 173, 8); B.spring(172, 9); P(175, 177, 5); B.block(178, 186, 4, 15); B.ground(176, 196); B.crystal(185, 4, 0, 1.4); B.crystal(179, 4, 1, 0.8);
+  B.block(196, 197, 0, 15);
+  // iglú secreto
+  B.ground(198, 213); B.block(198, 213, 0, 7); B.block(213, 213, 0, 15); B.row(201, 211, 12); B.row(202, 210, 10); B.hid(205, 10, 'vida'); B.crystal(209, 14, 1); B.portal(211, 14, 141, 14);
+  return B.done({ name: 'LLANURA HELADA', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 182 * T + T / 2, y: 4 * T } });
+};
+// 2-2 · cueva a oscuras: los cristales se encienden al tocarlos; hay que encontrar 3 llaves para abrir la puerta de hielo
+LEVELS['2-2'] = function () {
+  const H = 26, B = LB(150, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 149, 0, 1); B.block(0, 1, 0, H - 1); B.block(148, 149, 0, H - 1); B.ground(0, 149);
+  // planta baja
+  B.crystal(4, 24, 0); B.row(6, 12, 22); B.hid(9, 20, 'vida'); B.en('patrulla', 18, 23); B.crystal(22, 24, 1); B.block(26, 27, 21, 23); B.en('alien', 34, 23); B.crystal(38, 24, 2);
+  B.block(44, 60, 17, 18); B.icicle(47, 19); B.icicle(52, 19, 1); B.icicle(57, 19); B.row(45, 59, 23); B.crystal(62, 24, 0); B.cp(66, 24);
+  B.block(70, 72, 21, 23); B.en('erizo', 78, 23); B.crystal(84, 24, 1); B.block(88, 98, 21, 21); B.fake(88, 88, 22, 23); B.block(98, 98, 22, 23, 'C'); B.key(93, 23);          // llave 1: escondida dentro de una roca que se rompe con láser… o por el túnel de la derecha
+  B.box(80, 20, 'laser');
+  // pisos superiores (se suben por los cristales saltarines)
+  B.spring(102, 24); P(100, 112, 18); B.crystal(104, 18, 2); B.en('patrulla', 108, 17); P(90, 98, 15); B.row(90, 98, 14); B.en('dron', 85, 10, { x0: 76, x1: 96 }); P(74, 86, 13); B.crystal(78, 13, 0); B.gear(80, 11);
+  P(60, 70, 10); B.key(62, 8); B.crystal(68, 10, 1); B.icicle(64, 3); B.icicle(67, 3); P(46, 56, 13); B.en('alien', 50, 12); P(30, 42, 10); B.crystal(34, 10, 2); B.gear(36, 8); P(16, 26, 13); B.spring(20, 13); P(6, 12, 8); B.key(9, 6); B.crystal(11, 8, 0, 0.8);
+  B.spring(115, 24); P(116, 124, 19); B.crystal(120, 19, 1); B.en('dron', 128, 13, { x0: 118, x1: 138 }); P(128, 134, 15); B.gear(131, 13); B.row(128, 134, 14);
+  // salida: puerta de hielo que se abre con las 3 llaves
+  B.cp(118, 24); B.en('erizo', 126, 23); B.crystal(130, 24, 2); B.door(136, 20, 23); B.block(136, 147, 15, 19); B.crystal(146, 24, 0, 1.3);
+  return B.done({ name: 'CUEVAS DE CRISTAL', time: 300, theme: 'ice', cave: true, dark: true, crystalLight: true, intro: '¡TOCA LOS CRISTALES Y BUSCA 3 LLAVES!', spawn: { x: 4 * T, y: 24 * T }, goal: { x: 142 * T + T / 2, y: 24 * T } });
+};
+// 2-3 · bajo el hielo: corrientes que te arrastran, cámaras de hielo y salida nadando hacia la superficie
+LEVELS['2-3'] = function () {
+  const H = 30, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 169, 0, 3); B.block(0, 1, 0, H - 1); B.ground(0, 169);
+  B.row(5, 12, 26); B.hid(9, 24, 'vida'); B.crystal(3, 28, 0); B.en('patrulla', 18, 27);
+  B.wind(20, 50, 18, 27, 380, 0); for (let x = 22; x < 50; x += 4) B.chip(x, 22); B.block(30, 32, 12, 20); B.block(40, 42, 22, 27); B.crystal(36, 28, 1, 1.2);       // corriente que empuja hacia delante
+  B.block(52, 70, 18, 19); B.row(53, 69, 16); B.gear(61, 21); B.block(52, 52, 20, 27); B.block(70, 70, 20, 25); B.fake(52, 52, 24, 27); B.crystal(56, 28, 2);   // cámara sellada (pared falsa a la izquierda)
+  B.cp(74, 28); B.wind(76, 110, 4, 16, -360, 1.4); B.block(80, 82, 4, 14); B.block(92, 94, 10, 27); B.block(104, 106, 4, 16); for (let y = 8; y < 26; y += 4) B.chip(87, y), B.chip(99, y);   // laberinto contra corriente
+  B.en('dron', 99, 20, { x0: 96, x1: 102 }); B.box(87, 24, 'escudo'); B.gear(99, 6);
+  B.block(110, 140, 12, 13); B.block(110, 140, 12, 12, 'B'); B.row(112, 138, 20); B.en('erizo', 125, 27); B.en('alien', 132, 27); B.cp(140, 28);
+  // la salida: un agujero en el hielo del techo, se sube nadando hasta un iceberg
+  B.block(142, 168, 0, 3, ' '); B.block(156, 168, 6, 13); for (let y = 8; y < 26; y += 3) B.chip(150, y);
+  B.block(169, 169, 0, H - 1); B.crystal(166, 6, 0, 1.2);
+  return B.done({ name: 'BAJO EL HIELO', time: 260, theme: 'ice', cave: true, water: { y: 4 * T }, spawn: { x: 3 * T, y: 28 * T }, goal: { x: 161 * T + T / 2, y: 6 * T } });
+};
+// 2-4 · tormenta en las alturas: islas de hielo sueltas, ráfagas que cambian de lado y la última isla se alcanza en plataforma móvil
+LEVELS['2-4'] = function () {
+  const B = LB(200, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 18); B.hid(6, 10, 'vida'); B.box(10, 10, 'chip'); B.row(12, 16, 12);
+  B.block(21, 25, 11, 15); B.wind(18, 60, 2, 13, 330, 0); B.block(29, 31, 9, 15); B.block(35, 39, 12, 15); B.block(43, 44, 9, 15); B.gear(43, 6); B.block(48, 53, 11, 15); B.en('patrulla', 50, 10); B.row(26, 47, 6);
+  B.block(57, 66, 13, 15); B.cp(60, 13); B.icicle(63, 6); P(62, 66, 7); B.box(64, 4, 'iman'); B.spring(58, 13);
+  B.wind(66, 110, 2, 13, -330, 1.5); B.mover(69, 12, 3, 0, 60, 1.1, 0); B.block(76, 78, 10, 15); B.en('alien', 77, 9); B.mover(82, 9, 3, 72, 0, 1.0, 1); B.block(91, 95, 12, 15); B.en('erizo', 93, 11); B.block(99, 100, 9, 15); B.row(98, 101, 7);
+  B.block(104, 112, 12, 15); B.fake(106, 110, 13, 14); B.fake(108, 108, 12, 12); B.gear(108, 13); B.cp(111, 12); B.spring(105, 12);           // isla hueca
+  P(114, 117, 8); B.en('dron', 122, 6, { x0: 114, x1: 132 }); P(122, 125, 10); P(129, 133, 7); B.block(137, 143, 11, 15); B.en('patrulla', 140, 10); B.wind(130, 170, 2, 13, 360, 0.7);
+  B.block(146, 147, 9, 15); B.block(151, 152, 11, 15); B.block(156, 157, 8, 15); B.row(145, 158, 5); B.box(156, 4, 'estrella');
+  // la isla final: solo se llega montado en la plataforma que cruza el abismo
+  B.block(160, 164, 11, 15); B.mover(168, 11, 3, 4 * T, 0, 0.6, 0); B.mover(180, 11, 3, 3 * T, 0, 0.6, 1.5); B.row(167, 184, 8); B.block(187, 199, 11, 15); B.crystal(196, 11, 0, 1.4);
+  return B.done({ name: 'TORMENTA DE NIEVE', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 192 * T + T / 2, y: 11 * T } });
+};
+// 2-5 · la avalancha empuja la pantalla: ladera abajo sin parar
+LEVELS['2-5'] = function () {
+  const B = LB(300, 26), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  let y = 9; const step = (a, b) => { B.block(a, b, y, 25); };
+  step(0, 20); B.row(6, 12, y - 2); B.hid(14, y - 4, 'vida');
+  y = 11; step(21, 38); B.en('patrulla', 30, y - 1); B.snowgun(37, y, -1, 2.6); y = 13; step(39, 52); B.icicle(45, 0); B.box(46, y - 4, 'escudo');
+  B.arc(53, 57, 11, 2); y = 15; step(58, 74); B.en('alien', 66, y - 1); y = 17; step(75, 90); B.cp(77, 17); B.block(82, 83, 15, 16); B.row(84, 89, 15);
+  B.mover(92, 17, 3, 0, 48, 1.4, 0); y = 18; step(97, 114); B.en('erizo', 104, 17); B.gear(110, 13); P(108, 112, 14);
+  y = 19; step(115, 136); B.snowgun(135, 19, -1, 2.2); B.block(120, 121, 17, 18); B.block(127, 128, 17, 18); B.row(122, 126, 15);
+  B.arc(137, 142, 17, 3); y = 21; step(143, 166); B.pipe(150, 21, 280, 22, true); B.en('patrulla', 158, 20); B.cp(162, 21);         // escotilla secreta → refugio
+  y = 22; step(167, 190); B.spring(176, 22); P(178, 182, 15); B.gear(180, 13); B.row(178, 182, 14); B.en('alien', 186, 21);
+  B.mover(192, 21, 3, 60, 0, 1.2, 0); y = 23; step(198, 230); B.snowgun(229, 23, -1, 2); B.en('erizo', 212, 22); B.box(218, 19, 'turbo');
+  // la cabaña del fondo del valle
+  y = 24; step(231, 270); B.crystal(262, 24, 0, 1.3); B.block(270, 271, 0, 25);
+  B.block(272, 299, 23, 25); B.block(272, 299, 0, 15); B.row(275, 296, 21); B.row(276, 295, 19); B.gear(288, 21); B.portal(296, 23, 236, 24); B.block(299, 299, 0, 25);
+  return B.done({ name: 'AVALANCHA', time: 160, theme: 'ice', ice: true, intro: '¡LA AVALANCHA EMPUJA!', spawn: { x: 3 * T, y: 9 * T }, goal: { x: 258 * T + T / 2, y: 24 * T }, auto: { speed: 150, x: 0 }, chase: { x: -9999, speed: 0, startX: 2 * T, on: false, style: 'snow' } });
+};
+// 2-B · fase secreta: corrientes de aire que suben entre nubes, sin gravedad casi
+LEVELS['2-B'] = function () {
+  const H = 30, B = LB(150, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 12); B.hid(5, 24, 'vida'); B.crystal(2, 28, 1, 1.3); B.row(4, 10, 26);
+  B.lift(14, 16, 12, 28); for (let y = 14; y < 27; y += 3) B.chip(15, y); P(18, 24, 12); B.gear(21, 10); B.row(18, 24, 11);
+  P(28, 32, 16); B.spring(30, 16); P(34, 40, 6); B.row(34, 40, 5); B.en('alien', 37, 5); P(43, 46, 12); P(48, 52, 20); B.cp(50, 20);
+  B.mover(54, 20, 3, 0, 96, 0.8, 0); P(60, 66, 22); B.crystal(64, 22, 2); B.box(62, 18, 'iman'); B.lift(68, 70, 7, 24); P(72, 80, 7); B.en('erizo', 76, 6); B.row(72, 80, 5);
+  for (let i = 0; i < 6; i++) { const x = 84 + i * 6, yy = 9 + i * 3; P(x, x + 2, yy); B.chip(x + 1, yy - 1); } P(121, 127, 25); B.gear(124, 23);
+  B.lift(129, 131, 8, 26); P(133, 149, 8); B.cp(135, 8); B.crystal(146, 8, 0, 1.4);
+  return B.done({ name: 'AURORA', time: 170, theme: 'ice', sky: true, gk: 0.55, intro: '¡CORRIENTES DE AIRE!', spawn: { x: 3 * T, y: 28 * T }, goal: { x: 143 * T + T / 2, y: 8 * T }, rain: { x0: 134 * T, x1: 148 * T, dur: 6, t: 0, st: 0, acc: 0 } });
+};
+// 2-J · el Guardián de Hielo: los poderes están congelados en cristales a la entrada
+LEVELS['2-J'] = function () {
+  const B = LB(80, 16);
+  B.ground(0, 79); B.crystal(3, 14, 0, 1.3); B.block(0, 41, 0, 3); B.icicle(12, 4); B.icicle(26, 4, 1);
+  B.kitp(10, 14, 'escudo'); B.kitp(18, 14, 'laser'); B.kitp(26, 14, 'vuelo'); B.row(8, 30, 11); B.hid(33, 10, 'vida'); B.cp(36, 14);
+  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.block(44, 77, 0, 1); B.crystal(46, 14, 2, 1.2); B.crystal(75, 14, 1, 1.2); B.gear(60, 6);
+  return B.done({ name: 'GUARDIÁN DE HIELO', bossName: 'GUARDIÁN DE HIELO', bossHp: 6, bossStyle: 'ice', time: 300, theme: 'ice', ice: true, intro: '¡ROMPE LOS CRISTALES!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
+};
 LEVELS['2-6'] = function () {
   const H = 118, B = LB(34, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.block(0, 2, 8, H - 1); B.block(31, 33, 8, H - 1);
@@ -889,281 +958,209 @@ LEVELS['2-6'] = function () {
   return B.done({ name: 'POZO DE LA MINA', time: 230, theme: 'ice', vert: true, spawn: { x: 5 * T, y: 110 * T }, goal: { x: 26 * T + T / 2, y: 8 * T }, rise: { y: H * T + 400, speed: 42, startY: 104 * T, on: false, style: 'water' } });
 };
 /* ---------- fase secreta 2-B: AURORA (sobre las nubes del planeta, con gravedad lunar: escaleras de luz, estrellas fugaces de hielo y una lluvia de chips) ---------- */
-LEVELS['2-B'] = function () {
-  const H = 22, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  const shape = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') B.chip(x + i, y + j); }));
-  // A · el "2" de chips sobre las nubes
-  B.ground(0, 14); P(7, 12, 15); shape(8, 8, ['###', '..#', '###', '#..', '###']); B.hid(4, 16, 'vida'); B.crystal(2, 20, 1, 1.3);
-  // B · islas y cristales saltarines
-  B.arc(14, 20, 16, 3); B.ground(20, 26); B.spring(24, 20); P(28, 33, 10); B.gear(31, 8); B.row(28, 33, 9); B.crystal(21, 20, 0);
-  // C · estrellas fugaces
-  B.arc(26, 34, 15, 3); B.ground(34, 50); B.en('alien', 42, 19); B.box(46, 16, 'laser'); B.mover(52, 18, 3, 90, 0, 0.9, 0); B.arc(50, 58, 14, 3);
-  B.ground(58, 76); B.cp(60, 20); B.en('dron', 66, 15, { x0: 60, x1: 74 }); P(63, 66, 14); P(69, 72, 9); P(74, 77, 5); B.gear(76, 3); B.row(69, 72, 8); B.crystal(70, 20, 2, 1.2);
-  // D · escalera de luz sobre el vacío
-  for (let i = 0; i < 8; i++) { const x = 80 + i * 4, y = 17 - Math.round(Math.sin(i * 0.9) * 4); P(x, x + 1, y); B.chip(x, y - 1); B.chip(x + 1, y - 1); }
-  B.ground(113, 165); B.cp(115, 20); B.box(120, 16, 'iman'); B.spring(126, 20); P(128, 132, 9); B.gear(130, 7); B.en('erizo', 140, 19); B.crystal(118, 20, 1, 1.3); B.crystal(150, 20, 0, 1.2);
-  for (let i = 1; i <= 4; i++) B.block(150 + i, 150 + i, 20 - i, 19); B.row(151, 154, 14); B.block(162, 165, 0, 21);
-  return B.done({ name: 'AURORA', time: 170, theme: 'ice', sky: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
-    meteors: { zones: [[34 * T, 112 * T]], every: 1.05, acc: 0, style: 'comet' }, rain: { x0: 121 * T, x1: 148 * T, dur: 9, t: 0, st: 0, acc: 0 } });
-};
 /* ---------- jefe 2-J: GUARDIÁN DE HIELO (el mismo coloso, ahora congelado: arena que resbala, ráfagas de esquirlas de hielo, y al aplastar el suelo hace caer carámbanos del cielo; 8 golpes) ---------- */
-LEVELS['2-J'] = function () {
-  const B = LB(80, 16);
-  B.ground(0, 79); B.row(5, 8, 12); B.crystal(3, 14, 0, 1.3);
-  B.set(10, 10, 'B'); B.box(11, 10, 'escudo'); B.set(12, 10, 'B'); B.box(15, 10, 'laser'); B.block(18, 21, 9, 9); B.icicle(19, 10); B.icicle(21, 10); B.gear(20, 7); B.row(18, 21, 8); B.spring(16, 14);
-  B.en('patrulla', 24, 13); B.en('dron', 29, 10, { x0: 25, x1: 33 }); B.row(25, 31, 12); B.crystal(27, 14, 1);
-  B.cp(35, 14); B.box(38, 10, 'chip'); B.hid(33, 10, 'vida');
-  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13); B.crystal(45, 14, 2, 1.2); B.crystal(75, 14, 1, 1.2);
-  return B.done({ name: 'GUARDIÁN DE HIELO', bossName: 'GUARDIÁN DE HIELO', bossHp: 8, time: 260, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
-};
-/* ================== MUNDO 3: PLANETA VOLCÁNICO ================== */
+/* ======================= PLANETA 3 · VOLCÁNICO (cada fase con su propia idea) ======================= */
 const LV = o => Object.assign({ theme: 'lava', time: 220 }, o);
+// 3-1 · llanura de ceniza: charcos de lava y géiseres; la antena está en lo alto de un acantilado al que se sube por rocas que se hunden
 LEVELS['3-1'] = function () {
-  const B = LB(190, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  // A · primeros pasos sobre la ceniza
-  B.ground(0, 30); B.crystal(3, 14, 3, 1.2); B.row(5, 9, 12); B.hid(11, 10, 'vida'); B.set(14, 10, 'B'); B.box(15, 10, 'chip'); B.set(16, 10, 'B'); B.box(17, 10, 'escudo'); B.en('patrulla', 24, 13);
-  // B · primer charco de lava y los géiseres
-  B.arc(30, 35, 11, 2); B.ground(35, 62); B.geyser(41, 14, 4, 0); B.row(43, 47, 12); P(44, 47, 11); B.gear(46, 9); B.geyser(51, 14, 4, 1.6); B.en('alien', 56, 13); B.crystal(60, 14, 3);
-  // C · rocas que se hunden al pisarlas
-  B.fall(64, 13, 2); B.fall(68, 12, 2); B.fall(72, 13, 2); B.row(64, 73, 10); B.ground(76, 104); B.cp(78, 14);
-  B.block(82, 82, 12, 13); B.block(84, 90, 10, 10); B.row(84, 90, 9); B.box(87, 7, 'laser'); B.en('erizo', 96, 13); B.geyser(100, 14, 5, 0.8);
-  // D · el agujero oscuro (lleva a una cueva secreta) y el montículo hueco
-  B.arc(104, 109, 11, 2); B.pitWarp(105, 108, 180, 13); B.ground(109, 140); B.en('patrulla', 115, 13);
-  B.block(124, 130, 11, 13); B.fake(124, 130, 12, 13); B.row(125, 129, 12); B.gear(127, 13); B.crystal(122, 14, 3, 0.9); B.en('alien', 136, 13);
-  // E · recta final
-  B.arc(140, 144, 11, 2); B.ground(144, 172); B.geyser(150, 14, 4, 0.4); B.geyser(156, 14, 4, 2.0); B.en('alien', 161, 13);
-  for (let i = 1; i <= 4; i++) B.block(163 + i, 163 + i, 14 - i, 13); B.row(164, 167, 8); B.block(173, 175, 0, 15);
-  // cueva secreta
-  B.ground(176, 189); B.block(176, 189, 0, 8); B.block(189, 189, 0, 15); B.row(178, 187, 12); B.row(179, 186, 10); B.gear(184, 12); B.crystal(178, 14, 3, 1.2); B.portal(187, 14, 112, 14);
-  return B.done(LV({ name: 'LLANURA DE CENIZA', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 170 * T + T / 2, y: 14 * T } }));
+  const B = LB(176, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 26); B.crystal(3, 14, 3, 1.2); B.row(5, 9, 12); B.hid(11, 10, 'vida'); B.set(14, 10, 'B'); B.box(15, 10, 'escudo'); B.set(16, 10, 'B'); B.en('patrulla', 22, 13);
+  B.arc(26, 30, 11, 2); B.ground(30, 52); B.geyser(36, 14, 4, 0); B.row(38, 42, 12); B.geyser(46, 14, 4, 1.6); B.en('alien', 50, 13);
+  B.arc(52, 56, 11, 2); B.ground(56, 60); B.arc(60, 64, 11, 2); B.ground(64, 90); B.cp(66, 14); B.block(72, 78, 11, 11); B.row(72, 78, 10); B.box(75, 8, 'laser'); B.en('erizo', 82, 13); B.geyser(87, 14, 5, 0.8);
+  B.arc(90, 96, 11, 2); B.pitWarp(91, 95, 162, 13); B.ground(96, 128); B.en('patrulla', 102, 13);
+  B.block(110, 116, 11, 13); B.fake(110, 110, 12, 13); B.row(111, 115, 12); B.gear(114, 13); B.en('alien', 122, 13); B.cp(126, 14);
+  // el acantilado: rocas que se hunden, cada vez más altas
+  B.fall(130, 12, 2); B.fall(134, 10, 2); B.fall(138, 8, 2); B.gear(139, 6); B.block(142, 156, 7, 15); B.crystal(152, 7, 3, 1.4); B.block(157, 158, 0, 15);
+  // cueva secreta (se cae por el agujero sin lava)
+  B.ground(159, 175); B.block(159, 175, 0, 8); B.block(175, 175, 0, 15); B.row(161, 172, 12); B.row(162, 171, 10); B.gear(168, 12); B.crystal(161, 14, 3, 1.2); B.portal(173, 14, 100, 14);
+  return B.done(LV({ name: 'LLANURA DE CENIZA', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 148 * T + T / 2, y: 7 * T } }));
 };
+// 3-2 · campo de géiseres bajo las bombas del volcán; la antena está al fondo de un cráter al que hay que dejarse caer
 LEVELS['3-2'] = function () {
-  const B = LB(200, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.ground(0, 24); B.hid(7, 10, 'vida'); B.box(10, 10, 'turbo'); B.row(12, 18, 12); B.en('patrulla', 20, 13); B.crystal(2, 14, 3, 1.3);
-  // A · la ola de géiseres
-  B.ground(24, 70); for (let i = 0; i < 5; i++) B.geyser(29 + i * 4, 14, 5, i * 0.45, 3.4); B.row(28, 46, 11);
-  P(48, 51, 11); P(53, 57, 9); B.gear(55, 7); B.en('dron', 58, 9, { x0: 50, x1: 66 }); B.geyser(61, 14, 6, 0.3); B.en('erizo', 66, 13);
-  // B · lago de lava con rocas flotantes
-  B.mover(72, 12, 3, 96, 0, 1.0, 0); B.mover(82, 11, 3, 0, 48, 1.4, 1); B.row(72, 88, 9); B.gear(83, 7); B.ground(91, 140); B.cp(93, 14);
-  B.block(98, 100, 12, 13); B.en('torreta', 99, 11); B.geyser(104, 14, 5, 1); B.box(106, 10, 'escudo'); B.geyser(109, 14, 5, 2); B.en('patrulla', 115, 13);
-  // C · la roca con túnel secreto
-  P(121, 124, 11); B.block(126, 129, 9, 13); B.fake(126, 129, 12, 13); B.gear(128, 13); B.row(126, 129, 8); B.crystal(132, 14, 3);
-  // D · última carrera
-  B.arc(140, 146, 10, 3); B.fall(142, 12, 2); B.ground(146, 199); B.geyser(152, 14, 6, 0.6); B.geyser(158, 14, 6, 1.8); B.en('alien', 164, 13);
-  for (let i = 1; i <= 4; i++) B.block(169 + i, 169 + i, 14 - i, 13); B.row(170, 173, 8); B.crystal(186, 14, 3, 1.4); B.block(190, 199, 0, 15);
-  return B.done(LV({ name: 'GÉISERES DE FUEGO', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 182 * T + T / 2, y: 14 * T } }));
+  const B = LB(190, 22), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 40, 14, 21); B.hid(7, 10, 'vida'); B.box(10, 10, 'turbo'); B.row(12, 18, 12); B.en('patrulla', 20, 13);
+  for (let i = 0; i < 4; i++) B.geyser(25 + i * 4, 14, 5, i * 0.5, 3.4); B.row(24, 38, 11);
+  B.block(41, 60, 12, 21); B.en('alien', 48, 11); P(52, 55, 8); B.gear(53, 6); B.geyser(58, 12, 6, 0.3);
+  B.block(61, 100, 14, 21); B.cp(63, 14); B.block(70, 72, 12, 13); B.en('torreta', 71, 11); B.geyser(78, 14, 5, 1); B.box(82, 10, 'escudo'); B.geyser(86, 14, 5, 2); B.en('erizo', 94, 13);
+  B.block(101, 108, 11, 21); B.fake(101, 101, 12, 13); B.gear(104, 13); B.block(102, 107, 12, 13, ' '); B.row(102, 107, 10);
+  B.block(109, 140, 14, 21); B.cp(111, 14); B.geyser(118, 14, 6, 0.6); B.en('patrulla', 124, 13); B.geyser(130, 14, 6, 1.8); B.pipe(136, 14, 52, 12, false);
+  // el cráter: un agujero grande; abajo espera la antena
+  B.block(141, 145, 14, 21); B.block(158, 189, 14, 21); B.block(146, 157, 20, 21); B.row(147, 156, 16); B.crystal(149, 20, 3, 1.2); B.crystal(155, 20, 3);
+  B.block(188, 189, 0, 21); B.en('alien', 170, 13); B.crystal(178, 14, 3, 1.3);
+  return B.done(LV({ name: 'GÉISERES DE FUEGO', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 152 * T + T / 2, y: 20 * T }, bombs: { zones: [[60 * T, 140 * T]], every: 2.2 }, noLava: true }));
 };
+// 3-3 · descenso al cráter: fase vertical hacia ABAJO, entre bolas de magma que saltan
 LEVELS['3-3'] = function () {
-  const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.block(0, 209, 0, 2);
-  B.ground(0, 28); B.crystal(4, 14, 3, 1.2); B.row(6, 10, 12); B.hid(14, 10, 'vida'); B.box(18, 10, 'escudo'); B.en('patrulla', 24, 13);
-  // A · galería de techo bajo con géiseres
-  B.arc(28, 33, 11, 2); B.ground(33, 64); B.block(38, 58, 3, 7); B.geyser(42, 14, 4, 0); B.geyser(48, 14, 4, 1); B.geyser(54, 14, 4, 2); B.row(40, 57, 12); B.en('alien', 45, 13); B.en('erizo', 56, 13);
-  B.pad(61, 14); P(62, 66, 9); B.gear(64, 7); B.crystal(66, 9, 3, 0.8);
-  // B · el pozo de magma
-  B.fall(67, 12, 2); B.fall(71, 11, 2); B.fall(75, 12, 2); B.arc(67, 76, 8, 2); B.ground(78, 140); B.cp(80, 14);
-  B.en('dron', 88, 9, { x0: 82, x1: 96 }); B.box(90, 10, 'laser'); B.set(93, 10, 'B'); B.box(94, 10, 'chip'); B.set(95, 10, 'B');
-  // C · la roca con cámara secreta (pared falsa por arriba)
-  P(102, 104, 10); B.block(106, 111, 3, 11); B.fake(106, 110, 6, 10); B.gear(109, 8); B.row(107, 109, 7); B.row(107, 110, 10); B.row(106, 111, 13);
-  // D · callejón de géiseres
-  B.block(116, 136, 3, 6); for (let i = 0; i < 4; i++) B.geyser(119 + i * 5, 14, 5, i * 0.7); B.row(118, 135, 13); B.en('patrulla', 133, 13);
-  // E · abismo con plataformas de salto
-  B.block(143, 144, 12, 15); B.pad(143, 12); B.block(147, 149, 10, 15); B.pad(148, 10); B.arc(141, 150, 7, 3); B.gear(146, 5);
-  B.ground(151, 205); B.cp(154, 14); B.en('dron', 168, 8, { x0: 160, x1: 176 }); B.en('alien', 174, 13); B.box(178, 10, 'estrella'); B.en('patrulla', 182, 13); B.geyser(186, 14, 4, 0.5);
-  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.crystal(203, 14, 3, 1.4); B.block(206, 209, 0, 15);
-  return B.done(LV({ name: 'CRÁTER DEL VOLCÁN', time: 230, cave: true, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } }));
+  const H = 100, B = LB(34, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 2, 0, H - 1); B.block(31, 33, 0, H - 1); B.block(3, 30, 6, 6); B.block(14, 18, 6, 6, ' ');
+  B.row(5, 12, 4); B.hid(24, 2, 'vida');
+  const rows = [[3, 10], [20, 30], [8, 16], [18, 26], [3, 9], [22, 30], [10, 18], [3, 8], [24, 30], [12, 20]]; let k = 0;
+  for (let y = 12; y < H - 8; y += 7, k++) { const [a, b] = rows[k % rows.length]; B.block(a, b, y, y); B.chip(a + 1, y - 1); B.chip(b - 1, y - 1);
+    if (k % 3 === 1) B.jumper(a > 12 ? a - 3 : b + 3, y + 6, 4, k * 0.4); if (k % 4 === 2) B.en('patrulla', a + 2, y - 1); if (k === 5) B.cp(a + 2, y); if (k === 3) B.box(a + 2, y - 4, 'escudo'); if (k === 7) B.gear(a + 3, y - 2); if (k === 10) B.cp(a + 2, y); }
+  B.block(3, 6, 40, 46); B.fake(3, 6, 42, 45); B.gear(4, 44);              // hueco en la pared
+  B.block(26, 30, 62, 62); B.gear(28, 60); B.block(3, 30, H - 2, H - 1); B.crystal(8, H - 2, 3, 1.3); B.crystal(26, H - 2, 3, 1.3);
+  return B.done(LV({ name: 'CRÁTER DEL VOLCÁN', time: 200, vert: true, intro: '¡BAJA HASTA EL FONDO!', spawn: { x: 8 * T, y: 6 * T }, goal: { x: 17 * T + T / 2, y: (H - 2) * T } }));
 };
+// 3-4 · el río de magma: rocas a la deriva y bolas de magma; la antena está en una isla en mitad del río
 LEVELS['3-4'] = function () {
-  const B = LB(230, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.ground(0, 20); B.hid(5, 10, 'vida'); B.box(9, 10, 'chip'); B.row(11, 17, 12); B.crystal(2, 14, 3, 1.2);
-  // A · cruzar el río de magma
-  B.fall(22, 13, 2); B.mover(26, 12, 3, 60, 0, 1.1, 0); B.fall(33, 12, 2); B.fall(37, 13, 2); B.arc(22, 38, 9, 2);
-  B.ground(40, 56); B.en('patrulla', 47, 13); B.box(50, 10, 'escudo'); B.geyser(54, 14, 4, 0);
-  // B · rocas que suben y bajan
-  B.mover(58, 12, 3, 0, 60, 1.2, 0); B.mover(63, 10, 3, 0, 60, 1.2, 1.5); P(68, 71, 9); B.gear(70, 7); B.fall(73, 12, 2); B.fall(77, 12, 2); B.row(58, 78, 8);
-  B.ground(81, 105); B.cp(83, 14); B.en('alien', 90, 13); B.geyser(94, 14, 5, 1); B.en('erizo', 99, 13);
-  // C · un agujero sin lava… ¿adónde llevará?
-  B.arc(105, 109, 11, 2); B.pitWarp(106, 108, 212, 13); B.ground(109, 130); B.en('patrulla', 120, 13); B.crystal(127, 14, 3);
-  // D · el gran río
-  B.fall(132, 13, 2); B.fall(136, 12, 2); B.mover(140, 12, 3, 96, 0, 1.0, 0); B.fall(147, 11, 2); B.gear(148, 8); B.fall(151, 12, 2); B.mover(155, 12, 3, 0, 72, 1.3, 0.7); B.fall(160, 12, 2); B.fall(164, 13, 2); B.row(132, 165, 9);
-  B.ground(168, 199); B.cp(170, 14); B.en('patrulla', 178, 13); B.geyser(183, 14, 5, 0.3);
-  for (let i = 1; i <= 4; i++) B.block(185 + i, 185 + i, 14 - i, 13); B.row(186, 189, 8); B.block(200, 205, 0, 15);
-  // orilla secreta
-  B.ground(206, 229); B.block(206, 229, 0, 8); B.block(229, 229, 0, 15); B.row(208, 226, 12); B.row(210, 224, 10); B.gear(220, 12); B.crystal(208, 14, 3, 1.3); B.portal(227, 14, 112, 14);
-  return B.done(LV({ name: 'RÍO DE MAGMA', time: 230, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 195 * T + T / 2, y: 14 * T } }));
+  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 18); B.hid(5, 10, 'vida'); B.box(9, 10, 'chip'); B.row(11, 16, 12); B.crystal(2, 14, 3, 1.2);
+  B.mover(21, 13, 3, 72, 0, 1.0, 0); B.jumper(27, 16, 6, 0); B.mover(31, 12, 3, 0, 48, 1.3, 1); B.jumper(36, 16, 6, 1.2); B.arc(20, 38, 9, 2);
+  B.ground(39, 54); B.en('patrulla', 46, 13); B.box(50, 10, 'escudo');
+  B.fall(57, 13, 2); B.jumper(61, 16, 7, 0.5); B.fall(64, 12, 2); B.jumper(68, 16, 7, 1.6); B.fall(71, 11, 2); B.gear(72, 8); B.fall(75, 12, 2); B.row(57, 76, 9);
+  B.ground(79, 104); B.cp(81, 14); B.en('alien', 88, 13); B.en('erizo', 98, 13);
+  B.arc(104, 108, 11, 2); B.pitWarp(105, 107, 205, 13); B.ground(108, 128); B.en('patrulla', 118, 13); B.crystal(126, 14, 3);
+  B.mover(131, 12, 3, 96, 0, 0.9, 0); B.jumper(137, 16, 7, 0.3); B.jumper(143, 16, 7, 1.5); B.fall(150, 11, 2); B.gear(151, 8); B.mover(155, 12, 3, 0, 72, 1.2, 0.7); B.row(131, 158, 9);
+  B.ground(161, 170); B.cp(163, 14);
+  // la isla: se llega en una roca que cruza el río
+  B.mover(173, 12, 3, 3 * T, 0, 0.7, 0); B.jumper(178, 16, 6, 0.9); B.block(183, 190, 13, 15); B.crystal(189, 13, 3, 1.3); B.block(198, 199, 0, 15);
+  B.ground(200, 219); B.block(200, 219, 0, 8); B.block(219, 219, 0, 15); B.row(202, 216, 12); B.row(204, 214, 10); B.gear(212, 12); B.crystal(202, 14, 3, 1.3); B.portal(217, 14, 112, 14);
+  return B.done(LV({ name: 'RÍO DE MAGMA', time: 230, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 186 * T + T / 2, y: 13 * T } }));
 };
+// 3-5 · lluvia de bombas del volcán: hay que ir de refugio en refugio mirando dónde caen; la antena está bajo un arco de piedra
 LEVELS['3-5'] = function () {
-  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.ground(0, 40); B.hid(6, 10, 'vida'); B.box(10, 10, 'escudo'); B.row(13, 20, 12); B.en('patrulla', 28, 13); B.block(33, 37, 10, 10); B.row(33, 37, 13);
-  // A · empieza a llover fuego: refugios de roca
-  B.arc(41, 45, 11, 2); B.ground(45, 80); B.block(52, 56, 10, 10); B.row(52, 56, 13); B.geyser(60, 14, 4, 0); B.en('alien', 66, 13); B.block(69, 71, 10, 10); B.box(70, 7, 'estrella'); P(74, 78, 10); B.gear(76, 8);
-  B.fall(82, 12, 2); B.arc(81, 86, 10, 2); B.ground(86, 120); B.cp(88, 14); B.en('dron', 98, 9, { x0: 90, x1: 106 }); B.en('erizo', 105, 13); B.block(110, 112, 12, 13); B.en('torreta', 111, 11);
-  // B · el montículo hueco
-  B.block(114, 119, 11, 13); B.fake(114, 119, 12, 13); B.row(115, 118, 12); B.gear(117, 13);
-  // C · géiseres bajo la lluvia
-  B.arc(120, 125, 11, 2); B.ground(125, 170); B.geyser(130, 14, 4, 0.5); B.geyser(136, 14, 4, 1.7); P(140, 144, 11); P(146, 150, 8); B.gear(148, 6); B.block(155, 160, 10, 10); B.row(155, 160, 13); B.en('patrulla', 164, 13);
-  B.fall(172, 12, 2); B.arc(171, 175, 10, 2); B.ground(175, 219); B.en('alien', 185, 13);
-  for (let i = 1; i <= 4; i++) B.block(194 + i, 194 + i, 14 - i, 13); B.row(195, 198, 8); B.crystal(210, 14, 3, 1.3); B.block(212, 219, 0, 15);
-  return B.done(LV({ name: 'LLUVIA DE FUEGO', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 205 * T + T / 2, y: 14 * T }, meteors: { zones: [[42 * T, 200 * T]], every: 1.1, acc: 0 } }));
+  const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 209); B.hid(6, 10, 'vida'); B.box(10, 10, 'escudo'); B.row(13, 20, 12);
+  const roof = (a, b) => { B.block(a, a, 10, 13); B.block(b, b, 10, 13); B.block(a, b, 9, 9); B.row(a + 1, b - 1, 13); };
+  roof(26, 32); B.en('patrulla', 38, 13); B.arc(42, 46, 11, 2); B.block(44, 44, 14, 15, ' '); B.block(43, 45, 14, 15, ' ');
+  roof(52, 57); B.en('alien', 62, 13); B.geyser(68, 14, 4, 0.5); roof(73, 79); B.box(76, 6, 'estrella'); B.cp(82, 14);
+  B.block(90, 92, 12, 13); B.en('torreta', 91, 11); B.block(96, 101, 10, 13); B.fake(97, 100, 11, 13); B.gear(99, 12); B.row(96, 101, 9);
+  roof(108, 113); B.en('erizo', 118, 13); B.arc(122, 128, 11, 2); B.block(123, 127, 14, 15, ' '); roof(133, 139); B.cp(142, 14); B.gear(146, 10); P(144, 148, 11);
+  B.en('patrulla', 154, 13); roof(160, 166); B.geyser(171, 14, 4, 1.2); B.en('alien', 176, 13);
+  B.block(184, 185, 8, 13); B.block(196, 197, 8, 13); B.block(184, 197, 6, 7); B.crystal(187, 14, 3, 1.2); B.crystal(194, 14, 3, 1.2); B.block(205, 209, 0, 15);
+  return B.done(LV({ name: 'LLUVIA DE FUEGO', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 190 * T + T / 2, y: 14 * T }, bombs: { zones: [[22 * T, 183 * T]], every: 0.9 }, intro: '¡MIRA DÓNDE CAEN!' }));
 };
+// 3-6 · la vagoneta: la pantalla avanza sola por los túneles de la mina, con techos bajos y cintas turbo
 LEVELS['3-6'] = function () {
-  const B = LB(260, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.block(0, 259, 0, 2);
-  B.ground(0, 26); B.hid(6, 10, 'vida'); B.box(10, 10, 'turbo'); B.row(13, 20, 12); B.crystal(3, 14, 3, 1.2);
-  // A · ¡la lava viene detrás!
-  B.arc(26, 29, 11, 2); B.ground(29, 60); B.en('patrulla', 40, 13); B.strip(31, 45); B.row(32, 44, 12); B.block(50, 52, 12, 13); B.row(50, 52, 11);
-  B.fall(62, 13, 2); B.fall(66, 12, 2); B.ground(69, 110); B.cp(71, 14); B.box(75, 10, 'iman'); B.strip(77, 97); B.row(78, 96, 12); B.en('alien', 100, 13); B.block(104, 106, 12, 13);
-  // B · la gran roca: por encima… o por su túnel secreto
-  B.block(110, 110, 12, 13); B.block(112, 118, 9, 13); B.fake(112, 118, 11, 13); B.row(112, 118, 12); B.gear(116, 12); B.row(112, 118, 8);
-  // C · plataforma de salto y géiseres
-  B.arc(120, 124, 10, 2); B.ground(124, 170); B.pad(130, 14); P(132, 136, 9); B.gear(134, 7); B.row(132, 136, 8); B.en('patrulla', 145, 13); B.geyser(150, 14, 4, 0); B.geyser(156, 14, 4, 1.6); B.cp(166, 14);
-  // D · sprint hasta la salida
-  B.strip(172, 195); B.row(173, 194, 12); B.ground(170, 210); B.fall(212, 12, 2); B.arc(211, 215, 10, 2); B.ground(215, 259); B.en('alien', 222, 13); P(228, 232, 10); B.gear(230, 8);
-  for (let i = 1; i <= 4; i++) B.block(239 + i, 239 + i, 14 - i, 13); B.row(240, 243, 8); B.block(255, 259, 0, 15);
-  return B.done(LV({ name: 'TÚNELES DE LAVA', time: 200, cave: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 250 * T + T / 2, y: 14 * T }, chase: { x: -9999, speed: 172, startX: 15 * T, on: false, style: 'lava' } }));
+  const B = LB(250, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 249, 0, 2); B.ground(0, 249); B.hid(8, 10, 'vida'); B.row(10, 16, 12);
+  B.block(24, 34, 3, 10); B.row(25, 33, 13); B.arc(38, 43, 11, 2); B.block(39, 42, 14, 15, ' '); B.en('patrulla', 48, 13); B.block(54, 70, 3, 9); B.strip(55, 69); B.row(56, 68, 12);
+  B.block(76, 77, 12, 13); B.block(84, 85, 11, 13); B.block(92, 93, 12, 13); B.row(78, 91, 9); B.box(88, 6, 'escudo'); B.cp(98, 14);
+  B.arc(102, 108, 11, 2); B.block(103, 107, 14, 15, ' '); B.block(112, 130, 3, 10); B.strip(113, 129); B.en('alien', 122, 13); B.gear(127, 12);
+  B.block(136, 137, 7, 13); B.block(136, 137, 7, 9, 'C'); B.block(136, 137, 10, 13, ' '); B.block(136, 137, 3, 6); B.row(132, 140, 12);      // pasa por debajo… o rompe la roca con láser
+  B.box(132, 8, 'laser'); B.arc(144, 150, 11, 2); B.block(145, 149, 14, 15, ' '); B.en('erizo', 156, 13); B.cp(162, 14);
+  B.block(168, 190, 3, 9); B.strip(169, 189); B.row(170, 188, 12); B.block(194, 195, 12, 13); B.block(200, 204, 11, 13); B.fake(201, 203, 12, 13); B.gear(202, 12); B.pipe(212, 14, 236, 14, true);
+  B.arc(216, 222, 11, 2); B.block(217, 221, 14, 15, ' '); B.block(226, 249, 0, 9); B.crystal(240, 14, 3, 1.4); B.row(230, 238, 12);
+  return B.done(LV({ name: 'TÚNELES DE LAVA', time: 160, cave: true, intro: '¡LA VAGONETA NO PARA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 245 * T + T / 2, y: 14 * T }, auto: { speed: 165, x: 0 } }));
 };
+// 3-7 · el gran puente: cortinas de lava que se abren y se cierran, tramos que se derrumban y la antena en la puerta del castillo
 LEVELS['3-7'] = function () {
-  const B = LB(240, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.ground(0, 20); B.hid(5, 10, 'vida'); B.box(9, 10, 'escudo'); B.row(12, 18, 12); B.crystal(2, 14, 3, 1.2);
-  // A · el puente sobre el río
-  P(21, 33, 12); B.fall(34, 12, 2); P(36, 60, 12); B.en('patrulla', 28, 11); B.en('dron', 45, 8, { x0: 38, x1: 56 }); B.block(48, 52, 7, 7); B.laser(50, 8, 11, 0); B.row(22, 59, 10);
-  B.ground(61, 80); B.cp(63, 14); B.box(68, 10, 'laser'); B.en('alien', 74, 13); B.crystal(78, 14, 3);
-  // B · tramos que se derrumban
-  P(81, 89, 12); B.fall(90, 12, 2); P(92, 103, 12); B.fall(104, 12, 2); P(106, 117, 12); B.fall(118, 12, 2); P(120, 124, 12); P(128, 129, 12); B.fall(130, 12, 2); P(132, 140, 12);
-  B.en('patrulla', 96, 11); B.en('erizo', 112, 11); B.en('dron', 124, 8, { x0: 118, x1: 132 }); B.row(82, 139, 10); B.gear(110, 9);
-  B.pitWarp(125, 127, 224, 13);            // ¡el hueco del puente no tiene lava!
-  // C · la orilla de la fortaleza
-  B.ground(141, 215); B.cp(143, 14); B.block(150, 152, 12, 13); B.en('torreta', 151, 11); B.geyser(158, 14, 5, 0.5); B.en('patrulla', 166, 13); P(172, 176, 11); P(178, 182, 8); B.gear(180, 6);
-  for (let i = 1; i <= 4; i++) B.block(195 + i, 195 + i, 14 - i, 13); B.row(196, 199, 8); B.block(216, 219, 0, 15);
-  // cueva bajo el puente
-  B.ground(220, 239); B.block(220, 239, 0, 8); B.block(239, 239, 0, 15); B.row(222, 236, 12); B.gear(230, 12); B.crystal(222, 14, 3, 1.2); B.portal(237, 14, 145, 14);
-  return B.done(LV({ name: 'EL GRAN PUENTE', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 207 * T + T / 2, y: 14 * T } }));
+  P(21, 60, 12); B.block(30, 50, 3, 3); B.lavafall(33, 4, 11, 0); B.lavafall(40, 4, 11, 1.1); B.lavafall(47, 4, 11, 2.2); B.en('patrulla', 55, 11); B.row(22, 59, 10);
+  B.ground(61, 78); B.cp(63, 14); B.box(68, 10, 'laser'); B.en('alien', 74, 13);
+  P(79, 88, 12); B.fall(89, 12, 2); P(91, 102, 12); B.fall(103, 12, 2); P(105, 116, 12); B.en('erizo', 96, 11); B.block(84, 112, 3, 3); B.lavafall(86, 4, 11, 0.5); B.lavafall(100, 4, 11, 1.4); B.lavafall(110, 4, 11, 0.2); B.row(80, 115, 10); B.gear(98, 9);
+  P(117, 122, 12); P(127, 140, 12); B.pitWarp(123, 126, 207, 13); B.en('dron', 132, 8, { x0: 126, x1: 140 });
+  B.ground(141, 200); B.cp(143, 14); B.block(150, 152, 12, 13); B.en('torreta', 151, 11); B.block(156, 190, 3, 3); B.lavafall(160, 4, 13, 0); B.lavafall(170, 4, 13, 0.9); B.lavafall(180, 4, 13, 1.8);
+  B.block(186, 199, 4, 6); B.block(186, 187, 7, 9); B.block(198, 199, 7, 13); B.crystal(195, 14, 3, 1.2); B.block(200, 202, 0, 15);
+  B.ground(203, 219); B.block(203, 219, 0, 8); B.block(219, 219, 0, 15); B.row(205, 216, 12); B.gear(212, 12); B.crystal(205, 14, 3, 1.2); B.portal(217, 14, 145, 14);
+  return B.done(LV({ name: 'EL GRAN PUENTE', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 192 * T + T / 2, y: 14 * T } }));
 };
+// 3-8 · la fundición: interruptores que cambian los bloques rojos y azules; la antena está en el tejado del horno
 LEVELS['3-8'] = function () {
-  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.ground(0, 30); B.hid(6, 10, 'vida'); B.box(10, 10, 'chip'); B.row(13, 19, 12); B.en('patrulla', 25, 13);
-  // A · cintas transportadoras y láseres
-  B.ground(30, 80); B.strip(32, 50); B.block(38, 52, 8, 8); B.laser(42, 9, 13, 0); B.laser(47, 9, 13, 1.2); B.row(39, 51, 13); B.en('alien', 56, 13);
-  B.lift(60, 62, 5, 13); for (let r = 6; r <= 12; r += 2) B.chip(61, r); P(63, 68, 5); B.gear(66, 3); B.row(63, 68, 4);
-  // B · horno
-  B.mover(81, 12, 3, 48, 0, 1.2, 0); B.ground(85, 140); B.cp(87, 14); B.block(92, 94, 12, 13); B.en('torreta', 93, 11); B.strip(97, 115); B.block(103, 107, 8, 8); B.laser(105, 9, 13, 1); B.row(98, 114, 12); B.en('erizo', 120, 13);
-  // C · la máquina hueca
-  B.block(124, 124, 12, 13); B.block(126, 133, 10, 13); B.fake(126, 133, 12, 13); B.row(126, 133, 12); B.gear(130, 13); B.row(126, 133, 9);
-  // D · ascensor de calor y salida
-  B.fall(142, 12, 2); B.arc(141, 145, 10, 2); B.ground(145, 219); B.lift(150, 152, 5, 13); P(153, 158, 5); B.gear(156, 3); B.row(153, 158, 4); B.en('dron', 165, 9, { x0: 158, x1: 174 });
-  B.block(168, 177, 8, 8); B.laser(170, 9, 13, 0.4); B.laser(175, 9, 13, 1.6); B.row(169, 176, 13);
-  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.block(210, 219, 0, 15);
-  return B.done(LV({ name: 'LA FUNDICIÓN', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 202 * T + T / 2, y: 14 * T } }));
+  const B = LB(200, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 199); B.hid(6, 10, 'vida'); B.box(10, 10, 'chip'); B.row(12, 18, 12);
+  B.set(22, 10, '!'); B.block(28, 29, 9, 13, 'X'); B.row(31, 36, 12); B.block(38, 39, 9, 13, 'Y'); B.en('patrulla', 34, 13);
+  B.strip(42, 56); B.block(46, 52, 8, 8); B.laser(49, 9, 13, 0); B.row(43, 55, 12); B.set(60, 10, '!');
+  B.block(64, 72, 10, 10, 'X'); B.block(64, 72, 6, 6, 'Y'); B.row(64, 72, 5); B.gear(68, 4); B.block(74, 75, 6, 13); B.en('alien', 70, 13); B.cp(80, 14);
+  B.block(86, 88, 12, 13); B.en('torreta', 87, 11); B.set(92, 10, '!'); B.block(96, 106, 12, 13, 'Y'); B.block(96, 106, 12, 12, 'X'); B.lift(108, 110, 5, 13); P(111, 116, 5); B.row(111, 116, 4); B.box(114, 1, 'escudo');
+  B.block(118, 124, 9, 13); B.fake(118, 118, 11, 13); B.row(119, 123, 12); B.gear(122, 12); B.en('erizo', 130, 13); B.cp(136, 14);
+  // el horno: se sube alternando bloques
+  B.set(140, 10, '!'); B.block(144, 147, 11, 11, 'X'); B.block(148, 151, 8, 8, 'Y'); B.block(152, 155, 5, 5, 'X'); B.set(150, 2, '!'); B.block(158, 176, 4, 13); B.laser(166, 0, 3, 0.4); B.crystal(174, 4, 3, 1.3); B.block(196, 199, 0, 15);
+  return B.done(LV({ name: 'LA FUNDICIÓN', time: 240, intro: '¡GOLPEA LOS INTERRUPTORES!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 170 * T + T / 2, y: 4 * T } }));
 };
+// 3-9 · altos hornos: subida vertical con corrientes de calor y bloques que cambian con interruptores
 LEVELS['3-9'] = function () {
-  const H = 110, B = LB(34, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.block(0, 2, 8, H - 1); B.block(31, 33, 8, H - 1); B.ground(3, 30); B.row(6, 12, H - 4); B.hid(16, H - 6, 'vida'); B.crystal(28, H - 2, 3, 1.2);
-  // cámara secreta en la pared (se atraviesa su lado derecho)
-  B.block(3, 9, 49, 49); B.block(3, 8, 56, 56); B.block(9, 9, 50, 56); B.fake(9, 9, 53, 55); B.gear(5, 52); B.row(3, 8, 51); B.row(4, 7, 54);
-  const xs = [[5, 9], [12, 16], [19, 23], [25, 29], [19, 23], [12, 16]]; let k = 0;
-  for (let y = H - 5; y >= 12; y -= 3, k++) { let [a, b] = xs[k % 6]; if (y >= 47 && y <= 58 && a < 11) { a = 12; b = 16; } P(a, b, y);
-    if (k % 5 === 3) B.en('patrulla', a + 2, y - 1); if (k % 4 === 1) B.row(a, b, y - 1); if (k === 9) B.box(a + 2, y - 4, 'escudo'); if (k === 20) B.gear(a + 2, y - 2); if (k === 26) B.en('dron', 15, y - 2, { x0: 6, x1: 26 }); if (k === 14) B.cp(a + 2, y); }
-  B.lift(26, 28, 66, 80); B.gear(27, 64);
-  B.block(9, 30, 8, 9); B.arc(10, 24, 6, 3); B.crystal(29, 8, 3, 1.3); B.box(20, 4, 'chip');
-  return B.done(LV({ name: 'LAS CHIMENEAS', time: 230, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 26 * T + T / 2, y: 8 * T }, rise: { y: H * T + 400, speed: 44, startY: (H - 8) * T, on: false, style: 'lava' } }));
+  const H = 96, B = LB(30, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 2, 0, H - 1); B.block(27, 29, 0, H - 1); B.ground(3, 26); B.row(6, 12, H - 4); B.hid(16, H - 6, 'vida'); B.crystal(24, H - 2, 3, 1.2);
+  B.lift(22, 24, H - 20, H - 3); B.chip(23, H - 10); P(17, 21, H - 20); B.en('patrulla', 19, H - 21); P(8, 13, H - 24); B.set(10, H - 28, '!'); B.block(3, 7, H - 26, H - 26, 'X'); B.block(3, 7, H - 32, H - 32, 'Y'); B.gear(4, H - 34);
+  P(14, 19, H - 30); B.box(16, H - 34, 'escudo'); B.lift(3, 5, H - 50, H - 34); P(6, 11, H - 50); B.cp(8, H - 50); B.en('dron', 15, H - 54, { x0: 6, x1: 24 });
+  P(16, 22, H - 54); B.set(20, H - 58, '!'); B.block(23, 26, H - 58, H - 58, 'Y'); B.block(23, 26, H - 64, H - 64, 'X'); B.gear(24, H - 66); P(12, 16, H - 62); B.lift(6, 8, H - 80, H - 63); P(9, 14, H - 80);
+  B.block(18, 26, H - 74, H - 74); B.fake(18, 18, H - 73, H - 70); B.block(18, 26, H - 69, H - 69); B.row(19, 25, H - 71); B.gear(25, H - 71);              // cámara en la pared
+  P(16, 21, H - 84); B.en('patrulla', 18, H - 85); P(22, 26, H - 88); B.cp(24, H - 88); B.lift(3, 5, 6, H - 84); B.block(6, 26, 6, 7); B.crystal(24, 6, 3, 1.3); B.row(8, 20, 4);
+  return B.done(LV({ name: 'LAS CHIMENEAS', time: 240, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 15 * T + T / 2, y: 6 * T } }));
 };
+// 3-10 · engranajes gigantes: plataformas de la maquinaria y una red de escotillas; la última lleva a la sala de la antena
 LEVELS['3-10'] = function () {
-  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  const B = LB(200, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.ground(0, 22); B.cog(8, 7, 3); B.hid(12, 10, 'vida'); B.box(16, 10, 'escudo'); B.row(5, 10, 12);
-  // A · plataformas de la maquinaria
   B.mover(24, 12, 3, 0, 72, 1.2, 0); B.mover(30, 10, 3, 0, 72, 1.2, 1.5); B.mover(36, 12, 3, 60, 0, 1.0, 0); B.row(24, 40, 8);
-  B.ground(42, 70); B.cog(56, 8, 4); B.en('patrulla', 50, 13); B.geyser(60, 14, 5, 0); B.box(64, 10, 'laser');
-  // B · en diagonal
+  B.ground(42, 70); B.cog(56, 8, 4); B.en('patrulla', 50, 13); B.geyser(60, 14, 5, 0); B.box(64, 10, 'laser'); B.pipe(67, 14, 150, 14, true);
   B.mover(72, 12, 3, 48, -48, 1.1, 0); B.mover(80, 10, 3, 48, 48, 1.1, 1.6); P(87, 90, 9); B.gear(89, 7); B.row(72, 86, 8);
-  B.ground(92, 140); B.cp(94, 14); B.en('alien', 100, 13); B.en('erizo', 110, 13); B.cog(117, 6, 5);
-  B.block(124, 130, 11, 13); B.fake(124, 130, 12, 13); B.row(125, 129, 12); B.gear(127, 13);
-  // C · la cadena de engranajes sobre la lava
-  B.mover(142, 12, 3, 0, 60, 1.4, 0); B.mover(148, 11, 3, 0, 60, 1.4, 1.4); B.mover(154, 12, 3, 60, 0, 1.2, 0.7); B.gear(156, 8); B.fall(161, 12, 2); B.mover(165, 11, 3, 0, 60, 1.4, 2.2); B.fall(171, 12, 2); B.row(142, 172, 9); B.cog(158, 4, 4);
-  B.ground(175, 219); B.cp(177, 14); B.en('dron', 185, 9, { x0: 178, x1: 194 }); B.cog(200, 7, 4);
-  for (let i = 1; i <= 4; i++) B.block(194 + i, 194 + i, 14 - i, 13); B.row(195, 198, 8); B.block(210, 219, 0, 15);
-  return B.done(LV({ name: 'ENGRANAJES GIGANTES', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 205 * T + T / 2, y: 14 * T } }));
+  B.ground(92, 130); B.cp(94, 14); B.en('alien', 100, 13); B.cog(110, 6, 5); B.en('erizo', 116, 13); B.pipe(126, 14, 172, 14, false); B.block(130, 131, 0, 15);
+  B.ground(132, 160); B.block(132, 160, 0, 6); B.row(134, 158, 12); B.gear(146, 9); P(144, 148, 10); B.en('patrulla', 140, 13); B.pipe(157, 14, 98, 14, false); B.block(160, 161, 0, 15);
+  B.ground(162, 199); B.block(162, 199, 0, 4); B.cog(186, 9, 4); B.crystal(196, 14, 3, 1.3); B.cp(168, 14); B.block(199, 199, 0, 15);
+  return B.done(LV({ name: 'ENGRANAJES GIGANTES', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 190 * T + T / 2, y: 14 * T }, intro: '¡AGÁCHATE EN LAS ESCOTILLAS!' }));
 };
+// 3-11 · rocas flotantes con gravedad baja y corrientes de calor que suben
 LEVELS['3-11'] = function () {
-  const H = 22, B = LB(176, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.ground(0, 14); B.hid(4, 16, 'vida'); B.box(8, 16, 'escudo'); B.row(5, 11, 18); B.crystal(2, 20, 3, 1.3);
-  // A · rocas a la deriva sobre el mar de lava
-  B.fall(16, 18, 2); B.fall(21, 16, 2); B.fall(26, 14, 2); B.arc(16, 27, 12, 2); B.ground(30, 40); B.en('alien', 35, 19); P(33, 36, 13); B.gear(35, 11);
-  B.mover(42, 17, 3, 90, 0, 0.9, 0); B.ground(50, 64); B.cp(52, 20); B.en('dron', 58, 15, { x0: 52, x1: 64 }); B.box(56, 16, 'laser');
-  // B · escalera de rocas que se hunden
-  for (let i = 0; i < 8; i++) { const x = 66 + i * 4, y = 18 - Math.round(Math.sin(i * 0.9) * 4); B.fall(x, y, 2); B.chip(x, y - 1); B.chip(x + 1, y - 1); }
-  B.ground(98, 125); B.en('patrulla', 104, 19); B.block(114, 118, 12, 19); B.fake(114, 118, 17, 19); B.row(114, 118, 18); B.gear(116, 19); B.row(114, 118, 11);
-  // C · el último salto
-  B.mover(127, 16, 3, 0, 72, 1.3, 0); B.fall(133, 15, 2); B.fall(138, 13, 2); P(142, 145, 9); B.gear(144, 7); B.row(127, 141, 11);
-  B.ground(147, 175); B.cp(149, 20); B.en('erizo', 156, 19); for (let i = 1; i <= 4; i++) B.block(159 + i, 159 + i, 20 - i, 19); B.row(160, 163, 14); B.block(172, 175, 0, 21);
-  return B.done(LV({ name: 'ROCAS FLOTANTES', time: 190, sky: true, gk: 0.55, intro: '¡GRAVEDAD BAJA!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 167 * T + T / 2, y: 20 * T }, meteors: { zones: [[40 * T, 140 * T]], every: 1.4, acc: 0 } }));
+  const H = 26, B = LB(160, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 12); B.hid(4, 20, 'vida'); B.box(8, 20, 'escudo'); B.row(5, 11, 22); B.crystal(2, 24, 3, 1.3);
+  B.fall(15, 22, 2); B.fall(20, 19, 2); B.lift(24, 26, 8, 24); P(28, 34, 8); B.gear(31, 6); B.row(28, 34, 7); B.fall(37, 11, 2); B.fall(42, 14, 2); B.fall(47, 17, 2); B.ground(50, 62); B.cp(52, 24); B.en('alien', 58, 23);
+  B.lift(64, 66, 10, 24); for (let y = 12; y < 23; y += 3) B.chip(65, y); P(68, 72, 10); B.en('dron', 76, 8, { x0: 68, x1: 86 }); P(80, 84, 12); B.fall(88, 14, 2); B.fall(93, 12, 2); B.fall(98, 10, 2); B.gear(99, 7);
+  B.block(103, 110, 12, 15); B.fake(103, 103, 13, 14); B.gear(106, 14); B.block(104, 109, 13, 14, ' '); B.cp(108, 12); B.row(103, 110, 11);
+  B.fall(114, 15, 2); B.lift(118, 120, 6, 22); B.fall(124, 8, 2); B.fall(130, 7, 2); B.fall(136, 6, 2); B.row(124, 138, 4);
+  B.block(142, 159, 6, 9); B.crystal(156, 6, 3, 1.4); B.block(158, 159, 0, 5);
+  return B.done(LV({ name: 'ROCAS FLOTANTES', time: 190, sky: true, gk: 0.55, intro: '¡GRAVEDAD BAJA!', spawn: { x: 3 * T, y: 24 * T }, goal: { x: 150 * T + T / 2, y: 6 * T } }));
 };
+// 3-12 · murallas de la fortaleza: tres llaves repartidas por las torres abren la puerta del castillo
 LEVELS['3-12'] = function () {
-  const B = LB(208, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.ground(0, 24); B.hid(5, 10, 'vida'); B.box(9, 10, 'escudo'); B.row(11, 17, 12); B.en('patrulla', 20, 13);
-  // A · primera muralla
-  B.ground(24, 70); B.pad(28, 14); B.block(30, 33, 8, 13); B.en('torreta', 32, 7); B.row(30, 33, 6); B.geyser(38, 14, 5, 0); B.geyser(42, 14, 5, 1.2);
-  B.block(46, 50, 8, 8); B.laser(48, 9, 13, 0.5); B.gear(48, 12); B.en('alien', 55, 13); B.box(60, 10, 'laser');
-  // B · el foso
-  B.fall(72, 13, 2); B.fall(76, 12, 2); B.fall(80, 13, 2); B.row(72, 81, 10); B.ground(83, 130); B.cp(85, 14);
-  B.pad(90, 14); B.block(92, 96, 7, 13); B.en('torreta', 94, 6); B.en('erizo', 105, 13); B.block(108, 116, 8, 8); B.laser(110, 9, 13, 0); B.laser(114, 9, 13, 1.1); B.en('patrulla', 120, 13);
-  // C · la torre con puerta falsa
-  B.pad(122, 14); B.block(124, 128, 6, 13); B.fake(124, 128, 11, 13); B.row(124, 128, 12); B.gear(126, 13); B.row(124, 128, 5);
-  // D · segundo foso y la puerta del castillo
-  B.mover(132, 12, 3, 0, 60, 1.3, 0); B.fall(138, 12, 2); B.mover(142, 11, 3, 0, 60, 1.3, 1.5); B.row(132, 145, 9); B.ground(147, 207); B.cp(149, 14);
-  B.geyser(155, 14, 5, 0); B.geyser(159, 14, 5, 0.6); B.geyser(163, 14, 5, 1.2); B.block(168, 170, 12, 13); B.en('torreta', 169, 11); B.en('dron', 176, 9, { x0: 170, x1: 186 }); P(180, 184, 11); P(186, 190, 8); B.gear(188, 6);
-  for (let i = 1; i <= 3; i++) B.block(191 + i, 191 + i, 14 - i, 13); B.block(203, 207, 0, 15);
-  return B.done(LV({ name: 'MURALLAS DE LA FORTALEZA', time: 240, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } }));
+  const H = 20, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 169); B.hid(5, 14, 'vida'); B.box(9, 14, 'escudo'); B.row(11, 17, 16); B.en('patrulla', 20, 17);
+  // torre 1: llave arriba
+  B.block(26, 32, 6, 17); B.block(27, 31, 7, 16, ' '); B.block(27, 27, 17, 17, ' '); B.block(28, 31, 13, 13); B.block(27, 30, 10, 10); B.pad(31, 17); B.key(29, 8); B.en('alien', 30, 12);
+  B.geyser(38, 18, 5, 0); B.en('erizo', 44, 17); B.block(48, 50, 16, 17); B.en('torreta', 49, 15); B.cp(54, 18); B.box(58, 14, 'laser');
+  // torre 2: llave detrás de una pared agrietada
+  B.block(62, 70, 8, 17); B.block(63, 69, 9, 17, ' '); B.block(62, 62, 15, 17, 'C'); B.key(66, 16); B.gear(68, 16); B.block(70, 70, 15, 17, 'F'); B.row(62, 70, 6);
+  B.lavafall(76, 2, 17, 0); B.lavafall(82, 2, 17, 1.2); B.block(74, 84, 1, 1); B.en('patrulla', 90, 17); B.cp(96, 18);
+  // torre 3: llave en lo alto, se sube con géiseres y plataformas
+  B.pad(100, 18); P(102, 106, 13); B.en('dron', 108, 9, { x0: 102, x1: 116 }); P(108, 112, 9); P(114, 118, 5); B.key(116, 3); B.block(104, 120, 0, 0); B.gear(110, 7);
+  B.geyser(124, 18, 6, 0.5); B.geyser(130, 18, 6, 1.4); B.en('alien', 136, 17); B.cp(140, 18);
+  // la puerta del castillo
+  B.block(146, 169, 0, 13); B.door(146, 14, 17); B.crystal(162, 18, 3, 1.3); B.block(168, 169, 0, 19);
+  return B.done(LV({ name: 'MURALLAS DE LA FORTALEZA', time: 280, intro: '¡BUSCA LAS 3 LLAVES!', spawn: { x: 3 * T, y: 18 * T }, goal: { x: 156 * T + T / 2, y: 18 * T }, noLava: true }));
 };
+// 3-13 · isla flotante: corrientes de calor que soplan de lado entre islas; la antena está en la isla más alta
+LEVELS['3-13'] = function () {
+  const H = 22, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 14); B.hid(5, 16, 'vida'); B.box(9, 16, 'turbo'); B.row(4, 12, 18); B.crystal(2, 20, 3, 1.3);
+  B.wind(16, 44, 4, 19, 380, 0); B.fall(18, 18, 2); B.fall(25, 16, 2); B.fall(32, 17, 2); B.fall(39, 15, 2); B.row(18, 40, 12); B.block(46, 56, 17, 21); B.en('alien', 51, 16); P(48, 51, 12); B.gear(50, 10);
+  B.mover(59, 17, 3, 0, 96, 1.0, 0); B.block(65, 78, 15, 21); B.cp(67, 15); B.block(72, 76, 11, 14); B.fake(72, 72, 12, 14); B.block(73, 76, 12, 14, ' '); B.gear(75, 14); B.row(72, 76, 10);
+  B.wind(80, 112, 4, 19, -320, 1.2); B.fall(81, 16, 2); B.fall(87, 14, 2); B.mover(92, 13, 3, 72, 0, 1.0, 0); B.fall(102, 13, 2); B.fall(108, 15, 2); B.row(82, 110, 10); B.pipe(70, 15, 148, 7, true);
+  B.block(113, 124, 16, 21); B.cp(115, 16); B.en('dron', 120, 11, { x0: 113, x1: 128 }); B.pad(122, 16); P(126, 130, 10); B.gear(128, 8); B.wind(130, 150, 2, 14, 300, 0.5); B.fall(134, 10, 2); B.fall(140, 8, 2);
+  B.block(145, 169, 7, 10); B.crystal(165, 7, 3, 1.4); B.block(168, 169, 0, 6);
+  return B.done(LV({ name: 'ISLA FLOTANTE', time: 200, sky: true, gk: 0.65, intro: '¡CORRIENTES DE CALOR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 7 * T } }));
+};
+// 3-14 · mina de cristal rojo: el láser abre el camino rompiendo paredes agrietadas (y descubre cosas escondidas)
+LEVELS['3-14'] = function () {
+  const B = LB(190, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 189, 0, 2); B.ground(0, 189); B.crystal(4, 14, 3, 1.3); B.box(9, 10, 'laser'); B.hid(14, 10, 'vida'); B.row(16, 22, 12);
+  B.block(26, 27, 3, 13, 'C'); B.en('patrulla', 32, 13); B.crystal(36, 14, 3); B.block(40, 50, 3, 9); B.block(46, 46, 10, 13, 'C'); B.row(41, 45, 12); B.box(48, 11, 'chip');
+  B.block(54, 70, 9, 9); B.block(54, 54, 10, 13, 'C'); B.block(70, 70, 10, 13); B.row(55, 69, 12); B.gear(66, 12); B.jumper(60, 16, 5, 0); B.block(58, 62, 14, 15, ' ');
+  B.cp(74, 14); B.en('alien', 80, 13); B.block(86, 87, 3, 13, 'C'); B.block(90, 104, 3, 8); B.en('erizo', 96, 13); B.crystal(100, 14, 3, 1.2);
+  B.block(108, 116, 10, 13); B.block(108, 108, 10, 13, 'C'); B.block(109, 115, 11, 12, ' '); B.gear(113, 12); B.row(108, 116, 9);
+  B.block(120, 121, 3, 13, 'C'); B.cp(126, 14); B.jumper(132, 16, 5, 0.6); B.block(131, 133, 14, 15, ' '); B.en('patrulla', 138, 13); B.box(142, 10, 'laser');
+  B.block(150, 151, 3, 13, 'C'); B.block(156, 157, 3, 13, 'C'); B.crystal(164, 14, 3, 1.2); B.crystal(178, 14, 3, 1.3); B.block(184, 189, 0, 15);
+  return B.done(LV({ name: 'MINA DE CRISTAL ROJO', time: 230, cave: true, intro: '¡ROMPE LAS PAREDES CON EL LÁSER!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 172 * T + T / 2, y: 14 * T } }));
+};
+// 3-B · el tesoro del volcán: cámaras llenas de chips tras interruptores, bolas de magma y una puerta de 3 llaves
+LEVELS['3-B'] = function () {
+  const H = 20, B = LB(140, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 139, 0, 1); B.ground(0, 139); B.block(0, 1, 0, H - 1); B.hid(6, 14, 'vida'); B.crystal(4, 18, 3, 1.3); for (let x = 8; x < 20; x++) B.chip(x, 16);
+  B.set(22, 14, '!'); B.block(26, 36, 12, 17, 'X'); B.block(27, 35, 13, 16, ' '); for (let x = 27; x < 36; x++) { B.chip(x, 14); B.chip(x, 16); } B.key(31, 15);
+  B.jumper(40, 20, 6, 0); B.block(39, 41, 18, 19, ' '); B.jumper(46, 20, 6, 1.2); B.block(45, 47, 18, 19, ' '); B.row(38, 48, 12);
+  B.block(52, 64, 5, 5, 'Y'); for (let x = 52; x <= 64; x++) B.chip(x, 4); B.pad(54, 18); P(56, 60, 10); B.key(62, 3); B.set(58, 6, '!');
+  B.cp(68, 18); for (let i = 0; i < 4; i++) B.geyser(72 + i * 4, 18, 4, i * 0.6); B.row(71, 87, 13);
+  B.block(90, 104, 10, 17); B.block(91, 103, 11, 16, ' '); B.block(90, 90, 15, 17, 'C'); B.box(86, 14, 'laser'); for (let x = 91; x < 104; x++) { B.chip(x, 13); B.chip(x, 15); } B.key(100, 16);
+  B.block(110, 139, 0, 13); B.door(110, 14, 17); for (let x = 113; x < 136; x++) { B.chip(x, 16); B.chip(x, 14); } B.block(138, 139, 0, 19);
+  return B.done(LV({ name: 'TESORO DEL VOLCÁN', time: 200, cave: true, intro: '¡3 LLAVES ABREN EL TESORO!', spawn: { x: 4 * T, y: 18 * T }, goal: { x: 133 * T + T / 2, y: 18 * T }, noLava: true }));
+};
+// 3-J · Señor del Magma: los poderes esperan en tres forjas antes de la arena
 LEVELS['3-J'] = function () {
   const B = LB(80, 16);
-  B.ground(0, 79); B.row(5, 8, 12); B.crystal(3, 14, 3, 1.3);
-  B.set(10, 10, 'B'); B.box(11, 10, 'escudo'); B.set(12, 10, 'B'); B.box(15, 10, 'laser'); B.block(18, 21, 9, 9); B.gear(20, 7); B.row(18, 21, 8); B.pad(16, 14);
-  B.geyser(24, 14, 4, 0); B.en('patrulla', 27, 13); B.en('dron', 30, 10, { x0: 26, x1: 34 }); B.row(25, 31, 12);
-  B.cp(35, 14); B.box(38, 10, 'chip'); B.hid(33, 10, 'vida');
-  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13); B.crystal(45, 14, 3, 1.2); B.crystal(75, 14, 3, 1.2);
-  return B.done(LV({ name: 'SEÑOR DEL MAGMA', bossName: 'SEÑOR DEL MAGMA', bossHp: 10, time: 260, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true }));
-};
-LEVELS['3-B'] = function () {
-  const H = 22, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  const shape = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') B.chip(x + i, y + j); }));
-  B.ground(0, 14); P(7, 12, 15); shape(8, 8, ['###', '..#', '###', '..#', '###']); B.hid(4, 16, 'vida'); B.crystal(2, 20, 3, 1.3);
-  B.arc(14, 20, 16, 3); B.ground(20, 26); B.pad(24, 20); P(28, 33, 10); B.gear(31, 8); B.row(28, 33, 9);
-  B.arc(26, 34, 15, 3); B.ground(34, 50); B.en('alien', 42, 19); B.box(46, 16, 'laser'); B.mover(52, 18, 3, 90, 0, 0.9, 0); B.arc(50, 58, 14, 3);
-  B.ground(58, 76); B.cp(60, 20); B.en('dron', 66, 15, { x0: 60, x1: 74 }); P(63, 66, 14); P(69, 72, 9); P(74, 77, 5); B.gear(76, 3); B.row(69, 72, 8);
-  for (let i = 0; i < 8; i++) { const x = 80 + i * 4, y = 17 - Math.round(Math.sin(i * 0.9) * 4); B.fall(x, y, 2); B.chip(x, y - 1); B.chip(x + 1, y - 1); }
-  B.ground(113, 165); B.cp(115, 20); B.box(120, 16, 'iman'); B.pad(126, 20); P(128, 132, 9); B.gear(130, 7); B.en('erizo', 140, 19); B.crystal(150, 20, 3, 1.2);
-  for (let i = 1; i <= 4; i++) B.block(150 + i, 150 + i, 20 - i, 19); B.row(151, 154, 14); B.block(162, 165, 0, 21);
-  return B.done(LV({ name: 'TESORO DEL VOLCÁN', time: 170, sky: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
-    meteors: { zones: [[34 * T, 112 * T]], every: 1.05, acc: 0 }, rain: { x0: 121 * T, x1: 148 * T, dur: 9, t: 0, st: 0, acc: 0 } }));
-};
-LEVELS['3-13'] = function () {
-  const H = 22, B = LB(180, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.ground(0, 16); B.hid(5, 16, 'vida'); B.box(9, 16, 'turbo'); B.row(4, 12, 18); B.crystal(2, 20, 3, 1.3);
-  // A · corrientes de aire caliente
-  B.wind(18, 40, 6, 19, 380, 0); B.fall(19, 18, 2); B.fall(25, 16, 2); B.fall(31, 17, 2); B.fall(37, 15, 2); B.row(19, 38, 12); B.ground(42, 58); B.en('alien', 50, 19); P(46, 49, 14); B.gear(48, 12);
-  // B · isla con tesoro escondido
-  B.mover(60, 17, 3, 0, 90, 1.1, 0); B.ground(66, 90); B.cp(68, 20); B.en('patrulla', 76, 19); B.block(82, 86, 14, 19); B.fake(82, 86, 17, 19); B.row(82, 86, 18); B.gear(84, 19); B.row(82, 86, 13);
-  // C · contra el viento
-  B.wind(92, 125, 6, 19, -320, 1.2); B.fall(93, 18, 2); B.fall(98, 17, 2); B.mover(103, 16, 3, 72, 0, 1.0, 0); B.fall(111, 16, 2); B.fall(116, 17, 2); B.fall(121, 18, 2); B.row(93, 122, 13);
-  B.ground(125, 179); B.cp(127, 20); B.en('dron', 136, 15, { x0: 128, x1: 146 }); B.pad(144, 20); P(146, 150, 9); B.gear(148, 7); B.en('erizo', 156, 19);
-  for (let i = 1; i <= 4; i++) B.block(160 + i, 160 + i, 20 - i, 19); B.row(161, 164, 14); B.block(176, 179, 0, 21);
-  return B.done(LV({ name: 'ISLA FLOTANTE', time: 200, sky: true, gk: 0.6, intro: '¡CORRIENTES DE CALOR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 170 * T + T / 2, y: 20 * T }, meteors: { zones: [[60 * T, 160 * T]], every: 1.5, acc: 0 } }));
-};
-LEVELS['3-14'] = function () {
-  const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
-  B.block(0, 209, 0, 2);
-  B.ground(0, 26); B.crystal(4, 14, 3, 1.3); B.crystal(12, 14, 3); B.hid(8, 10, 'vida'); B.box(16, 10, 'escudo'); B.row(18, 24, 12); B.en('patrulla', 22, 13);
-  // A · vagonetas abandonadas (rocas que se hunden)
-  B.fall(28, 13, 2); B.fall(32, 12, 2); B.fall(36, 13, 2); B.ground(40, 80); B.block(44, 64, 3, 7); B.crystal(46, 14, 3); B.geyser(50, 14, 4, 0); B.en('alien', 54, 13); B.geyser(58, 14, 4, 1.4); B.crystal(62, 14, 3);
-  B.pad(68, 14); P(69, 73, 9); B.gear(71, 7); B.en('erizo', 76, 13);
-  // B · galería de cristales rojos
-  B.mover(82, 12, 3, 60, 0, 1.2, 0); B.ground(88, 140); B.cp(90, 14); for (let x = 94; x < 136; x += 7) B.crystal(x, 14, 3, 0.8 + (x % 3) * 0.2); B.en('dron', 100, 9, { x0: 92, x1: 110 }); B.box(104, 10, 'laser'); B.en('patrulla', 116, 13);
-  B.block(122, 128, 9, 13); B.fake(122, 128, 11, 13); B.row(122, 128, 12); B.gear(126, 12); B.block(120, 120, 12, 13); B.row(122, 128, 8);
-  // C · el pozo y la salida
-  B.block(143, 144, 12, 15); B.pad(143, 12); B.block(147, 149, 10, 15); B.pad(148, 10); B.arc(141, 150, 7, 3); B.gear(146, 5);
-  B.ground(151, 209); B.cp(154, 14); B.geyser(162, 14, 5, 0.5); B.en('alien', 170, 13); B.box(176, 10, 'estrella'); B.en('patrulla', 182, 13);
-  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.crystal(203, 14, 3, 1.4); B.block(206, 209, 0, 15);
-  return B.done(LV({ name: 'MINA DE CRISTAL ROJO', time: 230, cave: true, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } }));
+  B.ground(0, 79); B.crystal(3, 14, 3, 1.3); B.kitp(12, 14, 'escudo'); B.kitp(20, 14, 'laser'); B.kitp(28, 14, 'vuelo'); B.row(10, 30, 10); B.hid(33, 10, 'vida'); B.cp(36, 14);
+  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.crystal(46, 14, 3, 1.2); B.crystal(75, 14, 3, 1.2); B.gear(60, 7);
+  return B.done(LV({ name: 'SEÑOR DEL MAGMA', bossName: 'SEÑOR DEL MAGMA', bossHp: 7, bossStyle: 'magma', time: 300, intro: '¡COGE LOS PODERES DE LAS FORJAS!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true }));
 };
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
@@ -1177,11 +1174,11 @@ function buildLevel() {
     l.gears.forEach((g, i) => { g.i = i; g.old = gs.has(i); });
     o.b.forEach(k => { const [x, y] = k.split(',').map(Number); if (l.g[y] && (l.g[y][x] === '?' || l.g[y][x] === 'I')) l.g[y][x] = l.g[y][x] === 'I' ? ' ' : 'U'; });
     if (o.r && l.rain) l.rain.st = 2; }
-  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.icicles = (l.icicles || []).map(c => Object.assign({ x: c.x0, y: c.y0, st: 0, t: 0, vy: 0 }, c)); l.winds = l.winds || []; l.warps = l.warps || []; l.crys = l.crys || []; l.geysers = l.geysers || []; l.cogs = l.cogs || []; l.lastCp = null; if (l.bossLvl) bossInit(l);
+  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.icicles = (l.icicles || []).map(c => Object.assign({ x: c.x0, y: c.y0, st: 0, t: 0, vy: 0 }, c)); l.winds = l.winds || []; l.warps = l.warps || []; l.crys = l.crys || []; l.geysers = l.geysers || []; l.cogs = l.cogs || []; l.keys = l.keys || []; l.pipes = l.pipes || []; l.jumpers = l.jumpers || []; l.guns = l.guns || []; l.sw = 0; if (l.bombs) l.bombs.acc = 0; l.bl = []; if (l.auto) l.auto.x = 0; l.lastCp = null; if (l.bossLvl) bossInit(l);
   return l;
 }
 const tileAt = (tx, ty) => (tx < 0 || tx >= L.W) ? '#' : (ty < 0 || ty >= L.H) ? ' ' : L.g[ty][tx];
-const isSolid = c => c === '#' || c === '?' || c === 'U' || c === 'B';
+const isSolid = c => c === '#' || c === '?' || c === 'U' || c === 'B' || c === '!' || c === 'C' || c === 'D' || (c === 'X' && !L.sw) || (c === 'Y' && !!L.sw);
 function collide(o) {
   const x0 = Math.floor(o.x / T), x1 = Math.floor((o.x + o.w - 0.01) / T), y0 = Math.floor(o.y / T), y1 = Math.floor((o.y + o.h - 0.01) / T);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (isSolid(tileAt(tx, ty))) return true;
@@ -1223,7 +1220,7 @@ const ENEMY = {
   torreta: { img: 'enemigo-torreta-anim', h: 71, w: 54, bh: 56, speed: 0, stomp: true, pts: 300 }
 };
 function newPlayer(x, y) {          // en las fases de jefe empiezas (y reapareces) con escudo, láser y vuelo sin límite: solo sirven para esa fase
-  const kit = !!(L && L.bossLvl);
+  const kit = !!(L && L.bossLvl && (L.bossStyle || 'guard') === 'guard');
   return { kit, kitMsg: kit, fly: kit, x: x - 20, y: y - 78, w: 40, h: 78, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jbuf: 0, crouch: false,
     power: kit ? 'laser' : null, shield: kit, tTurbo: 0, tMagnet: 0, tStar: 0, inv: 0, dead: false, deadT: 0, win: false, winT: 0, idle: 0, sq: 0, tele: 0, drop: false, cool: 0 };
 }
@@ -1265,6 +1262,8 @@ function addChip(x, y) {
 /* ---------- bloques ---------- */
 function hitBlock(tx, ty) {
   const c = tileAt(tx, ty), cx = tx * T + T / 2, cy = ty * T;
+  if (c === '!') { if ((L.swT || 0) > time) return; L.swT = time + 0.4; L.sw = L.sw ? 0 : 1; bumps.push({ tx, ty, t: 0 }); tone(L.sw ? 880 : 440, L.sw ? 1320 : 660, 0.18, 'square', 0.1); shake = 0.1;
+    if (collide(P)) { L.sw = L.sw ? 0 : 1; SFX.bump(); } return; }
   if (c === '?') {
     L.g[ty][tx] = 'U'; bumps.push({ tx, ty, t: 0 });
     const what = L.boxes[tx + ',' + ty] || 'chip';
@@ -1286,7 +1285,9 @@ function knockAbove(tx, ty) {
 /* ---------- jugador ---------- */
 function hurt() {
   if (P.inv > 0 || P.dead || P.win || P.tStar > 0 || CHEAT.ghost) return;
-  if (P.shield) { P.shield = false; P.inv = 1.6; SFX.hurt(); burst(P.x + P.w / 2, P.y + P.h / 2, 16, '#29a8ff', 220); shake = 0.15; return; }
+  if (P.shield) { P.shield = false; P.inv = 1.6; SFX.hurt(); burst(P.x + P.w / 2, P.y + P.h / 2, 16, '#29a8ff', 220); shake = 0.15;
+    if (L.bossLvl && L.arena) { const a = L.arena, far = P.x + P.w / 2 < (a.x0 + a.x1) / 2 ? a.x1 - 3 * T : a.x0 + 3 * T, sx = P.x > a.x0 ? far : Math.max(4 * T, P.x - 8 * T); items.push({ kind: 'escudo', x: sx - 20, y: 10.5 * T, w: 40, h: 40, rise: 1, t: 0, stay: true, mat: 1.4 }); pop(sx, 9 * T, '¡TU ESCUDO!', '#7fe9ff'); }
+    return; }
   if (P.power) { P.power = null; setSize(P); if (!canStand(P)) { P.crouch = true; setSize(P); } P.inv = 1.8; SFX.hurt(); burst(P.x + P.w / 2, P.y + P.h / 2, 16, '#c63cff', 220); shake = 0.15; return; }
   die();
 }
@@ -1297,7 +1298,7 @@ function die() {
 }
 function respawn() {
   const cp = L.lastCp || L.spawn;
-  P = newPlayer(cp.x, cp.y); P.inv = 1.5; G.tleft = L.time;
+  P = newPlayer(cp.x, cp.y); P.inv = 1.5; G.tleft = L.time; if (L.auto) L.auto.x = Math.max(0, cp.x - 3 * T); L.bl = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; });
   spawnEnemies(); shots = [];
   if (L.chase && L.chase.on) L.chase.x = P.x - 560;
   if (L.rise && L.rise.on) L.rise.y = P.y + P.h + 460;
@@ -1383,7 +1384,10 @@ function updatePlayer(dt) {
     if (Math.abs(c.x - cx) < p.w / 2 + 14 && Math.abs(c.y - cy) < p.h / 2 + 14) { c.got = true; addChip(c.x, c.y); if (c.i !== undefined && !c.fall) gotMark('c', c.i); }
   }
   for (const g of L.gears) if (!g.got && Math.abs(g.x - cx) < p.w / 2 + 20 && Math.abs(g.y - cy) < p.h / 2 + 20) { g.got = true; G.gears++; if (!g.old) { addScore(500, g.x, g.y - 20); gotMark('g', g.i); } SFX.gear(); burst(g.x, g.y, 24, '#3db8ff', 240, 0.7, 200, 4); }
-  for (const it of items) if (!it.got && it.rise >= 1 && overlap(p, it)) { it.got = true; givePower(it.kind); }
+  for (const it of items) if (!it.got && it.rise >= 1 && !(it.mat > 0) && overlap(p, it)) { it.got = true; givePower(it.kind); }
+  if (L.kitP) for (const k of L.kitP) { k.t += dt; if (!k.st && !p.dead && overlap(p, { x: k.x - 26, y: k.y - 90, w: 52, h: 90 })) { k.st = 1; k.t = 0; givePower(k.kind);
+      if (L.theme === 'ice') { for (let i = 0; i < 26; i++) parts.push({ x: k.x + (Math.random() - 0.5) * 40, y: k.y - 45 + (Math.random() - 0.5) * 60, vx: (Math.random() - 0.5) * 420, vy: -100 - Math.random() * 300, life: 0.8, max: 0.8, col: i % 2 ? '#dff8ff' : '#7fd8ff', size: 4, grav: 1300, sqr: true }); noise(0.25, 0.2, 2000); }
+      else { burst(k.x, k.y - 45, 30, '#ff9a3c', 300, 0.7, -100, 4); burst(k.x, k.y - 45, 16, '#ffd060', 200, 0.5, 0, 3); noise(0.4, 0.15, 300); } } }
   items = items.filter(i => !i.got);
   // punto de control, portal, meta
   for (const cp of L.cps) if (!cp.on && Math.abs(cx - cp.x) < 30 && p.y + p.h > cp.y - 120 && p.y + p.h < cp.y + 30) { cp.on = true; L.lastCp = cp; SFX.check(); pop(cp.x, cp.y - 90, 'PUNTO DE CONTROL', '#35ff8a'); burst(cp.x, cp.y - 60, 20, '#35ff8a', 200, 0.6, 0, 3); }
@@ -1400,12 +1404,13 @@ function onOneWay(p) {
   for (let tx = Math.floor(p.x / T); tx <= Math.floor((p.x + p.w - 0.01) / T); tx++) if (tileAt(tx, ty) === '=') return true;
   return false;
 }
-const POWER_NAME = { vida: '+1 VIDA', laser: 'LÁSER', escudo: 'ESCUDO', turbo: 'TURBO', iman: 'IMÁN', mini: 'MINI LUCAS', estrella: 'ESTRELLA 5G' };
+const POWER_NAME = { vuelo: '¡VUELO SIN LÍMITE!', vida: '+1 VIDA', laser: 'LÁSER', escudo: 'ESCUDO', turbo: 'TURBO', iman: 'IMÁN', mini: 'MINI LUCAS', estrella: 'ESTRELLA 5G' };
 function givePower(k) {
   const p = P; SFX.power(); addScore(200); pop(p.x + p.w / 2, p.y - 16, POWER_NAME[k], '#29e6ff');
   burst(p.x + p.w / 2, p.y + p.h / 2, 20, '#29e6ff', 240, 0.6, 0, 3);
   if (k === 'vida') { G.lives++; SFX.life(); }
   else if (k === 'escudo') p.shield = true;
+  else if (k === 'vuelo') p.fly = true;
   else if (k === 'turbo') p.tTurbo = 7;
   else if (k === 'iman') p.tMagnet = 14;
   else if (k === 'estrella') p.tStar = 9;
@@ -1452,7 +1457,8 @@ function updateEnemies(dt) {
   }
   enemies = enemies.filter(e => !e.dead || e.dead < (e.how === 'fly' ? 2 : 0.45));
   for (const s of shots) {
-    s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+    if (s.g) s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; if (s.ball) s.rot = (s.rot || 0) + s.vx * dt / 17;
+    if (s.mine && tileAt(Math.floor(s.x / T), Math.floor(s.y / T)) === 'C') { const tx = Math.floor(s.x / T), ty = Math.floor(s.y / T); L.g[ty][tx] = ' '; s.life = 0; SFX.brk(); shake = 0.15; for (let i = 0; i < 10; i++) parts.push({ x: tx * T + T / 2 + (Math.random() - 0.5) * 30, y: ty * T + T / 2 + (Math.random() - 0.5) * 30, vx: (Math.random() - 0.5) * 320, vy: -200 - Math.random() * 260, life: 0.9, max: 0.9, col: i % 2 ? '#6a5a70' : '#aab4c4', size: 7, grav: 1500, sqr: true }); continue; }
     if (isSolid(tileAt(Math.floor(s.x / T), Math.floor(s.y / T)))) { s.life = 0; burst(s.x, s.y, 5, s.mine ? '#ff4a6a' : '#ff9a3c', 100, 0.2, 0, 2.5); continue; }
     const r = { x: s.x - s.w / 2, y: s.y - s.h / 2, w: s.w, h: s.h };
     if (s.mine) { for (const e of enemies) if (!e.dead && overlap(r, e)) { killEnemy(e, 'fly'); s.life = 0; break; } }
@@ -1514,6 +1520,7 @@ function updateStage(dt) {
     }
     L.mets = L.mets.filter(m => !m.dead);
   }
+  updExtras(dt, p);
   for (const gz of L.geysers) {          // géiseres de fuego: avisan burbujeando y luego escupen
     const k = ((time + gz.ph) % gz.per), on = k > 0.9 && k < 2.0; gz.warn = k > 0.15 && k <= 0.9; if (on && !gz.on && Math.abs(gz.x - (p.x + p.w / 2)) < VW) { noise(0.9, 0.1, 300); tone(90, 60, 0.6, 'sawtooth', 0.04); } gz.on = on;
     if (on && !p.dead && !p.win && !CHEAT.ghost && Math.abs(p.x + p.w / 2 - gz.x) < 16 + p.w / 2 && p.y + p.h > gz.y - gz.h && p.y < gz.y) { if (p.tStar > 0) {} else hurt(); }
@@ -1560,6 +1567,67 @@ function drawRock(m, x, y, w) {        // roca volcánica flotante (las que se h
   ctx.strokeStyle = m.fall ? 'rgba(255,140,40,' + (m.st === 1 ? 1 : 0.75) + ')' : 'rgba(255,120,40,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + w * 0.2, y + 8); ctx.lineTo(x + w * 0.35, y + 16); ctx.lineTo(x + w * 0.5, y + 12); ctx.moveTo(x + w * 0.6, y + 10); ctx.lineTo(x + w * 0.72, y + 20); ctx.lineTo(x + w * 0.55, y + h); ctx.stroke();
   ctx.fillStyle = '#ff8a30'; ctx.fillRect(x + 6, y - 1, w - 12, 2.5);
 }
+// ---------- mecánicas nuevas: llaves y puerta, escotillas secretas, bolas de magma, cañones de nieve, bombas del volcán, cristales que se encienden, scroll automático
+function updExtras(dt, p) {
+  const pc = p.x + p.w / 2;
+  for (const k of L.keys) if (!k.got && !p.dead && Math.abs(pc - k.x) < 34 && Math.abs(p.y + p.h / 2 - k.y) < 50) { k.got = true; const n = L.keys.filter(q => q.got).length;
+    burst(k.x, k.y, 24, '#ffd23c', 260, 0.6, 0, 3); [784, 1047, 1319].forEach((f, i) => tone(f, f, 0.1, 'triangle', 0.12, i * 0.07)); pop(k.x, k.y - 30, 'LLAVE ' + n + ' / ' + L.keys.length, '#ffd23c');
+    if (n === L.keys.length) { for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (L.g[y][x] === 'D') { L.g[y][x] = ' '; burst(x * T + T / 2, y * T + T / 2, 10, '#ffd23c', 200, 0.6, 300, 3); }
+      pop(pc, p.y - 60, '¡PUERTA ABIERTA!', '#ffd23c'); SFX.life(); shake = 0.3; } }
+  if (p.onGround && K.down && !p.dead && !(p.pipeT > 0)) for (const pp of L.pipes) if (pc > pp.x + 6 && pc < pp.x + 2 * T - 6 && Math.abs(p.y + p.h - pp.y) < 6) {
+    p.pipeT = 0.6; SFX.portal(); burst(pc, pp.y - 20, 26, pp.hid ? '#c63cff' : '#7fe9ff', 260, 0.6, 0, 4); p.x = pp.tox - p.w / 2; p.y = pp.toy - p.h - 0.01; p.vx = p.vy = 0; cam.x = p.x - VW * 0.4; cam.y = p.y - VHv * 0.6; burst(p.x + p.w / 2, p.y + p.h / 2, 26, '#ffffff', 260, 0.6, 0, 4); if (pp.hid) pop(pc, p.y - 40, '¡PASADIZO SECRETO!', '#e0b0ff'); break; }
+  p.pipeT = Math.max(0, (p.pipeT || 0) - dt);
+  for (const j of L.jumpers) { const k = ((time + j.ph) % j.per) / j.per; j.up = k < 0.55; j.y = j.up ? j.by - j.h * Math.sin(k / 0.55 * Math.PI) : j.by + 60; j.vy = j.up ? Math.cos(k / 0.55 * Math.PI) : 0;
+    if (j.up && !p.dead && !p.win && !CHEAT.ghost && Math.abs(pc - j.x) < 22 + p.w / 2 && Math.abs(p.y + p.h / 2 - j.y) < 20 + p.h / 2) { if (p.tStar <= 0) hurt(); }
+    if (j.up && k < 0.04 && Math.abs(j.x - pc) < VW) burst(j.x, j.by, 10, '#ffb040', 200, 0.4, 600, 3); }
+  for (const gg of L.guns) { if (Math.abs(gg.x - pc) > VW * 1.2) continue; gg.t -= dt; if (gg.t <= 0) { gg.t = gg.per; shots.push({ mine: false, x: gg.x + gg.dir * 40, y: gg.y - 24, vx: gg.dir * 210, vy: 0, w: 34, h: 34, life: 8, ball: true, ice: true }); tone(200, 120, 0.2, 'triangle', 0.06); burst(gg.x + gg.dir * 40, gg.y - 24, 8, '#ffffff', 120, 0.3, 0, 3); } }
+  const bm = L.bombs;
+  if (bm && !p.dead && !p.win && bm.zones.some(z => pc > z[0] && pc < z[1])) { bm.acc += dt; if (bm.acc > bm.every) { bm.acc = Math.random() * 0.4; const tx = Math.floor((pc - 160 + Math.random() * 640) / T);
+      let gy = -1; for (let y = Math.max(0, Math.floor(cam.y / T)); y < L.H; y++) if (isSolid(tileAt(tx, y)) || tileAt(tx, y) === '=') { gy = y * T; break; }
+      if (gy > 0) L.bl.push({ x: tx * T + T / 2, gy, t: 0, y: cam.y - 100 }); } }
+  for (const q of L.bl) { q.t += dt; if (q.t > 1.3) { q.y += 1500 * dt; if (q.y >= q.gy) { q.dead = true; burst(q.x, q.gy, 26, '#ff9a3c', 300, 0.6, 500, 4); burst(q.x, q.gy, 10, '#3a2020', 200, 0.7, 700, 5); noise(0.35, 0.18, 700); if (Math.abs(q.x - pc) < VW) shake = Math.max(shake, 0.15);
+        if (!p.dead && !CHEAT.ghost && Math.abs(q.x - pc) < 56 && Math.abs(q.gy - (p.y + p.h)) < 90) { if (p.tStar <= 0) hurt(); } } } }
+  L.bl = L.bl.filter(q => !q.dead);
+  if (L.crystalLight) for (const c of L.crys) if (!c.lit && Math.abs(pc - c.x) < 70 && Math.abs(p.y + p.h - c.y) < 90) { c.lit = true; [1319, 1760, 2093].forEach((f, i) => tone(f, f, 0.2, 'sine', 0.07, i * 0.05)); burst(c.x, c.y - 30, 18, '#bff4ff', 200, 0.6, 0, 3); }
+  if (L.auto && L.chase) L.chase.x = L.auto.x - 2;
+  if (L.auto && !p.win) { const A = L.auto; if (!p.dead) A.x = Math.min(L.W * T - VW, A.x + A.speed * dt);
+    if (!p.dead) { if (p.x < A.x + 6) { p.x = A.x + 6; if (collide(p)) die(); } if (p.x + p.w > A.x + VW - 30) p.x = A.x + VW - 30 - p.w; } }
+}
+function drawExtras() {
+  const vis = x => x > cam.x - 150 && x < cam.x + VW + 150;
+  for (const k of L.keys) if (!k.got && vis(k.x)) { const y = k.y + Math.sin(time * 3 + k.x) * 5;
+    ctx.globalCompositeOperation = 'lighter'; const g2 = ctx.createRadialGradient(k.x, y, 2, k.x, y, 40); g2.addColorStop(0, 'rgba(255,210,60,.5)'); g2.addColorStop(1, 'rgba(255,210,60,0)'); ctx.fillStyle = g2; ctx.fillRect(k.x - 40, y - 40, 80, 80); ctx.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.translate(k.x, y); ctx.rotate(Math.sin(time * 2) * 0.25); ctx.strokeStyle = '#6a3d00'; ctx.lineWidth = 3; ctx.fillStyle = '#ffd23c';
+    ctx.beginPath(); ctx.arc(0, -10, 10, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#6a3d00'; ctx.beginPath(); ctx.arc(0, -10, 4, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ffd23c';
+    ctx.fillRect(-3, -1, 6, 22); ctx.strokeRect(-3, -1, 6, 22); ctx.fillRect(3, 12, 7, 4); ctx.fillRect(3, 17, 5, 4); ctx.restore(); }
+  for (const pp of L.pipes) { if (!vis(pp.x)) continue; const cx = pp.x + T;
+    if (pp.hid) { if (Math.floor(time * 1.3 + pp.x) % 5 === 0 && Math.random() < 0.15) parts.push({ x: cx + (Math.random() - 0.5) * 50, y: pp.y - 4, vx: 0, vy: -40, life: 0.8, max: 0.8, col: '#e0b0ff', size: 1.6, grav: 0 }); continue; }
+    ctx.fillStyle = '#10141c'; ctx.beginPath(); ctx.ellipse(cx, pp.y + 2, T * 0.85, 9, 0, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = L.theme === 'lava' ? '#ff8a30' : L.theme === 'ice' ? '#bff4ff' : '#7fe9ff'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(127,233,255,' + (0.15 + 0.1 * Math.sin(time * 4)) + ')'; ctx.beginPath(); ctx.ellipse(cx, pp.y, T * 0.6, 5, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '900 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('▼', cx, pp.y - 10 + Math.sin(time * 5) * 3); }
+  for (const j of L.jumpers) { if (!j.up || !vis(j.x)) continue; const y = j.y;
+    ctx.globalCompositeOperation = 'lighter'; const g2 = ctx.createRadialGradient(j.x, y, 4, j.x, y, 40); g2.addColorStop(0, 'rgba(255,190,60,.7)'); g2.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = g2; ctx.fillRect(j.x - 40, y - 40, 80, 80); ctx.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.translate(j.x, y); ctx.rotate(j.vy < 0 ? Math.PI : 0); const bg = ctx.createRadialGradient(-5, -6, 2, 0, 0, 20); bg.addColorStop(0, '#fff2a0'); bg.addColorStop(0.5, '#ff8a20'); bg.addColorStop(1, '#a01e08'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#3a0a04'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-6, 2, 5, 0, 6.283); ctx.arc(6, 2, 5, 0, 6.283); ctx.fill(); ctx.fillStyle = '#200'; ctx.beginPath(); ctx.arc(-6, 4, 2.4, 0, 6.283); ctx.arc(6, 4, 2.4, 0, 6.283); ctx.fill(); ctx.restore();
+    if (Math.random() < 0.6) parts.push({ x: j.x + (Math.random() - 0.5) * 16, y: y + (j.vy > 0 ? 16 : -16), vx: 0, vy: j.vy > 0 ? 60 : -60, life: 0.4, max: 0.4, col: '#ff8a20', size: 3, grav: 0 }); }
+  for (const gg of L.guns) { if (!vis(gg.x)) continue; ctx.save(); ctx.translate(gg.x, gg.y); ctx.scale(gg.dir, 1); ctx.fillStyle = '#3a5a7a'; ctx.fillRect(-22, -22, 30, 22); ctx.fillStyle = '#5a86ac'; ctx.beginPath(); ctx.arc(-6, -30, 20, 0, 6.283); ctx.fill(); ctx.fillStyle = '#2a3e56'; ctx.fillRect(4, -40, 32, 20); ctx.fillStyle = '#10182a'; ctx.beginPath(); ctx.ellipse(36, -30, 5, 10, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#f4fcff'; ctx.beginPath(); ctx.ellipse(-6, -48, 22, 7, 0, 0, 6.283); ctx.fill(); ctx.restore(); }
+  for (const q of L.bl) { const a = Math.min(1, q.t / 1.3);
+    ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,90,40,' + (0.4 + 0.5 * Math.abs(Math.sin(time * 14))) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(q.x, q.gy, 56 * (1.3 - a * 0.3), 12, 0, 0, 6.283); ctx.stroke(); ctx.fillStyle = 'rgba(255,60,30,' + 0.25 * a + ')'; ctx.beginPath(); ctx.ellipse(q.x, q.gy, 56 * a, 12 * a, 0, 0, 6.283); ctx.fill();
+    if (q.t > 1.3) { const tg = ctx.createLinearGradient(q.x, q.y - 160, q.x, q.y); tg.addColorStop(0, 'rgba(255,90,20,0)'); tg.addColorStop(1, 'rgba(255,200,80,.9)'); ctx.fillStyle = tg; ctx.fillRect(q.x - 12, q.y - 160, 24, 160); }
+    ctx.globalCompositeOperation = 'source-over';
+    if (q.t > 1.3) { ctx.fillStyle = '#3a1a14'; ctx.beginPath(); ctx.arc(q.x, q.y, 20, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#ff8a30'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = '#ff6a1a'; ctx.fillRect(q.x - 8, q.y - 3, 12, 3); ctx.fillRect(q.x + 2, q.y + 5, 8, 3); } }
+}
+// tiles especiales: interruptor, bloques rojo/azul, pared agrietada (se rompe con el láser) y puerta de llaves
+function drawSpecial(c, tx, ty) {
+  const x = tx * T, y = ty * T;
+  if (c === 'X' || c === 'Y') { const on = c === 'X' ? !L.sw : !!L.sw, col = c === 'X' ? ['#ff3a5a', '#7a1428', '255,58,90'] : ['#3a8aff', '#14347a', '58,138,255'];
+    if (on) { ctx.fillStyle = col[1]; ctx.fillRect(x + 1, y + 1, T - 2, T - 2); ctx.fillStyle = col[0]; ctx.fillRect(x + 4, y + 4, T - 8, T - 8); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x + 4, y + 4, T - 8, 5); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, T - 2, T - 2); }
+    else { ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(' + col[2] + ',.6)'; ctx.lineWidth = 2; ctx.strokeRect(x + 4, y + 4, T - 8, T - 8); ctx.setLineDash([]); } }
+  else if (c === '!') { const b = bumps.find(q => q.tx === tx && q.ty === ty), oy = b ? -Math.sin(b.t / 0.2 * Math.PI) * 8 : 0; ctx.fillStyle = '#20242e'; ctx.fillRect(x + 2, y + 2 + oy, T - 4, T - 4); ctx.fillStyle = L.sw ? '#3a8aff' : '#ff3a5a'; ctx.beginPath(); ctx.arc(x + T / 2, y + T / 2 + oy, 13, 0, 6.283); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = '900 18px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', x + T / 2, y + T / 2 + 1 + oy); ctx.textBaseline = 'alphabetic'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(x + 2, y + 2 + oy, T - 4, T - 4); }
+  else if (c === 'D') { const g2 = ctx.createLinearGradient(x, 0, x + T, 0); g2.addColorStop(0, '#5a3a10'); g2.addColorStop(0.5, '#c8902a'); g2.addColorStop(1, '#5a3a10'); ctx.fillStyle = g2; ctx.fillRect(x + 2, y, T - 4, T); ctx.strokeStyle = '#2a1804'; ctx.lineWidth = 2; ctx.strokeRect(x + 2, y, T - 4, T);
+    if (!isWallT(tileAt(tx, ty - 1)) || tileAt(tx, ty - 1) === 'D' && tileAt(tx, ty + 1) !== 'D') { ctx.fillStyle = '#2a1804'; ctx.beginPath(); ctx.arc(x + T / 2, y + T / 2 - 4, 6, 0, 6.283); ctx.fill(); ctx.fillRect(x + T / 2 - 2.5, y + T / 2, 5, 12); } }
+}
 function drawCogs() {
   for (const c of L.cogs) { if (c.x + c.r < cam.x || c.x - c.r > cam.x + VW) continue; const n = Math.max(8, Math.round(c.r / 14)), a0 = time * 0.4 * (c.r > 3 * T ? 0.6 : 1) * ((c.x / T | 0) % 2 ? 1 : -1);
     ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(a0); ctx.fillStyle = '#2a1424'; ctx.strokeStyle = 'rgba(255,120,40,.5)'; ctx.lineWidth = 3; ctx.beginPath();
@@ -1568,7 +1636,7 @@ function drawCogs() {
     for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * 1.5708); ctx.fillRect(-c.r * 0.08, 0, c.r * 0.16, c.r * 0.6); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, c.r * 0.16, 0, 6.283); ctx.fillStyle = '#ff7a24'; ctx.fill(); ctx.restore(); }
 }
 function drawStageBack() {          // por detrás de los personajes
-  drawLavaPits(); drawGeysers();
+  drawLavaPits(); drawGeysers(); drawExtras();
   if (CHEAT.floor) {                 // puentes láser sobre los huecos
     CHEAT.floorT += 1 / 60; const gy = (L.H - 2) * T, x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1);
     const hole = x => !isSolid(L.g[L.H - 2][x]) && L.g[L.H - 2][x] !== '=' && !isSolid(L.g[L.H - 1][x]);
@@ -1590,12 +1658,12 @@ function drawStageBack() {          // por detrás de los personajes
     for (let x = st.x0 + off - 28; x < st.x1 - 10; x += 28) { if (x < st.x0 + 2) continue; ctx.beginPath(); ctx.moveTo(x, st.y); ctx.lineTo(x + 7, st.y + 4); ctx.lineTo(x, st.y + 8); ctx.stroke(); }
     ctx.globalCompositeOperation = 'source-over'; }
   for (const lf of L.lifts) { if (lf.x1 < cam.x - 20 || lf.x0 > cam.x + VW + 20 || lf.y1 < cam.y - 20 || lf.y0 > cam.y + VHv + 20) continue;     // ascensores antigravedad
-    const w = lf.x1 - lf.x0, h = lf.y1 - lf.y0; ctx.globalCompositeOperation = 'lighter';
-    const g2 = ctx.createLinearGradient(lf.x0, 0, lf.x1, 0); g2.addColorStop(0, 'rgba(41,230,255,0)'); g2.addColorStop(0.5, 'rgba(41,230,255,' + (0.16 + 0.05 * Math.sin(time * 5)) + ')'); g2.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g2; ctx.fillRect(lf.x0, lf.y0, w, h);
-    ctx.strokeStyle = 'rgba(127,243,255,.55)'; ctx.lineWidth = 3; const off = (time * 140) % 44;
+    const w = lf.x1 - lf.x0, h = lf.y1 - lf.y0, LC = L.theme === 'lava' ? ['255,140,40', '#ffb060'] : L.theme === 'ice' ? ['200,245,255', '#e8fbff'] : ['41,230,255', LC[1]]; ctx.globalCompositeOperation = 'lighter';
+    const g2 = ctx.createLinearGradient(lf.x0, 0, lf.x1, 0); g2.addColorStop(0, 'rgba(' + LC[0] + ',0)'); g2.addColorStop(0.5, 'rgba(' + LC[0] + ',' + (0.16 + 0.05 * Math.sin(time * 5)) + ')'); g2.addColorStop(1, 'rgba(' + LC[0] + ',0)'); ctx.fillStyle = g2; ctx.fillRect(lf.x0, lf.y0, w, h);
+    ctx.strokeStyle = 'rgba(' + LC[0] + ',.55)'; ctx.lineWidth = 3; const off = (time * 140) % 44;
     for (let y = lf.y1 - off; y > lf.y0 + 6; y -= 44) { ctx.globalAlpha = Math.min(1, (y - lf.y0) / 120) * 0.8; ctx.beginPath(); ctx.moveTo(lf.x0 + w * 0.3, y); ctx.lineTo(lf.x0 + w / 2, y - 12); ctx.lineTo(lf.x0 + w * 0.7, y); ctx.stroke(); }
-    ctx.globalAlpha = 1; ctx.fillStyle = '#7fe9ff'; ctx.fillRect(lf.x0 + 4, lf.y1 - 4, w - 8, 4); ctx.globalCompositeOperation = 'source-over';
-    if (Math.random() < 0.4) parts.push({ x: lf.x0 + Math.random() * w, y: lf.y1 - Math.random() * h, vx: 0, vy: -90 - Math.random() * 90, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#7fe9ff' : '#fff', size: 1.8, grav: 0 }); }
+    ctx.globalAlpha = 1; ctx.fillStyle = LC[1]; ctx.fillRect(lf.x0 + 4, lf.y1 - 4, w - 8, 4); ctx.globalCompositeOperation = 'source-over';
+    if (Math.random() < 0.4) parts.push({ x: lf.x0 + Math.random() * w, y: lf.y1 - Math.random() * h, vx: 0, vy: -90 - Math.random() * 90, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? LC[1] : '#fff', size: 1.8, grav: 0 }); }
   const PI = iceI('plataforma-hielo') || IMG.plataforma, PFX = PI === IMG.plataforma ? [0.165, 0.835] : [0.31, 0.69];
   for (const m of L.movers) { const w = m.w + 10, x = m.x - 5, y = m.y - 2, h = PI && PI.naturalWidth ? w * PI.naturalHeight / PI.naturalWidth : 14;
     ctx.globalCompositeOperation = 'lighter'; for (const fx of PFX) { const g2 = ctx.createRadialGradient(x + w * fx, y + h, 0, x + w * fx, y + h, w * 0.16); g2.addColorStop(0, 'rgba(255,190,60,.5)'); g2.addColorStop(1, 'rgba(255,190,60,0)'); ctx.fillStyle = g2; ctx.fillRect(x + w * fx - w * 0.16, y + h - 4, w * 0.32, w * 0.18); } ctx.globalCompositeOperation = 'source-over';
@@ -1613,6 +1681,14 @@ function drawStageBack() {          // por detrás de los personajes
 }
 function drawStageFront() {         // por delante: láseres, muro, plasma
   for (const l of L.lasers) {
+    if (l.lava) { if (l.x < cam.x - 60 || l.x > cam.x + VW + 60) continue; const on = laserOn(l), cyc = (time + l.ph) % (l.on + l.off), warn = !on && cyc > l.on + l.off - 0.6;
+      ctx.fillStyle = '#2a1018'; ctx.fillRect(l.x - 22, l.y0 - 8, 44, 10); ctx.fillStyle = '#ff7a24'; ctx.fillRect(l.x - 22, l.y0, 44, 2);
+      if (on) { const g2 = ctx.createLinearGradient(l.x - 20, 0, l.x + 20, 0); g2.addColorStop(0, '#a02008'); g2.addColorStop(0.3, '#ff7a1a'); g2.addColorStop(0.5, '#ffe080'); g2.addColorStop(0.7, '#ff7a1a'); g2.addColorStop(1, '#a02008'); ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.moveTo(l.x - 16, l.y0 + 2); for (let y = l.y0; y <= l.y1; y += 16) ctx.lineTo(l.x - 16 - Math.sin(y * 0.08 + time * 9) * 3, y); for (let y = l.y1; y >= l.y0; y -= 16) ctx.lineTo(l.x + 16 + Math.sin(y * 0.08 - time * 9) * 3, y); ctx.closePath(); ctx.fill();
+        ctx.globalCompositeOperation = 'lighter'; const g3 = ctx.createLinearGradient(l.x - 60, 0, l.x + 60, 0); g3.addColorStop(0, 'rgba(255,100,20,0)'); g3.addColorStop(0.5, 'rgba(255,120,30,.3)'); g3.addColorStop(1, 'rgba(255,100,20,0)'); ctx.fillStyle = g3; ctx.fillRect(l.x - 60, l.y0, 120, l.y1 - l.y0); ctx.globalCompositeOperation = 'source-over';
+        if (Math.random() < 0.5) parts.push({ x: l.x + (Math.random() - 0.5) * 30, y: l.y1 - 4, vx: (Math.random() - 0.5) * 140, vy: -80 - Math.random() * 120, life: 0.5, max: 0.5, col: '#ffb040', size: 2.5, grav: 900 }); }
+      else if (warn) { for (let k = 0; k < 3; k++) { ctx.fillStyle = '#ff9a30'; ctx.beginPath(); ctx.arc(l.x + (k - 1) * 10, l.y0 + 6 + ((time * 120 + k * 20) % 40), 4, 0, 6.283); ctx.fill(); } }
+      continue; }
     if (l.x < cam.x - 60 || l.x > cam.x + VW + 60) continue;
     const ph = laserPh(l), on = ph < l.on, warn = !on && ph > l.on + l.off - 0.45;
     ctx.fillStyle = '#1a2038'; ctx.fillRect(l.x - 11, l.y0 - 2, 22, 9); ctx.fillRect(l.x - 11, l.y1 - 7, 22, 9);
@@ -1692,7 +1768,8 @@ function drawDark() {
   const light = (x, y, r, a = 1) => { const sx = (x - cam.x) / q, sy = (y - cam.y) / q, rr = r / q; if (sx < -rr || sx > w + rr || sy < -rr || sy > h + rr) return; const g2 = d.createRadialGradient(sx, sy, rr * 0.15, sx, sy, rr); g2.addColorStop(0, 'rgba(0,0,0,' + a + ')'); g2.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g2; d.fillRect(sx - rr, sy - rr, rr * 2, rr * 2); };
   const p = P; light(p.x + p.w / 2, p.y + p.h / 2, (p.tStar > 0 ? 340 : 235) + Math.sin(time * 7) * 5); light(p.x + p.w / 2, p.y + p.h, 120, 0.8);
   for (const cp of L.cps) light(cp.x, cp.y - 60, cp.on ? 150 : 70, cp.on ? 0.9 : 0.55);
-  for (const c of L.crys) light(c.x, c.y - 30 * c.h, 150 * c.h, 0.85);
+  for (const c of L.crys) if (!L.crystalLight || c.lit) light(c.x, c.y - 30 * c.h, (L.crystalLight ? 260 : 150) * c.h, 0.9); else light(c.x, c.y - 30 * c.h, 45, 0.5);
+  for (const k of L.keys) if (!k.got) light(k.x, k.y, 90, 0.8); for (const j of L.jumpers) if (j.up) light(j.x, j.y, 110, 0.9);
   for (const ic of L.icicles) if (ic.st < 3) light(ic.x, ic.y + 20, 40, 0.45);
   if (L.theme === 'lava') { for (const gz of L.geysers) light(gz.x, gz.y - (gz.on ? gz.h / 2 : 10), gz.on ? gz.h * 0.8 : 50, gz.on ? 0.9 : 0.5);
     if (!L.vert && !L.noLava) for (let x = Math.floor(cam.x / T); x < (cam.x + VW) / T + 1; x += 2) if (x >= 0 && x < L.W && !isWallT(L.g[L.H - 1][x])) light(x * T + T / 2, (L.H - 1) * T, 120, 0.7);
@@ -1738,12 +1815,12 @@ function update(dt) {
     updateEnemies(dt);
     updateStage(dt);
     if (L.boss) bossUpdate(dt);
-    for (const it of items) { it.t += dt; if (it.rise < 1) { it.rise = Math.min(1, it.rise + dt * 2.5); it.y -= 46 * dt * 2.5; }
+    for (const it of items) { it.t += dt; if (it.mat > 0) { it.mat -= dt; for (let k = 0; k < 3; k++) { const aa = Math.random() * 6.283, d = 60 + Math.random() * 50; parts.push({ x: it.x + 20 + Math.cos(aa) * d, y: it.y + 20 + Math.sin(aa) * d, vx: -Math.cos(aa) * d * 2.2, vy: -Math.sin(aa) * d * 2.2, life: 0.45, max: 0.45, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffffff', size: 2.5, grav: 0 }); } continue; } if (it.stay) continue; if (it.rise < 1) { it.rise = Math.min(1, it.rise + dt * 2.5); it.y -= 46 * dt * 2.5; }
       else if (it.t > 0.8 && !P.dead) { const dx = P.x + P.w / 2 - (it.x + 20), dy = P.y + P.h / 2 - (it.y + 20), d = Math.hypot(dx, dy) || 1, v = Math.min(760, 220 + (it.t - 0.8) * 1100); it.x += dx / d * v * dt; it.y += dy / d * v * dt; } }
     const p = P;
     const tx = p.x + p.w / 2 - VW * 0.4 + p.face * 50, ty = p.y + p.h - VHv * (L.vert ? 0.62 : 0.7);
     cam.x += (tx - cam.x) * Math.min(1, dt * 5); cam.y += (ty - cam.y) * Math.min(1, dt * 4);
-    cam.x = Math.max(0, Math.min(L.W * T - VW, cam.x));
+    cam.x = Math.max(0, Math.min(L.W * T - VW, cam.x)); if (L.auto) cam.x = L.auto.x;
     if (L.boss && L.boss.fight) { const a = L.arena, lo = a.x0 - 2 * T, hi = a.x1 + 2 * T - VW; cam.x = hi < lo ? (a.x0 + a.x1) / 2 - VW / 2 : Math.max(lo, Math.min(hi, cam.x)); }
     cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, cam.y));
   }
@@ -1943,13 +2020,13 @@ function drawTiles() {
     } else { ctx.fillStyle = '#2c386e'; ctx.fillRect(x, y, w, 14); ctx.fillStyle = '#35ff8a'; ctx.fillRect(x, y, w, 2.5); }
   }
   // suelo y bloques macizos
-  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (L.g[ty][tx] === '#') solidTile(tx, ty, G, gOk, gw, gh);
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) { const c = L.g[ty][tx]; if (c === '#' || c === 'C') solidTile(tx, ty, G, gOk, gw, gh); if (c === 'C') { const x = tx * T, y = ty * T; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 10, y + 6); ctx.lineTo(x + 20, y + 20); ctx.lineTo(x + 14, y + 30); ctx.lineTo(x + 24, y + 42); ctx.moveTo(x + 20, y + 20); ctx.lineTo(x + 34, y + 16); ctx.moveTo(x + 30, y + 30); ctx.lineTo(x + 40, y + 38); ctx.stroke(); } }
   if (L.theme === 'ice') iceDeco(x0, x1, y0, y1);
   else if (L.theme === 'lava') for (const c of L.crys) { if (c.x < cam.x - 80 || c.x > cam.x + VW + 80) continue; drawCrystal(c.x, c.y, c.c, c.h); }
   // cajas (de izquierda a derecha, para que cada una tape el lateral de la anterior)
   drawBoxes(x0, x1, y0, y1);
 }
-const isWallT = c => c === '#' || c === 'F';
+const isWallT = c => c === '#' || c === 'F' || c === 'C' || c === 'D';
 function solidTile(tx, ty, G, gOk, gw, gh) {
     const x = tx * T, y = ty * T;
     let d = 0; while (d < 9 && ty - 1 - d >= 0 && isWallT(L.g[ty - 1 - d][tx])) d++;
@@ -1998,7 +2075,7 @@ function drawCrystal(x, y, c, h) {
 }
 function drawBoxes(x0, x1, y0, y1) {
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
-    const c = L.g[ty][tx]; if (c !== '?' && c !== 'B' && c !== 'U') continue;
+    const c = L.g[ty][tx]; if (c === 'X' || c === 'Y' || c === '!' || c === 'D') { drawSpecial(c, tx, ty); continue; } if (c !== '?' && c !== 'B' && c !== 'U') continue;
     const cx = tx * T + T / 2; let cy = ty * T + T / 2;
     const b = bumps.find(q => q.tx === tx && q.ty === ty); if (b) cy -= Math.sin(b.t / 0.2 * Math.PI) * 10;
     if (c === '?') {
@@ -2079,19 +2156,30 @@ function drawWorld() {
     if (Math.random() < 0.3) parts.push({ x: po.x + (Math.random() - 0.5) * 60, y: po.y + (Math.random() - 0.5) * 60, vx: 0, vy: -40, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#c63cff' : '#29e6ff', size: 2.5, grav: 0 });
   }
   // punto de control y meta
-  for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 78, 26, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y, 84); ctx.globalAlpha = 1; }
-  if (vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y, 250); }
+  for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 78, 26, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y + 22, 100); ctx.globalAlpha = 1; }
+  if (vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y + 22, 268); }
   drawCogs(); drawTiles();
   drawStageBack();
   // chips y engranajes
   for (const c of L.chips) if (!c.got && vis(c.x)) { const s = Math.cos(time * 4 + c.t); spr(IMG['obj-chip'], c.x, c.y + Math.sin(time * 3 + c.t) * 3, 26, 0.5, 0.5, false, 0, Math.abs(s) * 0.85 + 0.15, 1); }
   for (const g of L.gears) if (!g.got && vis(g.x)) { ctx.globalAlpha = g.old ? 0.38 : 1; ctx.fillStyle = 'rgba(61,184,255,.22)'; ctx.beginPath(); ctx.arc(g.x, g.y, 30, 0, 6.283); ctx.fill(); spr(IMG['obj-engranaje'], g.x, g.y + Math.sin(time * 2.5) * 4, 40, 0.5, 0.5, false, time * 1.2); ctx.globalAlpha = 1; }
   const PIMG = { laser: 'poder-laser', escudo: 'poder-escudo', turbo: 'poder-turbo', iman: 'poder-iman', mini: 'poder-mini', estrella: 'poder-estrella5g' };
-  for (const it of items) { const iy = it.y + 20 + Math.sin(it.t * 4) * 3;
+  if (L.kitP) for (const k of L.kitP) { if (!vis(k.x)) continue; const ic = k.kind === 'vuelo' ? 'poder-turbo' : PIMG[k.kind], bob = Math.sin(time * 3 + k.x) * 4;
+    if (L.theme === 'ice') { if (k.st) continue;          // cristal de hielo con el poder congelado dentro
+      ctx.globalCompositeOperation = 'lighter'; const g2 = ctx.createRadialGradient(k.x, k.y - 45, 4, k.x, k.y - 45, 60); g2.addColorStop(0, 'rgba(160,240,255,.5)'); g2.addColorStop(1, 'rgba(160,240,255,0)'); ctx.fillStyle = g2; ctx.fillRect(k.x - 60, k.y - 105, 120, 110); ctx.globalCompositeOperation = 'source-over';
+      spr(IMG[ic], k.x, k.y - 45, 40, 0.5, 0.5);
+      const cg = ctx.createLinearGradient(k.x - 28, 0, k.x + 28, 0); cg.addColorStop(0, 'rgba(120,200,255,.55)'); cg.addColorStop(0.5, 'rgba(230,252,255,.35)'); cg.addColorStop(1, 'rgba(80,170,240,.55)'); ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.moveTo(k.x - 26, k.y); ctx.lineTo(k.x - 30, k.y - 60); ctx.lineTo(k.x, k.y - 92); ctx.lineTo(k.x + 30, k.y - 62); ctx.lineTo(k.x + 26, k.y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.moveTo(k.x - 14, k.y - 20); ctx.lineTo(k.x - 4, k.y - 70); ctx.stroke(); }
+    else {          // forja: yunque al rojo con el poder flotando entre llamas
+      ctx.fillStyle = '#2a1018'; ctx.fillRect(k.x - 24, k.y - 22, 48, 22); ctx.fillStyle = '#3e1c26'; ctx.fillRect(k.x - 30, k.y - 30, 60, 10); ctx.fillStyle = '#ff7a24'; ctx.fillRect(k.x - 30, k.y - 30, 60, 3);
+      if (k.st) continue; if (Math.random() < 0.8) parts.push({ x: k.x + (Math.random() - 0.5) * 40, y: k.y - 32, vx: (Math.random() - 0.5) * 30, vy: -90 - Math.random() * 90, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#ffb040' : '#ff5a1a', size: 3, grav: -50 }); ctx.globalCompositeOperation = 'lighter'; const g2 = ctx.createRadialGradient(k.x, k.y - 66, 4, k.x, k.y - 66, 50); g2.addColorStop(0, 'rgba(255,170,60,.55)'); g2.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = g2; ctx.fillRect(k.x - 50, k.y - 116, 100, 100); ctx.globalCompositeOperation = 'source-over';
+      spr(IMG[ic], k.x, k.y - 66 + bob, 42, 0.5, 0.5); } }
+  for (const it of items) { if (it.mat > 0) ctx.globalAlpha = Math.max(0, 1 - it.mat / 1.4); const iy = it.y + 20 + Math.sin(it.t * 4) * 3;
     if (it.kind === 'vida') { ctx.globalCompositeOperation = 'lighter'; const vg = ctx.createRadialGradient(it.x + 20, iy, 4, it.x + 20, iy, 34); vg.addColorStop(0, 'rgba(53,255,138,.55)'); vg.addColorStop(1, 'rgba(53,255,138,0)'); ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(it.x + 20, iy, 34, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = 'rgba(160,255,200,.9)'; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(20,60,40,.45)'; ctx.beginPath(); ctx.arc(it.x + 20, iy, 22, 0, 6.283); ctx.fill(); ctx.stroke(); spr(IMG['lucas-quieto'], it.x + 20, iy + 15, 32, 0.5, 1);
       ctx.font = '900 11px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#35ff8a'; ctx.fillText('1UP', it.x + 20, iy - 26); continue; }
-    ctx.fillStyle = 'rgba(41,230,255,.2)'; ctx.beginPath(); ctx.arc(it.x + 20, iy, 30, 0, 6.283); ctx.fill(); spr(IMG[PIMG[it.kind]], it.x + 20, iy, 44, 0.5, 0.5); }
+    ctx.fillStyle = 'rgba(41,230,255,.2)'; ctx.beginPath(); ctx.arc(it.x + 20, iy, 30, 0, 6.283); ctx.fill(); spr(IMG[PIMG[it.kind]], it.x + 20, iy, 44, 0.5, 0.5); ctx.globalAlpha = 1; }
   // enemigos
   for (const e of enemies) {
     if (!vis(e.x)) continue;
@@ -2111,6 +2199,8 @@ function drawWorld() {
   ctx.globalCompositeOperation = 'lighter';
   for (const s of shots) {
     if (s.mine) { ctx.fillStyle = 'rgba(255,60,90,.4)'; ctx.fillRect(s.x - 18, s.y - 6, 36, 12); ctx.fillStyle = '#ff6a8a'; ctx.fillRect(s.x - 12, s.y - 3, 24, 6); ctx.fillStyle = '#fff'; ctx.fillRect(s.x - 9, s.y - 1, 18, 2); }
+    else if (s.ball) { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const bg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.7, '#d8f2ff'); bg.addColorStop(1, '#8cc8ec'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, 19, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#5a9cc8'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = 'rgba(120,180,220,.7)'; ctx.beginPath(); ctx.arc(0, 0, 11, 0.3, 2.2); ctx.stroke(); ctx.restore(); }
+    else if (s.magma) { ctx.globalCompositeOperation = 'lighter'; const mg = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, 24); mg.addColorStop(0, 'rgba(255,220,120,.9)'); mg.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(s.x, s.y, 24, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#3a1410'; ctx.beginPath(); ctx.arc(s.x, s.y, 11, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ff9a30'; ctx.beginPath(); ctx.arc(s.x - 2, s.y - 2, 6, 0, 6.283); ctx.fill(); if (Math.random() < 0.6) parts.push({ x: s.x, y: s.y, vx: (Math.random() - 0.5) * 30, vy: -20, life: 0.4, max: 0.4, col: '#ff8a20', size: 3, grav: 0 }); }
     else if (s.ice) { ctx.fillStyle = 'rgba(120,220,255,.45)'; ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, 6.283); ctx.fill(); ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(s.x - 9, s.y); ctx.lineTo(s.x, s.y - 9); ctx.lineTo(s.x + 9, s.y); ctx.lineTo(s.x, s.y + 9); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, 6.283); ctx.fill(); }
     else { ctx.fillStyle = 'rgba(255,140,40,.4)'; ctx.beginPath(); ctx.arc(s.x, s.y, 13, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ffb24a'; ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, 6.283); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, 6.283); ctx.fill(); }
   }
@@ -2138,7 +2228,7 @@ function drawHUD() {
   spr(IMG['obj-chip'], pad + 112, 26, 24, 0.5, 0.5); txt(String(G.chips), pad + 130, 26, '#ffe27a');
   for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < G.gears ? 1 : 0.28; spr(IMG['obj-engranaje'], pad + 196 + i * 28, 26, 24, 0.5, 0.5); } ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; txt(String(G.score).padStart(6, '0'), w / 2, 26);
-  ctx.font = '700 12px system-ui,sans-serif'; txt('MUNDO ' + curId, w / 2, 46, '#9fb4ff');
+  ctx.font = '700 12px system-ui,sans-serif'; txt('PLANETA ' + curId, w / 2, 46, '#9fb4ff');
   { // reloj: se pone rojo y late cuando quedan 30 s
     const tl = Math.ceil(G.tleft), low = tl <= 30, vlow = tl <= 10, tx = Math.min(w - 190, w / 2 + 200), pu = low ? 1 + (vlow ? 0.16 : 0.08) * Math.abs(Math.sin(time * (vlow ? 10 : 5))) : 1, col = low ? '#ff4a5a' : '#fff';
     ctx.save(); ctx.translate(tx, 30); ctx.scale(pu, pu);
@@ -2257,7 +2347,7 @@ function levelDone() {
   const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId]; bossBeatBefore = !first;
   PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score) }; saveProg();
   { const ci = MAP.findIndex(n => n.id === curId); justOpened = first ? MAP.findIndex((n, k) => k > 0 && !n.bonus && mapPrev(k) === ci) : -1; }
-  $('card').innerHTML = '<h2>' + (/-J$/.test(curId) ? '¡MUNDO ' + curId[0] + ' COMPLETADO!' : '¡FASE SUPERADA!') + '</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
+  $('card').innerHTML = '<h2>' + (/-J$/.test(curId) ? '¡PLANETA ' + curId[0] + ' COMPLETADO!' : '¡FASE SUPERADA!') + '</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
     '<div class="stat"><span>Chips</span><b>' + G.chips + '</b></div><div class="stat"><span>Engranajes</span><b>' + G.gears + ' / 3</b></div>' +
     '<div class="stat"><span>Tiempo</span><b>' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + '</b></div><div class="stat"><span>Bonus por tiempo sobrante</span><b>+' + bonus + '</b></div>' +
     '<div class="stat"><span>Puntos</span><b>' + G.score + (G.score > old.best ? ' · ¡RÉCORD!' : '') + '</b></div>' +
@@ -2343,7 +2433,7 @@ function drawWarp() {
     // rótulo del mundo
     const ta = Math.min(1, Math.max(0, (u - 0.12) * 4)) * Math.min(1, Math.max(0, (0.97 - u) * 6));
     if (ta > 0) { ctx.globalAlpha = ta; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const sp2 = 18 * (1 - Math.min(1, (u - 0.12) * 2)), y0 = VHv * 0.18;
-      ctx.font = '800 ' + Math.round(VHv * 0.035) + 'px system-ui,sans-serif'; ctx.fillStyle = '#7fe9ff'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 12; ctx.fillText((W.dir > 0 ? 'RUMBO AL MUNDO ' : 'REGRESO AL MUNDO ') + toW.n, VW / 2, y0);
+      ctx.font = '800 ' + Math.round(VHv * 0.035) + 'px system-ui,sans-serif'; ctx.fillStyle = '#7fe9ff'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 12; ctx.fillText((W.dir > 0 ? 'RUMBO AL PLANETA ' : 'REGRESO AL PLANETA ') + toW.n, VW / 2, y0);
       ctx.font = '900 ' + Math.round(VHv * 0.085) + 'px system-ui,sans-serif'; ctx.fillStyle = '#fff'; ctx.shadowBlur = 26; const nm = toW.name, cw = [...nm].map(c => ctx.measureText(c).width), tw = cw.reduce((a, b) => a + b, 0) + sp2 * (nm.length - 1); let xx = VW / 2 - tw / 2;
       [...nm].forEach((c, i) => { ctx.fillText(c, xx + cw[i] / 2, y0 + VHv * 0.09); xx += cw[i] + sp2; }); ctx.shadowBlur = 0; ctx.globalAlpha = 1; }
     if (u > 0.9) { ctx.fillStyle = 'rgba(255,255,255,' + (u - 0.9) * 10 + ')'; ctx.fillRect(0, 0, VW, VHv); }
@@ -2383,21 +2473,21 @@ const MAP2 = [
 /* ---------- mapa del mundo 3: PLANETA VOLCÁNICO (panorámico: la cámara sigue a Lucas) ---------- */
 const MAP3 = [
   { id: '3-1', n: '1', name: 'LLANURA DE CENIZA', x: 0.0399, y: 0.5574, rx: 0.038, built: true },
-  { id: '3-2', n: '2', name: 'GÉISERES DE FUEGO', x: 0.0904, y: 0.3978, rx: 0.038, built: true, way: [[0.0354, 0.479]] },
-  { id: '3-3', n: '3', name: 'CRÁTER DEL VOLCÁN', x: 0.2921, y: 0.3716, rx: 0.038, built: true, way: [[0.16, 0.411], [0.23, 0.37]] },
-  { id: '3-4', n: '4', name: 'RÍO DE MAGMA', x: 0.2073, y: 0.538, rx: 0.038, built: true, way: [[0.316, 0.43], [0.283, 0.52], [0.25, 0.545]] },
-  { id: '3-5', n: '5', name: 'LLUVIA DE FUEGO', x: 0.0882, y: 0.7373, rx: 0.038, built: true, way: [[0.149, 0.55], [0.07, 0.6], [0.06, 0.68]] },
-  { id: '3-6', n: '6', name: 'TÚNELES DE LAVA', x: 0.2006, y: 0.8556, rx: 0.038, built: true, way: [[0.1414, 0.839]] },
-  { id: '3-7', n: '7', name: 'EL GRAN PUENTE', x: 0.3248, y: 0.7373, rx: 0.038, built: true, way: [[0.26, 0.817]] },
-  { id: '3-8', n: '8', name: 'LA FUNDICIÓN', x: 0.5053, y: 0.5177, rx: 0.038, built: true, way: [[0.357, 0.693], [0.48, 0.524]] },
-  { id: '3-9', n: '9', name: 'LAS CHIMENEAS', x: 0.6138, y: 0.7314, rx: 0.038, built: true, way: [[0.567, 0.583], [0.597, 0.695]] },
-  { id: '3-10', n: '10', name: 'ENGRANAJES GIGANTES', x: 0.7235, y: 0.397, rx: 0.038, built: true, way: [[0.672, 0.684], [0.683, 0.583], [0.638, 0.459], [0.586, 0.414], [0.597, 0.335], [0.672, 0.335]] },
-  { id: '3-11', n: '11', name: 'ROCAS FLOTANTES', x: 0.7536, y: 0.5524, rx: 0.038, built: true, way: [[0.7366, 0.4704]] },
-  { id: '3-12', n: '12', name: 'MURALLAS DE LA FORTALEZA', x: 0.827, y: 0.6672, rx: 0.038, gold: true, built: true, way: [[0.7793, 0.6394]] },
-  { id: '3-J', n: '', name: 'JEFE · SEÑOR DEL MAGMA', x: 0.8848, y: 0.5177, rx: 0.05, boss: true, built: true, way: [[0.865, 0.6056]] },
-  { id: '3-B', n: '★', name: 'FASE SECRETA · TESORO DEL VOLCÁN', x: 0.5377, y: 0.8361, rx: 0.03, bonus: true, built: true, prev: 8, way: [[0.59, 0.8], [0.56, 0.83]] },
-  { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7757, y: 0.288, rx: 0.036, built: true, prev: 9, way: [[0.745, 0.36], [0.762, 0.32]] },
-  { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7109, y: 0.8758, rx: 0.036, built: true, prev: 13, way: [[0.623, 0.898], [0.679, 0.909]] }
+  { id: '3-2', n: '2', name: 'GÉISERES DE FUEGO', x: 0.0904, y: 0.3978, rx: 0.038, built: true, way: [[0.0491, 0.549], [0.0603, 0.4814]] },
+  { id: '3-3', n: '3', name: 'CRÁTER DEL VOLCÁN', x: 0.2921, y: 0.3716, rx: 0.038, built: true, way: [[0.0999, 0.397], [0.1222, 0.397], [0.1445, 0.4358], [0.1669, 0.4679], [0.1892, 0.5084], [0.2115, 0.5372], [0.2338, 0.5338], [0.2561, 0.527], [0.2785, 0.5101], [0.298, 0.4459]] },
+  { id: '3-4', n: '4', name: 'RÍO DE MAGMA', x: 0.2073, y: 0.538, rx: 0.038, built: true, way: [[0.2935, 0.4003], [0.2935, 0.4645], [0.2712, 0.5], [0.2489, 0.5169], [0.2266, 0.5169]] },
+  { id: '3-5', n: '5', name: 'LLUVIA DE FUEGO', x: 0.0882, y: 0.7373, rx: 0.038, built: true, way: [[0.197, 0.5372], [0.1747, 0.4916], [0.1523, 0.4611], [0.13, 0.424], [0.1077, 0.4155], [0.0854, 0.4155], [0.0636, 0.473], [0.053, 0.5405], [0.0525, 0.6081], [0.0603, 0.6757]] },
+  { id: '3-6', n: '6', name: 'TÚNELES DE LAVA', x: 0.2006, y: 0.8556, rx: 0.038, built: true, way: [[0.0938, 0.7669], [0.1161, 0.8074], [0.1384, 0.8598], [0.1607, 0.8632], [0.183, 0.8699]] },
+  { id: '3-7', n: '7', name: 'EL GRAN PUENTE', x: 0.3248, y: 0.7373, rx: 0.038, built: true, way: [[0.2098, 0.8564], [0.2321, 0.853], [0.2545, 0.8041], [0.2768, 0.8041], [0.2991, 0.772]] },
+  { id: '3-8', n: '8', name: 'LA FUNDICIÓN', x: 0.5053, y: 0.5177, rx: 0.038, built: true, way: [[0.3147, 0.7365], [0.2924, 0.7483], [0.2701, 0.8041], [0.2478, 0.8209], [0.2254, 0.8226], [0.2031, 0.8564], [0.1808, 0.8649], [0.1585, 0.8699], [0.1362, 0.8632], [0.1138, 0.8345], [0.0915, 0.772], [0.077, 0.7044], [0.0603, 0.6368], [0.0525, 0.5693], [0.0536, 0.5017], [0.0759, 0.4476], [0.0982, 0.4341], [0.1205, 0.4139], [0.1429, 0.4139], [0.1652, 0.4628], [0.1875, 0.5034], [0.2098, 0.5372], [0.2321, 0.5405], [0.2545, 0.5405], [0.2768, 0.5405], [0.2991, 0.527], [0.3214, 0.4949], [0.3438, 0.5591], [0.3661, 0.5811], [0.3884, 0.5743], [0.4107, 0.5726], [0.433, 0.5794], [0.4554, 0.5541], [0.4777, 0.527]] },
+  { id: '3-9', n: '9', name: 'LAS CHIMENEAS', x: 0.6138, y: 0.7314, rx: 0.038, built: true, way: [[0.5145, 0.5186], [0.5368, 0.5557], [0.5592, 0.6047], [0.5815, 0.6639], [0.6038, 0.7264]] },
+  { id: '3-10', n: '10', name: 'ENGRANAJES GIGANTES', x: 0.7235, y: 0.397, rx: 0.038, built: true, way: [[0.6222, 0.7331], [0.6445, 0.7449], [0.6669, 0.7348], [0.6858, 0.6672], [0.6819, 0.5997], [0.6596, 0.5541], [0.6373, 0.527], [0.615, 0.4865], [0.5954, 0.4189], [0.611, 0.3767], [0.6334, 0.3666], [0.6557, 0.3666], [0.678, 0.3666], [0.7003, 0.3868]] },
+  { id: '3-11', n: '11', name: 'ROCAS FLOTANTES', x: 0.7536, y: 0.5524, rx: 0.038, built: true, way: [[0.7232, 0.4274], [0.7316, 0.4949]] },
+  { id: '3-12', n: '12', name: 'MURALLAS DE LA FORTALEZA', x: 0.827, y: 0.6672, rx: 0.038, gold: true, built: true, way: [[0.7612, 0.5828], [0.7835, 0.6368], [0.8058, 0.6605]] },
+  { id: '3-J', n: '', name: 'JEFE · SEÑOR DEL MAGMA', x: 0.8848, y: 0.5177, rx: 0.05, boss: true, built: true, way: [[0.8354, 0.6655], [0.8577, 0.598]] },
+  { id: '3-B', n: '★', name: 'FASE SECRETA · TESORO DEL VOLCÁN', x: 0.5377, y: 0.8361, rx: 0.03, bonus: true, built: true, prev: 7, way: [[0.514, 0.5473], [0.5363, 0.6149], [0.553, 0.6824], [0.5547, 0.75]] },
+  { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7757, y: 0.288, rx: 0.036, built: true, prev: 9, way: [[0.745, 0.35], [0.76, 0.31]] },
+  { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7109, y: 0.8758, rx: 0.036, built: true, prev: 13, way: [[0.5474, 0.8395], [0.5698, 0.8666], [0.5921, 0.8986], [0.6144, 0.9155], [0.6367, 0.9155], [0.659, 0.9172], [0.6814, 0.9206]] }
 ];
 const WORLDS = [
   { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff' },
@@ -2457,7 +2547,7 @@ function toMap(advance) {
   const i = MAP.findIndex(n => n.id === curId);
   if (advance && justOpened >= 0) { mapUnl = { i: justOpened, t: 0, snd: false }; }
   else if (advance && i >= 0 && MAP[i].boss && curW + 1 < WORLDS.length && !bossBeatBefore) { setTimeout(() => { if (state === 'map') startWarp(curW + 1); }, 1100); }
-  else if (advance && i >= 0 && MAP[i].boss && curW + 1 >= WORLDS.length) { mapMsg = { txt: '¡MUNDO ' + WORLDS[curW].n + ' SUPERADO! EL MUNDO ' + (WORLDS[curW].n + 1) + ' LLEGARÁ PRONTO', t: 4, ok: true }; }
+  else if (advance && i >= 0 && MAP[i].boss && curW + 1 >= WORLDS.length) { mapMsg = { txt: '¡PLANETA ' + WORLDS[curW].n + ' SUPERADO! EL PLANETA ' + (WORLDS[curW].n + 1) + ' LLEGARÁ PRONTO', t: 4, ok: true }; }
   else if (advance && i >= 0) { const nx = MAP.findIndex((n, k) => k > i && !n.bonus && mapPrev(k) === i); if (nx >= 0 && mapOpen(nx)) mapGo(nx); }
   justOpened = -1;
   mapInfo(); checkRot(); setTimeout(updApply, 4000);
@@ -2475,26 +2565,26 @@ function mapSelect(i) {
   if (i === mapSel) { if (!mapRoute.length) mapPlay(); return; }
   SFX.chip(); mapGo(i);
 }
-function mapMove(d) {
+function mapMove(d) {          // mando/teclado: va a la fase conectada que está en esa dirección del dibujo
   if (mapUnl) return;
-  let i = mapSel;
-  const cur = MAP[mapSel];
-  if (d === 2) { i = MAP.findIndex(n => n.bonus && n.prev === mapSel); if (i < 0) return; }
-  else if (d === -2) { if (!cur.bonus) return; i = cur.prev; }
-  else { const base = cur.bonus ? cur.prev : mapSel; if (cur.bonus && d < 0) i = base; else if (d > 0) { i = MAP.findIndex((n, k) => k > base && !n.bonus && mapPrev(k) === base); if (cur.bonus) i = MAP.findIndex((n, k) => k > base && !n.bonus && mapPrev(k) === base); } else { i = MAP[base].prev !== undefined ? MAP[base].prev : base - 1; } if (i < 0 || i >= MAP.length) return; }
-  if (!mapOpen(i)) return mapDeny(i);
-  SFX.chip(); mapGo(i);
+  const cur = MAP[mapSel], nb = MAP.map((n, k) => k).filter(k => k !== mapSel && (k === mapPrev(mapSel) && mapSel > 0 || mapPrev(k) === mapSel && k > 0));
+  const dir = d === 1 ? [1, 0] : d === -1 ? [-1, 0] : d === 2 ? [0, -1] : [0, 1], t = mapT();
+  let best = -1, bs = -1e9;
+  for (const k of nb) { const dx = (MAP[k].x - cur.x) * t.w, dy = (MAP[k].y - cur.y) * t.h, dd = Math.hypot(dx, dy) || 1, dot = (dx * dir[0] + dy * dir[1]) / dd; if (dot < 0.2) continue; const sc = dot * 2 - dd / 2000 + (d === 1 && k > mapSel ? 0.3 : 0) + (d === -1 && k < mapSel ? 0.3 : 0); if (sc > bs) { bs = sc; best = k; } }
+  if (best < 0) return;
+  if (!mapOpen(best)) return mapDeny(best);
+  SFX.chip(); mapGo(best);
 }
 function mapPlay(force) {
   if (mapUnl || mapRoute.length || warp) return; const n = MAP[mapSel]; if (!isBuilt(n)) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; }
   // en el jefe ya superado se puede viajar al mundo siguiente; en la primera fase de un mundo, volver al anterior
-  if (!force && n.boss && PROG[n.id] && curW + 1 < WORLDS.length) return askTravel('JUGAR EL JEFE', 'VIAJAR AL MUNDO ' + WORLDS[curW + 1].n, curW + 1);
-  if (!force && mapSel === 0 && curW > 0) return askTravel('JUGAR FASE ' + n.id, 'VOLVER AL MUNDO ' + WORLDS[curW - 1].n, curW - 1);
+  if (!force && n.boss && PROG[n.id] && curW + 1 < WORLDS.length) return askTravel('JUGAR EL JEFE', 'VIAJAR AL PLANETA ' + WORLDS[curW + 1].n, curW + 1);
+  if (!force && mapSel === 0 && curW > 0) return askTravel('JUGAR FASE ' + n.id, 'VOLVER AL PLANETA ' + WORLDS[curW - 1].n, curW - 1);
   curId = n.id; evt('jugar', curId); startGame();
 }
 function askTravel(playTxt, goTxt, w) {
   const c = $('card'); c.classList.remove('tips'); SFX.chip();
-  c.innerHTML = '<h2>' + (w > curW ? '🚀 ¿SIGUIENTE MUNDO?' : '🚀 ¿VOLVER ATRÁS?') + '</h2><div style="color:#cfe0ff;margin:4px 0 10px">' + (w > curW ? 'Puedes repetir esta fase o despegar hacia <b>' + WORLDS[w].name + '</b>.' : 'Puedes jugar esta fase o volar de vuelta a <b>' + WORLDS[w].name + '</b>.') + '</div>' +
+  c.innerHTML = '<h2>' + (w > curW ? '🚀 ¿SIGUIENTE PLANETA?' : '🚀 ¿VOLVER ATRÁS?') + '</h2><div style="color:#cfe0ff;margin:4px 0 10px">' + (w > curW ? 'Puedes repetir esta fase o despegar hacia <b>' + WORLDS[w].name + '</b>.' : 'Puedes jugar esta fase o volar de vuelta a <b>' + WORLDS[w].name + '</b>.') + '</div>' +
     '<div class="row"><button class="btn" id="tvGo" style="border-color:#35ff8a;box-shadow:0 0 16px rgba(53,255,138,.6)">' + goTxt + '</button><button class="btn" id="tvPlay">' + playTxt + '</button><button class="btn" id="tvX">VOLVER</button></div>';
   show('panel', true);
   $('tvGo').onclick = () => { show('panel', false); startWarp(w); };
@@ -2585,7 +2675,7 @@ function drawMap() {
   const hg = ctx.createLinearGradient(0, 0, 0, 110); hg.addColorStop(0, 'rgba(4,6,22,.7)'); hg.addColorStop(1, 'rgba(4,6,22,0)'); ctx.fillStyle = hg; ctx.fillRect(0, 0, VW, 110);
   const bg = ctx.createRadialGradient(VW - 150, VHv + 20, 30, VW - 150, VHv + 20, 420); bg.addColorStop(0, 'rgba(4,6,22,.92)'); bg.addColorStop(0.5, 'rgba(4,6,22,.7)'); bg.addColorStop(1, 'rgba(4,6,22,0)'); ctx.fillStyle = bg; ctx.fillRect(VW - 570, VHv - 400, 570, 400);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.font = '800 14px system-ui,sans-serif'; ctx.fillStyle = '#7fe9ff'; ctx.fillText('MUNDO ' + WORLDS[curW].n, 22, 32);
+  ctx.font = '800 14px system-ui,sans-serif'; ctx.fillStyle = '#7fe9ff'; ctx.fillText('PLANETA ' + WORLDS[curW].n, 22, 32);
   ctx.font = '800 26px system-ui,sans-serif'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 14; ctx.fillStyle = '#fff'; ctx.fillText(WORLDS[curW].name, 22, 60); ctx.shadowBlur = 0;
   const done = MAP.filter(n => PROG[n.id]).length, stars = MAP.reduce((a, n) => a + (PROG[n.id] ? PROG[n.id].stars : 0), 0);
   ctx.font = '700 13px system-ui,sans-serif'; ctx.fillStyle = '#cfe0ff'; ctx.fillText(done + ' / ' + MAP.length + ' fases', 22, 82);
@@ -2777,14 +2867,14 @@ function admPaint() {
   const B = $('abody');
   if (admTab === 'TRUCOS') {
     let h = '<div style="color:#8ea3e6">Solo tú ves esto. Secretos escondidos en cada fase:</div>', last = '';
-    SECRETS.forEach(s2 => { const n = ALLN().find(m => m.id === s2.f); if (s2.f !== last) { last = s2.f; h += '<h3>MUNDO ' + s2.f[0] + ' · ' + (n.boss ? 'JEFE' : n.bonus ? 'FASE SECRETA' : 'FASE ' + s2.f.slice(2)) + ' — ' + esc(n.name.replace(/^(JEFE|FASE SECRETA) · /, '')) + '</h3>'; }
+    SECRETS.forEach(s2 => { const n = ALLN().find(m => m.id === s2.f); if (s2.f !== last) { last = s2.f; h += '<h3>PLANETA ' + s2.f[0] + ' · ' + (n.boss ? 'JEFE' : n.bonus ? 'FASE SECRETA' : 'FASE ' + s2.f.slice(2)) + ' — ' + esc(n.name.replace(/^(JEFE|FASE SECRETA) · /, '')) + '</h3>'; }
       h += '<div class="trk"><img loading="lazy" src="img/trucos/' + s2.img + '.webp?v=' + VERSION + '" alt=""><div><span class="tg">' + s2.f + '</span><b>' + esc(s2.t) + '</b><br>' + esc(s2.d) + '</div></div>'; });
     B.innerHTML = h;
   } else if (admTab === 'CÓDIGOS') {
     B.innerHTML = '<div style="color:#8ea3e6">Se escriben en la consola (pausa · 10 toques rápidos sobre PAUSA). Aquí puedes activarlos directamente.</div>' + CODES.map(c => { const on = CHEAT[c[0].toLowerCase()]; return '<div class="akey"><b style="color:#ffd23c">' + c[0] + '</b> — ' + c[1] + '<br>' + esc(c[2]) + '<div class="arow"><button class="btn' + (on ? ' on' : '') + '" data-c="' + c[0] + '">' + (on ? 'ACTIVADO ✔' : 'ACTIVAR') + '</button></div></div>'; }).join('') + '<div class="akey"><b style="color:#ffd23c">HACK</b> — muestra la lista de códigos con la animación de hackeo.<br><b style="color:#ffd23c">ADMIN</b> — abre este panel (pide la llave NFC).</div>';
     B.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const k = b.dataset.c.toLowerCase(); CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; saveCheats(); SFX.power(); admPaint(); });
   } else if (admTab === 'FASES') {
-    B.innerHTML = '<h3>JUGAR DIRECTAMENTE</h3>' + WORLDS.map((w, wi) => '<div style="color:#8ea3e6;margin-top:6px">MUNDO ' + w.n + ' · ' + w.name + '</div><div class="arow">' + w.nodes.map((n, i) => '<button class="btn" data-w="' + wi + '" data-f="' + i + '"' + (typeof LEVELS[n.id] === 'function' ? '' : ' disabled style="opacity:.35"') + '>' + (n.boss ? 'JEFE ' + w.n : n.bonus ? 'SECRETA ' + w.n : n.id) + '</button>').join('') + '</div>').join('') +
+    B.innerHTML = '<h3>JUGAR DIRECTAMENTE</h3>' + WORLDS.map((w, wi) => '<div style="color:#8ea3e6;margin-top:6px">PLANETA ' + w.n + ' · ' + w.name + '</div><div class="arow">' + w.nodes.map((n, i) => '<button class="btn" data-w="' + wi + '" data-f="' + i + '"' + (typeof LEVELS[n.id] === 'function' ? '' : ' disabled style="opacity:.35"') + '>' + (n.boss ? 'JEFE ' + w.n : n.bonus ? 'SECRETA ' + w.n : n.id) + '</button>').join('') + '</div>').join('') +
       '<h3>PROGRESO EN ESTE DISPOSITIVO</h3><div class="arow"><button class="btn" id="aOpen">ABRIR TODAS LAS FASES</button><button class="btn red" id="aReset">BORRAR MI PROGRESO</button></div><div class="amsg" id="amsg"></div>';
     B.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { closeAdmin(); setWorld(+b.dataset.w); curId = MAP[+b.dataset.f].id; mapSel = +b.dataset.f; startGame(); });
     $('aOpen').onclick = () => { ALLN().forEach(n => { if (typeof LEVELS[n.id] === 'function') DEV[n.id] = 1; }); try { localStorage.setItem('tl_dev', JSON.stringify(DEV)); } catch (e) {} admMsg('✔ Todas las fases abiertas en este dispositivo'); SFX.life(); };
@@ -2958,5 +3048,5 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { noEnemies() { enemies = []; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; } };
+window.__TL = { noEnemies() { enemies = []; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); } };
 })();
