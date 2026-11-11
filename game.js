@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.32';
+const VERSION = '0.33';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -821,6 +821,26 @@ LEVELS['2-4'] = function () {
   B.ground(190, 219); B.block(190, 219, 0, 3); for (let r = 6; r <= 10; r += 2) B.arc(194, 204, r, 1); P(206, 210, 10); B.gear(208, 8); B.crystal(196, 14, 0, 1.3); B.crystal(212, 14, 1, 1.2); B.portal(216, 14, 78, 14);
   return B.done({ name: 'TORMENTA DE NIEVE', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 180 * T + T / 2, y: 14 * T } });
 };
+/* ---------- fase 2-5: AVALANCHA (¡una avalancha te persigue! sobre hielo que resbala, con cintas turbo, cristales saltarines y carámbanos) ---------- */
+LEVELS['2-5'] = function () {
+  const B = LB(300, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  // A · el rugido de la montaña
+  B.ground(0, 24); B.hid(6, 10, 'vida'); B.box(10, 10, 'escudo'); B.row(13, 20, 12); B.crystal(3, 14, 0, 1.3);
+  // B · primeros saltos sobre el hielo
+  B.arc(24, 28, 11, 2); B.ground(28, 44); B.en('patrulla', 36, 13); B.strip(30, 43); B.arc(44, 48, 10, 2); B.ground(48, 72);
+  B.block(54, 61, 9, 9); B.icicle(55, 10); B.icicle(58, 10); B.icicle(61, 10); B.row(54, 61, 13); B.spring(64, 14); P(66, 70, 9); B.gear(68, 7); B.row(66, 70, 8); B.en('alien', 70, 13);
+  // C · abismo con plataformas
+  B.mover(74, 12, 3, 0, 40, 1.8, 0); B.mover(79, 12, 3, 0, 40, 1.8, 1.6); B.arc(72, 84, 9, 3); B.ground(84, 135); B.cp(86, 14); B.box(90, 10, 'iman');
+  B.strip(92, 110); B.row(93, 109, 12); B.en('erizo', 113, 13); B.block(117, 119, 12, 13); B.en('torreta', 118, 11); B.en('patrulla', 125, 13); B.crystal(130, 14, 1, 1.2);
+  // D · dos caminos: arriba con cristales (engranaje) o abajo entre carámbanos
+  B.spring(136, 14); B.block(138, 170, 9, 9); B.row(140, 168, 8); B.gear(160, 7); B.en('dron', 152, 6, { x0: 142, x1: 166 });
+  B.ground(136, 175); B.icicle(142, 10, 1); B.icicle(147, 10, 1); B.icicle(152, 10, 1); B.icicle(157, 10, 1); B.icicle(162, 10, 1); B.icicle(167, 10, 1); B.row(140, 168, 13); B.cp(174, 14);
+  // E · sprint final
+  B.strip(176, 198); B.row(177, 197, 12); B.arc(199, 205, 10, 3); B.ground(205, 232); B.strip(206, 230); B.box(212, 10, 'estrella'); B.en('patrulla', 220, 13); B.en('patrulla', 226, 13);
+  B.arc(233, 238, 10, 3); B.gear(235, 8); B.ground(238, 299); B.en('alien', 246, 13); B.block(252, 254, 12, 13); B.block(258, 260, 10, 13); B.en('erizo', 266, 13);
+  for (let i = 1; i <= 4; i++) B.block(271 + i, 271 + i, 14 - i, 13); B.row(272, 275, 8); B.crystal(290, 14, 2, 1.4); B.block(294, 299, 0, 15);
+  return B.done({ name: 'AVALANCHA', time: 200, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 284 * T + T / 2, y: 14 * T }, chase: { x: -9999, speed: 178, startX: 15 * T, on: false, style: 'snow' } });
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -1151,7 +1171,7 @@ function updateStage(dt) {
   }
   const ch = L.chase;
   if (ch) {
-    if (!ch.on && p.x > ch.startX) { ch.on = true; ch.x = p.x - 620; pop(p.x + p.w / 2, p.y - 40, '¡CORRE!', '#ff5a6a'); [330, 440, 330, 440, 330, 440].forEach((f, i) => tone(f, f, 0.14, 'sawtooth', 0.1, i * 0.15)); shake = 0.3; }
+    if (!ch.on && p.x > ch.startX) { ch.on = true; ch.x = p.x - 620; pop(p.x + p.w / 2, p.y - 40, ch.style === 'snow' ? '¡AVALANCHA!' : '¡CORRE!', ch.style === 'snow' ? '#ffffff' : '#ff5a6a'); if (ch.style === 'snow') noise(2.5, 0.25, 500); [330, 440, 330, 440, 330, 440].forEach((f, i) => tone(f, f, 0.14, 'sawtooth', 0.1, i * 0.15)); shake = 0.3; }
     if (ch.on && !p.win && !p.dead) { ch.x += ch.speed * dt; ch.x = Math.max(ch.x, p.x - VW * 0.8); if (CHEAT.stop) ch.x = Math.min(ch.x, p.x - 230); if (p.x < ch.x + 4) die(); }
   }
   const mt = L.meteors;
@@ -1252,7 +1272,13 @@ function drawStageFront() {         // por delante: láseres, muro, plasma
     ctx.restore();
   }
   const ch = L.chase;
-  if (ch && ch.on) { const x = ch.x, top = cam.y - 20, hh = VHv + 40;
+  if (ch && ch.on && ch.style === 'snow') { const x = ch.x, top = cam.y - 20, hh = VHv + 40;          // avalancha: muro de nieve con bolas rodando
+    const g2 = ctx.createLinearGradient(x - 500, 0, x + 30, 0); g2.addColorStop(0, 'rgba(160,200,235,.98)'); g2.addColorStop(0.8, 'rgba(235,248,255,.97)'); g2.addColorStop(1, 'rgba(255,255,255,.0)'); ctx.fillStyle = g2; ctx.fillRect(cam.x - 60, top, x + 30 - cam.x + 60, hh);
+    ctx.fillStyle = '#f4fbff'; for (let i = 0; i < 9; i++) { const yy = top + hh - ((i * 83) % hh), rr = 26 + (i * 17) % 30, xx = x - 10 + Math.sin(time * 6 + i) * 10; ctx.beginPath(); ctx.arc(xx, yy, rr, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = '#c8e2f5'; for (let i = 0; i < 6; i++) { const a2 = time * 8 + i, bx = x - 20 + (i % 3) * 8, by = (L.H - 2) * T - 24 - (i % 2) * 40; ctx.beginPath(); ctx.arc(bx + Math.cos(a2) * 4, by, 22, 0, 6.283); ctx.fill(); }
+    for (let i = 0; i < 3; i++) parts.push({ x: x + Math.random() * 20, y: top + Math.random() * hh, vx: 120 + Math.random() * 200, vy: -60 + Math.random() * 60, life: 0.6, max: 0.6, col: '#ffffff', size: 2 + Math.random() * 3, grav: 300 });
+    if (Math.random() < 0.2) shake = Math.max(shake, 0.06); }
+  else if (ch && ch.on) { const x = ch.x, top = cam.y - 20, hh = VHv + 40;
     const g2 = ctx.createLinearGradient(x - 420, 0, x, 0); g2.addColorStop(0, 'rgba(120,0,60,.96)'); g2.addColorStop(0.75, 'rgba(255,30,80,.85)'); g2.addColorStop(1, 'rgba(255,120,160,.95)'); ctx.fillStyle = g2; ctx.fillRect(cam.x - 60, top, x - cam.x + 60, hh);
     ctx.globalCompositeOperation = 'lighter'; const g3 = ctx.createLinearGradient(x, 0, x + 90, 0); g3.addColorStop(0, 'rgba(255,60,110,.7)'); g3.addColorStop(1, 'rgba(255,60,110,0)'); ctx.fillStyle = g3; ctx.fillRect(x, top, 90, hh);
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); for (let y = top; y < top + hh; y += 18) { const xx = x + (Math.random() - 0.5) * 14; if (y === top) ctx.moveTo(xx, y); else ctx.lineTo(xx, y); } ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
@@ -1901,7 +1927,7 @@ const MAP2 = [
   { id: '2-2', n: '2', name: 'CUEVAS DE CRISTAL', x: 0.3475, y: 0.657, rx: 0.04, built: true, way: [[0.165, 0.453], [0.22, 0.488], [0.25, 0.56], [0.29, 0.625]] },
   { id: '2-3', n: '3', name: 'BAJO EL HIELO', x: 0.3635, y: 0.437, rx: 0.038, built: true, way: [[0.35, 0.59], [0.355, 0.52]] },
   { id: '2-4', n: '4', name: 'TORMENTA DE NIEVE', x: 0.4985, y: 0.491, rx: 0.038, built: true, way: [[0.415, 0.448], [0.455, 0.475]] },
-  { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, way: [[0.53, 0.555], [0.585, 0.627]] },
+  { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, built: true, way: [[0.53, 0.555], [0.585, 0.627]] },
   { id: '2-6', n: '6', name: 'POZO DE LA MINA', x: 0.651, y: 0.351, rx: 0.036, gold: true, way: [[0.67, 0.555], [0.666, 0.45]] },
   { id: '2-J', n: '', name: 'JEFE · GUARDIÁN DE HIELO', x: 0.8725, y: 0.401, rx: 0.058, boss: true, way: [[0.71, 0.33], [0.775, 0.315], [0.83, 0.355]] },
   { id: '2-B', n: '★', name: 'FASE SECRETA · AURORA', x: 0.618, y: 0.19, rx: 0.024, bonus: true, prev: 5, way: [[0.635, 0.305], [0.613, 0.26], [0.615, 0.224]] }
