@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.57';
+const VERSION = '0.58';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -1632,6 +1632,7 @@ function updatePlayer(dt) {
   if (p.onGround && dir && Math.sign(p.vx) !== dir && Math.abs(p.vx) > 120 && Math.random() < 0.5) parts.push({ x: p.x + p.w / 2, y: p.y + p.h, vx: -dir * 60, vy: -40 - Math.random() * 60, life: 0.3, max: 0.3, col: '#9fb4ff', size: 3, grav: 0 });
   // salto
   p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
+  if (p.onGround || p.climb) p.dj = true; p.flip = Math.max(0, (p.flip || 0) - dt);
   p.jbuf = jumpPressed ? 0.12 : Math.max(0, p.jbuf - dt);
   p.drop = false;
   const wet = !!(L.water && p.y + p.h * 0.4 > L.water.y); if (wet !== !!p.wet) { if (Math.abs(p.vy) > 60) { burst(p.x + p.w / 2, L.water.y, 14, '#dff8ff', 200, 0.5, 600, 3); noise(0.25, 0.12, 1200); } p.wet = wet; }
@@ -1645,6 +1646,12 @@ function updatePlayer(dt) {
       p.vy = p.power === 'mini' ? -700 : -780; p.jbuf = 0; p.coyote = 0; p.onGround = false; p.sq = 1; SFX.jump();
       burst(p.x + p.w / 2, p.y + p.h, 8, '#ffb347', 120, 0.3, 0, 3);
     }
+  }
+  else if (jumpPressed && p.dj && !p.onGround && !p.climb && !p.dead && !(p.tTurbo > 0 || CHEAT.fly || p.fly)) {   // doble salto en el aire
+    p.dj = false; p.vy = p.power === 'mini' ? -680 : -760; p.boost = 1; p.jbuf = 0; p.sq = 1; p.flip = 0.42;
+    const fx = p.x + p.w / 2, fy = p.y + p.h; (L.djr = L.djr || []).push({ x: fx, y: fy, t0: time });
+    tone(520, 1560, 0.18, 'triangle', 0.08); tone(780, 2340, 0.16, 'sine', 0.05, 0.04);
+    for (let i = 0; i < 26; i++) { const a = Math.PI * (0.15 + 0.7 * Math.random()), v = 160 + Math.random() * 260; parts.push({ x: fx + (Math.random() - 0.5) * 20, y: fy, vx: Math.cos(a) * v * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * v * 0.6, life: 0.45, max: 0.45, col: ['#7ff6ff', '#ffffff', '#35ff8a', '#bff9ff'][i % 4], size: 2 + Math.random() * 2.5, grav: 200 }); }
   }
   if (!wet && !K.jump && p.vy < -260 && !p.boost) p.vy = -260;               // salto corto si sueltas
   if ((p.tTurbo > 0 || CHEAT.fly || p.fly) && K.jump) p.vy = Math.max(p.vy - 3600 * dt, -330);   // turbo: volar
@@ -2571,7 +2578,7 @@ function drawPlayer() {
   // llamas de los 3 propulsores
   if (!p.dead) {
     if (p.wet && Math.random() < 0.25) parts.push({ x: cx + (Math.random() - 0.5) * 20, y: p.y + p.h - 6, vx: (Math.random() - 0.5) * 20, vy: -30, life: 1.2, max: 1.2, col: 'rgba(220,250,255,.8)', size: 1.5 + Math.random() * 2.5, grav: -120 });
-    const fl = p.wet ? 0 : p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly || p.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
+    const fl = p.wet || p.flip > 0 ? 0 : p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly || p.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
     const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = CAN[pose].map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
     if (p.onGround) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,130,40,' + (0.2 + 0.08 * Math.sin(time * 40)) + ')'; ctx.beginPath(); ctx.ellipse(mouths[1][0], p.y + p.h + 1, 30 * mini, 5 * mini, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
     if (fl > 0) mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 ? 1.1 : 1), 9 * mini, i + 1));
@@ -2581,7 +2588,19 @@ function drawPlayer() {
   if (p.tStar > 0) { ctx.globalAlpha = 0.35; ctx.fillStyle = 'hsl(' + (time * 400 % 360) + ',100%,60%)'; ctx.beginPath(); ctx.ellipse(cx, p.y + p.h / 2, p.w * 1.05, p.h * 0.72, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     if (Math.random() < 0.6) parts.push({ x: cx + (Math.random() - 0.5) * 40, y: p.y + Math.random() * p.h, vx: 0, vy: -30, life: 0.5, max: 0.5, col: 'hsl(' + Math.random() * 360 + ',100%,65%)', size: 3.5, grav: 0 }); }
   if (ghost) { ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 22 + 8 * Math.sin(time * 6); ctx.globalAlpha = 0.55 + 0.08 * Math.sin(time * 4); }
-  spr(im, cx, by, h, ANCH[pose], 1, p.face < 0, lean, sx, sy);
+  if (L.djr && L.djr.length) {        // ondas de energía del doble salto
+    ctx.globalCompositeOperation = 'lighter';
+    for (const r of L.djr) { const a = (time - r.t0) / 0.45; if (a >= 1) continue;
+      for (let k = 0; k < 2; k++) { const q = Math.min(1, a * (1.25 - k * 0.35)), R = 14 + q * (70 - k * 20); ctx.strokeStyle = k ? 'rgba(53,255,138,' + (1 - q) * 0.8 + ')' : 'rgba(127,246,255,' + (1 - q) + ')'; ctx.lineWidth = 5 * (1 - q) + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y + k * 6, R, R * 0.3, 0, 0, 6.283); ctx.stroke(); }
+      const g = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, 46); g.addColorStop(0, 'rgba(200,255,255,' + (1 - a) * 0.7 + ')'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(r.x, r.y, 46, 18, 0, 0, 6.283); ctx.fill();
+      for (let k = -1; k <= 1; k++) { const lx = r.x + k * 14, ly = r.y + 6 + a * 50; ctx.strokeStyle = 'rgba(190,250,255,' + (1 - a) * 0.8 + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx, ly + 26 * (1 - a)); ctx.stroke(); } }
+    ctx.globalCompositeOperation = 'source-over'; L.djr = L.djr.filter(r => time - r.t0 < 0.45);
+  }
+  if (p.flip > 0 && !p.dead) {          // voltereta del doble salto, con estela
+    const pr = 1 - p.flip / 0.42, ang = pr * 6.283 * (p.face < 0 ? -1 : 1), my = p.y + p.h / 2;
+    for (let g2 = 2; g2 >= 1; g2--) { const a2 = ang - g2 * 0.5 * (p.face < 0 ? -1 : 1); ctx.save(); ctx.globalAlpha = 0.18 / g2; ctx.translate(cx, my); ctx.rotate(a2); ctx.translate(-cx, -my); spr(im, cx, by, h, ANCH[pose], 1, p.face < 0, 0, sx, sy); ctx.restore(); }
+    ctx.save(); ctx.translate(cx, my); ctx.rotate(ang); ctx.translate(-cx, -my); spr(im, cx, by, h, ANCH[pose], 1, p.face < 0, 0, sx, sy); ctx.restore();
+  } else spr(im, cx, by, h, ANCH[pose], 1, p.face < 0, lean, sx, sy);
   if (ghost) { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.globalAlpha = 1; }
   if (p.shield) { ctx.strokeStyle = 'rgba(60,180,255,' + (0.6 + Math.sin(time * 8) * 0.2) + ')'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(60,160,255,.14)'; ctx.beginPath(); ctx.ellipse(cx, p.y + p.h / 2 - 4, p.w * 1.15, p.h * 0.7, 0, 0, 6.283); ctx.fill(); ctx.stroke(); }
   if (p.tMagnet > 0) { ctx.strokeStyle = 'rgba(198,60,255,' + (0.25 + 0.2 * Math.sin(time * 10)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, p.y + p.h / 2, 60 + (time * 80 % 40), 0, 6.283); ctx.stroke(); }
