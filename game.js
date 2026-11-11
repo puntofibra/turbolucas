@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.27';
+const VERSION = '0.28';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -722,8 +722,18 @@ function drawWaves() {
     if (Math.random() < 0.8) parts.push({ x: w.x, y: gy - Math.random() * 20, vx: -w.dir * 60, vy: -80 - Math.random() * 120, life: 0.4, max: 0.4, col: Math.random() < 0.5 ? '#ff9a3c' : '#fff', size: 2.5, grav: 600 }); }
   ctx.globalCompositeOperation = 'source-over';
 }
+/* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
+let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
+const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
+let gotT = 0; function gotSave() { clearTimeout(gotT); gotT = setTimeout(() => { try { localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {} }, 400); }
+function gotMark(kind, v) { const o = gotOf(curId); if (kind === 'r') o.r = 1; else if (!o[kind].includes(v)) o[kind].push(v); gotSave(); }
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
+  { const o = gotOf(curId), cs = new Set(o.c), gs = new Set(o.g);
+    l.chips.forEach((c, i) => { c.i = i; if (cs.has(i)) c.got = true; });
+    l.gears.forEach((g, i) => { g.i = i; g.old = gs.has(i); });
+    o.b.forEach(k => { const [x, y] = k.split(',').map(Number); if (l.g[y] && (l.g[y][x] === '?' || l.g[y][x] === 'I')) l.g[y][x] = l.g[y][x] === 'I' ? ' ' : 'U'; });
+    if (o.r && l.rain) l.rain.st = 2; }
   l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.lastCp = null; if (l.bossLvl) bossInit(l);
   return l;
 }
@@ -814,6 +824,7 @@ function hitBlock(tx, ty) {
   if (c === '?') {
     L.g[ty][tx] = 'U'; bumps.push({ tx, ty, t: 0 });
     const what = L.boxes[tx + ',' + ty] || 'chip';
+    if (what === 'chip' || what === 'vida') gotMark('b', tx + ',' + ty);
     if (what === 'chip') { addChip(cx, cy - 20); parts.push({ x: cx, y: cy - 10, vx: 0, vy: -420, life: 0.45, max: 0.45, coin: true, grav: 1200, size: 1 }); }
     else { items.push({ kind: what, x: cx - 20, y: cy, w: 40, h: 40, rise: 0, t: 0 }); SFX.appear(); }
     knockAbove(tx, ty);
@@ -916,9 +927,9 @@ function updatePlayer(dt) {
   for (const c of L.chips) {
     if (c.got) continue;
     if (p.tMagnet > 0) { const dx = cx - c.x, dy = cy - c.y, d = Math.hypot(dx, dy); if (d < 210 && d > 1) { c.x += dx / d * 520 * dt; c.y += dy / d * 520 * dt; } }
-    if (Math.abs(c.x - cx) < p.w / 2 + 14 && Math.abs(c.y - cy) < p.h / 2 + 14) { c.got = true; addChip(c.x, c.y); }
+    if (Math.abs(c.x - cx) < p.w / 2 + 14 && Math.abs(c.y - cy) < p.h / 2 + 14) { c.got = true; addChip(c.x, c.y); if (c.i !== undefined && !c.fall) gotMark('c', c.i); }
   }
-  for (const g of L.gears) if (!g.got && Math.abs(g.x - cx) < p.w / 2 + 20 && Math.abs(g.y - cy) < p.h / 2 + 20) { g.got = true; G.gears++; addScore(500, g.x, g.y - 20); SFX.gear(); burst(g.x, g.y, 24, '#3db8ff', 240, 0.7, 200, 4); }
+  for (const g of L.gears) if (!g.got && Math.abs(g.x - cx) < p.w / 2 + 20 && Math.abs(g.y - cy) < p.h / 2 + 20) { g.got = true; G.gears++; if (!g.old) { addScore(500, g.x, g.y - 20); gotMark('g', g.i); } SFX.gear(); burst(g.x, g.y, 24, '#3db8ff', 240, 0.7, 200, 4); }
   for (const it of items) if (!it.got && it.rise >= 1 && overlap(p, it)) { it.got = true; givePower(it.kind); }
   items = items.filter(i => !i.got);
   // punto de control, portal, meta
@@ -1014,7 +1025,7 @@ function updateStage(dt) {
   for (const c of L.chips) if (c.fall && !c.got) { c.y += c.vy * dt; if (c.y > (L.H - 2) * T - 6) c.got = true; }
   const r = L.rain;
   if (r) {
-    if (r.st === 0 && p.x > r.x0 && p.x < r.x1) { r.st = 1; pop(p.x + p.w / 2, p.y - 40, '¡LLUVIA DE CHIPS!', '#ffd23c'); SFX.life(); }
+    if (r.st === 0 && p.x > r.x0 && p.x < r.x1) { r.st = 1; gotMark('r'); pop(p.x + p.w / 2, p.y - 40, '¡LLUVIA DE CHIPS!', '#ffd23c'); SFX.life(); }
     if (r.st === 1) { r.t += dt; r.acc += dt; while (r.acc > 0.065) { r.acc -= 0.065; L.chips.push({ x: r.x0 + 30 + Math.random() * (r.x1 - r.x0 - 60), y: cam.y - 20, t: Math.random() * 6, vy: 230 + Math.random() * 260, fall: true }); } if (r.t > r.dur) r.st = 2; }
     if (L.chips.length > 600) L.chips = L.chips.filter(c => !c.got);
   }
@@ -1380,7 +1391,7 @@ function drawWorld() {
   drawStageBack();
   // chips y engranajes
   for (const c of L.chips) if (!c.got && vis(c.x)) { const s = Math.cos(time * 4 + c.t); spr(IMG['obj-chip'], c.x, c.y + Math.sin(time * 3 + c.t) * 3, 26, 0.5, 0.5, false, 0, Math.abs(s) * 0.85 + 0.15, 1); }
-  for (const g of L.gears) if (!g.got && vis(g.x)) { ctx.fillStyle = 'rgba(61,184,255,.22)'; ctx.beginPath(); ctx.arc(g.x, g.y, 30, 0, 6.283); ctx.fill(); spr(IMG['obj-engranaje'], g.x, g.y + Math.sin(time * 2.5) * 4, 40, 0.5, 0.5, false, time * 1.2); }
+  for (const g of L.gears) if (!g.got && vis(g.x)) { ctx.globalAlpha = g.old ? 0.38 : 1; ctx.fillStyle = 'rgba(61,184,255,.22)'; ctx.beginPath(); ctx.arc(g.x, g.y, 30, 0, 6.283); ctx.fill(); spr(IMG['obj-engranaje'], g.x, g.y + Math.sin(time * 2.5) * 4, 40, 0.5, 0.5, false, time * 1.2); ctx.globalAlpha = 1; }
   const PIMG = { laser: 'poder-laser', escudo: 'poder-escudo', turbo: 'poder-turbo', iman: 'poder-iman', mini: 'poder-mini', estrella: 'poder-estrella5g' };
   for (const it of items) { const iy = it.y + 20 + Math.sin(it.t * 4) * 3;
     if (it.kind === 'vida') { ctx.globalCompositeOperation = 'lighter'; const vg = ctx.createRadialGradient(it.x + 20, iy, 4, it.x + 20, iy, 34); vg.addColorStop(0, 'rgba(53,255,138,.55)'); vg.addColorStop(1, 'rgba(53,255,138,0)'); ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(it.x + 20, iy, 34, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
@@ -1908,7 +1919,7 @@ function admPaint() {
       '<h3>PROGRESO EN ESTE DISPOSITIVO</h3><div class="arow"><button class="btn" id="aOpen">ABRIR TODAS LAS FASES</button><button class="btn red" id="aReset">BORRAR MI PROGRESO</button></div><div class="amsg" id="amsg"></div>';
     B.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { closeAdmin(); curId = MAP[+b.dataset.f].id; mapSel = +b.dataset.f; startGame(); });
     $('aOpen').onclick = () => { MAP.forEach(n => DEV[n.id] = 1); try { localStorage.setItem('tl_dev', JSON.stringify(DEV)); } catch (e) {} admMsg('✔ Todas las fases abiertas en este dispositivo'); SFX.life(); };
-    $('aReset').onclick = () => { if ($('aReset').dataset.ok !== '1') { $('aReset').dataset.ok = '1'; $('aReset').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } PROG = {}; DEV = {}; saveProg(); try { localStorage.setItem('tl_dev', '{}'); } catch (e) {} admMsg('Progreso borrado'); $('aReset').textContent = 'BORRAR MI PROGRESO'; $('aReset').dataset.ok = ''; };
+    $('aReset').onclick = () => { if ($('aReset').dataset.ok !== '1') { $('aReset').dataset.ok = '1'; $('aReset').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } PROG = {}; DEV = {}; GOT = {}; saveProg(); try { localStorage.setItem('tl_dev', '{}'); localStorage.setItem('tl_got', '{}'); } catch (e) {} admMsg('Progreso borrado'); $('aReset').textContent = 'BORRAR MI PROGRESO'; $('aReset').dataset.ok = ''; };
   } else if (admTab === 'LLAVES') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando llaves…</div><div id="akeys"></div><h3>AÑADIR LLAVE</h3><div class="akey">' + (HAY_NFC ? '<div class="arow"><button class="btn on" id="aScan">ESCANEAR LLAVE NUEVA</button></div>' : '<div style="color:#8ea3e6">Para escanear una llave abre este panel desde un móvil Android. Aquí puedes escribir su código a mano:</div>') +
       '<div class="arow"><input class="ain" id="anN" placeholder="Nombre" maxlength="30" style="width:140px"><input class="ain" id="anK" placeholder="Código de la llave (hex)" maxlength="40" style="flex:1;min-width:160px"><button class="btn" id="anAdd">GUARDAR</button></div></div>';
