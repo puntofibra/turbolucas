@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.45';
+const VERSION = '0.46';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -36,6 +36,11 @@ const ICEN = { patrulla: ['enemigo-patrulla-hielo', 4, 1.12], dron: ['enemigo-dr
 const ICE_SET = ['suelo-hielo', 'plataforma-hielo', 'caja-hielo', 'carambano', 'cristal-salto', 'cristal-0', 'cristal-1', 'cristal-2', 'cometa-hielo', 'fondo-lejos-hielo', 'fondo-cerca-hielo', 'jefe2', 'jefe2-roto'];
 function preIce() { ICE_SET.forEach(n => xi(n)); for (const k in ICEN) xi(ICEN[k][0], ICEN[k][1]); }
 const iceI = n => L && L.theme === 'ice' && okI(IMG[n]) ? IMG[n] : null;
+// imágenes del planeta volcánico
+const LAVN = { patrulla: ['enemigo-patrulla-lava', 4, 1.3], dron: ['enemigo-dron-lava', 4, 1.2], erizo: ['enemigo-erizo-lava', 4, 1.3], alien: ['enemigo-alien-lava', 4, 1.25], torreta: ['enemigo-torreta-lava', 3, 1.12] };
+const LAVA_SET = ['suelo-lava', 'plataforma-lava', 'caja-lava', 'cristal-lava-0', 'cristal-lava-1', 'cristal-lava-2', 'fondo-lejos-lava', 'fondo-cerca-lava', 'jefe3', 'jefe3-roto'];
+function preLava() { LAVA_SET.forEach(n => xi(n)); for (const k in LAVN) xi(LAVN[k][0], LAVN[k][1]); }
+const lavaI = n => L && L.theme === 'lava' && okI(IMG[n]) ? IMG[n] : null;
 function loadImages(done) {
   NAMES.forEach(n => {
     const im = new Image();
@@ -715,7 +720,7 @@ function tintOf(im, col) { const k = col + '|' + im.src; if (TINT[k] || !im.natu
 function tintCv(im, col) { const c = tintOf(im, col); if (c && !c.naturalWidth) { c.naturalWidth = c.width; c.naturalHeight = c.height; c._n = im._n; } return c; }
 function drawBoss() {
   const b = L.boss; if (!b || b.gone) return;
-  const j2 = iceI('jefe2'), im = j2 ? (b.hp <= b.max / 2 && iceI('jefe2-roto')) || j2 : IMG.jefe1; if (!im || !im.naturalWidth) return;
+  const j3 = lavaI('jefe3'), j2 = iceI('jefe2') || j3, im = j3 ? (b.hp <= b.max / 2 && lavaI('jefe3-roto')) || j3 : j2 ? (b.hp <= b.max / 2 && iceI('jefe2-roto')) || j2 : IMG.jefe1; if (!im || !im.naturalWidth) return;
   const h = BOSS_H, w = h * im.naturalWidth / im.naturalHeight, flip = P.x + P.w / 2 > b.x, fs = flip ? -1 : 1, ph2 = b.hp <= b.max / 2, gy = 14 * T;
   let x = b.x, y = b.y; if (b.st === 'aim' || b.st === 'die' || b.st === 'intro') { x += (Math.random() - 0.5) * 8; y += (Math.random() - 0.5) * 6; }
   const air = Math.max(0, gy - y);
@@ -725,16 +730,16 @@ function drawBoss() {
   const rot = b.st === 'stun' ? 0.1 * Math.sin(time * 3) : b.st === 'die' ? (Math.random() - 0.5) * 0.12 : Math.sin(time * 2) * 0.03;
   const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(fs, 1); ctx.drawImage(src, -w / 2, -h, w, h); ctx.restore(); };
   draw(im, 1);
-  if (L.theme === 'lava') { const t5 = tintOf(im, 'rgba(255,90,30,1)'); if (t5) draw(t5, 0.3 + 0.08 * Math.sin(time * 4)); }
+  if (L.theme === 'lava' && !j3) { const t5 = tintOf(im, 'rgba(255,90,30,1)'); if (t5) draw(t5, 0.3 + 0.08 * Math.sin(time * 4)); }
   if (L.theme === 'ice' && !j2) { const t4 = tintOf(im, 'rgba(120,225,255,1)'); if (t4) draw(t4, 0.32 + 0.06 * Math.sin(time * 3)); }
   if (ph2 || b.st === 'die') { const t2 = tintOf(im, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(time * 8))); if (Math.random() < 0.3) parts.push({ x: x + (Math.random() - 0.5) * 140, y: y - Math.random() * 200, vx: (Math.random() - 0.5) * 60, vy: -60 - Math.random() * 60, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#ffd23c' : '#8a8fa8', size: 2.5, grav: 0 }); }
   if (b.flash > 0) { const t3 = tintOf(im, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); }
   // núcleo (el punto débil) y ojo
-  const cx = x + fs * ((j2 ? 0.43 : 0.457) - 0.5) * w, cy = y - h * (1 - (j2 ? 0.42 : 0.453)), stun = b.st === 'stun';
+  const cx = x + fs * ((j3 ? 0.46 : j2 ? 0.43 : 0.457) - 0.5) * w, cy = y - h * (1 - (j3 ? 0.39 : j2 ? 0.42 : 0.453)), stun = b.st === 'stun';
   ctx.globalCompositeOperation = 'lighter';
   const R = stun ? 60 + 14 * Math.sin(time * 14) : 26, cg = ctx.createRadialGradient(cx, cy, 2, cx, cy, R); cg.addColorStop(0, stun ? 'rgba(255,255,200,1)' : 'rgba(255,120,60,.6)'); cg.addColorStop(0.35, stun ? 'rgba(255,200,60,.8)' : 'rgba(255,60,40,.35)'); cg.addColorStop(1, 'rgba(255,60,40,0)');
   ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fill();
-  const ex = x + fs * ((j2 ? 0.425 : 0.495) - 0.5) * w, ey = y - h * (1 - (j2 ? 0.14 : 0.19)), eg = ctx.createRadialGradient(ex, ey, 1, ex, ey, stun ? 10 : 22); eg.addColorStop(0, 'rgba(255,80,80,.9)'); eg.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 22, 0, 6.283); ctx.fill();
+  const ex = x + fs * ((j3 ? 0.47 : j2 ? 0.425 : 0.495) - 0.5) * w, ey = y - h * (1 - (j3 ? 0.18 : j2 ? 0.14 : 0.19)), eg = ctx.createRadialGradient(ex, ey, 1, ex, ey, stun ? 10 : 22); eg.addColorStop(0, 'rgba(255,80,80,.9)'); eg.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 22, 0, 6.283); ctx.fill();
   if (b.st === 'aim') { ctx.strokeStyle = 'rgba(255,40,60,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(b.x, gy); ctx.stroke(); }
   ctx.globalCompositeOperation = 'source-over';
   if (stun) { ctx.font = '900 26px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let k = 0; k < 3; k++) { const aa = time * 4 + k * 2.094; ctx.fillStyle = '#ffd23c'; ctx.fillText('★', b.x + Math.cos(aa) * 60, y - h - 6 + Math.sin(aa) * 12); }
@@ -1231,7 +1236,7 @@ function spawnEnemies() {
   });
 }
 function resetLevel(full) {
-  L = buildLevel(); if (L.theme === 'ice') preIce(); if (L.meteors && L.meteors.style !== 'comet') xi('meteoro');
+  L = buildLevel(); if (L.theme === 'ice') preIce(); if (L.theme === 'lava') preLava(); if (L.meteors && L.meteors.style !== 'comet') xi('meteoro');
   spawnEnemies(); items = []; shots = []; parts = []; pops = []; bumps = [];
   if (full) G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0, tleft: L.time };
   G.tleft = L.time;
@@ -1547,6 +1552,7 @@ function drawGeysers() {
 }
 function drawRock(m, x, y, w) {        // roca volcánica flotante (las que se hunden tiemblan antes)
   if (m.st === 3) return; const jx = m.st === 1 ? Math.sin(time * 60) * 2.5 : 0, h = 30; x += jx;
+  { const LP = lavaI('plataforma-lava'); if (LP) { const h2 = w * LP.naturalHeight / LP.naturalWidth; if (m.st === 1) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,120,40,.25)'; ctx.fillRect(x, y, w, h2 * 0.5); ctx.globalCompositeOperation = 'source-over'; } ctx.drawImage(LP, x, y - h2 * 0.06, w, h2); return; } }
   ctx.globalCompositeOperation = 'lighter'; const g0 = ctx.createRadialGradient(x + w / 2, y + h, 2, x + w / 2, y + h, w * 0.6); g0.addColorStop(0, 'rgba(255,100,30,' + (m.fall ? 0.35 : 0.22) + ')'); g0.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = g0; ctx.fillRect(x - w * 0.1, y, w * 1.2, h * 2.4); ctx.globalCompositeOperation = 'source-over';
   const g2 = ctx.createLinearGradient(0, y, 0, y + h + 16); g2.addColorStop(0, '#5a2a3a'); g2.addColorStop(0.35, '#3a1428'); g2.addColorStop(1, '#1a0812'); ctx.fillStyle = g2;
   ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x + 6, y - 1); ctx.lineTo(x + w - 6, y - 1); ctx.lineTo(x + w, y + 5); ctx.lineTo(x + w - 10, y + h * 0.7); ctx.lineTo(x + w * 0.62, y + h + 12); ctx.lineTo(x + w * 0.38, y + h + 6); ctx.lineTo(x + 12, y + h * 0.65); ctx.closePath(); ctx.fill();
@@ -1842,8 +1848,9 @@ function drawLavaBg() {              // planeta volcánico: cielo rojizo, volcan
   for (const s2 of STARS) { const px = ((s2.x * 1400 - cam.x * 0.03 * s2.l) % 1400 + 1400) % 1400; if (px > VW || s2.y > 0.55) continue; ctx.globalAlpha = 0.35 + 0.35 * Math.sin(time * 1.5 + s2.tw); ctx.fillStyle = '#ffe8d0'; ctx.fillRect(px, s2.y * VHv, s2.s, s2.s); } ctx.globalAlpha = 1;
   { const px = VW * 0.78 - cam.x * 0.012, py = VHv * 0.18, r = 38, pg = ctx.createRadialGradient(px - 12, py - 12, 3, px, py, r); pg.addColorStop(0, '#f4e0ff'); pg.addColorStop(0.6, '#9a7ab8'); pg.addColorStop(1, '#3a2458'); ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
     const p2 = VW * 0.2 - cam.x * 0.008; ctx.fillStyle = '#5a3a6a'; ctx.beginPath(); ctx.arc(p2, VHv * 0.12, 18, 0, 6.283); ctx.fill(); }
-  const up = (L.H * T - VHv - cam.y) * 0.1;
-  [[0.05, VHv * 0.62, VHv * 0.34, '#3a1430', 0], [0.14, VHv * 0.8, VHv * 0.3, '#22091c', 1]].forEach(([par, base, hh, col, l]) => {
+  const up = (L.H * T - VHv - cam.y) * 0.1, FA = lavaI('fondo-lejos-lava'), FB = lavaI('fondo-cerca-lava');
+  if (FA && FB) { bgLayer(FA, Math.max(220, VHv * 0.48), VHv * 0.84 + up, 0.06); ctx.fillStyle = 'rgba(40,8,30,.25)'; ctx.fillRect(0, 0, VW, VHv); if (!L.sky) bgLayer(FB, Math.max(230, VHv * 0.42), VHv + 16 + up * 2, 0.18); }
+  else [[0.05, VHv * 0.62, VHv * 0.34, '#3a1430', 0], [0.14, VHv * 0.8, VHv * 0.3, '#22091c', 1]].forEach(([par, base, hh, col, l]) => {
     const off = cam.x * par; ctx.beginPath(); ctx.moveTo(0, VHv); const pts = MTN[l];
     for (let rep2 = 0; rep2 < 3; rep2++) for (const [mx, mh] of pts) { const x = mx + rep2 * 3000 - (off % 3000); if (x < -200 || x > VW + 200) continue; ctx.lineTo(x, base + up * (l + 1) - mh * hh); }
     ctx.lineTo(VW, VHv); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = l ? 'rgba(255,110,40,.35)' : 'rgba(255,90,60,.2)'; ctx.lineWidth = 2; ctx.stroke();
@@ -1914,12 +1921,13 @@ function drawBackground() {
 function drawTiles() {
   const x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1);
   const y0 = Math.max(0, Math.floor(cam.y / T) - 1), y1 = Math.min(L.H - 1, Math.floor((cam.y + VHv) / T));
-  const G = iceI('suelo-hielo') || IMG.suelo, gOk = G && G.naturalWidth, gw = gOk ? G.naturalWidth / 8 : 0, gh = gOk ? G.naturalHeight / 2 : 0;
+  const G = iceI('suelo-hielo') || lavaI('suelo-lava') || IMG.suelo, gOk = G && G.naturalWidth, gw = gOk ? G.naturalWidth / 8 : 0, gh = gOk ? G.naturalHeight / 2 : 0;
   // plataformas flotantes (una imagen por tramo)
   const PI = iceI('plataforma-hielo') || IMG.plataforma, PFX = PI === IMG.plataforma ? [0.165, 0.835] : [0.31, 0.69];
   for (const pl of L.plats) {
     if (pl.x1 < x0 - 1 || pl.x0 > x1 + 1) continue;
     const w = (pl.x1 - pl.x0 + 1) * T + 10, x = pl.x0 * T - 5, y = pl.ty * T - 2 + Math.sin(time * 2 + pl.x0) * 1.2;
+    { const LP = lavaI('plataforma-lava'); if (LP && pl.x1 - pl.x0 < 7) { const h2 = w * LP.naturalHeight / LP.naturalWidth; ctx.drawImage(LP, x, pl.ty * T - h2 * 0.06, w, h2); continue; } }
     if (L.theme === 'lava') { const yy = pl.ty * T;          // pasarela de metal oxidado con remaches al rojo
       const g2 = ctx.createLinearGradient(0, yy, 0, yy + 20); g2.addColorStop(0, '#6a4a5a'); g2.addColorStop(0.25, '#3a2232'); g2.addColorStop(1, '#1a0c16'); ctx.fillStyle = g2; ctx.fillRect(x + 3, yy, w - 6, 18);
       ctx.fillStyle = '#ff8a30'; ctx.fillRect(x + 3, yy, w - 6, 2.5); ctx.strokeStyle = '#120408'; ctx.lineWidth = 2; ctx.strokeRect(x + 3, yy, w - 6, 18);
@@ -1945,7 +1953,7 @@ const isWallT = c => c === '#' || c === 'F';
 function solidTile(tx, ty, G, gOk, gw, gh) {
     const x = tx * T, y = ty * T;
     let d = 0; while (d < 9 && ty - 1 - d >= 0 && isWallT(L.g[ty - 1 - d][tx])) d++;
-    if (gOk && G === IMG['suelo-hielo']) { const sx = ((tx * 7 + ty * 3) % 6) * 256;
+    if (gOk && (G === IMG['suelo-hielo'] || G === IMG['suelo-lava'])) { const sx = ((tx * 7 + ty * 3) % 6) * 256;
       if (d === 0) ctx.drawImage(G, sx, 0, 256, 347, x - 0.5, y - T * 0.336, T + 1, T * 1.336 + 0.5); else ctx.drawImage(G, sx, 347, 256, 256, x, y, T + 0.5, T + 0.5);
     } else if (gOk) {
       const sx = (tx % 8) * gw;
@@ -1954,7 +1962,7 @@ function solidTile(tx, ty, G, gOk, gw, gh) {
       else { ctx.save(); ctx.translate(x, y + T); ctx.scale(1, -1); ctx.drawImage(G, sx, gh, gw, gh, 0, -0.5, T + 0.5, T + 0.5); ctx.restore(); }
     } else { ctx.fillStyle = '#263060'; ctx.fillRect(x, y, T + 0.5, T + 0.5); if (d === 0) { ctx.fillStyle = '#29e6ff'; ctx.fillRect(x, y, T + 0.5, 2.5); } }
     if (L.theme === 'ice' && G !== IMG['suelo-hielo']) { ctx.fillStyle = 'rgba(175,228,255,.3)'; ctx.fillRect(x, y, T + 0.5, T + 0.5); }
-    else if (L.theme === 'lava') { ctx.fillStyle = 'rgba(70,12,28,.55)'; ctx.fillRect(x, y, T + 0.5, T + 0.5); if (d === 0) { ctx.fillStyle = '#ff7a24'; ctx.fillRect(x, y, T + 0.5, 3); ctx.fillStyle = 'rgba(255,160,60,.35)'; ctx.fillRect(x, y + 3, T + 0.5, 3); } }
+    else if (L.theme === 'lava' && G !== IMG['suelo-lava']) { ctx.fillStyle = 'rgba(70,12,28,.55)'; ctx.fillRect(x, y, T + 0.5, T + 0.5); if (d === 0) { ctx.fillStyle = '#ff7a24'; ctx.fillRect(x, y, T + 0.5, 3); ctx.fillStyle = 'rgba(255,160,60,.35)'; ctx.fillRect(x, y + 3, T + 0.5, 3); } }
     ctx.fillStyle = L.theme === 'ice' ? '#0c2a4a' : L.theme === 'lava' ? '#1a0610' : '#080b1c';
     if (tx > 0 && !isWallT(L.g[ty][tx - 1])) ctx.fillRect(x, y, 2.5, T + 0.5);
     if (tx < L.W - 1 && !isWallT(L.g[ty][tx + 1])) ctx.fillRect(x + T - 2.5, y, 2.5, T + 0.5);
@@ -1963,7 +1971,7 @@ function solidTile(tx, ty, G, gOk, gw, gh) {
 // pared falsa: se dibuja por delante de Lucas y se vuelve transparente cuando estás dentro
 function drawFake() {
   const x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1), y0 = Math.max(0, Math.floor(cam.y / T) - 1), y1 = Math.min(L.H - 1, Math.floor((cam.y + VHv) / T));
-  const G = iceI('suelo-hielo') || IMG.suelo, gOk = G && G.naturalWidth, gw = gOk ? G.naturalWidth / 8 : 0, gh = gOk ? G.naturalHeight / 2 : 0, pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
+  const G = iceI('suelo-hielo') || lavaI('suelo-lava') || IMG.suelo, gOk = G && G.naturalWidth, gw = gOk ? G.naturalWidth / 8 : 0, gh = gOk ? G.naturalHeight / 2 : 0, pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) { if (L.g[ty][tx] !== 'F') continue;
     const dd = Math.hypot(tx * T + T / 2 - pcx, ty * T + T / 2 - pcy), a = dd < 2.6 * T ? 0.28 + Math.max(0, dd - 1.4 * T) / (1.2 * T) * 0.72 : 1;
     ctx.globalAlpha = Math.min(1, a); solidTile(tx, ty, G, gOk, gw, gh); ctx.globalAlpha = 1; }
@@ -1982,7 +1990,7 @@ function iceDeco(x0, x1, y0, y1) {
   for (const c of L.crys) { if (c.x < cam.x - 80 || c.x > cam.x + VW + 80) continue; drawCrystal(c.x, c.y, c.c, c.h); }
 }
 function drawCrystal(x, y, c, h) {
-  { const ci = c < 3 && iceI('cristal-' + (c % 3)); if (ci) { const col = ['41,200,255', '198,90,255', '53,255,190'][c % 3], s2 = 30 * h; ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over'; spr(ci, x, y + 3, 60 * h, 0.5, 1); return; } }
+  { const ci = c < 3 ? iceI('cristal-' + (c % 3)) : lavaI('cristal-lava-' + (Math.floor(x / T) % 3)); if (ci) { const col = ['41,200,255', '198,90,255', '53,255,190', '255,80,40'][c % 4], s2 = 30 * h; ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over'; spr(ci, x, y + 3, 60 * h, 0.5, 1); return; } }
   const col = [['#1f8fd0', '#d8f8ff', '#5fd0ff', '41,200,255'], ['#7a2ad8', '#f0c8ff', '#b070ff', '198,90,255'], ['#1aa088', '#d0fff0', '#40e0b0', '53,255,190'], ['#a01828', '#ffd8c8', '#ff5a4a', '255,70,50']][c % 4], s2 = 30 * h;
   ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col[3] + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col[3] + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over';
   for (const [dx, hh, ww, rr] of [[-10, 1.1, 7, -0.25], [11, 1.25, 7, 0.22], [0, 1.9, 10, 0]]) { ctx.save(); ctx.translate(x + dx * h, y); ctx.rotate(rr); const H2 = s2 * hh, W2 = ww * h, g2 = ctx.createLinearGradient(-W2, 0, W2, 0); g2.addColorStop(0, col[0]); g2.addColorStop(0.5, col[1]); g2.addColorStop(1, col[2]); ctx.fillStyle = g2;
@@ -2001,6 +2009,7 @@ function drawBoxes(x0, x1, y0, y1) {
       ctx.globalCompositeOperation = 'source-over';
       spr(IMG['obj-caja'], cx, cy, 57 * (1 + pu * 0.03), 0.5, 0.5);
     } else if (c === 'B' && iceI('caja-hielo')) spr(IMG['caja-hielo'], cx, cy, 52, 0.5, 0.5);
+    else if (c === 'B' && lavaI('caja-lava')) spr(IMG['caja-lava'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && L.theme === 'ice') { const x = cx - 23, y = cy - 23, g2 = ctx.createLinearGradient(x, y, x + 46, y + 46); g2.addColorStop(0, 'rgba(230,252,255,.95)'); g2.addColorStop(0.5, 'rgba(120,210,255,.85)'); g2.addColorStop(1, 'rgba(60,150,230,.9)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, 46, 46, 6) : ctx.rect(x, y, 46, 46); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.moveTo(x + 8, y + 30); ctx.lineTo(x + 20, y + 12); ctx.moveTo(x + 26, y + 38); ctx.lineTo(x + 38, y + 20); ctx.stroke(); }
     else spr(IMG[c === 'B' ? 'caja-x' : 'caja-usada'], cx, cy, c === 'B' ? 53 : 54, 0.5, 0.5);
   }
@@ -2086,7 +2095,7 @@ function drawWorld() {
   // enemigos
   for (const e of enemies) {
     if (!vis(e.x)) continue;
-    const cx = e.x + e.w / 2, by = e.y + e.h, iv = ICEN[e.type] && iceI(ICEN[e.type][0]), eim = iv || IMG[e.d.img], eax = iv ? 0.5 : e.d.ax || 0.5, efl = iv || e.d.faceR ? e.dir < 0 : e.dir > 0, eh = iv ? e.d.h * ICEN[e.type][2] : e.d.h;
+    const cx = e.x + e.w / 2, by = e.y + e.h, TV = L.theme === 'lava' ? LAVN : ICEN, iv = TV[e.type] && (iceI(TV[e.type][0]) || lavaI(TV[e.type][0])), eim = iv || IMG[e.d.img], eax = iv ? 0.5 : e.d.ax || 0.5, efl = iv || e.d.faceR ? e.dir < 0 : e.dir > 0, eh = iv ? e.d.h * TV[e.type][2] : e.d.h;
     if (eim._n) eim._f = e.dead ? 0 : e.type === 'torreta' ? (e.shotT > 0 ? 2 : e.near && e.timer < 0.6 ? 1 : 0) : Math.floor(e.t * (e.d.fps || 22));
     if (e.dead) { if (e.how === 'squish') spr(eim, cx, by, eh, eax, 1, efl, 0, 1.25, 0.25); else spr(eim, cx, by - eh / 2, eh, 0.5, 0.5, efl, e.dead * 9); continue; }
     const wob = e.d.fly || e.type === 'torreta' ? 0 : Math.sin(e.t * 9) * 0.04;
@@ -2551,7 +2560,7 @@ function drawMap() {
     ctx.beginPath(); ctx.ellipse(x, y, rx * 0.9, ry * 0.9, 0, 0, 6.283); ctx.stroke(); ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
     if (sel) { ctx.setLineDash([rx * 0.26, rx * 0.2]); ctx.lineDashOffset = -time * 40; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 + 0.3 * pu) + ')'; ctx.beginPath(); ctx.ellipse(x, y, rx * 0.68, ry * 0.68, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
-    if (n.boss) spr(curW === 1 && okI(xi('jefe2')) ? IMG.jefe2 : IMG.jefe1, x, y + ry * 0.4, rx * 1.4, 0.5, 1);
+    if (n.boss) spr(curW === 2 && okI(xi('jefe3')) ? IMG.jefe3 : curW === 1 && okI(xi('jefe2')) ? IMG.jefe2 : IMG.jefe1, x, y + ry * 0.4, rx * 1.4, 0.5, 1);
     else { ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.62); ctx.font = '900 ' + Math.round(rx * 1.05) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = rx * 0.1; ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.strokeText(n.n, 0, rx * 0.04); ctx.fillStyle = n.gold || n.bonus ? '#6a3d00' : '#0d1a55'; ctx.fillText(n.n, 0, rx * 0.04); ctx.restore(); }
     if (dn) post.push(() => {
@@ -2941,7 +2950,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) updC
 
 /* ---------- arranque ---------- */
 setSnd(sndOn); resize();
-L = buildLevel(); if (L.theme === 'ice') preIce(); P = newPlayer(L.spawn.x, L.spawn.y); spawnEnemies(); cam.y = L.H * T - VHv;
+L = buildLevel(); if (L.theme === 'ice') preIce(); if (L.theme === 'lava') preLava(); P = newPlayer(L.spawn.x, L.spawn.y); spawnEnemies(); cam.y = L.H * T - VHv;
 requestAnimationFrame(frame);
 loadImages(() => {
   state = 'title'; setWorld(curW); setTimeout(() => WORLDS.forEach((w, i) => mapImg(i)), 1500);
