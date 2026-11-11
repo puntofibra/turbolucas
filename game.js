@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.71';
+const VERSION = '0.72';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -689,7 +689,7 @@ LEVELS['1-4'] = function () {
   P(8, 12, 16); B.row(8, 12, 15); P(4, 8, 13);
   // F · la cima: antena 5G
   P(3, 7, 11); B.block(9, 30, 10, 11); B.en('patrulla', 14, 9); B.en('patrulla', 19, 9); B.arc(9, 22, 7, 3); B.box(17, 5, 'chip');
-  return B.done({ name: 'TORRE DE ANTENAS', time: 210, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 26 * T + T / 2, y: 10 * T }, rise: { y: H * T + 400, speed: 40, startY: 103 * T, on: false } });
+  return B.done({ name: 'TORRE DE ANTENAS', time: 210, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 26 * T + T / 2, y: 10 * T }, rise: { y: H * T + 400, speed: 26, startY: 103 * T, on: false } });
 };
 /* ---------- fase secreta 1-B: PASEO ESPACIAL (gravedad lunar, lluvia de meteoritos, islas flotantes y lluvia de chips final) ---------- */
 LEVELS['1-B'] = function () {
@@ -1019,7 +1019,7 @@ LEVELS['2-6'] = function () {
   P(10, 14, 35); P(17, 21, 32); B.en('dron', 15, 28, { x0: 6, x1: 26 }); P(24, 28, 29); B.spring(26, 29); P(24, 29, 24); B.row(24, 29, 23); P(16, 20, 21); P(8, 12, 18); P(3, 6, 15); B.gear(4, 13); P(14, 18, 15); B.icicle(16, 9);
   // la boca del pozo
   P(8, 12, 12); P(3, 7, 9); B.block(9, 30, 8, 9); B.en('patrulla', 16, 7); B.arc(10, 24, 6, 3); B.crystal(29, 8, 1, 1.3); B.box(20, 4, 'chip');
-  return B.done({ name: 'POZO DE LA MINA', time: 230, theme: 'ice', vert: true, spawn: { x: 5 * T, y: 110 * T }, goal: { x: 26 * T + T / 2, y: 8 * T }, rise: { y: H * T + 400, speed: 42, startY: 104 * T, on: false, style: 'water' } });
+  return B.done({ name: 'POZO DE LA MINA', time: 230, theme: 'ice', vert: true, spawn: { x: 5 * T, y: 110 * T }, goal: { x: 26 * T + T / 2, y: 8 * T }, rise: { y: H * T + 400, speed: 36, startY: 104 * T, on: false, style: 'water' } });
 };
 /* ---------- fase secreta 2-B: AURORA (sobre las nubes del planeta, con gravedad lunar: escaleras de luz, estrellas fugaces de hielo y una lluvia de chips) ---------- */
 /* ---------- jefe 2-J: GUARDIÁN DE HIELO (el mismo coloso, ahora congelado: arena que resbala, ráfagas de esquirlas de hielo, y al aplastar el suelo hace caer carámbanos del cielo; 8 golpes) ---------- */
