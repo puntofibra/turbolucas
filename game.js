@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.13';
+const VERSION = '0.14';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -33,7 +33,7 @@ function loadImages(done) {
   NAMES.forEach(n => {
     const im = new Image();
     im.onload = im.onerror = () => { if (++loaded === NAMES.length) done(); };
-    im.src = 'img/' + TIER + '/' + n + '.webp';
+    im.src = 'img/' + TIER + '/' + n + '.webp?v=' + VERSION;
     if (FRAMES[n]) im._n = FRAMES[n];
     IMG[n] = im;
   });
