@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.54';
+const VERSION = '0.55';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -2047,6 +2047,10 @@ function bossJungle(dt, b, p, a, mid, ph2, gy, px) {
 }
 function drawCogs() {
   for (const c of L.cogs) { if (c.x + c.r < cam.x || c.x - c.r > cam.x + VW) continue; const n = Math.max(8, Math.round(c.r / 14)), a0 = time * 0.4 * (c.r > 3 * T ? 0.6 : 1) * ((c.x / T | 0) % 2 ? 1 : -1);
+    const gi = xi('engranaje-lava');
+    if (okI(gi)) { ctx.save(); ctx.translate(c.x, c.y);
+      ctx.globalCompositeOperation = 'lighter'; const pu = 0.6 + 0.4 * Math.sin(time * 2 + c.x * 0.01), gg = ctx.createRadialGradient(0, 0, 0, 0, 0, c.r * 0.7); gg.addColorStop(0, 'rgba(255,120,30,' + 0.28 * pu + ')'); gg.addColorStop(1, 'rgba(255,60,10,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, 0, c.r * 0.7, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+      ctx.rotate(a0); ctx.drawImage(gi, -c.r, -c.r, c.r * 2, c.r * 2); ctx.restore(); continue; }
     ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(a0); ctx.fillStyle = '#2a1424'; ctx.strokeStyle = 'rgba(255,120,40,.5)'; ctx.lineWidth = 3; ctx.beginPath();
     for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * 6.283, rr = i % 2 ? c.r : c.r * 0.86, a2 = (i + 1) / (n * 2) * 6.283; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); ctx.lineTo(Math.cos(a2) * rr, Math.sin(a2) * rr); }
     ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#160812'; ctx.beginPath(); ctx.arc(0, 0, c.r * 0.55, 0, 6.283); ctx.fill(); ctx.fillStyle = '#3a1c2c';
