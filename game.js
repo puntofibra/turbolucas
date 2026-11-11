@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.50';
+const VERSION = '0.51';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3051,10 +3051,11 @@ async function tlSave() {
 async function openTaller(info) {
   closeEditor(true); state = 'title'; show('title', true);
   const c = $('card'); c.classList.add('tips');
-  c.innerHTML = '<h2>🛠️ TALLER ESPACIAL</h2><div class="tbody" id="tlB"><div style="text-align:center;color:#8ea3e6">Cargando…</div></div><div class="row"><button class="btn" id="tlNew">NUEVO NIVEL</button><button class="btn" id="tlCode">CARGAR CÓDIGO</button><button class="btn" id="tlX">VOLVER</button></div>';
+  c.innerHTML = '<h2>🛠️ TALLER ESPACIAL</h2><div class="tbody" id="tlB"><div style="text-align:center;color:#8ea3e6">Cargando…</div></div><div class="row"><button class="btn" id="tlNew">NUEVO NIVEL</button><button class="btn" id="tlCode">CARGAR CÓDIGO</button><button class="btn" id="tlPub" style="border-color:#ffd23c">🌍 PANTALLAS PÚBLICAS</button><button class="btn" id="tlX">VOLVER</button></div>';
   show('panel', true); $('tlX').onclick = () => show('panel', false);
   $('tlNew').onclick = () => { ED = tlNew('Nivel ' + (new Date().toLocaleDateString('es-ES'))); openEditor(); };
   $('tlCode').onclick = () => tlAskCode();
+  $('tlPub').onclick = () => tlPublic('ult');
   let list = [];
   if (ACC) { const r = await api({ a: 'nivMios', ses: ACC.ses }); if (r.ok) list = r.niveles.map(x => ({ c: x.c, n: x.n, t: x.t, f: x.f })); }
   else list = tlLocal().map(x => ({ lid: x.lid, n: x.n, t: x.t, f: x.f }));
@@ -3069,6 +3070,19 @@ async function openTaller(info) {
     if (x.c) await api({ a: 'nivNombre', ses: ACC.ses, c: x.c, n }); else { const l = tlLocal(), q = l.find(z => z.lid === x.lid); if (q) { q.n = n; tlLocalSave(l); } } openTaller(); });
   B.querySelectorAll('[data-td]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } const x = list[+b.dataset.td];
     if (x.c) await api({ a: 'nivBorrar', ses: ACC.ses, c: x.c }); else tlLocalSave(tlLocal().filter(z => z.lid !== x.lid)); openTaller(); });
+}
+async function tlPublic(tab) {
+  const c = $('card'); c.classList.add('tips');
+  c.innerHTML = '<h2>🌍 PANTALLAS PÚBLICAS</h2><div class="tabs"><button class="btn' + (tab === 'ult' ? ' on' : '') + '" id="tpU">ÚLTIMAS 20</button><button class="btn' + (tab === 'top' ? ' on' : '') + '" id="tpT">🏆 TOP 10 MÁS GUARDADAS</button></div><div class="tbody" id="tpB"><div style="text-align:center;color:#8ea3e6">Cargando…</div></div><div class="row"><button class="btn" id="tpX">VOLVER</button></div>';
+  show('panel', true); $('tpX').onclick = () => openTaller(); $('tpU').onclick = () => tlPublic('ult'); $('tpT').onclick = () => tlPublic('top');
+  const r = await api({ a: 'nivPublicos' }), B = $('tpB'); if (!B) return; if (!r.ok) { B.textContent = r.error || 'Sin conexión'; return; }
+  const l = tab === 'top' ? r.top : r.ultimos;
+  B.innerHTML = '<div style="text-align:center;color:#8ea3e6;margin-bottom:8px">' + (tab === 'top' ? 'Las pantallas que más jugadores tienen guardadas en su taller ahora mismo. Si alguien la borra, baja en el top.' : 'Las 20 últimas pantallas creadas por los jugadores.') + '</div>' +
+    (l.length ? l.map((x, i) => '<div class="stat" style="flex-wrap:wrap;gap:6px"><span>' + (tab === 'top' ? (i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.') + ' ' : '') + '<b>' + esc(x.n) + '</b> <span style="color:#8ea3e6">de ' + esc(x.autor) + ' · ' + (TL_THEMES.find(t => t[0] === (x.t || '')) || ['', ''])[1] + ' · código <b style="color:#ffd23c">' + x.c + '</b> · 💾 ' + x.copias + '</span></span><span style="display:flex;gap:4px"><button class="btn" data-pp="' + x.c + '">JUGAR</button><button class="btn" data-pg="' + x.c + '" style="border-color:#35ff8a">GUARDAR</button></span></div>').join('') : '<div style="text-align:center">' + (tab === 'top' ? 'Todavía ninguna pantalla ha sido guardada por otros jugadores.' : 'Todavía no hay pantallas publicadas.') + '</div>');
+  B.querySelectorAll('[data-pp]').forEach(b => b.onclick = async () => { const q = await api({ a: 'nivGet', c: b.dataset.pp }); if (!q.ok) return infoPanel('ERROR', esc(q.error)); ED = tlUnpack(null, q.n, q.t, q.datos); tlPlay(false); });
+  B.querySelectorAll('[data-pg]').forEach(b => b.onclick = async () => { b.textContent = '…';
+    if (ACC) { const q = await api({ a: 'nivCopiar', ses: ACC.ses, c: b.dataset.pg }); b.textContent = q.ok ? '✔ GUARDADA' : '✖ ' + q.error; if (q.ok) SFX.life(); }
+    else { const q = await api({ a: 'nivGet', c: b.dataset.pg }); if (!q.ok) { b.textContent = '✖'; return; } const ll = tlLocal(); ll.unshift({ lid: 'L' + Date.now(), n: q.n, t: q.t, datos: q.datos, f: Date.now() }); tlLocalSave(ll); b.textContent = '✔ GUARDADA'; SFX.life(); } });
 }
 function tlAskCode() {
   const c = $('card'); c.classList.remove('tips');
