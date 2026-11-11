@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.24';
+const VERSION = '0.25';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -201,6 +201,9 @@ function pollPad() {
 
 /* ---------- consola secreta de trucos (10 toques rápidos sobre PAUSA) ---------- */
 const CHEAT = { ghost: false, live: false, floor: false, stop: false, kill: false, unlock: false, laser: false, fly: false, time: false, floorT: 0 };
+// los trucos se guardan en el dispositivo: siguen activos al cambiar de fase, al actualizarse el juego o al volver otro día
+try { const sv = JSON.parse(localStorage.getItem('tl_ch') || '{}'); for (const k in sv) if (k in CHEAT && k !== 'floorT') CHEAT[k] = !!sv[k]; } catch (e) {}
+function saveCheats() { try { const o = {}; for (const k in CHEAT) if (k !== 'floorT' && CHEAT[k]) o[k] = 1; localStorage.setItem('tl_ch', JSON.stringify(o)); } catch (e) {} }
 const CON = { on: false, q: [], typing: false, busy: false, pend: [] };
 const CODES = [
   ['GHOST', 'MODO FANTASMA', 'Lucas se vuelve espectral, con aura de neón. Los bichos, sus disparos y los láseres le atraviesan.'],
@@ -376,7 +379,7 @@ function conRun(raw) {
   }
   const code = CODES.find(c => c[0] === cmd || (cmd === 'LIVES' && c[0] === 'LIVE'));
   if (code) {
-    const k = code[0].toLowerCase(); CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0;
+    const k = code[0].toLowerCase(); CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; saveCheats();
     if (CHEAT[k]) { say('>> ' + code[1] + ' ACTIVADO ✔', 'g big', 26); say('   ' + code[2], '', 10); SFX.power(); }
     else { say('>> ' + code[1] + ' DESACTIVADO', 'r', 22); tone(500, 120, 0.3, 'square', 0.06); }
     say(activeTxt(), 'y', 0, true); return;
@@ -1436,7 +1439,6 @@ function drawHUD() {
   const p = P, act = [];
   if (p.power === 'laser' || CHEAT.laser) act.push(['poder-laser', 0]); if (p.power === 'mini') act.push(['poder-mini', 0]); if (p.shield) act.push(['poder-escudo', 0]);
   if (p.tTurbo > 0) act.push(['poder-turbo', p.tTurbo / 7]); if (p.tMagnet > 0) act.push(['poder-iman', p.tMagnet / 14]); if (p.tStar > 0) act.push(['poder-estrella5g', p.tStar / 9]);
-  { const ch = CODES.filter(c => CHEAT[c[0].toLowerCase()]).map(c => c[0]); if (ch.length) { ctx.font = '800 11px ui-monospace,monospace'; ctx.textAlign = 'left'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 8; ctx.fillStyle = '#7fe9ff'; ctx.fillText('> ' + ch.join(' · ') + (Math.floor(time * 2) % 2 ? '_' : ''), pad, act.length ? 108 : 70); ctx.shadowBlur = 0; ctx.textAlign = 'center'; } }
   act.forEach(([n, f], i) => { const x = pad + 18 + i * 44, y = 76; spr(IMG[n], x, y, 36, 0.5, 0.5);
     if (f > 0) { ctx.strokeStyle = '#35ff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 20, -1.5708, -1.5708 + 6.283 * f); ctx.stroke(); } });
   ctx.restore();
@@ -1890,7 +1892,7 @@ function admPaint() {
     B.innerHTML = h;
   } else if (admTab === 'CÓDIGOS') {
     B.innerHTML = '<div style="color:#8ea3e6">Se escriben en la consola (pausa · 10 toques rápidos sobre PAUSA). Aquí puedes activarlos directamente.</div>' + CODES.map(c => { const on = CHEAT[c[0].toLowerCase()]; return '<div class="akey"><b style="color:#ffd23c">' + c[0] + '</b> — ' + c[1] + '<br>' + esc(c[2]) + '<div class="arow"><button class="btn' + (on ? ' on' : '') + '" data-c="' + c[0] + '">' + (on ? 'ACTIVADO ✔' : 'ACTIVAR') + '</button></div></div>'; }).join('') + '<div class="akey"><b style="color:#ffd23c">HACK</b> — muestra la lista de códigos con la animación de hackeo.<br><b style="color:#ffd23c">ADMIN</b> — abre este panel (pide la llave NFC).</div>';
-    B.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const k = b.dataset.c.toLowerCase(); CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; SFX.power(); admPaint(); });
+    B.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const k = b.dataset.c.toLowerCase(); CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; saveCheats(); SFX.power(); admPaint(); });
   } else if (admTab === 'FASES') {
     B.innerHTML = '<h3>JUGAR DIRECTAMENTE</h3><div class="arow">' + MAP.map((n, i) => '<button class="btn" data-f="' + i + '">' + (n.boss ? 'JEFE' : n.bonus ? 'SECRETA' : n.id) + '</button>').join('') + '</div>' +
       '<h3>PROGRESO EN ESTE DISPOSITIVO</h3><div class="arow"><button class="btn" id="aOpen">ABRIR TODAS LAS FASES</button><button class="btn red" id="aReset">BORRAR MI PROGRESO</button></div><div class="amsg" id="amsg"></div>';
