@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.23';
+const VERSION = '0.24';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -352,7 +352,7 @@ function openConsole(fromPad) {
 }
 function closeConsole() {
   if (!CON.on) return; CON.on = false; CON.q = []; clearTimeout(conTimer); try { conIn.blur(); } catch (e) {}
-  vkbShow(false); const c = $('con'); c.classList.add('off'); tone(900, 50, 0.35, 'sawtooth', 0.06);
+  vkbShow(false); { const qb = $('conQr'); if (qb) qb.remove(); } const c = $('con'); c.classList.add('off'); tone(900, 50, 0.35, 'sawtooth', 0.06);
   setTimeout(() => { c.classList.remove('on', 'off'); }, 460);
 }
 const activeTxt = () => { const a = CODES.filter(c => CHEAT[c[0].toLowerCase()]).map(c => c[0]); return 'TRUCOS ACTIVOS: ' + (a.length ? a.join(' · ') : 'NINGUNO'); };
@@ -1824,7 +1824,11 @@ const NFC_HTML = '<div class="nfcw"><svg viewBox="0 0 64 64" width="54" height="
 .nfcw{position:relative;width:96px;height:96px;margin:10px 0;color:#29e6ff;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 8px #29e6ff)}
 .nfcw i{position:absolute;inset:0;border-radius:50%;border:2px solid #29e6ff;animation:nfcp 2s infinite}.nfcw i+i{animation-delay:1s}
 @keyframes nfcp{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.25);opacity:0}}
-.conqr{background:#fff;padding:10px;display:inline-block;border-radius:8px;margin:8px 0;box-shadow:0 0 22px rgba(41,230,255,.6)}
+#conQr{position:absolute;z-index:7;right:calc(24px + env(safe-area-inset-right));top:50%;transform:translateY(-50%);background:#fff;padding:12px 12px 8px;border-radius:12px;box-shadow:0 0 30px rgba(41,230,255,.8);text-align:center;animation:qrIn .4s ease-out}
+#conQr img{display:block;width:min(42vh,300px);height:min(42vh,300px);image-rendering:pixelated}
+#conQr div{font:800 12px system-ui,sans-serif;color:#0a1640;letter-spacing:.08em;margin-top:6px}
+@keyframes qrIn{from{opacity:0;transform:translateY(-50%) scale(.8)}}
+@media (max-width:700px){#conQr{right:50%;transform:translate(50%,-50%)}}
 #adm{position:fixed;inset:0;z-index:56;display:none;background:radial-gradient(ellipse at 50% 30%,#06163a,#010309 75%);font-family:"Lucida Console","Courier New",ui-monospace,monospace;color:#cfe0ff}
 #adm.on{display:flex;flex-direction:column}
 #adm::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px);z-index:3}
@@ -1925,7 +1929,7 @@ let admQrT = 0;
 function conAdmin() {
   if (ADM) { say('SESIÓN DE ADMINISTRADOR ACTIVA', 'g', 18); setTimeout(openAdmin, 700); return; }
   say('*** ACCESO RESTRINGIDO ***', 'r big', 24); say('IDENTIFICACIÓN POR LLAVE REQUERIDA', 'w', 14);
-  const ok = r => { clearInterval(admQrT); setAdm(r.adm); say(r.nueva ? 'LLAVE MAESTRA REGISTRADA ✔' : 'LLAVE RECONOCIDA ✔', 'g big', 22); say('ACCESO CONCEDIDO. ABRIENDO PANEL…', 'g', 14); SFX.win(); setTimeout(() => { if (CON.on) openAdmin(); }, 2200); };
+  const ok = r => { clearInterval(admQrT); { const qb = $('conQr'); if (qb) qb.remove(); } setAdm(r.adm); say(r.nueva ? 'LLAVE MAESTRA REGISTRADA ✔' : 'LLAVE RECONOCIDA ✔', 'g big', 22); say('ACCESO CONCEDIDO. ABRIENDO PANEL…', 'g', 14); SFX.win(); setTimeout(() => { if (CON.on) openAdmin(); }, 2200); };
   if (HAY_NFC) {
     CON.q.push({ txt: '', cls: '', fast: true });
     setTimeout(() => { const box = document.createElement('div'); box.innerHTML = NFC_HTML + '<div id="cnfc" class="y">ACERCA TU LLAVE A LA PARTE DE ATRÁS DEL MÓVIL…</div>'; conOut.appendChild(box); conScroll(); }, 900);
@@ -1934,9 +1938,9 @@ function conAdmin() {
   } else {
     say('ESTE DISPOSITIVO NO LEE NFC. ESCANEA EL CÓDIGO CON TU MÓVIL ANDROID Y ACERCA LA LLAVE:', 'y', 10);
     api({ a: 'qr' }).then(r => { if (!r.ok) { say('ERROR: ' + r.error, 'r', 10); return; }
-      const url = location.origin + location.pathname + '?admq=' + r.q, box = document.createElement('div'); box.className = 'conqr';
-      try { const q = qrcode(0, 'M'); q.addData(url); q.make(); box.innerHTML = '<img src="' + q.createDataURL(5, 0) + '" width="190" height="190" style="image-rendering:pixelated;display:block" alt="QR">'; } catch (e) { box.textContent = url; }
-      setTimeout(() => { conOut.appendChild(box); conScroll(); }, 1200);
+      const url = location.origin + location.pathname + '?admq=' + r.q, box = document.createElement('div'); box.id = 'conQr'; const old = $('conQr'); if (old) old.remove();
+      try { const q = qrcode(0, 'M'); q.addData(url); q.make(); box.innerHTML = '<img src="' + q.createDataURL(8, 4) + '" alt="QR"><div>ESCANÉALO CON TU MÓVIL</div>'; } catch (e) { box.textContent = url; }
+      setTimeout(() => { if (CON.on) $('con').appendChild(box); }, 1200);
       clearInterval(admQrT); admQrT = setInterval(async () => { if (!CON.on) return clearInterval(admQrT); const s2 = await api({ a: 'qrEst', q: r.q }); if (s2.estado === 'ok') ok(s2); else if (s2.estado === 'caducado') { clearInterval(admQrT); say('EL CÓDIGO HA CADUCADO. ESCRIBE ADMIN OTRA VEZ.', 'r', 10); } }, 2000);
     });
   }
