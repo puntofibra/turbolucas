@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.25';
+const VERSION = '0.26';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -296,7 +296,8 @@ function padConsole(gp, b, ax, ay) {
   if (edge(9, 'cst')) vkbEnter();
   const sy = gp.axes[3] || 0; if (Math.abs(sy) > 0.3) { conOut.scrollTop += sy * 14; conHold = performance.now() + 4000; }
   const L = padHeld('l', ax < -0.5 || b(14)), R = padHeld('r', ax > 0.5 || b(15)), U = padHeld('u', ay < -0.5 || b(12)), D = padHeld('d', ay > 0.5 || b(13));
-  if (!vkbOn) { if (U || D) { conOut.scrollTop += U ? -60 : 60; conHold = performance.now() + 4000; } if (edge(0, 'cx')) vkbEnter(); return; }
+  const xEdge = edge(0, 'cx'); if (xEdge && conTapSkip()) return;
+  if (!vkbOn) { if (U || D) { conOut.scrollTop += U ? -60 : 60; conHold = performance.now() + 4000; } if (xEdge && !CON.typing) vkbEnter(); return; }
   if (edge(4, 'cl1') | edge(5, 'cr1')) { vkbTop = !vkbTop; vkbShow(true); }
   if (L || R || U || D) {
     const old = vkbRow(vkbR).length;
@@ -304,7 +305,7 @@ function padConsole(gp, b, ax, ay) {
     if (U || D) { const nr = (vkbR + (U ? -1 : 1) + VKB_ROWS.length) % VKB_ROWS.length, nl = vkbRow(nr).length; vkbC = Math.min(nl - 1, Math.round(vkbC * (nl - 1) / Math.max(1, old - 1))); vkbR = nr; }
     vkbPaint(); tone(1300, 1300, 0.02, 'square', 0.03);
   }
-  if (edge(0, 'cx')) { vkbPress(); const el = $('vkb').querySelector('.k.sel'); if (el) { el.style.transform = 'scale(.9)'; setTimeout(() => el.style.transform = '', 90); } }
+  if (xEdge && !CON.typing) { vkbPress(); const el = $('vkb').querySelector('.k.sel'); if (el) { el.style.transform = 'scale(.9)'; setTimeout(() => el.style.transform = '', 90); } }
 }
 
 let conLine = null, conTimer = null;
@@ -320,15 +321,22 @@ function conPrompt() {        // línea de escritura con el cursor _ parpadeando
 function say(txt, cls = '', speed = 18, fast = false) { CON.q.push({ txt, cls, speed, fast }); if (!CON.typing) conPump(); }
 function conPump() {
   const it = CON.q.shift();
-  if (!it) { CON.typing = false; if (CON.on && CON.busy) conPrompt(); return; }
+  if (!it) { CON.typing = false; CON.skip = false; if (CON.on && CON.busy) conPrompt(); return; }
   CON.typing = true;
   const el = document.createElement('div'); if (it.cls) el.className = it.cls; conOut.appendChild(el);
-  if (it.fast || !it.txt) { el.textContent = it.txt || ' '; conScroll(); conTimer = setTimeout(conPump, it.fast ? 28 : 60); return; }
+  if (it.fast || !it.txt || CON.skip) { el.textContent = it.txt || ' '; conScroll(); if (CON.skip) conPump(); else conTimer = setTimeout(conPump, it.fast ? 28 : 60); return; }
   let i = 0; const cur = document.createElement('span'); cur.className = 'cur'; cur.textContent = '_';
-  const step = () => { if (!CON.on) return; el.textContent = it.txt.slice(0, ++i); el.appendChild(cur);
+  const step = () => { if (!CON.on) return; if (CON.skip) { el.textContent = it.txt; conScroll(); conPump(); return; } el.textContent = it.txt.slice(0, ++i); el.appendChild(cur);
     if (i % 2 === 0) tone(1800 + Math.random() * 400, 1800, 0.012, 'square', 0.025); conScroll();
     if (i < it.txt.length) conTimer = setTimeout(step, it.speed); else { cur.remove(); conTimer = setTimeout(conPump, 90); } };
   step();
+}
+// 3 pulsaciones rápidas (espacio, ✕ del mando o clic) mientras escribe: saca todo el texto de golpe
+let conTaps = [];
+function conTapSkip() {
+  if (!CON.typing) return false; const t = performance.now(); conTaps = conTaps.filter(x => t - x < 700); conTaps.push(t);
+  if (conTaps.length >= 3) { conTaps = []; CON.skip = true; clearTimeout(conTimer); conPump(); return true; }
+  return false;
 }
 let pauseTap = { n: 0, t: 0 };
 function pauseTapOn(pad) {
@@ -391,12 +399,14 @@ function conRun(raw) {
 }
 conIn.addEventListener('input', () => { conIn.value = conIn.value.toUpperCase().slice(0, 30); const tx = $('conTx'); if (tx && !CON.busy) tx.textContent = conIn.value; tone(2200, 2200, 0.01, 'square', 0.03); conScroll(); });
 conIn.addEventListener('keydown', e => { e.stopPropagation();
+  if (e.key === ' ' && CON.typing) { e.preventDefault(); conTapSkip(); return; }
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') { e.preventDefault(); const st = /Page/.test(e.key) ? conOut.clientHeight * 0.8 : 60; conOut.scrollTop += /Up/.test(e.key) ? -st : st; conHold = conOut.scrollHeight - conOut.scrollTop - conOut.clientHeight > 20 ? performance.now() + 4000 : 0; return; }
   if (e.key === 'Enter') { e.preventDefault(); if (!CON.busy) conRun(conIn.value); else if (conIn.value.trim()) { CON.pend.push(conIn.value); conIn.value = ''; } } else if (e.key === 'Escape') closeConsole(); });
 const conKb = e => { if (e.target.id === 'conX' || (e.target.closest && e.target.closest('#vkb'))) return; try { conIn.blur(); conIn.focus({ preventScroll: true }); conIn.click(); } catch (x) {} };      // tocar la pantalla vuelve a sacar el teclado
 let conTy = 0, conMoved = false;
 $('con').addEventListener('touchstart', e => { conTy = e.touches[0].clientY; conMoved = false; }, { passive: true });
 $('con').addEventListener('touchmove', e => { if (Math.abs(e.touches[0].clientY - conTy) > 10) conMoved = true; }, { passive: true });
+$('con').addEventListener('pointerdown', e => { if (e.target.id !== 'conX' && !(e.target.closest && e.target.closest('#vkb'))) conTapSkip(); });
 $('con').addEventListener('pointerup', e => { if (!conMoved) conKb(e); }); $('con').addEventListener('touchend', e => { if (!conMoved) conKb(e); });
 $('conX').addEventListener('click', closeConsole);
 
