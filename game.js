@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.8';
+const VERSION = '0.9';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -850,12 +850,12 @@ function gameOver() {
 /* ---------- mapa del mundo 1 (ilustración + camino de energía) ---------- */
 // x, y y rx van en fracciones del dibujo del mapa; way = puntos del tubo desde la fase anterior
 const MAP = [
-  { id: '1-1', n: '1', name: 'MUELLE DE CARGA', x: 0.104, y: 0.513, rx: 0.042, built: true },
-  { id: '1-2', n: '2', name: 'PASILLOS DE SERVICIO', x: 0.348, y: 0.668, rx: 0.042, way: [[0.16, 0.47], [0.20, 0.477], [0.23, 0.52], [0.26, 0.60], [0.29, 0.655]] },
-  { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.498, y: 0.518, rx: 0.042, way: [[0.39, 0.675], [0.42, 0.635], [0.45, 0.60], [0.47, 0.57]] },
-  { id: '1-4', n: '4', name: 'TORRE DE ANTENAS', x: 0.651, y: 0.369, rx: 0.036, gold: true, way: [[0.53, 0.46], [0.56, 0.42], [0.59, 0.385], [0.62, 0.37]] },
-  { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.871, y: 0.395, rx: 0.058, boss: true, way: [[0.685, 0.335], [0.71, 0.305], [0.74, 0.295], [0.78, 0.31], [0.81, 0.335], [0.84, 0.37]] },
-  { id: '1-B', n: '★', name: 'FASE SECRETA', x: 0.618, y: 0.19, rx: 0.027, bonus: true, prev: 3, way: [[0.625, 0.33], [0.603, 0.29], [0.598, 0.24], [0.595, 0.21]] }
+  { id: '1-1', n: '1', name: 'MUELLE DE CARGA', x: 0.1041, y: 0.498, rx: 0.033, built: true },
+  { id: '1-2', n: '2', name: 'PASILLOS DE SERVICIO', x: 0.3479, y: 0.659, rx: 0.033, way: [[0.16, 0.47], [0.20, 0.477], [0.23, 0.52], [0.26, 0.60], [0.29, 0.655]] },
+  { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.4996, y: 0.499, rx: 0.033, way: [[0.39, 0.675], [0.42, 0.635], [0.45, 0.60], [0.47, 0.57]] },
+  { id: '1-4', n: '4', name: 'TORRE DE ANTENAS', x: 0.6515, y: 0.357, rx: 0.03, gold: true, way: [[0.53, 0.46], [0.56, 0.42], [0.59, 0.385], [0.62, 0.37]] },
+  { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.871, y: 0.393, rx: 0.05, boss: true, way: [[0.685, 0.335], [0.71, 0.305], [0.74, 0.295], [0.78, 0.31], [0.81, 0.335], [0.84, 0.37]] },
+  { id: '1-B', n: '★', name: 'FASE SECRETA', x: 0.6177, y: 0.186, rx: 0.021, bonus: true, prev: 3, way: [[0.625, 0.33], [0.603, 0.29], [0.598, 0.24], [0.595, 0.21]] }
 ];
 let PROG = {}, curId = '1-1', mapSel = 0, mapAt = 0, mapL = { x: MAP[0].x, y: MAP[0].y }, mapRoute = [], mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 }, mapUnl = null, mapParts = [], justOpened = -1;
 try { PROG = JSON.parse(localStorage.getItem('tl_prog') || '{}') || {}; const os = +localStorage.getItem('tl_stars_1_1') || 0; if (os && !PROG['1-1']) PROG['1-1'] = { stars: os, best: +localStorage.getItem('tl_best_1_1') || 0 }; } catch (e) { PROG = {}; }
@@ -942,8 +942,6 @@ function drawMap() {
     const way = n.way.map(p => mapPt(t, p[0], p[1])), a = mapPt(t, MAP[mapPrev(i)].x, MAP[mapPrev(i)].y), b = mapPt(t, n.x, n.y), full = [a, ...way, b];
     if (unl < 1) {
       const [sx, sy, si] = polyAt(way, unl);
-      ctx.beginPath(); ctx.moveTo(sx, sy); for (let k = si + 1; k < way.length; k++) ctx.lineTo(way[k][0], way[k][1]);
-      ctx.lineWidth = (n.bonus ? 0.022 : 0.045) * u; ctx.strokeStyle = 'rgba(5,7,26,.7)'; ctx.stroke();
       if (unl > 0) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 0.05 * u); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.3, 'rgba(120,235,255,.7)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, 0.05 * u, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
         if (Math.random() < 0.8) mapParts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 160, vy: (Math.random() - 0.5) * 160, life: 0.5, max: 0.5, col: '#bff6ff', size: 2 + Math.random() * 2 }); }
     }
@@ -955,27 +953,26 @@ function drawMap() {
   }
   // plataformas de cada fase
   for (let i = 0; i < MAP.length; i++) {
-    const n = MAP[i], open = mapOpen(i) && !(mapUnl && mapUnl.i === i), dn = PROG[n.id], sel = i === mapSel, pu = 0.5 + 0.5 * Math.sin(time * 4 + i), rx = n.rx * u, ry = rx * 0.36;
+    const n = MAP[i], open = mapOpen(i) && !(mapUnl && mapUnl.i === i), dn = PROG[n.id], sel = i === mapSel, pu = 0.5 + 0.5 * Math.sin(time * 4 + i), rx = n.rx * u, ry = rx * 0.4;
     let [x, y] = mapPt(t, n.x, n.y); if (mapShake.i === i && mapShake.t > 0) x += Math.sin(mapShake.t * 60) * 5;
     const col = dn ? '53,255,138' : n.boss ? '255,70,80' : n.gold || n.bonus ? '255,205,70' : '41,230,255';
     if (!open) {
       const fade = mapUnl && mapUnl.i === i ? 1 - Math.max(0, mapUnl.t - 0.75) * 4 : 1;
-      ctx.fillStyle = 'rgba(5,7,26,' + 0.66 * fade + ')'; ctx.beginPath(); ctx.ellipse(x, y + ry * 0.5, rx * 1.3, ry * 2.1, 0, 0, 6.283); ctx.fill();
-      ctx.globalAlpha = fade; spr(IMG['ico-candado'], x, y + ry * 0.9, rx * 1.05, 0.5, 1); ctx.globalAlpha = 1;
+      ctx.globalAlpha = fade; spr(IMG['ico-candado'], x, y + ry * 0.75 + Math.sin(time * 2 + i) * 1.5, rx * 1.55, 0.5, 1); ctx.globalAlpha = 1;
       continue;
     }
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = 3 + pu * 2; ctx.strokeStyle = 'rgba(' + col + ',' + (0.55 + 0.35 * pu) + ')'; ctx.shadowColor = 'rgb(' + col + ')'; ctx.shadowBlur = 14;
-    ctx.beginPath(); ctx.ellipse(x, y, rx * 0.86, ry * 0.86, 0, 0, 6.283); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.ellipse(x, y, rx * 0.9, ry * 0.9, 0, 0, 6.283); ctx.stroke(); ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
-    if (sel) { ctx.setLineDash([rx * 0.22, rx * 0.16]); ctx.lineDashOffset = -time * 40; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 + 0.3 * pu) + ')'; ctx.beginPath(); ctx.ellipse(x, y, rx * 1.18, ry * 1.25, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
-    if (n.boss) spr(IMG.jefe1, x, y + ry * 0.4, rx * 1.2, 0.5, 1);
-    else { ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.62); ctx.font = '900 ' + Math.round(rx * 0.82) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.lineWidth = rx * 0.1; ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.strokeText(n.n, 0, rx * 0.06); ctx.fillStyle = n.gold || n.bonus ? '#6a3d00' : '#0d1a55'; ctx.fillText(n.n, 0, rx * 0.06); ctx.restore(); }
+    if (sel) { ctx.setLineDash([rx * 0.26, rx * 0.2]); ctx.lineDashOffset = -time * 40; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 + 0.3 * pu) + ')'; ctx.beginPath(); ctx.ellipse(x, y, rx * 0.68, ry * 0.68, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
+    if (n.boss) spr(IMG.jefe1, x, y + ry * 0.4, rx * 1.4, 0.5, 1);
+    else { ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.62); ctx.font = '900 ' + Math.round(rx * 1.05) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = rx * 0.1; ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.strokeText(n.n, 0, rx * 0.04); ctx.fillStyle = n.gold || n.bonus ? '#6a3d00' : '#0d1a55'; ctx.fillText(n.n, 0, rx * 0.04); ctx.restore(); }
     if (dn) {
-      spr(IMG['ico-bandera'], x + rx * 0.78, y - ry * 0.1, rx * 0.95, 0.12, 1, false, Math.sin(time * 3 + i) * 0.05);
-      for (let k = 0; k < 3; k++) spr(IMG[k < dn.stars ? 'ico-estrella' : 'ico-estrella-off'], x + (k - 1) * rx * 0.5, y + rx * 0.82 + (k === 1 ? rx * 0.06 : 0), rx * 0.46, 0.5, 0.5);
-    } else if (!n.built) { ctx.font = '800 ' + Math.max(9, Math.round(rx * 0.3)) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#05071a'; ctx.fillText('PRONTO', x + 1, y + rx * 0.82 + 1); ctx.fillStyle = '#cfe0ff'; ctx.fillText('PRONTO', x, y + rx * 0.82); }
+      spr(IMG['ico-bandera'], x + rx * 1.02, y + ry * 0.05, rx * 1.2, 0.12, 1, false, Math.sin(time * 3 + i) * 0.05);
+      for (let k = 0; k < 3; k++) spr(IMG[k < dn.stars ? 'ico-estrella' : 'ico-estrella-off'], x + (k - 1) * rx * 0.66, y + rx * 1.22 + (k === 1 ? rx * 0.08 : 0), rx * 0.6, 0.5, 0.5);
+    } else if (!n.built) { ctx.font = '800 ' + Math.max(9, Math.round(rx * 0.38)) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#05071a'; ctx.fillText('PRONTO', x + 1, y + rx * 1.25 + 1); ctx.fillStyle = '#cfe0ff'; ctx.fillText('PRONTO', x, y + rx * 1.25); }
   }
   // chispas y Lucas recorriendo el tubo
   ctx.globalCompositeOperation = 'lighter';
@@ -1001,7 +998,7 @@ function drawMap() {
 cv.addEventListener('pointerdown', e => {
   if (state !== 'map') return;
   const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC, t = mapT();
-  for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.w; if (((x - nx) / (rx * 1.3)) ** 2 + ((y - ny) / (rx * 0.95)) ** 2 < 1) { mapSelect(i); return; } }
+  for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.w; if (((x - nx) / (rx * 1.75)) ** 2 + ((y - ny - rx * 0.2) / (rx * 1.2)) ** 2 < 1) { mapSelect(i); return; } }
 });
 $('mPlay').onclick = mapPlay; $('mBack').onclick = toMenu;
 $('btnPlay').onclick = openMap;
