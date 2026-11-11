@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.11';
+const VERSION = '0.12';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -23,11 +23,11 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 
 /* ---------- imagenes ---------- */
 const NAMES = ['lucas-quieto', 'lucas-avanzando', 'lucas-saltando', 'lucas-cayendo', 'lucas-golpeado', 'lucas-celebrando', 'lucas-agachado',
-  'enemigo-patrulla-anim', 'enemigo-dron-anim', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien-anim',
+  'enemigo-patrulla-anim', 'enemigo-dron-anim', 'enemigo-erizo-anim', 'enemigo-torreta', 'enemigo-alien-anim',
   'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'jefe1', 'mapa1', 'ico-candado', 'ico-estrella', 'ico-estrella-off', 'ico-bandera', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
   'poder-laser', 'poder-escudo', 'poder-turbo', 'poder-iman', 'poder-mini', 'poder-estrella5g'];
 const IMG = {};
-const FRAMES = { 'enemigo-dron-anim': 4, 'enemigo-patrulla-anim': 4, 'enemigo-alien-anim': 4 };      // imágenes que son una tira de fotogramas de animación
+const FRAMES = { 'enemigo-dron-anim': 4, 'enemigo-patrulla-anim': 4, 'enemigo-alien-anim': 4, 'enemigo-erizo-anim': 4 };      // imágenes que son una tira de fotogramas de animación
 let loaded = 0;
 function loadImages(done) {
   NAMES.forEach(n => {
@@ -261,7 +261,7 @@ let G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0, tleft: LE
 const ENEMY = {
   patrulla: { img: 'enemigo-patrulla-anim', h: 69.8, ax: 0.5228, fps: 9, faceR: true, w: 40, bh: 58, speed: 62, stomp: true, pts: 100 },
   alien: { img: 'enemigo-alien-anim', h: 59.8, ax: 0.5141, fps: 4.5, w: 48, bh: 46, speed: 30, stomp: true, pts: 100 },
-  erizo: { img: 'enemigo-erizo', h: 56, w: 50, bh: 44, speed: 48, stomp: false, pts: 300 },
+  erizo: { img: 'enemigo-erizo-anim', h: 52.6, fps: 7, w: 50, bh: 44, speed: 48, stomp: false, pts: 300 },
   dron: { img: 'enemigo-dron-anim', h: 61.8, ax: 0.5216, w: 46, bh: 40, speed: 80, stomp: true, pts: 200, fly: true },
   torreta: { img: 'enemigo-torreta', h: 64, w: 54, bh: 56, speed: 0, stomp: true, pts: 300 }
 };
