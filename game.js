@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.55';
+const VERSION = '0.56';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -2919,45 +2919,45 @@ const MAP2 = [
 ];
 /* ---------- mapa del mundo 3: PLANETA VOLCÁNICO (panorámico: la cámara sigue a Lucas) ---------- */
 const MAP3 = [
-  { id: '3-1', n: '1', name: 'LLANURA DE CENIZA', x: 0.0399, y: 0.5574, rx: 0.038, built: true },
-  { id: '3-2', n: '2', name: 'GÉISERES DE FUEGO', x: 0.0904, y: 0.3978, rx: 0.038, built: true, way: [[0.0491, 0.549], [0.0603, 0.4814]] },
-  { id: '3-3', n: '3', name: 'CRÁTER DEL VOLCÁN', x: 0.2921, y: 0.3716, rx: 0.038, built: true, way: [[0.0999, 0.397], [0.1222, 0.397], [0.1445, 0.4358], [0.1669, 0.4679], [0.1892, 0.5084], [0.2115, 0.5372], [0.2338, 0.5338], [0.2561, 0.527], [0.2785, 0.5101], [0.298, 0.4459]] },
-  { id: '3-4', n: '4', name: 'RÍO DE MAGMA', x: 0.2073, y: 0.538, rx: 0.038, built: true, way: [[0.2935, 0.4003], [0.2935, 0.4645], [0.2712, 0.5], [0.2489, 0.5169], [0.2266, 0.5169]] },
-  { id: '3-5', n: '5', name: 'LLUVIA DE FUEGO', x: 0.0882, y: 0.7373, rx: 0.038, built: true, way: [[0.197, 0.5372], [0.1747, 0.4916], [0.1523, 0.4611], [0.13, 0.424], [0.1077, 0.4155], [0.0854, 0.4155], [0.0636, 0.473], [0.053, 0.5405], [0.0525, 0.6081], [0.0603, 0.6757]] },
-  { id: '3-6', n: '6', name: 'TÚNELES DE LAVA', x: 0.2006, y: 0.8556, rx: 0.038, built: true, way: [[0.0938, 0.7669], [0.1161, 0.8074], [0.1384, 0.8598], [0.1607, 0.8632], [0.183, 0.8699]] },
-  { id: '3-7', n: '7', name: 'EL GRAN PUENTE', x: 0.3248, y: 0.7373, rx: 0.038, built: true, way: [[0.2098, 0.8564], [0.2321, 0.853], [0.2545, 0.8041], [0.2768, 0.8041], [0.2991, 0.772]] },
-  { id: '3-8', n: '8', name: 'LA FUNDICIÓN', x: 0.5053, y: 0.5177, rx: 0.038, built: true, way: [[0.3147, 0.7365], [0.2924, 0.7483], [0.2701, 0.8041], [0.2478, 0.8209], [0.2254, 0.8226], [0.2031, 0.8564], [0.1808, 0.8649], [0.1585, 0.8699], [0.1362, 0.8632], [0.1138, 0.8345], [0.0915, 0.772], [0.077, 0.7044], [0.0603, 0.6368], [0.0525, 0.5693], [0.0536, 0.5017], [0.0759, 0.4476], [0.0982, 0.4341], [0.1205, 0.4139], [0.1429, 0.4139], [0.1652, 0.4628], [0.1875, 0.5034], [0.2098, 0.5372], [0.2321, 0.5405], [0.2545, 0.5405], [0.2768, 0.5405], [0.2991, 0.527], [0.3214, 0.4949], [0.3438, 0.5591], [0.3661, 0.5811], [0.3884, 0.5743], [0.4107, 0.5726], [0.433, 0.5794], [0.4554, 0.5541], [0.4777, 0.527]] },
-  { id: '3-9', n: '9', name: 'LAS CHIMENEAS', x: 0.6138, y: 0.7314, rx: 0.038, built: true, way: [[0.5145, 0.5186], [0.5368, 0.5557], [0.5592, 0.6047], [0.5815, 0.6639], [0.6038, 0.7264]] },
-  { id: '3-10', n: '10', name: 'ENGRANAJES GIGANTES', x: 0.7235, y: 0.397, rx: 0.038, built: true, way: [[0.6222, 0.7331], [0.6445, 0.7449], [0.6669, 0.7348], [0.6858, 0.6672], [0.6819, 0.5997], [0.6596, 0.5541], [0.6373, 0.527], [0.615, 0.4865], [0.5954, 0.4189], [0.611, 0.3767], [0.6334, 0.3666], [0.6557, 0.3666], [0.678, 0.3666], [0.7003, 0.3868]] },
-  { id: '3-11', n: '11', name: 'ROCAS FLOTANTES', x: 0.7536, y: 0.5524, rx: 0.038, built: true, way: [[0.7232, 0.4274], [0.7316, 0.4949]] },
-  { id: '3-12', n: '12', name: 'MURALLAS DE LA FORTALEZA', x: 0.827, y: 0.6672, rx: 0.038, gold: true, built: true, way: [[0.7612, 0.5828], [0.7835, 0.6368], [0.8058, 0.6605]] },
-  { id: '3-J', n: '', name: 'JEFE · SEÑOR DEL MAGMA', x: 0.8848, y: 0.5177, rx: 0.05, boss: true, built: true, way: [[0.8354, 0.6655], [0.8577, 0.598]] },
-  { id: '3-B', n: '★', name: 'FASE SECRETA · TESORO DEL VOLCÁN', x: 0.5377, y: 0.8361, rx: 0.03, bonus: true, built: true, prev: 7, way: [[0.514, 0.5473], [0.5363, 0.6149], [0.553, 0.6824], [0.5547, 0.75]] },
-  { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7757, y: 0.288, rx: 0.036, built: true, prev: 9, way: [[0.745, 0.35], [0.76, 0.31]] },
-  { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7109, y: 0.8758, rx: 0.036, built: true, prev: 13, way: [[0.5474, 0.8395], [0.5698, 0.8666], [0.5921, 0.8986], [0.6144, 0.9155], [0.6367, 0.9155], [0.659, 0.9172], [0.6814, 0.9206]] }
+  { id: '3-1', n: '1', name: 'LLANURA DE CENIZA', x: 0.0405, y: 0.5519, rx: 0.03, built: true },
+  { id: '3-2', n: '2', name: 'GÉISERES DE FUEGO', x: 0.0918, y: 0.3877, rx: 0.03, built: true },
+  { id: '3-3', n: '3', name: 'CRÁTER DEL VOLCÁN', x: 0.2955, y: 0.3628, rx: 0.03, built: true },
+  { id: '3-4', n: '4', name: 'RÍO DE MAGMA', x: 0.2093, y: 0.5317, rx: 0.03, built: true },
+  { id: '3-5', n: '5', name: 'LLUVIA DE FUEGO', x: 0.0887, y: 0.7327, rx: 0.03, built: true },
+  { id: '3-6', n: '6', name: 'TÚNELES DE LAVA', x: 0.2026, y: 0.8535, rx: 0.03, built: true },
+  { id: '3-7', n: '7', name: 'EL GRAN PUENTE', x: 0.329, y: 0.7318, rx: 0.03, built: true },
+  { id: '3-8', n: '8', name: 'LA FUNDICIÓN', x: 0.5095, y: 0.5118, rx: 0.03, built: true },
+  { id: '3-9', n: '9', name: 'LAS CHIMENEAS', x: 0.6145, y: 0.7293, rx: 0.03, built: true },
+  { id: '3-10', n: '10', name: 'ENGRANAJES GIGANTES', x: 0.7199, y: 0.3906, rx: 0.03, built: true },
+  { id: '3-11', n: '11', name: 'ROCAS FLOTANTES', x: 0.7503, y: 0.5477, rx: 0.03, built: true },
+  { id: '3-12', n: '12', name: 'MURALLAS DE LA FORTALEZA', x: 0.8237, y: 0.6655, rx: 0.03, gold: true, built: true },
+  { id: '3-J', n: '', name: 'JEFE · SEÑOR DEL MAGMA', x: 0.8825, y: 0.511, rx: 0.04, boss: true, built: true },
+  { id: '3-B', n: '★', name: 'FASE SECRETA · TESORO DEL VOLCÁN', x: 0.5419, y: 0.845, rx: 0.03, bonus: true, built: true, prev: 7 },
+  { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7732, y: 0.2766, rx: 0.03, built: true, prev: 9 },
+  { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7134, y: 0.887, rx: 0.03, built: true, prev: 13 }
 ];
 /* ---------- mapa del planeta 4: SELVA LUMINOSA (4 pantallas de ancho; paint = plataforma dibujada por el juego) ---------- */
 const MAP4 = [
-  { id: '4-1', n: '1', name: 'SENDERO LUMINOSO', x: 0.1325, y: 0.529, rx: 0.021, built: true },
-  { id: '4-2', n: '2', name: 'LIANAS GIGANTES', x: 0.196, y: 0.70, rx: 0.021, built: true },
-  { id: '4-3', n: '3', name: 'CIÉNAGA TÓXICA', x: 0.187, y: 0.386, rx: 0.021, built: true },
-  { id: '4-4', n: '4', name: 'TORMENTA TROPICAL', x: 0.2775, y: 0.418, rx: 0.021, built: true },
-  { id: '4-5', n: '5', name: 'CHORROS DE ESPORAS', x: 0.362, y: 0.80, rx: 0.021, built: true, paint: true },
-  { id: '4-6', n: '6', name: 'DENTRO DEL ÁRBOL', x: 0.46, y: 0.842, rx: 0.021, built: true },
-  { id: '4-7', n: '7', name: 'LAS COPAS', x: 0.516, y: 0.544, rx: 0.021, built: true },
-  { id: '4-8', n: '8', name: 'NIDO DE PLANTAS CARNÍVORAS', x: 0.5225, y: 0.331, rx: 0.021, built: true },
-  { id: '4-9', n: '9', name: 'EL PUENTE COLGANTE', x: 0.6145, y: 0.348, rx: 0.021, built: true },
-  { id: '4-10', n: '10', name: 'LA GRAN CASCADA', x: 0.5375, y: 0.887, rx: 0.021, built: true },
-  { id: '4-11', n: '11', name: 'RÍO ABAJO', x: 0.64, y: 0.872, rx: 0.021, built: true },
-  { id: '4-12', n: '12', name: 'EL LAGO DE LOS NENÚFARES', x: 0.734, y: 0.643, rx: 0.021, built: true },
-  { id: '4-13', n: '13', name: 'LLUVIA DE SEMILLAS', x: 0.67, y: 0.214, rx: 0.021, built: true },
-  { id: '4-14', n: '14', name: 'LA CUEVA DE LAS SETAS', x: 0.71, y: 0.321, rx: 0.021, built: true },
-  { id: '4-15', n: '15', name: 'LA ESCALINATA', x: 0.746, y: 0.426, rx: 0.021, built: true },
-  { id: '4-16', n: '16', name: 'RUINAS DEL TEMPLO', x: 0.811, y: 0.877, rx: 0.024, built: true, gold: true },
-  { id: '4-J', n: '', name: 'JEFE · COLOSO DE LA SELVA', x: 0.892, y: 0.56, rx: 0.03, boss: true, built: true },
-  { id: '4-B', n: '★', name: 'FASE SECRETA · NIDO DE LUCIÉRNAGAS', x: 0.44, y: 0.19, rx: 0.021, bonus: true, built: true, prev: 7, paint: true },
-  { id: '4-C', n: '★', name: 'FASE SECRETA · JARDÍN FLOTANTE', x: 0.36, y: 0.12, rx: 0.021, bonus: true, built: true, prev: 17, paint: true },
-  { id: '4-D', n: '★', name: 'FASE SECRETA · TRAS LA CASCADA', x: 0.566, y: 0.56, rx: 0.021, bonus: true, built: true, prev: 8, paint: true }
+  { id: '4-1', n: '1', name: 'SENDERO LUMINOSO', x: 0.1325, y: 0.529, rx: 0.04, built: true },
+  { id: '4-2', n: '2', name: 'LIANAS GIGANTES', x: 0.196, y: 0.70, rx: 0.04, built: true },
+  { id: '4-3', n: '3', name: 'CIÉNAGA TÓXICA', x: 0.187, y: 0.386, rx: 0.04, built: true },
+  { id: '4-4', n: '4', name: 'TORMENTA TROPICAL', x: 0.2775, y: 0.418, rx: 0.04, built: true },
+  { id: '4-5', n: '5', name: 'CHORROS DE ESPORAS', x: 0.362, y: 0.80, rx: 0.04, built: true, paint: true },
+  { id: '4-6', n: '6', name: 'DENTRO DEL ÁRBOL', x: 0.46, y: 0.842, rx: 0.04, built: true },
+  { id: '4-7', n: '7', name: 'LAS COPAS', x: 0.516, y: 0.544, rx: 0.04, built: true },
+  { id: '4-8', n: '8', name: 'NIDO DE PLANTAS CARNÍVORAS', x: 0.5225, y: 0.331, rx: 0.04, built: true },
+  { id: '4-9', n: '9', name: 'EL PUENTE COLGANTE', x: 0.6145, y: 0.348, rx: 0.04, built: true },
+  { id: '4-10', n: '10', name: 'LA GRAN CASCADA', x: 0.5375, y: 0.887, rx: 0.04, built: true },
+  { id: '4-11', n: '11', name: 'RÍO ABAJO', x: 0.64, y: 0.872, rx: 0.04, built: true },
+  { id: '4-12', n: '12', name: 'EL LAGO DE LOS NENÚFARES', x: 0.734, y: 0.643, rx: 0.04, built: true },
+  { id: '4-13', n: '13', name: 'LLUVIA DE SEMILLAS', x: 0.67, y: 0.214, rx: 0.04, built: true },
+  { id: '4-14', n: '14', name: 'LA CUEVA DE LAS SETAS', x: 0.71, y: 0.321, rx: 0.04, built: true },
+  { id: '4-15', n: '15', name: 'LA ESCALINATA', x: 0.746, y: 0.426, rx: 0.04, built: true },
+  { id: '4-16', n: '16', name: 'RUINAS DEL TEMPLO', x: 0.811, y: 0.877, rx: 0.042, built: true, gold: true },
+  { id: '4-J', n: '', name: 'JEFE · COLOSO DE LA SELVA', x: 0.892, y: 0.56, rx: 0.055, boss: true, built: true },
+  { id: '4-B', n: '★', name: 'FASE SECRETA · NIDO DE LUCIÉRNAGAS', x: 0.44, y: 0.19, rx: 0.04, bonus: true, built: true, prev: 7, paint: true },
+  { id: '4-C', n: '★', name: 'FASE SECRETA · JARDÍN FLOTANTE', x: 0.36, y: 0.12, rx: 0.04, bonus: true, built: true, prev: 17, paint: true },
+  { id: '4-D', n: '★', name: 'FASE SECRETA · TRAS LA CASCADA', x: 0.566, y: 0.56, rx: 0.04, bonus: true, built: true, prev: 8, paint: true }
 ];
 const WORLDS = [
   { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff', fog: 'nebula' },
@@ -2966,7 +2966,7 @@ const WORLDS = [
   { n: 4, name: 'SELVA LUMINOSA', img: 'mapa4', nodes: MAP4, col: '#9aff6a', fog: 'mist', plat: 'obj-plat4', platW: 0.0419, platA: [0.494, 0.377, 0.3988] }
 ];
 // tramos sin camino dibujado: arco suave entre plataformas (la proporción del mapa se tiene en cuenta para que se vea redondo)
-WORLDS.forEach(W => { const ar = W.img === 'mapa4' ? 4.03 : W.img === 'mapa3' ? 3.03 : 1.79; W.nodes.forEach((n, i) => { if (!i || n.way) return; const p = W.nodes[n.prev !== undefined ? n.prev : i - 1], dx = (n.x - p.x) * ar, dy = n.y - p.y, d = Math.hypot(dx, dy), lift = Math.min(0.12, d * 0.22); n.way = [];
+WORLDS.forEach(W => { const ar = W.img === 'mapa4' ? 4.03 : W.img === 'mapa3' ? 3.03 : 1.79; W.nodes.forEach((n, i) => { if (!i) return; const p = W.nodes[n.prev !== undefined ? n.prev : i - 1], dx = (n.x - p.x) * ar, dy = n.y - p.y, d = Math.hypot(dx, dy), lift = Math.min(0.05, d * 0.1); n.way = [];
   for (let k = 1; k < 6; k++) { const f = k / 6, bx = p.x + (n.x - p.x) * f, by = p.y + (n.y - p.y) * f - Math.sin(f * Math.PI) * lift; n.way.push([bx, by]); } }); });
 
 const ALLN = () => WORLDS.reduce((a, w) => a.concat(w.nodes), []);
@@ -3119,14 +3119,16 @@ function drawSecretFx(x, y, R, p) {           // destello, ondas y columna de lu
   if (q < 0.25) { const fa = 1 - q / 0.25, fg = ctx.createRadialGradient(x, y, 0, x, y, R * 8); fg.addColorStop(0, 'rgba(255,255,255,' + fa + ')'); fg.addColorStop(0.3, 'rgba(255,230,150,' + fa * 0.6 + ')'); fg.addColorStop(1, 'rgba(255,200,80,0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(x, y, R * 8, 0, 6.283); ctx.fill(); }
   ctx.globalCompositeOperation = 'source-over';
 }
-function drawTrail(pts, frac, col, u, r0, r1, i) {    // camino de puntitos de luz entre dos plataformas
-  let tot = 0; for (let k = 1; k < pts.length; k++) tot += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
-  const step = Math.max(9, 0.0105 * u), nd = Math.floor(tot / step), rd = Math.max(1.6, 0.0032 * u);
-  for (let k = 1; k < nd; k++) { const f = k / nd; if (f > frac) break; const d = f * tot; if (d < r0 || tot - d < r1) continue;
-    const [px, py] = polyAt(pts, f), w = 0.55 + 0.45 * Math.sin(time * 5 - d / (0.03 * u) + i);
-    ctx.fillStyle = 'rgba(0,0,15,.5)'; ctx.beginPath(); ctx.arc(px, py + rd * 0.35, rd * 1.55, 0, 6.283); ctx.fill();
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45 + 0.55 * w; ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(px, py, rd, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.5 * w; ctx.beginPath(); ctx.arc(px - rd * 0.25, py - rd * 0.25, rd * 0.45, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+function drawTrail(pts, frac, col, u, r0, r1) {    // camino suave entre dos plataformas (sin efectos, ligero)
+  let tot = 0; const ls = []; for (let k = 1; k < pts.length; k++) { const l = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); ls.push(l); tot += l; }
+  const a = r0 / tot, b = Math.min(frac, 1 - r1 / tot); if (b <= a) return;
+  const N = 24, P = []; for (let k = 0; k <= N; k++) P.push(polyAt(pts, a + (b - a) * k / N));
+  const line = () => { ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for (let k = 1; k <= N; k++) ctx.lineTo(P[k][0], P[k][1]); ctx.stroke(); };
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(0,0,12,.4)'; ctx.lineWidth = Math.max(6, 0.011 * u); line();
+  ctx.globalAlpha = 0.35; ctx.strokeStyle = col; ctx.lineWidth = Math.max(5, 0.009 * u); line();
+  ctx.globalAlpha = 0.95; ctx.lineWidth = Math.max(2, 0.0034 * u); line();
+  ctx.globalAlpha = 0.6; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, 0.0012 * u); line(); ctx.globalAlpha = 1;
 }
 function drawPaintPlat(x, y, s) {             // plataforma dibujada por el juego (para las bases que no vienen en la ilustración)
   const W = WORLDS[curW], im = W.plat && xi(W.plat); if (!okI(im)) return; const t = mapT(), w = W.platW * t.w * s, h = w * W.platA[2];
@@ -3135,21 +3137,12 @@ function drawPaintPlat(x, y, s) {             // plataforma dibujada por el jueg
 function drawMap() {
   mapCamStep(); const t = mapT(), u = t.u, im = mapImg(curW);
   if (im && im.naturalWidth) ctx.drawImage(im, t.ox, t.oy, t.w, t.h); else drawBackground();
-  // caminos de luz entre fases (sólo los ya abiertos; el de una base secreta aparece al descubrirla)
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // caminos entre fases (sólo los ya abiertos; se van dibujando al abrirse)
   for (let i = 1; i < MAP.length; i++) {
-    const n = MAP[i], open = mapOpen(i), ing = mapUnl && mapUnl.i === i, unl = ing ? (n.bonus ? Math.min(1, mapUnl.t / 0.32) : mapUnl.t) : (open ? 1 : 0);
+    const n = MAP[i], open = mapOpen(i), ing = mapUnl && mapUnl.i === i, unl = ing ? (n.bonus ? Math.min(1, mapUnl.t / 0.32) : Math.min(1, mapUnl.t / 0.8)) : (open ? 1 : 0);
     if (unl <= 0) continue;
-    const pv = MAP[mapPrev(i)], way = n.way.map(p => mapPt(t, p[0], p[1])), a = mapPt(t, pv.x, pv.y), b = mapPt(t, n.x, n.y), full = [a, ...way, b];
-    drawTrail(full, unl, n.bonus ? '#ffd34a' : WORLDS[curW].col, u, pv.rx * u * 0.85, n.rx * u * 0.85, i);
-    if (unl < 1) {
-      const [sx, sy] = polyAt(full, unl); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 0.05 * u); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.3, n.bonus ? 'rgba(255,220,110,.7)' : 'rgba(120,235,255,.7)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, 0.05 * u, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
-      if (Math.random() < 0.8) mapParts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 160, vy: (Math.random() - 0.5) * 160, life: 0.5, max: 0.5, col: n.bonus ? '#fff0b0' : '#bff6ff', size: 2 + Math.random() * 2 });
-    } else {
-      ctx.globalCompositeOperation = 'lighter';
-      for (let k = 0; k < 2; k++) { const [x, y] = polyAt(full, (time * 0.22 + k / 2 + i * 0.13) % 1), r = (n.bonus ? 0.012 : 0.016) * u, g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(0.35, n.bonus ? 'rgba(255,215,90,.55)' : 'rgba(140,240,255,.5)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); }
-      ctx.globalCompositeOperation = 'source-over';
-    }
+    const pv = MAP[mapPrev(i)], full = [mapPt(t, pv.x, pv.y), ...n.way.map(p => mapPt(t, p[0], p[1])), mapPt(t, n.x, n.y)];
+    drawTrail(full, unl, n.bonus ? '#ffd34a' : WORLDS[curW].col, u, pv.rx * u * 0.9, n.rx * u * 0.9);
   }
   // plataformas de cada fase
   const post = [];
