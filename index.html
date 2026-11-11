@@ -104,6 +104,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
     <button class="btn" id="btnInstall">INSTALAR</button>
     <button class="btn" id="btnShare">COMPARTIR</button>
     <button class="btn" id="btnSnd">SONIDO: SÍ</button>
+    <button class="btn" id="btnFull" style="display:none">PANTALLA COMPLETA</button>
   </div>
   <div class="credit">UN JUEGO DE FUTURMOVIL</div>
   <div class="ver" id="ver"></div>
@@ -144,7 +145,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
   <button class="btn" id="iosOk">ENTENDIDO</button>
 </div></div>
 
-<script src="game.js?v=14"></script>
+<script src="game.js?v=15"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 </script>

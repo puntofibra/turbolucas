@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.14';
+const VERSION = '0.15';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -814,10 +814,22 @@ $('rotBtn').onclick = () => {
   try { document.documentElement.requestFullscreen().then(() => screen.orientation.lock('landscape')).catch(() => rotHint('time')); } catch (e) { rotHint('time'); }
 };
 function show(id, on) { $(id).classList.toggle('on', on); }
-function goFull() {
-  if (!TOUCH) return;
-  try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {}); } catch (e) {}
+const INSTALLED = matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)').matches || navigator.standalone;
+let fsLeft = false;      // el jugador salió a propósito de pantalla completa: no se la volvemos a imponer
+function enterFull() {
+  const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen; if (!rq || document.fullscreenElement) return;
+  try { Promise.resolve(rq.call(el, { navigationUI: 'hide' })).then(() => {
+    if (TOUCH) { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
+    else { try { navigator.keyboard && navigator.keyboard.lock && navigator.keyboard.lock(['Escape']).catch(() => {}); } catch (e) {} }   // así Esc pausa en vez de salir
+  }).catch(() => {}); } catch (e) {}
 }
+function goFull() { if (TOUCH || (INSTALLED && !fsLeft)) enterFull(); }
+function toggleFull() { if (document.fullscreenElement) { fsLeft = true; try { document.exitFullscreen(); } catch (e) {} } else { fsLeft = false; enterFull(); } }
+document.addEventListener('fullscreenchange', () => { const b = $('btnFull'); if (b) b.textContent = document.fullscreenElement ? 'SALIR DE PANTALLA COMPLETA' : 'PANTALLA COMPLETA'; setTimeout(resize, 60); });
+// instalada en PC: pantalla completa de verdad (sin barra de Windows) al primer clic o tecla
+if (INSTALLED && !TOUCH) { const first = () => { if (!fsLeft) enterFull(); }; addEventListener('pointerdown', first); addEventListener('keydown', first); }
+addEventListener('keydown', e => { if (e.code === 'F11' || (e.code === 'KeyF' && !e.repeat && state !== 'play')) { e.preventDefault(); toggleFull(); } });
+if (!TOUCH) { $('btnFull').style.display = ''; $('btnFull').onclick = toggleFull; }
 function startGame() {
   audio(); startMusic();
   resetLevel(true); state = 'play'; paused = false;
