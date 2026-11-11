@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.31';
+const VERSION = '0.32';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -799,6 +799,28 @@ LEVELS['2-3'] = function () {
   B.crystal(212, 14, 1, 1.3); B.block(226, 229, 0, 15);
   return B.done({ name: 'BAJO EL HIELO', time: 240, theme: 'ice', cave: true, water: { y: 2 * T }, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 216 * T + T / 2, y: 14 * T } });
 };
+/* ---------- fase 2-4: TORMENTA DE NIEVE (ráfagas de ventisca que te frenan o te lanzan contra los bichos, plataformas en pleno vendaval y un agujero que esconde una gruta) ---------- */
+LEVELS['2-4'] = function () {
+  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  // A · empieza a soplar
+  B.ground(0, 28); B.hid(8, 10, 'vida'); B.row(4, 7, 12); B.box(14, 10, 'escudo'); B.set(13, 10, 'B'); B.set(15, 10, 'B'); B.en('patrulla', 22, 13); B.crystal(3, 14, 1); B.wind(10, 28, 2, 13, -380, 0);
+  // B · plataformas en pleno vendaval
+  B.mover(30, 12, 3, 60, 0, 1.1, 0); B.mover(34, 11, 2, 0, 48, 1.3, 1); B.arc(29, 37, 9, 2); B.wind(29, 40, 2, 13, -560, 1.5);
+  B.ground(37, 70); B.block(45, 52, 9, 9); B.icicle(46, 10); B.icicle(49, 10); B.icicle(52, 10, 1); B.row(45, 52, 13); B.en('alien', 58, 13); B.spring(62, 14); P(63, 67, 9); B.row(63, 66, 8); B.gear(66, 7); B.crystal(55, 14, 0, 1.2);
+  // C · viento a favor… directo hacia los erizos (y un agujero sospechoso)
+  B.arc(70, 75, 11, 2); B.pitWarp(71, 74, 192, 13); B.ground(75, 110); B.cp(77, 14); B.wind(80, 110, 2, 13, 560, 3);
+  B.set(79, 10, 'B'); B.box(80, 10, 'turbo'); B.set(81, 10, 'B'); B.en('erizo', 86, 13); B.en('erizo', 96, 13); B.en('patrulla', 103, 13); B.row(84, 104, 9); B.crystal(91, 14, 2); B.crystal(107, 14, 1, 1.2);
+  // D · el gran abismo de la ventisca
+  B.mover(112, 12, 3, 90, 0, 0.9, 0); B.mover(118, 11, 3, 0, 60, 1.2, 1); B.arc(111, 123, 8, 3); B.wind(111, 122, 2, 13, -620, 0.7);
+  B.ground(123, 165); B.cp(125, 14); B.en('dron', 135, 9, { x0: 128, x1: 142 }); B.box(132, 10, 'laser');
+  B.block(146, 152, 11, 13); B.fake(147, 151, 12, 13); B.gear(149, 13); B.row(147, 151, 12);                 // montículo de nieve hueco
+  B.block(155, 162, 9, 9); B.icicle(156, 10, 1); B.icicle(159, 10, 1); B.icicle(162, 10, 1); B.row(155, 162, 8); B.wind(140, 165, 2, 13, -450, 2.2); B.en('alien', 160, 13);
+  // E · llegada
+  B.ground(166, 185); for (let i = 1; i <= 4; i++) B.block(170 + i, 170 + i, 14 - i, 13); B.row(171, 174, 8); B.crystal(184, 14, 2, 1.3); B.block(186, 189, 0, 15);
+  // gruta secreta bajo la nieve
+  B.ground(190, 219); B.block(190, 219, 0, 3); for (let r = 6; r <= 10; r += 2) B.arc(194, 204, r, 1); P(206, 210, 10); B.gear(208, 8); B.crystal(196, 14, 0, 1.3); B.crystal(212, 14, 1, 1.2); B.portal(216, 14, 78, 14);
+  return B.done({ name: 'TORMENTA DE NIEVE', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 180 * T + T / 2, y: 14 * T } });
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -965,7 +987,7 @@ function updatePlayer(dt) {
   p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
   p.jbuf = jumpPressed ? 0.12 : Math.max(0, p.jbuf - dt);
   p.drop = false;
-  const wet = L.water && p.y + p.h * 0.4 > L.water.y; if (wet !== !!p.wet) { if (Math.abs(p.vy) > 60) { burst(p.x + p.w / 2, L.water.y, 14, '#dff8ff', 200, 0.5, 600, 3); noise(0.25, 0.12, 1200); } p.wet = wet; }
+  const wet = !!(L.water && p.y + p.h * 0.4 > L.water.y); if (wet !== !!p.wet) { if (Math.abs(p.vy) > 60) { burst(p.x + p.w / 2, L.water.y, 14, '#dff8ff', 200, 0.5, 600, 3); noise(0.25, 0.12, 1200); } p.wet = wet; }
   if (wet && jumpPressed) {             // nadar: cada pulsación es una brazada (cerca de la superficie, salta fuera)
     p.vy = p.y < L.water.y + 30 ? -680 : Math.min(p.vy, 0) - 380; if (p.vy < -420 && p.y >= L.water.y + 30) p.vy = -420; p.jbuf = 0; p.coyote = 0; p.onGround = false; p.sq = 0.6;
     tone(260, 420, 0.14, 'sine', 0.07); for (let i = 0; i < 6; i++) parts.push({ x: p.x + p.w / 2 + (Math.random() - 0.5) * 30, y: p.y + p.h, vx: (Math.random() - 0.5) * 40, vy: 40 + Math.random() * 60, life: 0.6, max: 0.6, col: 'rgba(220,250,255,.9)', size: 2 + Math.random() * 3, grav: -260 }); }
@@ -1111,7 +1133,8 @@ function updateStage(dt) {
       if (ic.st === 3) { for (let i = 0; i < 12; i++) parts.push({ x: ic.x + (Math.random() - 0.5) * 16, y: ic.y + L2 - 6, vx: (Math.random() - 0.5) * 260, vy: -100 - Math.random() * 220, life: 0.6, max: 0.6, col: i % 2 ? '#dff8ff' : '#7fd8ff', size: 4, grav: 1300, sqr: true }); noise(0.18, 0.12, 4000); } }
   }
   for (const w of L.winds) {              // ráfagas de ventisca: empujan a Lucas (y van y vienen)
-    const k = 0.5 + 0.5 * Math.sin(time * 0.9 + w.ph), on = k > 0.35; w.k = on ? (k - 0.35) / 0.65 : 0;
+    const k = 0.5 + 0.5 * Math.sin(time * 0.9 + w.ph), on = k > 0.35, was = w.k > 0; w.k = on ? (k - 0.35) / 0.65 : 0;
+    if (on && !was && p.x + p.w > w.x0 - 200 && p.x < w.x1 + 200) { noise(1.6, 0.12, 900); tone(180, 120, 1.2, 'sine', 0.04); }
     if (on && !p.dead && p.x + p.w > w.x0 && p.x < w.x1 && p.y + p.h > w.y0 && p.y < w.y1) { p.vx += w.f * w.k * dt; const cap = 420; if (Math.abs(p.vx) > cap) p.vx = Math.sign(p.vx) * cap; }
   }
   p.inLift = false;
@@ -1877,7 +1900,7 @@ const MAP2 = [
   { id: '2-1', n: '1', name: 'LLANURA HELADA', x: 0.104, y: 0.4955, rx: 0.04, built: true },
   { id: '2-2', n: '2', name: 'CUEVAS DE CRISTAL', x: 0.3475, y: 0.657, rx: 0.04, built: true, way: [[0.165, 0.453], [0.22, 0.488], [0.25, 0.56], [0.29, 0.625]] },
   { id: '2-3', n: '3', name: 'BAJO EL HIELO', x: 0.3635, y: 0.437, rx: 0.038, built: true, way: [[0.35, 0.59], [0.355, 0.52]] },
-  { id: '2-4', n: '4', name: 'TORMENTA DE NIEVE', x: 0.4985, y: 0.491, rx: 0.038, way: [[0.415, 0.448], [0.455, 0.475]] },
+  { id: '2-4', n: '4', name: 'TORMENTA DE NIEVE', x: 0.4985, y: 0.491, rx: 0.038, built: true, way: [[0.415, 0.448], [0.455, 0.475]] },
   { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, way: [[0.53, 0.555], [0.585, 0.627]] },
   { id: '2-6', n: '6', name: 'POZO DE LA MINA', x: 0.651, y: 0.351, rx: 0.036, gold: true, way: [[0.67, 0.555], [0.666, 0.45]] },
   { id: '2-J', n: '', name: 'JEFE · GUARDIÁN DE HIELO', x: 0.8725, y: 0.401, rx: 0.058, boss: true, way: [[0.71, 0.33], [0.775, 0.315], [0.83, 0.355]] },
