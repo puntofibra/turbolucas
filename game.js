@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.20';
+const VERSION = '0.21';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -126,13 +126,14 @@ const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'ri
 function press(k, v) { if (v && !K[k]) { if (k === 'jump') jumpPressed = true; if (k === 'act') actPressed = true; } K[k] = v; }
 addEventListener('keydown', e => {
   if (CON.on) { if (e.code === 'Escape') closeConsole(); return; }
+  if ($('adm').classList.contains('on')) return;
   const k = KEYMAP[e.code];
   if (k) { press(k, true); e.preventDefault(); }
   if ((e.code === 'KeyP' || e.code === 'Escape') && state === 'play') togglePause();
   if (state === 'map') { if (e.code === 'ArrowRight' || e.code === 'KeyD') mapMove(1); else if (e.code === 'ArrowLeft' || e.code === 'KeyA') mapMove(-1); else if (e.code === 'ArrowUp' || e.code === 'KeyW') mapMove(2); else if (e.code === 'ArrowDown' || e.code === 'KeyS') mapMove(-2); else if (e.code === 'Enter' || e.code === 'Space') mapPlay(); else if (e.code === 'Escape') toMenu(); return; }
   if (e.code === 'Enter') { if (state === 'title') openMap(); else if ($('panel').classList.contains('on')) { const b = $('card').querySelector('button'); if (b) b.click(); } }
 });
-addEventListener('keyup', e => { if (CON.on) return; const k = KEYMAP[e.code]; if (k) { press(k, false); e.preventDefault(); } });
+addEventListener('keyup', e => { if (CON.on || $('adm').classList.contains('on')) return; const k = KEYMAP[e.code]; if (k) { press(k, false); e.preventDefault(); } });
 addEventListener('blur', () => { for (const k in K) K[k] = false; });
 [['bL', 'left'], ['bR', 'right'], ['bD', 'down'], ['bA', 'jump'], ['bB', 'act']].forEach(([id, k]) => {
   const el = $(id);
@@ -152,6 +153,7 @@ const padPrev = { jump: false, act: false, left: false, right: false, down: fals
 let navI = 0, navPrev = null;
 function navButtons() {            // botones que el mando puede recorrer en la pantalla que esté a la vista
   const vis = el => el && el.offsetParent !== null && !el.disabled;
+  if ($('adm').classList.contains('on')) return [...$('adm').querySelectorAll('button')].filter(vis);
   if ($('ios').classList.contains('on')) return [...$('ios').querySelectorAll('button')].filter(vis);
   if ($('panel').classList.contains('on')) return [...$('card').querySelectorAll('button')].filter(vis);
   if (state === 'title' && $('title').classList.contains('on')) return [...$('title').querySelectorAll('button')].filter(vis);
@@ -171,14 +173,14 @@ function pollPad() {
   // menús con el mando: cruceta/joystick para elegir botón, X para pulsar, Círculo para volver
   const nav = navButtons();
   if (nav.length) {
-    if (nav !== navPrev) { if (!navPrev || nav.length !== navPrev.length || nav[0] !== navPrev[0]) navI = 0; navPrev = nav; }
+    if (nav !== navPrev) { if (!navPrev || nav.length !== navPrev.length || nav[0].textContent !== navPrev[0].textContent) navI = 0; navPrev = nav; }
     navI = Math.min(navI, nav.length - 1);
     const fwd = (now.right && !padPrev.mr) || (now.down && !padPrev.md), back = (now.left && !padPrev.ml) || (up && !padPrev.mu);
     if (fwd || back) { navI = (navI + (fwd ? 1 : -1) + nav.length) % nav.length; tone(900, 900, 0.04, 'square', 0.05); }
     nav.forEach((el, k) => el.classList.toggle('pf', k === navI));
     const click = el => { press('jump', false); jumpPressed = false; padPrev.jump = true; nav.forEach(e => e.classList.remove('pf')); navPrev = null; el.click(); };
     if (b(0) && !padPrev.a) click(nav[navI]);
-    else if (b(1) && !padPrev.o) { const bk = nav.find(e => /^(VOLVER|MAPA|SEGUIR|ENTENDIDO|CONTINUAR)/.test(e.textContent.trim())); if (bk) click(bk); }
+    else if (b(1) && !padPrev.o) { const bk = nav.find(e => /^(VOLVER|MAPA|SEGUIR|ENTENDIDO|CONTINUAR|SALIR|CERRAR)/.test(e.textContent.trim())); if (bk) click(bk); }
   } else {
     if (navPrev) { navPrev.forEach(e => e.classList.remove('pf')); navPrev = null; }
     if (b(0) && !padPrev.a && state === 'map') mapPlay();
@@ -191,12 +193,13 @@ function pollPad() {
 
 
 /* ---------- consola secreta de trucos (10 toques rápidos sobre PAUSA) ---------- */
-const CHEAT = { ghost: false, live: false, floor: false, floorT: 0 };
+const CHEAT = { ghost: false, live: false, floor: false, stop: false, floorT: 0 };
 const CON = { on: false, q: [], typing: false, busy: false, pend: [] };
 const CODES = [
   ['GHOST', 'MODO FANTASMA', 'Lucas se vuelve espectral, con aura de neón. Los bichos, sus disparos y los láseres le atraviesan.'],
   ['LIVE', 'VIDAS INFINITAS', 'El contador de vidas pasa a ∞. Caer ya no cuesta nada.'],
-  ['FLOOR', 'PUENTE LÁSER', 'Sobre cada hueco del suelo se tiende un puente de luz recto. Imposible caerse.']
+  ['FLOOR', 'PUENTE LÁSER', 'Sobre cada hueco del suelo se tiende un puente de luz recto. Imposible caerse.'],
+  ['STOP', 'FRENO DE PERSECUCIÓN', 'El muro de energía, el plasma y todo lo que te persigue se frena a tu espalda: te sigue, pero nunca te alcanza.']
 ];
 (() => {
   const st = document.createElement('style');
@@ -255,7 +258,6 @@ function conPump() {
 let pauseTap = { n: 0, t: 0 };
 function pauseTapOn() {
   const now = performance.now(); pauseTap = now - pauseTap.t < 600 ? { n: pauseTap.n + 1, t: now } : { n: 1, t: now };
-  const h = $('pauseT'); if (h && pauseTap.n > 2) { h.style.textShadow = '0 0 ' + (8 + pauseTap.n * 3) + 'px #29e6ff'; tone(400 + pauseTap.n * 90, 400 + pauseTap.n * 90, 0.04, 'square', 0.05); }
   if (pauseTap.n >= 10) { pauseTap = { n: 0, t: 0 }; openConsole(); }
 }
 function openConsole() {
@@ -273,7 +275,6 @@ function openConsole() {
     say('ENLACE 5G ........... CONECTADO', 'g', 0, true);
     say('', '', 0, true);
     say(activeTxt(), 'y', 0, true);
-    say('Escribe un código. Escribe HACK para ver la lista.', '', 14);
   }, 650);
 }
 function closeConsole() {
@@ -306,14 +307,15 @@ function conRun(raw) {
     else { say('>> ' + code[1] + ' DESACTIVADO', 'r', 22); tone(500, 120, 0.3, 'square', 0.06); }
     say(activeTxt(), 'y', 0, true); return;
   }
-  if (cmd === 'AYUDA' || cmd === 'HELP') { say('Escribe HACK para ver los códigos secretos. SALIR para volver al juego.', '', 12); return; }
+  if (cmd === 'ADMIN') { conAdmin(); return; }
   if (cmd === 'CLS' || cmd === 'LIMPIAR') { conOut.innerHTML = ''; say('', '', 0, true); return; }
   if (cmd === 'SALIR' || cmd === 'EXIT') { closeConsole(); return; }
   say('ERROR 0x' + rh(4) + ' · CÓDIGO "' + cmd.slice(0, 20) + '" NO RECONOCIDO', 'r', 12); tone(140, 90, 0.3, 'square', 0.08);
 }
 conIn.addEventListener('input', () => { conIn.value = conIn.value.toUpperCase().slice(0, 30); const tx = $('conTx'); if (tx && !CON.busy) tx.textContent = conIn.value; tone(2200, 2200, 0.01, 'square', 0.03); conScroll(); });
 conIn.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); if (!CON.busy) conRun(conIn.value); else if (conIn.value.trim()) { CON.pend.push(conIn.value); conIn.value = ''; } } else if (e.key === 'Escape') closeConsole(); });
-$('con').addEventListener('pointerup', e => { if (e.target.id === 'conX') return; try { conIn.focus({ preventScroll: true }); } catch (x) {} });
+const conKb = e => { if (e.target.id === 'conX') return; try { conIn.blur(); conIn.focus({ preventScroll: true }); conIn.click(); } catch (x) {} };      // tocar la pantalla vuelve a sacar el teclado
+$('con').addEventListener('pointerup', conKb); $('con').addEventListener('touchend', conKb);
 $('conX').addEventListener('click', closeConsole);
 
 /* ---------- nivel 1-1: Estación orbital ---------- */
@@ -334,6 +336,7 @@ LEVELS['1-1'] = function () {
 
   // tramo 1: aprender a moverse
   ground(0, 24); chipRow(6, 9, 12);
+  set(5, 10, 'I'); boxes['5,10'] = 'vida';
   set(11, 10, 'B'); box(12, 10, 'chip'); set(13, 10, 'B'); box(14, 10, 'escudo'); set(15, 10, 'B');
   en('patrulla', 20, 13);
   // tramo 2: plataformas y primer engranaje
@@ -388,6 +391,7 @@ function LB(W, H) {
   B.block = (x0, x1, y0, y1, c = '#') => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) B.set(x, y, c); };
   B.ground = (a, b) => B.block(a, b, H - 2, H - 1);
   B.box = (x, y, what) => { B.set(x, y, '?'); B.boxes[x + ',' + y] = what; };
+  B.hid = (x, y, what) => { B.set(x, y, 'I'); B.boxes[x + ',' + y] = what; };      // bloque invisible: solo aparece al darle con la cabeza
   B.chip = (x, y) => B.chips.push({ x: x * T + T / 2, y: y * T + T / 2, t: Math.random() * 6 });
   B.row = (a, b, y) => { for (let x = a; x <= b; x++) B.chip(x, y); };
   B.arc = (a, b, y, hgt) => { for (let x = a; x <= b; x++) { const k = (x - a) / Math.max(1, b - a); B.chip(x, y - Math.sin(k * Math.PI) * hgt); } };
@@ -408,7 +412,7 @@ function LB(W, H) {
 LEVELS['1-2'] = function () {
   const B = LB(338, 16);
   // A · entrada
-  B.ground(0, 80); B.row(6, 10, 12); B.box(13, 10, 'escudo'); B.en('patrulla', 22, 13);
+  B.ground(0, 80); B.row(6, 10, 12); B.box(13, 10, 'escudo'); B.en('patrulla', 22, 13); B.hid(20, 10, 'vida');
   // B · pasillo con láseres abajo, ruta alta por encima
   B.block(28, 29, 12, 12, '='); B.block(31, 32, 10, 10, '=');
   B.block(34, 78, 9, 10);
@@ -435,7 +439,7 @@ LEVELS['1-2'] = function () {
   for (let i = 1; i <= 4; i++) B.block(281 + i, 281 + i, 14 - i, 13);
   B.row(282, 285, 8); B.block(296, 301, 0, 15);
   // sala secreta: lluvia de chips
-  B.ground(302, 337); B.block(334, 337, 0, 15); B.portal(331, 14, 146, 14);
+  B.ground(302, 337); B.block(334, 337, 0, 15); B.portal(331, 14, 146, 14); B.hid(302, 10, 'iman');
   return B.done({ name: 'PASILLOS DE SERVICIO', time: 270, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 291 * T + T / 2, y: 14 * T }, rain: { x0: 304 * T, x1: 330 * T, dur: 13, t: 0, st: 0, acc: 0 } });
 };
 /* ---------- fase 1-3: SALA DE MÁQUINAS (persecución: un muro de energía te sigue; cintas turbo y saltos largos) ---------- */
@@ -444,7 +448,7 @@ LEVELS['1-3'] = function () {
   // A · arranque y primeros fosos
   B.ground(0, 23); B.row(5, 9, 12); B.box(11, 10, 'escudo');
   B.ground(27, 33); B.arc(23, 27, 11, 2); B.en('patrulla', 30, 13); B.ground(37, 78); B.arc(33, 37, 11, 2);
-  B.en('erizo', 43, 13); B.block(50, 52, 11, 13); B.block(49, 49, 13, 13); B.gear(51, 8); B.row(54, 58, 12); B.en('alien', 59, 13);
+  B.en('erizo', 43, 13); B.hid(45, 10, 'vida'); B.block(50, 52, 11, 13); B.block(49, 49, 13, 13); B.gear(51, 8); B.row(54, 58, 12); B.en('alien', 59, 13);
   // B · cintas turbo con saltos largos
   B.strip(63, 78); B.row(64, 77, 12); B.arc(79, 85, 10, 3); B.ground(86, 101); B.strip(87, 101); B.row(88, 100, 12); B.arc(102, 108, 10, 3); B.ground(109, 118);
   B.cp(112, 14); B.box(115, 10, 'iman');
@@ -469,10 +473,10 @@ LEVELS['1-4'] = function () {
   const H = 112, B = LB(34, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.block(0, 2, 10, H - 1); B.block(31, 33, 10, H - 1);           // paredes de la torre
   // A · base de la torre
-  B.block(3, 30, H - 2, H - 1); B.row(6, 10, 108); B.box(16, 106, 'escudo'); B.en('patrulla', 22, 109);
+  B.block(3, 30, H - 2, H - 1); B.row(6, 10, 108); B.box(16, 106, 'escudo'); B.hid(12, 106, 'vida'); B.en('patrulla', 22, 109);
   P(24, 28, 107); B.row(24, 28, 106); P(18, 22, 104); P(10, 14, 101); B.en('alien', 12, 100); P(4, 8, 98); B.arc(4, 8, 96, 1);
   // B · láser y saltador
-  P(9, 13, 95); P(15, 19, 92); B.en('patrulla', 18, 91); B.laser(21, 85, 91, 0, 1.1, 1.5); P(23, 28, 89); B.row(23, 28, 88); B.cp(27, 89);
+  P(9, 13, 95); P(15, 19, 92); B.en('patrulla', 16, 91); B.laser(18, 87, 91, 0, 1.1, 1.5);      // láser anclado: del techo (repisa) al suelo de la plataforma P(23, 28, 89); B.row(23, 28, 88); B.cp(27, 89);
   B.block(14, 22, 86, 86); B.pad(15, 86); B.row(17, 21, 85); B.box(19, 82, 'chip'); B.box(20, 82, 'chip');
   B.block(3, 5, 84, 84); B.gear(4, 82); B.arc(6, 12, 84, 2);                  // engranaje 1: a la izquierda del saltador
   // C · ascensor antigravedad entre drones
@@ -481,11 +485,11 @@ LEVELS['1-4'] = function () {
   B.en('dron', 21, 72, { x0: 14, x1: 27 }); B.en('dron', 21, 66, { x0: 15, x1: 28 });
   P(23, 28, 63); B.cp(26, 63); P(13, 18, 63); B.gear(14, 61); B.row(15, 18, 62);   // engranaje 2: al salir del ascensor por la izquierda
   // D · plataformas que suben y bajan bajo el fuego de la torreta
-  B.mover(18, 58, 3, 0, 72, 1.4, 0); B.mover(12, 52, 3, 0, 72, 1.4, 1.6); B.mover(6, 46, 3, 0, 72, 1.4, 3.2);
-  B.arc(18, 21, 55, 1); B.arc(12, 15, 49, 1); B.block(25, 30, 49, 49); B.en('torreta', 28, 48); B.row(25, 27, 48);
-  P(4, 9, 42); B.box(5, 38, 'turbo');
+  B.mover(18, 61, 3, 0, 36, 1.3, 0); B.mover(12, 58, 3, 0, 36, 1.3, 3.14); B.mover(6, 55, 3, 0, 36, 1.3, 0); B.mover(12, 52, 3, 0, 36, 1.3, 3.14); B.mover(18, 49, 3, 0, 36, 1.3, 0);
+  P(12, 16, 46); B.arc(12, 15, 55, 1); B.arc(6, 9, 52, 1); B.arc(12, 15, 49, 1); B.row(12, 16, 45); B.block(25, 30, 49, 49); B.en('torreta', 28, 48); B.row(25, 27, 48);
+  P(4, 9, 43); B.box(5, 39, 'turbo');
   // E · techo de cajas rompibles
-  P(11, 15, 39); P(16, 20, 37); B.block(3, 15, 34, 34); B.block(21, 30, 34, 34); B.block(16, 20, 34, 34, 'B');
+  P(11, 15, 40); P(16, 20, 37); B.block(3, 15, 34, 34); B.block(21, 30, 34, 34); B.block(16, 20, 34, 34, 'B');
   B.en('erizo', 9, 33); B.en('patrulla', 26, 33); B.pad(23, 34); B.block(26, 30, 28, 28); B.gear(29, 26); B.row(26, 28, 27);   // engranaje 3: saltador hasta la repisa
   P(4, 8, 31); P(10, 14, 28); B.box(12, 24, 'laser'); P(16, 20, 25); B.en('dron', 18, 21, { x0: 8, x1: 26 }); P(10, 14, 22); P(4, 8, 19); B.cp(6, 19);
   P(10, 14, 16); B.row(10, 14, 15); P(4, 8, 13);
@@ -498,7 +502,7 @@ LEVELS['1-B'] = function () {
   const H = 22, B = LB(166, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   const shape = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') B.chip(x + i, y + j); }));
   // A · el "5G" de chips en el cielo
-  B.ground(0, 16); B.row(4, 7, 18); P(8, 13, 15); shape(8, 8, ['###.###', '#...#..', '###.#.#', '..#.#.#', '###.###']);
+  B.ground(0, 16); B.row(4, 7, 18); P(8, 13, 15); B.hid(15, 16, 'vida'); shape(8, 8, ['###.###', '#...#..', '###.#.#', '..#.#.#', '###.###']);
   // B · primeros saltos lunares
   B.arc(16, 22, 16, 3); B.ground(22, 30); B.en('alien', 27, 19); B.box(25, 16, 'escudo');
   P(32, 35, 15); P(37, 40, 11); B.gear(38, 8); B.arc(32, 40, 13, 3);                       // engranaje 1: en lo alto
@@ -527,7 +531,7 @@ LEVELS['1-J'] = function () {
   B.ground(0, 79); B.row(5, 8, 12);
   B.set(10, 10, 'B'); B.box(11, 10, 'escudo'); B.set(12, 10, 'B'); B.box(15, 10, 'laser');
   B.block(18, 20, 9, 9, '='); B.gear(19, 7); B.en('patrulla', 23, 13); B.en('dron', 28, 10, { x0: 25, x1: 33 }); B.row(25, 31, 12);
-  B.cp(35, 14); B.box(38, 10, 'chip');
+  B.cp(35, 14); B.box(38, 10, 'chip'); B.hid(33, 10, 'vida');
   B.block(42, 43, 0, 10); B.block(78, 79, 0, 15);                                  // puerta de la arena y pared del fondo
   B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13);
   return B.done({ name: 'EL GUARDIÁN', time: 240, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
@@ -790,6 +794,9 @@ function updatePlayer(dt) {
   p.vy = Math.min(p.vy + 2000 * L.gk * dt, L.gk < 1 ? 560 : 900);
   const wasAir = !p.onGround, vyBefore = p.vy, feet0 = p.y + p.h;
   moveEnt(p, dt);
+  if (p.vy < 0 && !p.dead) { const ty = Math.floor(p.y / T);           // bloque invisible: aparece al golpearlo desde abajo
+    for (const tx of [Math.floor((p.x + p.w / 2) / T), Math.floor((p.x + 4) / T), Math.floor((p.x + p.w - 4) / T)]) if (tileAt(tx, ty) === 'I') {
+      L.g[ty][tx] = '?'; p.y = (ty + 1) * T + 0.01; p.vy = 0; hitBlock(tx, ty); burst(tx * T + T / 2, ty * T + T / 2, 22, '#fff', 220, 0.5, 0, 3); tone(1568, 2093, 0.18, 'triangle', 0.1); break; } }
   if (p.vy >= 0) p.boost = 0;
   if (p.vy >= 0 && !p.drop) for (const m of L.movers) {        // plataformas móviles: te llevan encima
     if (p.x + p.w > m.x + 4 && p.x < m.x + m.w - 4 && feet0 <= m.y - m.dy + 10 && p.y + p.h >= m.y - 2) { p.y = m.y - p.h - 0.01; p.vy = 0; p.onGround = true; p.x += m.dx; if (collide(p)) p.x -= m.dx; break; }
@@ -836,11 +843,12 @@ function onOneWay(p) {
   for (let tx = Math.floor(p.x / T); tx <= Math.floor((p.x + p.w - 0.01) / T); tx++) if (tileAt(tx, ty) === '=') return true;
   return false;
 }
-const POWER_NAME = { laser: 'LÁSER', escudo: 'ESCUDO', turbo: 'TURBO', iman: 'IMÁN', mini: 'MINI LUCAS', estrella: 'ESTRELLA 5G' };
+const POWER_NAME = { vida: '+1 VIDA', laser: 'LÁSER', escudo: 'ESCUDO', turbo: 'TURBO', iman: 'IMÁN', mini: 'MINI LUCAS', estrella: 'ESTRELLA 5G' };
 function givePower(k) {
   const p = P; SFX.power(); addScore(200); pop(p.x + p.w / 2, p.y - 16, POWER_NAME[k], '#29e6ff');
   burst(p.x + p.w / 2, p.y + p.h / 2, 20, '#29e6ff', 240, 0.6, 0, 3);
-  if (k === 'escudo') p.shield = true;
+  if (k === 'vida') { G.lives++; SFX.life(); }
+  else if (k === 'escudo') p.shield = true;
   else if (k === 'turbo') p.tTurbo = 7;
   else if (k === 'iman') p.tMagnet = 14;
   else if (k === 'estrella') p.tStar = 9;
@@ -919,7 +927,7 @@ function updateStage(dt) {
   const ch = L.chase;
   if (ch) {
     if (!ch.on && p.x > ch.startX) { ch.on = true; ch.x = p.x - 620; pop(p.x + p.w / 2, p.y - 40, '¡CORRE!', '#ff5a6a'); [330, 440, 330, 440, 330, 440].forEach((f, i) => tone(f, f, 0.14, 'sawtooth', 0.1, i * 0.15)); shake = 0.3; }
-    if (ch.on && !p.win && !p.dead) { ch.x += ch.speed * dt; ch.x = Math.max(ch.x, p.x - VW * 0.8); if (p.x < ch.x + 4) die(); }
+    if (ch.on && !p.win && !p.dead) { ch.x += ch.speed * dt; ch.x = Math.max(ch.x, p.x - VW * 0.8); if (CHEAT.stop) ch.x = Math.min(ch.x, p.x - 230); if (p.x < ch.x + 4) die(); }
   }
   const mt = L.meteors;
   if (mt) {
@@ -938,7 +946,7 @@ function updateStage(dt) {
   const rs = L.rise;
   if (rs) {
     if (!rs.on && p.y + p.h < rs.startY) { rs.on = true; pop(p.x + p.w / 2, p.y - 40, '¡EL PLASMA SUBE!', '#35ff8a'); [220, 262, 330, 392].forEach((f, i) => tone(f, f * 1.5, 0.2, 'sawtooth', 0.08, i * 0.14)); shake = 0.3; }
-    if (rs.on && !p.win && !p.dead) { rs.y -= rs.speed * dt; rs.y = Math.min(rs.y, p.y + p.h + VHv * 0.62); if (p.y + p.h > rs.y + 10) die(); }
+    if (rs.on && !p.win && !p.dead) { rs.y -= rs.speed * dt; rs.y = Math.min(rs.y, p.y + p.h + VHv * 0.62); if (CHEAT.stop) rs.y = Math.max(rs.y, p.y + p.h + 170); if (p.y + p.h > rs.y + 10) die(); }
   }
 }
 function drawStageBack() {          // por detrás de los personajes
@@ -1280,7 +1288,11 @@ function drawWorld() {
   for (const c of L.chips) if (!c.got && vis(c.x)) { const s = Math.cos(time * 4 + c.t); spr(IMG['obj-chip'], c.x, c.y + Math.sin(time * 3 + c.t) * 3, 26, 0.5, 0.5, false, 0, Math.abs(s) * 0.85 + 0.15, 1); }
   for (const g of L.gears) if (!g.got && vis(g.x)) { ctx.fillStyle = 'rgba(61,184,255,.22)'; ctx.beginPath(); ctx.arc(g.x, g.y, 30, 0, 6.283); ctx.fill(); spr(IMG['obj-engranaje'], g.x, g.y + Math.sin(time * 2.5) * 4, 40, 0.5, 0.5, false, time * 1.2); }
   const PIMG = { laser: 'poder-laser', escudo: 'poder-escudo', turbo: 'poder-turbo', iman: 'poder-iman', mini: 'poder-mini', estrella: 'poder-estrella5g' };
-  for (const it of items) { ctx.fillStyle = 'rgba(41,230,255,.2)'; ctx.beginPath(); ctx.arc(it.x + 20, it.y + 20, 30, 0, 6.283); ctx.fill(); spr(IMG[PIMG[it.kind]], it.x + 20, it.y + 20 + Math.sin(it.t * 4) * 3, 44, 0.5, 0.5); }
+  for (const it of items) { const iy = it.y + 20 + Math.sin(it.t * 4) * 3;
+    if (it.kind === 'vida') { ctx.globalCompositeOperation = 'lighter'; const vg = ctx.createRadialGradient(it.x + 20, iy, 4, it.x + 20, iy, 34); vg.addColorStop(0, 'rgba(53,255,138,.55)'); vg.addColorStop(1, 'rgba(53,255,138,0)'); ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(it.x + 20, iy, 34, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(160,255,200,.9)'; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(20,60,40,.45)'; ctx.beginPath(); ctx.arc(it.x + 20, iy, 22, 0, 6.283); ctx.fill(); ctx.stroke(); spr(IMG['lucas-quieto'], it.x + 20, iy + 15, 32, 0.5, 1);
+      ctx.font = '900 11px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#35ff8a'; ctx.fillText('1UP', it.x + 20, iy - 26); continue; }
+    ctx.fillStyle = 'rgba(41,230,255,.2)'; ctx.beginPath(); ctx.arc(it.x + 20, iy, 30, 0, 6.283); ctx.fill(); spr(IMG[PIMG[it.kind]], it.x + 20, iy, 44, 0.5, 0.5); }
   // enemigos
   for (const e of enemies) {
     if (!vis(e.x)) continue;
@@ -1421,7 +1433,7 @@ function toggleFull() { if (document.fullscreenElement) { fsLeft = true; try { d
 document.addEventListener('fullscreenchange', () => { const b = $('btnFull'); if (b) b.textContent = document.fullscreenElement ? 'SALIR DE PANTALLA COMPLETA' : 'PANTALLA COMPLETA'; setTimeout(resize, 60); });
 // instalada en PC: pantalla completa de verdad (sin barra de Windows) al primer clic o tecla
 if (INSTALLED && !TOUCH) { const first = () => { if (!fsLeft) enterFull(); }; addEventListener('pointerdown', first); addEventListener('keydown', first); }
-addEventListener('keydown', e => { if (CON.on) return; if (e.code === 'F11' || (e.code === 'KeyF' && !e.repeat && state !== 'play')) { e.preventDefault(); toggleFull(); } });
+addEventListener('keydown', e => { if (CON.on || $('adm').classList.contains('on')) return; if (e.code === 'F11' || (e.code === 'KeyF' && !e.repeat && state !== 'play')) { e.preventDefault(); toggleFull(); } });
 if (!TOUCH) { $('btnFull').style.display = ''; $('btnFull').onclick = toggleFull; }
 function startGame() {
   audio(); startMusic();
@@ -1432,12 +1444,12 @@ function togglePause() {
   if (state !== 'play') return;
   paused = !paused;
   if (CON.on) return;
-  if (paused) { $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
+  if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
   else show('panel', false);
 }
 function toMenu() { setTimeout(updApply, 300); paused = false; state = 'title'; show('panel', false); show('mapUI', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
 function levelDone() {
-  state = 'done'; show('touch', false);
+  state = 'done'; show('touch', false); $('card').classList.remove('tips'); evt('superada', curId);
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
   const secs = Math.floor(G.clock), bonus = Math.ceil(G.tleft) * 10; G.score += bonus;
   const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId];
@@ -1453,7 +1465,7 @@ function levelDone() {
   for (let i = 0; i < stars; i++) setTimeout(() => { const e = $('st' + i); if (e) { e.classList.add('on'); tone(784 + i * 196, 784 + i * 196, 0.2, 'triangle', 0.14); } }, 400 + i * 380);
 }
 function gameOver() {
-  state = 'over'; show('touch', false); SFX.over();
+  state = 'over'; show('touch', false); SFX.over(); $('card').classList.remove('tips');
   $('card').innerHTML = '<h2>FIN DE LA PARTIDA</h2><div class="stat"><span>Puntos</span><b>' + G.score + '</b></div><div class="row"><button class="btn" id="pr">REINTENTAR</button><button class="btn" id="pm">MAPA</button></div>';
   show('panel', true); $('pr').onclick = startGame; $('pm').onclick = () => toMap(false);
 }
@@ -1464,7 +1476,7 @@ const MAP = [
   { id: '1-1', n: '1', name: 'MUELLE DE CARGA', x: 0.1041, y: 0.498, rx: 0.033, built: true },
   { id: '1-2', n: '2', name: 'PASILLOS DE SERVICIO', x: 0.3479, y: 0.659, rx: 0.033, built: true, way: [[0.16, 0.47], [0.20, 0.477], [0.23, 0.52], [0.26, 0.60], [0.29, 0.655]] },
   { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.4996, y: 0.499, rx: 0.033, built: true, way: [[0.39, 0.675], [0.42, 0.635], [0.45, 0.60], [0.47, 0.57]] },
-  { id: '1-4', n: '4', name: 'TORRE DE ANTENAS', x: 0.6515, y: 0.357, rx: 0.03, gold: true, built: true, way: [[0.53, 0.46], [0.56, 0.42], [0.59, 0.385], [0.62, 0.37]] },
+  { id: '1-4', n: '4', name: 'TORRE DE ANTENAS', x: 0.6515, y: 0.339, rx: 0.033, gold: true, built: true, way: [[0.53, 0.46], [0.56, 0.42], [0.59, 0.385], [0.62, 0.37]] },
   { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.871, y: 0.393, rx: 0.05, boss: true, built: true, way: [[0.685, 0.335], [0.71, 0.305], [0.74, 0.295], [0.78, 0.31], [0.81, 0.335], [0.84, 0.37]] },
   { id: '1-B', n: '★', name: 'FASE SECRETA · PASEO ESPACIAL', x: 0.6177, y: 0.186, rx: 0.021, bonus: true, built: true, prev: 3, way: [[0.625, 0.33], [0.603, 0.29], [0.598, 0.24], [0.595, 0.21]] }
 ];
@@ -1528,7 +1540,7 @@ function mapMove(d) {
   if (!mapOpen(i)) return mapDeny(i);
   SFX.chip(); mapGo(i);
 }
-function mapPlay() { if (mapUnl || mapRoute.length) return; const n = MAP[mapSel]; if (!isBuilt(n)) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; } curId = n.id; startGame(); }
+function mapPlay() { if (mapUnl || mapRoute.length) return; const n = MAP[mapSel]; if (!isBuilt(n)) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; } curId = n.id; evt('jugar', curId); startGame(); }
 function mapUpdate(dt) {
   const t = mapT();
   if (mapUnl) {
@@ -1640,7 +1652,7 @@ addEventListener('appinstalled', () => { $('btnInstall').style.display = 'none';
 $('btnInstall').onclick = () => {
   if (deferred) { deferred.prompt(); deferred = null; }
   else if (isIOS) show('ios', true);
-  else alert('Para instalar TURBOLUCAS abre el menú del navegador (⋮) y elige "Instalar aplicación" o "Añadir a pantalla de inicio".');
+  else infoPanel('INSTALAR', 'Abre el menú del navegador <b>⋮</b> y elige <b>"Instalar aplicación"</b> o <b>"Añadir a pantalla de inicio"</b>.<br>Tendrás TURBOLUCAS como una app más, a pantalla completa.');
 };
 $('iosOk').onclick = () => show('ios', false);
 // compartir: solo texto + enlace, para que WhatsApp muestre la tarjeta con imagen
@@ -1649,6 +1661,215 @@ $('btnShare').onclick = () => {
   if (navigator.share) navigator.share({ title: 'TURBOLUCAS', text, url }).catch(() => {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank');
 };
+
+/* ---------- portada: web del creador, consejos e instalar (todo con el estilo del juego, nada de alerts) ---------- */
+const API = 'https://script.google.com/macros/s/AKfycbxtRso7g_0i53NRLJZFdM22TF2GW2EtzgwMZ3Mavq5ZVK6Ni0lXQNVXid6U7j5RL3wodQ/exec';
+function api(d) { return fetch(API, { method: 'POST', body: JSON.stringify(d) }).then(r => r.json()).catch(() => ({ ok: false, error: 'Sin conexión. Inténtalo otra vez.' })); }
+function evt(e, f) { try { api({ a: 'evt', e, f }); } catch (x) {} }
+try { const k = 'tl_vis_' + new Date().toISOString().slice(0, 10); if (!localStorage.getItem(k)) { localStorage.setItem(k, '1'); setTimeout(() => evt('visita'), 3000); } } catch (e) {}
+(() => { const st = document.createElement('style'); st.textContent = `
+.card.tips{width:min(94vw,760px);max-height:92vh;display:flex;flex-direction:column;text-align:left;padding:14px 18px}
+.card.tips h2{text-align:center}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:4px 0 10px}
+.tabs .btn{font-size:12px;padding:7px 10px;border-radius:10px;opacity:.75}
+.tabs .btn.on{opacity:1;border-color:var(--gr);box-shadow:0 0 14px rgba(53,255,138,.55),inset 0 0 10px rgba(53,255,138,.2)}
+.tbody{overflow-y:auto;flex:1;min-height:0;font-size:clamp(12px,2.5vh,15px);line-height:1.45;color:#cfe0ff;padding-right:4px;scrollbar-width:thin}
+.tbody h3{margin:8px 0 4px;font-size:1.05em;color:#fff;letter-spacing:.04em;text-shadow:0 0 10px rgba(41,230,255,.7)}
+.tbody b{color:#fff}.tbody .k{display:inline-block;min-width:22px;padding:1px 6px;margin:1px 2px;border:1px solid #29e6ff;border-radius:6px;background:rgba(41,230,255,.12);color:#fff;font-weight:800;font-size:.9em;text-align:center}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.tit{display:flex;gap:10px;align-items:flex-start;background:rgba(41,230,255,.06);border:1px solid rgba(41,230,255,.25);border-radius:12px;padding:8px 10px}
+.tit .ic{font-size:24px;line-height:1;flex:none;width:34px;text-align:center}.tit img{width:40px;height:40px;object-fit:contain;flex:none}
+.tit p{margin:0;overflow-wrap:anywhere}.tfoot{text-align:center;margin-top:10px}`; document.head.appendChild(st); })();
+const TIPS = {
+  'DÓNDE JUGAR': `<div class="tgrid">
+    <div class="tit"><div class="ic">📱</div><p><b>Móvil y tablet</b><br>Siempre en horizontal. Pulsa <b>INSTALAR</b> y tendrás TURBOLUCAS como una app más: a pantalla completa y sin barras del navegador.</p></div>
+    <div class="tit"><div class="ic">💻</div><p><b>PC y portátil</b><br>En Chrome, Edge, Firefox o Safari. Pulsa <span class="k">F</span> o <b>PANTALLA COMPLETA</b>. También se puede instalar como aplicación.</p></div>
+    <div class="tit"><div class="ic">📺</div><p><b>Smart TV</b><br>Abre el navegador de la tele (Samsung, LG, Android TV, Google TV, Fire TV…) y entra en <b>puntofibra.github.io/turbolucas</b>. Se disfruta mucho más con un mando o un teclado conectado a la tele.</p></div>
+    <div class="tit"><div class="ic">⚡</div><p><b>Siempre al día</b><br>El juego se actualiza solo con fases y mejoras nuevas, y una vez cargado sigue funcionando aunque se vaya la conexión.</p></div></div>`,
+  'MANDOS': `<div class="tgrid">
+    <div class="tit"><div class="ic">🎮</div><p><b>Mandos compatibles</b><br>PlayStation 5 (DualSense), PlayStation 4 (DualShock 4), Xbox One y Series, Nintendo Switch Pro y la mayoría de mandos Bluetooth o USB.</p></div>
+    <div class="tit"><div class="ic">🔗</div><p><b>Cómo conectarlo</b><br><b>PS5:</b> mantén PS + Create. <b>PS4:</b> PS + Share. <b>Xbox:</b> botón de emparejar de arriba. <b>Switch Pro:</b> botón de sincronizar. Cuando la luz parpadee, búscalo en <b>Ajustes › Bluetooth</b> del móvil, PC o tele. En PC también vale el cable USB.</p></div>
+    <div class="tit"><div class="ic">🕹️</div><p><b>Botones</b><br><b>Saltar:</b> <span class="k">✕</span> / <span class="k">A</span><br><b>Láser:</b> <span class="k">□</span> <span class="k">○</span> <span class="k">R1</span> / <span class="k">X</span> <span class="k">B</span> <span class="k">RB</span><br><b>Pausa:</b> <span class="k">OPTIONS</span> / <span class="k">MENU</span></p></div>
+    <div class="tit"><div class="ic">🧭</div><p><b>Menús con el mando</b><br>Cruceta o joystick para elegir, <span class="k">✕</span>/<span class="k">A</span> para aceptar y <span class="k">○</span>/<span class="k">B</span> para volver. Al usar el mando desaparecen los botones táctiles.</p></div></div>`,
+  'CONTROLES': `<div class="tgrid">
+    <div class="tit"><div class="ic">⌨️</div><p><b>Teclado</b><br><span class="k">←</span><span class="k">→</span> o <span class="k">A</span><span class="k">D</span> moverse<br><span class="k">↑</span> <span class="k">W</span> <span class="k">ESPACIO</span> saltar<br><span class="k">↓</span> <span class="k">S</span> agacharse<br><span class="k">X</span> <span class="k">SHIFT</span> láser · <span class="k">P</span> <span class="k">ESC</span> pausa</p></div>
+    <div class="tit"><div class="ic">👆</div><p><b>Pantalla táctil</b><br><b>◀ ▶</b> moverse, <b>▼</b> agacharse, <b>SALTAR</b> y <b>LÁSER</b>. Puedes pulsar varios a la vez.</p></div>
+    <div class="tit"><div class="ic">🚀</div><p><b>Salto con propulsores</b><br>Mantén pulsado saltar para llegar más alto; suéltalo antes para un salto corto y preciso.</p></div>
+    <div class="tit"><div class="ic">⬇️</div><p><b>Bajar de plataformas</b><br>Sobre una plataforma flotante, abajo + saltar para dejarte caer.</p></div></div>`,
+  'PODERES': () => '<div class="tgrid">' + [['laser', 'LÁSER', 'Dispara rayos que fulminan a los bichos.'], ['escudo', 'ESCUDO', 'Aguanta un golpe sin perder nada.'], ['turbo', 'TURBO', 'Mantén saltar y Lucas vuela unos segundos.'], ['iman', 'IMÁN', 'Atrae todos los chips cercanos.'], ['mini', 'MINI LUCAS', 'Diminuto: cabe por huecos estrechos.'], ['estrella5g', 'ESTRELLA 5G', 'Invencible: arrasa con todo lo que toque.']]
+    .map(([f, n, d]) => '<div class="tit"><img src="img/' + TIER + '/poder-' + f + '.webp" alt=""><p><b>' + n + '</b><br>' + d + '</p></div>').join('') +
+    '<div class="tit"><img src="img/' + TIER + '/obj-chip.webp" alt=""><p><b>CHIPS</b><br>Cada 100 chips, una vida extra.</p></div><div class="tit"><img src="img/' + TIER + '/obj-engranaje.webp" alt=""><p><b>ENGRANAJES</b><br>Hay 3 en cada fase. Encuéntralos todos.</p></div></div>',
+  'CONSEJOS PRO': `<div class="tgrid">
+    <div class="tit"><div class="ic">⭐</div><p><b>Tres estrellas</b><br>Una por terminar la fase, otra por los 3 engranajes y otra por no perder ninguna vida.</p></div>
+    <div class="tit"><div class="ic">⏱️</div><p><b>Cada segundo cuenta</b><br>El tiempo que te sobre se convierte en puntos. Cuando el reloj se pone rojo, ¡corre!</p></div>
+    <div class="tit"><div class="ic">👾</div><p><b>Aplasta bichos</b><br>Cae encima de los enemigos para eliminarlos… menos del erizo: pincha.</p></div>
+    <div class="tit"><div class="ic">📡</div><p><b>Puntos de control</b><br>Las antenas pequeñas guardan tu avance: si pierdes una vida, sigues desde ahí.</p></div>
+    <div class="tit"><div class="ic">📦</div><p><b>Cajas</b><br>Golpéalas desde abajo: las de interrogación esconden chips o poderes; las otras se rompen.</p></div>
+    <div class="tit"><div class="ic">🏆</div><p><b>Récords</b><br>Repite las fases para batir tu mejor puntuación y completar el mapa en verde.</p></div></div>`
+};
+let tipTab = 'DÓNDE JUGAR';
+function showTips(tab) {
+  if (tab) tipTab = tab; const c = $('card'); c.classList.add('tips');
+  const body = TIPS[tipTab], html = typeof body === 'function' ? body() : body;
+  c.innerHTML = '<h2>CONSEJOS</h2><div class="tabs">' + Object.keys(TIPS).map(k => '<button class="btn' + (k === tipTab ? ' on' : '') + '" data-t="' + k + '">' + k + '</button>').join('') + '</div><div class="tbody">' + html + '</div><div class="tfoot"><button class="btn" id="tipX">VOLVER</button></div>';
+  c.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { SFX.chip(); showTips(b.dataset.t); });
+  $('tipX').onclick = () => { show('panel', false); c.classList.remove('tips'); };
+  show('panel', true);
+}
+function infoPanel(title, html) {
+  const c = $('card'); c.classList.remove('tips');
+  c.innerHTML = '<h2>' + title + '</h2><div style="font-size:15px;line-height:1.5;color:#cfe0ff;margin:6px 0 4px">' + html + '</div><div class="row"><button class="btn" id="infX">ENTENDIDO</button></div>';
+  $('infX').onclick = () => show('panel', false); show('panel', true);
+}
+$('btnTips').onclick = () => { audio(); SFX.chip(); showTips(); };
+$('btnWeb').onclick = () => { SFX.chip(); setTimeout(() => { location.href = 'https://puntofibra.github.io/web/'; }, 120); };
+
+/* ---------- ADMIN: entrada con llave NFC (o QR desde un móvil Android) y menú oculto ---------- */
+let ADM = null; try { ADM = sessionStorage.getItem('tl_adm'); } catch (e) {}
+const setAdm = t => { ADM = t; try { t ? sessionStorage.setItem('tl_adm', t) : sessionStorage.removeItem('tl_adm'); } catch (e) {} };
+const HAY_NFC = 'NDEFReader' in window;
+let nfcCtl = null;
+function nfcStop() { if (nfcCtl) { try { nfcCtl.abort(); } catch (e) {} nfcCtl = null; } }
+async function nfcRead(onSerial, onErr) {        // solo se usa el número de serie de la llave
+  nfcStop(); let busy = false;
+  try { nfcCtl = new AbortController(); const r = new NDEFReader(); await r.scan({ signal: nfcCtl.signal });
+    r.onreading = async ev => { if (busy) return; busy = true; try { navigator.vibrate && navigator.vibrate(80); } catch (e) {} const s2 = String(ev.serialNumber || '').replace(/:/g, '').toUpperCase(); try { await onSerial(s2); nfcStop(); } catch (e) { onErr(e.message || String(e)); busy = false; } };
+    r.onreadingerror = () => { if (!busy) onErr('No pude leer la llave. Vuelve a acercarla.'); };
+    return true;
+  } catch (e) { nfcStop(); onErr('Activa el NFC del móvil y vuelve a intentarlo.'); return false; }
+}
+const NFC_HTML = '<div class="nfcw"><svg viewBox="0 0 64 64" width="54" height="54"><rect x="14" y="6" width="36" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><path d="M27 24a9 9 0 0 1 0 16M33 19a16 16 0 0 1 0 26M39 14a23 23 0 0 1 0 36" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><i></i><i></i></div>';
+(() => { const st = document.createElement('style'); st.textContent = `
+.nfcw{position:relative;width:96px;height:96px;margin:10px 0;color:#29e6ff;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 8px #29e6ff)}
+.nfcw i{position:absolute;inset:0;border-radius:50%;border:2px solid #29e6ff;animation:nfcp 2s infinite}.nfcw i+i{animation-delay:1s}
+@keyframes nfcp{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.25);opacity:0}}
+.conqr{background:#fff;padding:10px;display:inline-block;border-radius:8px;margin:8px 0;box-shadow:0 0 22px rgba(41,230,255,.6)}
+#adm{position:fixed;inset:0;z-index:56;display:none;background:radial-gradient(ellipse at 50% 30%,#06163a,#010309 75%);font-family:"Lucida Console","Courier New",ui-monospace,monospace;color:#cfe0ff}
+#adm.on{display:flex;flex-direction:column}
+#adm::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px);z-index:3}
+.ahead{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 8px calc(16px + env(safe-area-inset-left));border-bottom:1px solid rgba(41,230,255,.35);position:relative;z-index:4}
+.ahead h1{margin:0;font-size:clamp(14px,3vh,20px);letter-spacing:.18em;color:#35ff8a;text-shadow:0 0 10px #35ff8a;flex:1}
+.atabs{display:flex;gap:6px;flex-wrap:wrap;padding:8px calc(16px + env(safe-area-inset-right)) 8px calc(16px + env(safe-area-inset-left));position:relative;z-index:4}
+#adm .btn{font-family:inherit;font-size:12px;padding:7px 10px;border-radius:8px}
+#adm .btn.on{border-color:#35ff8a;box-shadow:0 0 14px rgba(53,255,138,.6);color:#35ff8a}
+#adm .btn.red{border-color:#ff4a6a;box-shadow:0 0 12px rgba(255,74,106,.45)}
+.abody{flex:1;min-height:0;overflow-y:auto;padding:6px calc(16px + env(safe-area-inset-right)) 20px calc(16px + env(safe-area-inset-left));position:relative;z-index:4;font-size:clamp(12px,2.5vh,14px);line-height:1.5}
+.abody h3{color:#29e6ff;letter-spacing:.12em;margin:14px 0 6px;text-shadow:0 0 8px #29e6ff;font-size:1.05em}
+.trk{display:grid;grid-template-columns:minmax(150px,300px) 1fr;gap:12px;align-items:center;background:rgba(41,230,255,.06);border:1px solid rgba(41,230,255,.3);border-radius:10px;padding:10px;margin-bottom:10px}
+.trk img{width:100%;border-radius:6px;border:1px solid rgba(41,230,255,.5);box-shadow:0 0 14px rgba(41,230,255,.35)}
+.trk b{color:#ffd23c}.trk .tg{display:inline-block;font-size:.8em;color:#010309;background:#35ff8a;border-radius:4px;padding:0 6px;margin-right:6px;font-weight:900}
+@media (max-width:560px){.trk{grid-template-columns:1fr}}
+.arow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.ain{font:inherit;color:#fff;background:rgba(2,10,30,.9);border:1px solid #29e6ff;border-radius:6px;padding:7px 9px;min-width:0;-webkit-user-select:text!important;user-select:text!important;touch-action:manipulation}
+.akey{background:rgba(41,230,255,.06);border:1px solid rgba(41,230,255,.3);border-radius:10px;padding:10px;margin-bottom:8px}
+.bars .bar{display:grid;grid-template-columns:110px 1fr 46px;gap:8px;align-items:center;margin:3px 0}.bars i{height:10px;background:linear-gradient(90deg,#29e6ff,#35ff8a);border-radius:5px;box-shadow:0 0 8px rgba(41,230,255,.6);display:block}
+.amsg{min-height:1.4em;color:#ffd23c}.amsg.err{color:#ff4a6a}`; document.head.appendChild(st);
+  const d = document.createElement('div'); d.id = 'adm'; document.body.appendChild(d); })();
+const SECRETS = [
+  { f: '1-1', img: '1-1a', t: 'Túnel y cielo secreto', d: 'En el último tramo, bajo el bloque largo, hay un túnel con chips y un engranaje. Al final, el portal morado te sube a una plataforma escondida en el cielo con un montón de chips y otro engranaje.' },
+  { f: '1-1', img: '1-1b', t: 'Vida oculta al empezar', d: 'Nada más empezar, salta justo encima de la primera fila de chips: aparece un bloque invisible con una vida extra (1UP).' },
+  { f: '1-2', img: '1-2a', t: 'Sala de la lluvia de chips', d: 'Tras el laberinto, la plataforma flotante con portal te lleva a una sala secreta donde llueven chips durante unos segundos. El portal del fondo te devuelve al camino.' },
+  { f: '1-2', img: '1-2b', t: 'Vida oculta antes del primer bicho', d: 'Justo antes del primer robot patrulla, salta en el aire: hay un bloque invisible con una vida.' },
+  { f: '1-2', img: '1-2c', t: 'Imán escondido en la sala de chips', d: 'Dentro de la sala de la lluvia de chips, ve a la izquierda del todo, hasta la pared, y salta justo ahí: aparece una caja oculta con un IMÁN que atrae todos los chips que caen cerca.' },
+  { f: '1-3', img: '1-3a', t: 'Vida oculta junto al erizo', d: 'Al pasar el primer erizo, antes de la escalera de bloques, salta: un bloque invisible suelta una vida extra.' },
+  { f: '1-3', img: '1-3b', t: 'Ruta alta de los drones', d: 'En la parte de las dos rutas, el saltador verde te sube por encima: más chips y menos láseres que por abajo.' },
+  { f: '1-4', img: '1-4a', t: 'Vida oculta en la base de la torre', d: 'En el suelo de la base, entre la fila de chips y la caja del escudo, salta: hay un bloque invisible con una vida.' },
+  { f: '1-4', img: '1-4b', t: 'Repisa del tercer engranaje', d: 'Encima del techo de cajas, el saltador de la derecha te lanza a una repisa pegada a la pared con el tercer engranaje.' },
+  { f: '1-B', img: '1-Ba', t: 'Vida oculta bajo el 5G', d: 'Justo a la derecha de la plataforma del "5G" de chips, salta en el aire: un bloque invisible esconde una vida.' },
+  { f: '1-B', img: '1-Bb', t: 'Isla del cielo', d: 'Al final, el saltador te lanza muy alto (con la gravedad lunar) a una isla escondida con el tercer engranaje y un arco de chips.' },
+  { f: '1-J', img: '1-Ja', t: 'Vida antes del jefe', d: 'Junto al punto de control de antes de la arena, salta a la izquierda de la caja: un bloque invisible te da una vida para la pelea.' }
+];
+let admTab = 'TRUCOS', admLl = [], admSt = null;
+function openAdmin() {
+  closeConsole(); if (state === 'play' && !paused) togglePause();
+  const a = $('adm'); a.classList.add('on'); admPaint();
+}
+function closeAdmin() { nfcStop(); $('adm').classList.remove('on'); }
+async function admOp(op, d) {
+  const r = await api(Object.assign({ a: 'adm', t: ADM, op }, d || {}));
+  if (!r.ok) { if (r.error === 'ADMIN') { setAdm(null); closeAdmin(); infoPanel('SESIÓN CADUCADA', 'La sesión de administrador ha caducado. Vuelve a entrar con tu llave.'); } throw new Error(r.error || 'Error'); }
+  return r;
+}
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
+function admPaint() {
+  const tabs = ['TRUCOS', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'SISTEMA'];
+  $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · TURBOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
+  $('admX').onclick = closeAdmin;
+  $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
+  const B = $('abody');
+  if (admTab === 'TRUCOS') {
+    let h = '<div style="color:#8ea3e6">Solo tú ves esto. Secretos escondidos en cada fase:</div>', last = '';
+    SECRETS.forEach(s2 => { const n = MAP.find(m => m.id === s2.f); if (s2.f !== last) { last = s2.f; h += '<h3>MUNDO 1 · ' + (n.boss ? 'JEFE' : n.bonus ? 'FASE SECRETA' : 'FASE ' + s2.f.slice(2)) + ' — ' + esc(n.name.replace(/^(JEFE|FASE SECRETA) · /, '')) + '</h3>'; }
+      h += '<div class="trk"><img loading="lazy" src="img/trucos/' + s2.img + '.webp?v=' + VERSION + '" alt=""><div><span class="tg">' + s2.f + '</span><b>' + esc(s2.t) + '</b><br>' + esc(s2.d) + '</div></div>'; });
+    B.innerHTML = h;
+  } else if (admTab === 'CÓDIGOS') {
+    B.innerHTML = '<div style="color:#8ea3e6">Se escriben en la consola (pausa · 10 toques rápidos sobre PAUSA). Aquí puedes activarlos directamente.</div>' + CODES.map(c => { const on = CHEAT[c[0].toLowerCase()]; return '<div class="akey"><b style="color:#ffd23c">' + c[0] + '</b> — ' + c[1] + '<br>' + esc(c[2]) + '<div class="arow"><button class="btn' + (on ? ' on' : '') + '" data-c="' + c[0] + '">' + (on ? 'ACTIVADO ✔' : 'ACTIVAR') + '</button></div></div>'; }).join('') + '<div class="akey"><b style="color:#ffd23c">HACK</b> — muestra la lista de códigos con la animación de hackeo.<br><b style="color:#ffd23c">ADMIN</b> — abre este panel (pide la llave NFC).</div>';
+    B.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const k = b.dataset.c.toLowerCase(); CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; SFX.power(); admPaint(); });
+  } else if (admTab === 'FASES') {
+    B.innerHTML = '<h3>JUGAR DIRECTAMENTE</h3><div class="arow">' + MAP.map((n, i) => '<button class="btn" data-f="' + i + '">' + (n.boss ? 'JEFE' : n.bonus ? 'SECRETA' : n.id) + '</button>').join('') + '</div>' +
+      '<h3>PROGRESO EN ESTE DISPOSITIVO</h3><div class="arow"><button class="btn" id="aOpen">ABRIR TODAS LAS FASES</button><button class="btn red" id="aReset">BORRAR MI PROGRESO</button></div><div class="amsg" id="amsg"></div>';
+    B.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { closeAdmin(); curId = MAP[+b.dataset.f].id; mapSel = +b.dataset.f; startGame(); });
+    $('aOpen').onclick = () => { MAP.forEach(n => DEV[n.id] = 1); try { localStorage.setItem('tl_dev', JSON.stringify(DEV)); } catch (e) {} admMsg('✔ Todas las fases abiertas en este dispositivo'); SFX.life(); };
+    $('aReset').onclick = () => { if ($('aReset').dataset.ok !== '1') { $('aReset').dataset.ok = '1'; $('aReset').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } PROG = {}; DEV = {}; saveProg(); try { localStorage.setItem('tl_dev', '{}'); } catch (e) {} admMsg('Progreso borrado'); $('aReset').textContent = 'BORRAR MI PROGRESO'; $('aReset').dataset.ok = ''; };
+  } else if (admTab === 'LLAVES') {
+    B.innerHTML = '<div class="amsg" id="amsg">Cargando llaves…</div><div id="akeys"></div><h3>AÑADIR LLAVE</h3><div class="akey">' + (HAY_NFC ? '<div class="arow"><button class="btn on" id="aScan">ESCANEAR LLAVE NUEVA</button></div>' : '<div style="color:#8ea3e6">Para escanear una llave abre este panel desde un móvil Android. Aquí puedes escribir su código a mano:</div>') +
+      '<div class="arow"><input class="ain" id="anN" placeholder="Nombre" maxlength="30" style="width:140px"><input class="ain" id="anK" placeholder="Código de la llave (hex)" maxlength="40" style="flex:1;min-width:160px"><button class="btn" id="anAdd">GUARDAR</button></div></div>';
+    const paintKeys = () => { $('akeys').innerHTML = admLl.map((k, i) => '<div class="akey"><div class="arow"><input class="ain" data-n="' + i + '" value="' + esc(k.n) + '" maxlength="30" style="width:150px"><input class="ain" data-k="' + i + '" value="' + esc(k.k) + '" maxlength="40" style="flex:1;min-width:170px;letter-spacing:.08em"></div><div class="arow"><span style="color:#8ea3e6;flex:1">Guardada el ' + new Date(k.f).toLocaleString('es-ES') + '</span><button class="btn" data-s="' + i + '">GUARDAR CAMBIOS</button><button class="btn red" data-d="' + i + '">BORRAR</button></div></div>').join('');
+      $('akeys').querySelectorAll('[data-s]').forEach(b => b.onclick = async () => { const i = +b.dataset.s; try { const r = await admOp('llaveEdit', { k: admLl[i].k, nk: $('akeys').querySelector('[data-k="' + i + '"]').value, n: $('akeys').querySelector('[data-n="' + i + '"]').value }); admLl = r.llaves; paintKeys(); admMsg('✔ Llave actualizada'); } catch (e) { admMsg(e.message, 1); } });
+      $('akeys').querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const i = +b.dataset.d; if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } try { const r = await admOp('llaveDel', { k: admLl[i].k }); admLl = r.llaves; paintKeys(); admMsg('Llave borrada'); } catch (e) { admMsg(e.message, 1); } }); };
+    admOp('llaves').then(r => { admLl = r.llaves; paintKeys(); admMsg(admLl.length + ' llave(s) con acceso de administrador'); }).catch(e => admMsg(e.message, 1));
+    $('anAdd').onclick = async () => { try { const r = await admOp('llaveAdd', { k: $('anK').value, n: $('anN').value || 'Llave' }); admLl = r.llaves; paintKeys(); $('anK').value = ''; $('anN').value = ''; admMsg('✔ Llave añadida'); SFX.life(); } catch (e) { admMsg(e.message, 1); } };
+    if (HAY_NFC) $('aScan').onclick = () => { admMsg('📡 Acerca la llave nueva a la parte de atrás del móvil…'); nfcRead(async k => { $('anK').value = k; admMsg('Llave leída: ' + k + '. Ponle un nombre y pulsa GUARDAR.'); }, t => admMsg(t, 1)); };
+  } else if (admTab === 'ESTADÍSTICAS') {
+    B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="ast"></div>';
+    admOp('stats').then(r => { const s2 = r.stats || {}, t = s2.tot || { visitas: 0, partidas: 0, superadas: 0 }, dias = s2.dias || {}, jug = s2.jug || {}, win = s2.win || {};
+      const bars = (o, lab) => { const e = Object.entries(o), mx = Math.max(1, ...e.map(x => x[1])); return '<div class="bars">' + (e.length ? e.map(([k, v]) => '<div class="bar"><span>' + esc(lab ? lab(k) : k) + '</span><i style="width:' + (v / mx * 100) + '%"></i><b>' + v + '</b></div>').join('') : '<div style="color:#8ea3e6">Aún no hay datos</div>') + '</div>'; };
+      const last = Object.keys(dias).sort().slice(-14), dd = {}; last.forEach(k => dd[k] = dias[k]);
+      const fases = {}; MAP.forEach(n => { if (jug[n.id] || win[n.id]) fases[n.id] = jug[n.id] || 0; });
+      $('ast').innerHTML = '<div class="arow"><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.visitas + '</b><br>visitas</div><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.partidas + '</b><br>partidas</div><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.superadas + '</b><br>fases superadas</div></div>' +
+        '<h3>JUGADORES POR DÍA (14 DÍAS)</h3>' + bars(dd, k => k.slice(8) + '/' + k.slice(5, 7)) + '<h3>PARTIDAS POR FASE</h3>' + bars(fases) + '<h3>% DE ÉXITO POR FASE</h3><div class="bars">' + MAP.filter(n => jug[n.id]).map(n => { const pc = Math.round((win[n.id] || 0) / jug[n.id] * 100); return '<div class="bar"><span>' + n.id + '</span><i style="width:' + pc + '%"></i><b>' + pc + '%</b></div>'; }).join('') + '</div>' +
+        '<div class="arow" style="margin-top:12px"><button class="btn red" id="aSR">PONER A CERO</button></div>';
+      admMsg(''); $('aSR').onclick = async () => { if ($('aSR').dataset.ok !== '1') { $('aSR').dataset.ok = '1'; $('aSR').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } await admOp('statsReset'); admPaint(); };
+    }).catch(e => admMsg(e.message, 1));
+  } else if (admTab === 'SISTEMA') {
+    B.innerHTML = '<div class="akey">Versión del juego: <b style="color:#35ff8a">v' + VERSION + '</b><br>Calidad de imágenes: <b>' + (TIER === 'hd' ? 'HD (tablet/PC)' : 'SD (móvil)') + '</b><br>Lector NFC en este dispositivo: <b>' + (HAY_NFC ? 'SÍ' : 'NO') + '</b><br>Mando conectado: <b>' + (padUsed ? 'SÍ' : 'NO') + '</b></div>' +
+      '<div class="arow"><button class="btn" id="aUpd">BUSCAR ACTUALIZACIÓN</button><button class="btn red" id="aOut">CERRAR SESIÓN ADMIN</button></div><div class="amsg" id="amsg"></div>';
+    $('aUpd').onclick = () => { admMsg('Buscando…'); fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v !== VERSION) { admMsg('Hay versión nueva (v' + j.v + '). Recargando…'); setTimeout(() => location.replace(location.pathname + '?u=' + j.v), 900); } else admMsg('✔ Ya tienes la última versión'); }).catch(() => admMsg('Sin conexión', 1)); };
+    $('aOut').onclick = () => { setAdm(null); closeAdmin(); };
+  }
+}
+// la consola pide la llave
+let admQrT = 0;
+function conAdmin() {
+  if (ADM) { say('SESIÓN DE ADMINISTRADOR ACTIVA', 'g', 18); setTimeout(openAdmin, 700); return; }
+  say('*** ACCESO RESTRINGIDO ***', 'r big', 24); say('IDENTIFICACIÓN POR LLAVE REQUERIDA', 'w', 14);
+  const ok = r => { clearInterval(admQrT); setAdm(r.adm); say(r.nueva ? 'LLAVE MAESTRA REGISTRADA ✔' : 'LLAVE RECONOCIDA ✔', 'g big', 22); say('ACCESO CONCEDIDO. ABRIENDO PANEL…', 'g', 14); SFX.win(); setTimeout(() => { if (CON.on) openAdmin(); }, 2200); };
+  if (HAY_NFC) {
+    CON.q.push({ txt: '', cls: '', fast: true });
+    setTimeout(() => { const box = document.createElement('div'); box.innerHTML = NFC_HTML + '<div id="cnfc" class="y">ACERCA TU LLAVE A LA PARTE DE ATRÁS DEL MÓVIL…</div>'; conOut.appendChild(box); conScroll(); }, 900);
+    nfcRead(async k => { $('cnfc') && ($('cnfc').textContent = 'LEYENDO LLAVE ' + k.replace(/(..)/g, '$1 ').trim() + ' …'); const r = await api({ a: 'llave', k }); if (!r.ok) throw new Error(r.error); ok(r); },
+      t => { const c = $('cnfc'); if (c) { c.textContent = '✖ ' + t.toUpperCase(); c.className = 'r'; } tone(140, 90, 0.3, 'square', 0.08); });
+  } else {
+    say('ESTE DISPOSITIVO NO LEE NFC. ESCANEA EL CÓDIGO CON TU MÓVIL ANDROID Y ACERCA LA LLAVE:', 'y', 10);
+    api({ a: 'qr' }).then(r => { if (!r.ok) { say('ERROR: ' + r.error, 'r', 10); return; }
+      const url = location.origin + location.pathname + '?admq=' + r.q, box = document.createElement('div'); box.className = 'conqr';
+      try { const q = qrcode(0, 'M'); q.addData(url); q.make(); box.innerHTML = '<img src="' + q.createDataURL(5, 0) + '" width="190" height="190" style="image-rendering:pixelated;display:block" alt="QR">'; } catch (e) { box.textContent = url; }
+      setTimeout(() => { conOut.appendChild(box); conScroll(); }, 1200);
+      clearInterval(admQrT); admQrT = setInterval(async () => { if (!CON.on) return clearInterval(admQrT); const s2 = await api({ a: 'qrEst', q: r.q }); if (s2.estado === 'ok') ok(s2); else if (s2.estado === 'caducado') { clearInterval(admQrT); say('EL CÓDIGO HA CADUCADO. ESCRIBE ADMIN OTRA VEZ.', 'r', 10); } }, 2000);
+    });
+  }
+}
+// el móvil que escanea el QR autoriza al otro dispositivo con la llave
+(() => {
+  const q = new URLSearchParams(location.search).get('admq'); if (!q) return;
+  history.replaceState(null, '', location.pathname);
+  const a = $('adm'); a.classList.add('on');
+  a.innerHTML = '<div class="abody" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><h3 style="font-size:1.4em">AUTORIZAR ACCESO</h3>' + NFC_HTML + '<div class="amsg" id="amsg">' + (HAY_NFC ? 'Pulsa el botón y acerca tu llave a la parte de atrás del móvil' : 'Este móvil no lee NFC. Usa un Android con Chrome.') + '</div>' +
+    (HAY_NFC ? '<div class="arow"><button class="btn on" id="qScan">ACTIVAR LECTOR</button></div>' : '') + '<div class="arow"><button class="btn" id="qX">CERRAR</button></div></div>';
+  $('qX').onclick = closeAdmin;
+  if (HAY_NFC) $('qScan').onclick = () => { admMsg('📡 Esperando la llave…'); nfcRead(async k => { const r = await api({ a: 'qrOk', q, k }); if (!r.ok) throw new Error(r.error); admMsg('✔ Acceso autorizado. Ya puedes cerrar esto.'); SFX && SFX.win(); }, t => admMsg(t, 1)); };
+})();
 
 /* ---------- actualización automática ---------- */
 // Mira cada minuto si hay versión nueva. Nunca recarga en mitad de una partida: espera a que el jugador vuelva al menú.
@@ -1675,5 +1896,5 @@ loadImages(() => {
   let back = null; try { back = JSON.parse(sessionStorage.getItem('tl_back') || 'null'); sessionStorage.removeItem('tl_back'); } catch (e) {}
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, MAP, die, get DEV() { return DEV; }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; } };
+window.__TL = { noEnemies() { enemies = []; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, MAP, die, get DEV() { return DEV; }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; } };
 })();

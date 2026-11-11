@@ -29,7 +29,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 .ov.on{display:flex}
 #title{background:linear-gradient(180deg,rgba(7,10,30,.35),rgba(7,10,30,.78))}
 #title .logo{width:min(78vw,620px);max-height:26vh;object-fit:contain;filter:drop-shadow(0 0 18px rgba(80,120,255,.55))}
-#title .hero{height:min(34vh,300px);margin:1vh 0;animation:bob 2.2s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(41,230,255,.35))}
+#title .hero{height:min(30vh,290px);margin:1vh 0;animation:bob 2.2s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(41,230,255,.35))}
 @keyframes bob{50%{transform:translateY(-10px)}}
 .btn{font:inherit;font-weight:800;letter-spacing:.06em;color:#fff;border:2px solid var(--cy);background:rgba(12,20,52,.82);border-radius:14px;padding:12px 22px;cursor:pointer;box-shadow:0 0 14px rgba(41,230,255,.45),inset 0 0 12px rgba(41,230,255,.18);transition:transform .08s}
 .btn:active{transform:scale(.95)}
@@ -101,10 +101,12 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
   <img class="hero" id="heroImg" alt="Lucas">
   <button class="btn big" id="btnPlay">JUGAR</button>
   <div class="row">
+    <button class="btn" id="btnTips">CONSEJOS</button>
     <button class="btn" id="btnInstall">INSTALAR</button>
     <button class="btn" id="btnShare">COMPARTIR</button>
     <button class="btn" id="btnSnd">SONIDO: SÍ</button>
     <button class="btn" id="btnFull" style="display:none">PANTALLA COMPLETA</button>
+    <button class="btn" id="btnWeb" style="border-color:#ffd23c;box-shadow:0 0 14px rgba(255,210,60,.45),inset 0 0 12px rgba(255,210,60,.18)">WEB DEL CREADOR</button>
   </div>
   <div class="credit">UN JUEGO DE FUTURMOVIL</div>
   <div class="ver" id="ver"></div>
@@ -145,7 +147,8 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
   <button class="btn" id="iosOk">ENTENDIDO</button>
 </div></div>
 
-<script src="game.js?v=20"></script>
+<script src="js/qrcode.min.js"></script>
+<script src="game.js?v=21"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 </script>
