@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.48';
+const VERSION = '0.49';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -844,7 +844,7 @@ LEVELS['2-1'] = function () {
   B.hid(70, 10, 'chip'); B.en('erizo', 72, 13); B.pipe(75, 14, 200, 14, true);                       // escotilla oculta → iglú secreto
   B.arc(78, 83, 11, 2); B.ground(83, 120); B.cp(85, 14); B.snowgun(118, 14, -1, 2.6); B.block(92, 93, 12, 13); B.block(100, 101, 12, 13); B.block(108, 109, 12, 13); B.row(94, 99, 11); B.row(102, 107, 11);
   P(112, 116, 10); B.box(114, 7, 'turbo'); B.en('dron', 105, 8, { x0: 95, x1: 115 });
-  B.mover(121, 13, 3, 72, 0, 1.0, 0); B.arc(121, 128, 9, 2); B.ground(129, 176); B.block(132, 140, 11, 13); B.fake(134, 138, 12, 13); B.gear(136, 13); B.row(133, 139, 10);     // colina hueca
+  B.mover(121, 13, 3, 72, 0, 1.0, 0); B.arc(121, 128, 9, 2); B.ground(129, 176); B.block(132, 140, 11, 13); B.fake(132, 138, 12, 13); B.gear(136, 13); B.row(133, 139, 10);     // colina hueca
   B.en('patrulla', 146, 13); B.snowgun(172, 14, -1, 2.4, 0.5); B.crystal(150, 14, 2, 1.3); B.en('alien', 158, 13); B.cp(164, 14);
   // la torre de hielo: se sube con cristales saltarines
   B.spring(168, 14); P(170, 173, 9); B.row(170, 173, 8); B.spring(172, 9); P(175, 177, 5); B.block(178, 186, 4, 15); B.ground(176, 196); B.crystal(185, 4, 0, 1.4); B.crystal(179, 4, 1, 0.8);
@@ -897,7 +897,7 @@ LEVELS['2-4'] = function () {
   B.block(146, 147, 9, 15); B.block(151, 152, 11, 15); B.block(156, 157, 8, 15); B.row(145, 158, 5); B.box(156, 4, 'estrella');
   // la isla final: solo se llega montado en la plataforma que cruza el abismo
   B.block(160, 164, 11, 15); B.mover(168, 11, 3, 4 * T, 0, 0.6, 0); B.mover(180, 11, 3, 3 * T, 0, 0.6, 1.5); B.row(167, 184, 8); B.block(187, 199, 11, 15); B.crystal(196, 11, 0, 1.4);
-  return B.done({ name: 'TORMENTA DE NIEVE', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 192 * T + T / 2, y: 11 * T } });
+  return B.done({ name: 'TORMENTA DE NIEVE', time: 220, theme: 'ice', ice: true, meteors: { zones: [[112 * T, 160 * T]], every: 1.25, acc: 0, style: 'comet' }, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 192 * T + T / 2, y: 11 * T } });
 };
 // 2-5 · la avalancha empuja la pantalla: ladera abajo sin parar
 LEVELS['2-5'] = function () {
@@ -1025,7 +1025,7 @@ LEVELS['3-5'] = function () {
   const roof = (a, b) => { B.block(a, a, 10, 13); B.block(b, b, 10, 13); B.block(a, b, 9, 9); B.row(a + 1, b - 1, 13); };
   roof(26, 32); B.en('patrulla', 38, 13); B.arc(42, 46, 11, 2); B.block(44, 44, 14, 15, ' '); B.block(43, 45, 14, 15, ' ');
   roof(52, 57); B.en('alien', 62, 13); B.geyser(68, 14, 4, 0.5); roof(73, 79); B.box(76, 6, 'estrella'); B.cp(82, 14);
-  B.block(90, 92, 12, 13); B.en('torreta', 91, 11); B.block(96, 101, 10, 13); B.fake(97, 100, 11, 13); B.gear(99, 12); B.row(96, 101, 9);
+  B.block(90, 92, 12, 13); B.en('torreta', 91, 11); B.block(96, 101, 10, 13); B.fake(96, 100, 11, 13); B.gear(99, 12); B.row(96, 101, 9);
   roof(108, 113); B.en('erizo', 118, 13); B.arc(122, 128, 11, 2); B.block(123, 127, 14, 15, ' '); roof(133, 139); B.cp(142, 14); B.gear(146, 10); P(144, 148, 11);
   B.en('patrulla', 154, 13); roof(160, 166); B.geyser(171, 14, 4, 1.2); B.en('alien', 176, 13);
   B.block(184, 185, 8, 13); B.block(196, 197, 8, 13); B.block(184, 197, 6, 7); B.crystal(187, 14, 3, 1.2); B.crystal(194, 14, 3, 1.2); B.block(205, 209, 0, 15);
@@ -1040,7 +1040,7 @@ LEVELS['3-6'] = function () {
   B.arc(102, 108, 11, 2); B.block(103, 107, 14, 15, ' '); B.block(112, 130, 3, 10); B.strip(113, 129); B.en('alien', 122, 13); B.gear(127, 12);
   B.block(136, 137, 7, 13); B.block(136, 137, 7, 9, 'C'); B.block(136, 137, 10, 13, ' '); B.block(136, 137, 3, 6); B.row(132, 140, 12);      // pasa por debajo… o rompe la roca con láser
   B.box(132, 8, 'laser'); B.arc(144, 150, 11, 2); B.block(145, 149, 14, 15, ' '); B.en('erizo', 156, 13); B.cp(162, 14);
-  B.block(168, 190, 3, 9); B.strip(169, 189); B.row(170, 188, 12); B.block(194, 195, 12, 13); B.block(200, 204, 11, 13); B.fake(201, 203, 12, 13); B.gear(202, 12); B.pipe(212, 14, 236, 14, true);
+  B.block(168, 190, 3, 9); B.strip(169, 189); B.row(170, 188, 12); B.block(194, 195, 12, 13); B.block(200, 204, 11, 13); B.fake(200, 203, 12, 13); B.gear(202, 12); B.pipe(212, 14, 236, 14, true);
   B.arc(216, 222, 11, 2); B.block(217, 221, 14, 15, ' '); B.block(226, 249, 0, 9); B.crystal(240, 14, 3, 1.4); B.row(230, 238, 12);
   return B.done(LV({ name: 'TÚNELES DE LAVA', time: 160, cave: true, intro: '¡LA VAGONETA NO PARA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 245 * T + T / 2, y: 14 * T }, auto: { speed: 165, x: 0 } }));
 };
@@ -1065,7 +1065,7 @@ LEVELS['3-8'] = function () {
   B.strip(42, 56); B.block(46, 52, 8, 8); B.laser(49, 9, 13, 0); B.row(43, 55, 12); B.set(60, 10, '!');
   B.block(64, 72, 10, 10, 'X'); B.block(64, 72, 6, 6, 'Y'); B.row(64, 72, 5); B.gear(68, 4); B.block(74, 75, 6, 13); B.en('alien', 70, 13); B.cp(80, 14);
   B.block(86, 88, 12, 13); B.en('torreta', 87, 11); B.set(92, 10, '!'); B.block(96, 106, 12, 13, 'Y'); B.block(96, 106, 12, 12, 'X'); B.lift(108, 110, 5, 13); P(111, 116, 5); B.row(111, 116, 4); B.box(114, 1, 'escudo');
-  B.block(118, 124, 9, 13); B.fake(118, 118, 11, 13); B.row(119, 123, 12); B.gear(122, 12); B.en('erizo', 130, 13); B.cp(136, 14);
+  B.block(118, 124, 9, 13); B.block(119, 123, 11, 13, ' '); B.fake(118, 118, 11, 13); B.row(119, 122, 12); B.gear(122, 12); B.en('erizo', 130, 13); B.cp(136, 14);
   // el horno: se sube alternando bloques
   B.set(140, 10, '!'); B.block(144, 147, 11, 11, 'X'); B.block(148, 151, 8, 8, 'Y'); B.block(152, 155, 5, 5, 'X'); B.set(150, 2, '!'); B.block(158, 176, 4, 13); B.laser(166, 0, 3, 0.4); B.crystal(174, 4, 3, 1.3); B.block(196, 199, 0, 15);
   return B.done(LV({ name: 'LA FUNDICIÓN', time: 240, intro: '¡GOLPEA LOS INTERRUPTORES!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 170 * T + T / 2, y: 4 * T } }));
@@ -1102,7 +1102,7 @@ LEVELS['3-11'] = function () {
   B.block(103, 110, 12, 15); B.fake(103, 103, 13, 14); B.gear(106, 14); B.block(104, 109, 13, 14, ' '); B.cp(108, 12); B.row(103, 110, 11);
   B.fall(114, 15, 2); B.lift(118, 120, 6, 22); B.fall(124, 8, 2); B.fall(130, 7, 2); B.fall(136, 6, 2); B.row(124, 138, 4);
   B.block(142, 159, 6, 9); B.crystal(156, 6, 3, 1.4); B.block(158, 159, 0, 5);
-  return B.done(LV({ name: 'ROCAS FLOTANTES', time: 190, sky: true, gk: 0.55, intro: '¡GRAVEDAD BAJA!', spawn: { x: 3 * T, y: 24 * T }, goal: { x: 150 * T + T / 2, y: 6 * T } }));
+  return B.done(LV({ name: 'ROCAS FLOTANTES', time: 190, sky: true, gk: 0.55, intro: '¡GRAVEDAD BAJA!', meteors: { zones: [[36 * T, 140 * T]], every: 1.3, acc: 0 }, spawn: { x: 3 * T, y: 24 * T }, goal: { x: 150 * T + T / 2, y: 6 * T } }));
 };
 // 3-12 · murallas de la fortaleza: tres llaves repartidas por las torres abren la puerta del castillo
 LEVELS['3-12'] = function () {
@@ -2837,21 +2837,51 @@ const SECRETS = [
   { f: '1-4', img: '1-4a', t: 'Vida oculta en la base de la torre', d: 'En el suelo de la base, entre la fila de chips y la caja del escudo, salta: hay un bloque invisible con una vida.' },
   { f: '1-B', img: '1-Ba', t: 'Vida oculta bajo el 5G', d: 'Justo a la derecha de la plataforma del "5G" de chips, salta en el aire: un bloque invisible esconde una vida.' },
   { f: '1-J', img: '1-Ja', t: 'Vida antes del jefe', d: 'Junto al punto de control de antes de la arena, salta a la izquierda de la caja: un bloque invisible te da una vida para la pelea.' },
-  { f: '2-1', img: '2-1a', t: 'Vida oculta junto a los chips', d: 'Al empezar, justo a la derecha de la primera fila de chips, salta: aparece un bloque invisible con una vida.' },
-  { f: '2-1', img: '2-1b', t: 'La torre de la pared falsa', d: 'La torre baja de hielo del tramo 4 está hueca por abajo: camina contra ella y la atraviesas. Dentro hay chips y un engranaje.' },
-  { f: '2-1', img: '2-1c', t: 'El agujero de la cueva secreta', d: 'Después del punto de control, déjate caer por el agujero (en vez de saltarlo): no mueres, caes en una cueva secreta llena de chips con el tercer engranaje. El portal te devuelve al camino.' },
-  { f: '2-2', img: '2-2a', t: 'Vida oculta en la entrada', d: 'Entre la fila de chips y la caja del escudo, salta: hay un bloque invisible con una vida.' },
-  { f: '2-2', img: '2-2b', t: 'Cámara dentro de la roca', d: 'Antes de la gran roca, sube a la plataforma pequeña y salta hacia la roca: su parte de arriba es una pared falsa con un engranaje y chips dentro.' },
-  { f: '2-3', img: '2-3a', t: 'Vida oculta al zambullirte', d: 'Nada más empezar, nada hacia arriba en la zona de los primeros chips: un bloque invisible esconde una vida.' },
-  { f: '2-3', img: '2-3b', t: 'La roca hueca', d: 'Tras las corrientes, la roca grande tiene una pared falsa a media altura: entra nadando y coge el engranaje.' },
-  { f: '2-4', img: '2-4a', t: 'Vida oculta antes de la ventisca', d: 'Al empezar, a la derecha de los chips, salta: bloque invisible con una vida.' },
-  { f: '2-4', img: '2-4b', t: 'El agujero de la gruta', d: 'Después del primer cristal saltarín, déjate caer por el agujero: llegas a una gruta secreta bajo la nieve con el tercer engranaje.' },
-  { f: '2-4', img: '2-4c', t: 'Montículo de nieve hueco', d: 'Al final, el montículo de nieve bajo se atraviesa andando: dentro hay un engranaje.' },
-  { f: '2-5', img: '2-5a', t: 'Vida oculta antes de la avalancha', d: 'Al empezar, antes de la caja del escudo, salta: hay una vida escondida. ¡Cógela rápido, que viene la avalancha!' },
+  { f: '2-1', img: 'n2-1a', t: 'Vida oculta al empezar', d: "Nada más empezar, a la derecha de la primera fila de chips, salta: aparece un bloque invisible con una vida." },
+  { f: '2-1', img: 'n2-1b', t: 'La escotilla invisible del iglú', d: "Pasado el pico del engranaje, justo antes del erizo, agáchate en el suelo: hay una escotilla que no se ve y te lleva a un iglú secreto con chips, una vida oculta y un portal de vuelta." },
+  { f: '2-1', img: 'n2-1c', t: 'La colina hueca', d: "La colina baja que hay después de la plataforma móvil está hueca: camina contra ella y la atraviesas. Dentro hay un engranaje." },
+  { f: '2-2', img: 'n2-2a', t: 'Vida oculta en la entrada de la cueva', d: "Al empezar, encima de la primera fila de chips, salta: bloque invisible con una vida." },
+  { f: '2-2', img: 'n2-2b', t: 'La llave de la roca', d: "La primera llave está dentro de una roca baja: su pared de la izquierda es falsa (la atraviesas andando) y la de la derecha se rompe con el láser." },
+  { f: '2-3', img: 'n2-3a', t: 'Vida oculta al zambullirte', d: "Nada más empezar, nada un poco hacia arriba sobre los primeros chips: bloque invisible con una vida." },
+  { f: '2-3', img: 'n2-3b', t: 'La cámara de hielo sellada', d: "Pasada la primera corriente, la cámara bajo el techo de hielo tiene la pared de la izquierda falsa: entra por ahí a por el engranaje." },
+  { f: '2-4', img: 'n2-4a', t: 'Vida oculta antes de la ventisca', d: "Al empezar, a la izquierda de la caja, salta: bloque invisible con una vida." },
+  { f: '2-4', img: 'n2-4b', t: 'El suelo falso de la isla', d: "En la isla con cristal saltarín y punto de control, el centro del suelo es falso: colócate justo en medio y te hundes en una cámara con un engranaje." },
+  { f: '2-5', img: 'n2-5a', t: 'Vida oculta en lo alto de la ladera', d: "Nada más empezar, encima de los chips, salta rápido antes de que la avalancha te empuje: hay una vida escondida." },
+  { f: '2-5', img: 'n2-5b', t: 'La escotilla del refugio', d: "Después del segundo punto de control, agáchate justo donde empieza el escalón: una escotilla invisible te mete en el refugio secreto del fondo del valle, lleno de chips y con un engranaje." },
   { f: '2-6', img: '2-6a', t: 'El portal escondido en el agujero', d: 'En el suelo de la mina, a la derecha, hay un agujero: cae por él a una galería oculta con chips, un engranaje y un portal que te lleva a una cámara secreta del pozo con otro engranaje.' },
   { f: '2-6', img: '2-6b', t: 'Vida oculta en el fondo del pozo', d: 'En el suelo de la mina, a la derecha de la primera fila de chips, salta: bloque invisible con una vida.' },
-  { f: '2-B', img: '2-Ba', t: 'Vida oculta sobre las nubes', d: 'Nada más empezar, salta un poco a la derecha: aparece un bloque invisible con una vida.' },
-  { f: '2-J', img: '2-Ja', t: 'Vida antes del Guardián de Hielo', d: 'Junto al punto de control de antes de la arena, salta a la izquierda de la caja: bloque invisible con una vida.' }
+  { f: '2-B', img: 'n2-Ba', t: 'Vida oculta entre las nubes', d: "Al empezar, salta sobre la fila de chips: bloque invisible con una vida." },
+  { f: '2-J', img: 'n2-Ja', t: 'Vida antes del Guardián de Hielo', d: "Junto al punto de control de antes de la arena, salta: bloque invisible con una vida." },
+  { f: '3-1', img: 'n3-1a', t: 'Vida oculta al empezar', d: "Al empezar, a la derecha de la primera fila de chips, salta: bloque invisible con una vida." },
+  { f: '3-1', img: 'n3-1b', t: 'El agujero sin lava', d: "Tras el segundo punto de control hay un agujero sin lava: déjate caer y llegas a una cueva secreta con chips, un engranaje y un portal de vuelta." },
+  { f: '3-1', img: 'n3-1c', t: 'El montículo hueco', d: "El montículo de roca de después del agujero tiene la cara izquierda falsa: entra andando y coge el engranaje." },
+  { f: '3-2', img: 'n3-2a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja del turbo, salta: bloque invisible con una vida." },
+  { f: '3-2', img: 'n3-2b', t: 'La roca hueca', d: "Pasado el segundo géiser, la roca alta tiene la cara izquierda falsa: dentro hay un engranaje." },
+  { f: '3-3', img: 'n3-3a', t: 'Vida oculta en la boca del cráter', d: "Al empezar, ve a la derecha del borde del cráter y salta: bloque invisible con una vida." },
+  { f: '3-3', img: 'n3-3b', t: 'El hueco en la pared', d: "Bajando, a media altura, la pared de la izquierda tiene un hueco falso con un engranaje dentro." },
+  { f: '3-4', img: 'n3-4a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja, salta: bloque invisible con una vida." },
+  { f: '3-4', img: 'n3-4b', t: 'El agujero sin lava', d: "Tras el segundo punto de control hay un agujero pequeño sin lava: cae por él a una orilla secreta con chips y un engranaje." },
+  { f: '3-5', img: 'n3-5a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja del escudo, salta: bloque invisible con una vida." },
+  { f: '3-5', img: 'n3-5b', t: 'La roca hueca', d: "Pasada la torreta, la roca baja se atraviesa andando por la izquierda: dentro hay un engranaje." },
+  { f: '3-6', img: 'n3-6a', t: 'Vida oculta al subir a la vagoneta', d: "Al empezar, encima de los chips, salta enseguida: bloque invisible con una vida." },
+  { f: '3-6', img: 'n3-6b', t: 'La roca hueca y el atajo', d: "Casi al final, la roca baja se atraviesa por la izquierda (engranaje dentro). Justo después, agáchate en el suelo: una escotilla invisible te deja junto a la salida." },
+  { f: '3-7', img: 'n3-7a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja, salta: bloque invisible con una vida." },
+  { f: '3-7', img: 'n3-7b', t: 'El hueco del puente', d: "En el último tramo del puente hay un hueco sin lava: cae por él a una cueva secreta con un engranaje y un portal de vuelta." },
+  { f: '3-8', img: 'n3-8a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja, salta: bloque invisible con una vida." },
+  { f: '3-8', img: 'n3-8b', t: 'La máquina hueca', d: "Después del ascensor de calor, la máquina baja tiene la cara izquierda falsa: dentro hay un engranaje." },
+  { f: '3-9', img: 'n3-9a', t: 'Vida oculta en el fondo del horno', d: "Al empezar, en el suelo, salta un poco a la derecha de los chips: bloque invisible con una vida." },
+  { f: '3-9', img: 'n3-9b', t: 'La cámara en la pared', d: "Casi arriba, a la derecha, hay una cámara pegada a la pared con la entrada izquierda falsa: dentro hay chips y un engranaje." },
+  { f: '3-10', img: 'n3-10a', t: 'Vida oculta al empezar', d: "Al empezar, entre los chips y la caja, salta: bloque invisible con una vida." },
+  { f: '3-10', img: 'n3-10b', t: 'La escotilla invisible', d: "Justo después de la caja del láser, agáchate en el suelo: hay una escotilla invisible que te lleva a la sala de los engranajes por un atajo." },
+  { f: '3-11', img: 'n3-11a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja, salta: bloque invisible con una vida." },
+  { f: '3-11', img: 'n3-11b', t: 'La roca hueca', d: "En la roca grande del segundo punto de control, la cara izquierda es falsa: entra y coge el engranaje." },
+  { f: '3-12', img: 'n3-12a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja, salta: bloque invisible con una vida." },
+  { f: '3-12', img: 'n3-12b', t: 'La puerta falsa de la segunda torre', d: "La segunda torre se abre rompiendo su pared agrietada con el láser… pero su pared de la derecha es falsa: también puedes entrar andando por ahí a por la llave." },
+  { f: '3-13', img: 'n3-13a', t: 'Vida oculta al empezar', d: "Al empezar, a la izquierda de la caja, salta: bloque invisible con una vida." },
+  { f: '3-13', img: 'n3-13b', t: 'La escotilla de la isla', d: "En la isla del primer punto de control, agáchate a la derecha del punto de control: una escotilla invisible te lleva directo a la isla de la antena. En esa misma isla, el bloque de la derecha tiene una cara falsa con un engranaje." },
+  { f: '3-14', img: 'n3-14a', t: 'Vida oculta al empezar', d: "Al empezar, a la derecha de la caja del láser, salta: bloque invisible con una vida." },
+  { f: '3-B', img: 'n3-Ba', t: 'Vida oculta en el tesoro', d: "Al empezar, sobre la fila de chips, salta: bloque invisible con una vida." },
+  { f: '3-J', img: 'n3-Ja', t: 'Vida antes del Señor del Magma', d: "Junto al punto de control de antes de la arena, salta: bloque invisible con una vida." }
 ];
 let admTab = 'TRUCOS', admLl = [], admSt = null;
 function openAdmin() {
