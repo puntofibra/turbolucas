@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.67';
+const VERSION = '0.68';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -212,7 +212,7 @@ let touchCrouchT = 0;          // en pantalla táctil, Lucas sigue agachado 1 s 
 document.addEventListener('contextmenu', e => e.preventDefault());
 // nada de ampliar la pantalla: ni pellizco, ni doble toque, ni Ctrl+rueda
 const noZoom = e => { if (e.touches && e.touches.length > 1 || e.scale !== undefined && e.scale !== 1) e.preventDefault(); };
-document.addEventListener('touchstart', noZoom, { passive: false }); document.addEventListener('touchmove', e => { if (!(e.touches.length === 1 && e.target.closest && e.target.closest('#conOut,.abody,.tbody'))) e.preventDefault(); }, { passive: false });
+document.addEventListener('touchstart', noZoom, { passive: false }); document.addEventListener('touchmove', e => { if (!(e.touches.length === 1 && e.target.closest && e.target.closest('#conOut,.abody,.tbody,.pal,#uidlg .ucard'))) e.preventDefault(); }, { passive: false });
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
 let lastTap = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTap < 320) e.preventDefault(); lastTap = n; }, { passive: false });
 document.addEventListener('dblclick', e => e.preventDefault());
@@ -670,7 +670,7 @@ LEVELS['1-4'] = function () {
   B.block(3, 30, H - 2, H - 1); B.row(6, 10, 108); B.box(16, 106, 'escudo'); B.hid(12, 106, 'vida'); B.en('patrulla', 22, 109);
   P(24, 28, 107); B.row(24, 28, 106); P(18, 22, 104); P(10, 14, 101); B.en('alien', 12, 100); P(4, 8, 98); B.arc(4, 8, 96, 1);
   // B · láser y saltador
-  P(9, 13, 95); P(15, 19, 92); B.en('patrulla', 16, 91); B.laser(18, 87, 91, 0, 1.1, 1.5);      // láser anclado: del techo (repisa) al suelo de la plataforma P(23, 28, 89); B.row(23, 28, 88); B.cp(27, 89);
+  P(9, 13, 95); P(15, 19, 92); B.en('patrulla', 16, 91); B.laser(18, 87, 91, 0, 1.1, 1.5); P(23, 28, 89); B.row(23, 28, 88); B.cp(27, 89);      // láser anclado del techo (repisa) al suelo de la plataforma
   B.block(14, 22, 86, 86); B.pad(15, 86); B.row(17, 21, 85); B.box(19, 82, 'chip'); B.box(20, 82, 'chip');
   B.block(3, 5, 84, 84); B.gear(4, 82); B.arc(6, 12, 84, 2);                  // engranaje 1: a la izquierda del saltador
   // C · ascensor antigravedad entre drones
@@ -686,7 +686,7 @@ LEVELS['1-4'] = function () {
   P(11, 15, 40); P(16, 20, 37); B.block(3, 15, 34, 34); B.block(21, 30, 34, 34); B.block(16, 20, 34, 34, 'B');
   B.en('erizo', 9, 33); B.en('patrulla', 26, 33); B.pad(23, 34); B.block(26, 30, 28, 28); B.gear(29, 26); B.row(26, 28, 27);   // engranaje 3: saltador hasta la repisa
   P(4, 8, 31); P(10, 14, 28); B.box(12, 24, 'laser'); P(16, 20, 25); B.en('dron', 18, 21, { x0: 8, x1: 26 }); P(10, 14, 22); P(4, 8, 19); B.cp(6, 19);
-  P(10, 14, 16); B.row(10, 14, 15); P(4, 8, 13);
+  P(8, 12, 16); B.row(8, 12, 15); P(4, 8, 13);
   // F · la cima: antena 5G
   P(3, 7, 11); B.block(9, 30, 10, 11); B.en('patrulla', 14, 9); B.en('patrulla', 19, 9); B.arc(9, 22, 7, 3); B.box(17, 5, 'chip');
   return B.done({ name: 'TORRE DE ANTENAS', time: 210, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 26 * T + T / 2, y: 10 * T }, rise: { y: H * T + 400, speed: 40, startY: 103 * T, on: false } });
@@ -927,7 +927,7 @@ LEVELS['2-2'] = function () {
   B.box(80, 20, 'laser');
   // pisos superiores (se suben por los cristales saltarines)
   B.spring(102, 24); P(100, 112, 18); B.crystal(104, 18, 2); B.en('patrulla', 108, 17); P(90, 98, 15); B.row(90, 98, 14); B.en('dron', 85, 10, { x0: 76, x1: 96 }); P(74, 86, 13); B.crystal(78, 13, 0); B.gear(80, 11);
-  P(60, 70, 10); B.key(62, 8); B.crystal(68, 10, 1); B.icicle(64, 3); B.icicle(67, 3); P(46, 56, 13); B.en('alien', 50, 12); P(30, 42, 10); B.crystal(34, 10, 2); B.gear(36, 8); P(16, 26, 13); B.spring(20, 13); P(6, 12, 8); B.key(9, 6); B.crystal(11, 8, 0, 0.8);
+  P(60, 70, 10); B.key(62, 8); B.crystal(68, 10, 1); B.icicle(64, 3); B.icicle(67, 3); P(46, 56, 13); B.en('alien', 50, 12); P(30, 42, 10); B.crystal(34, 10, 2); B.gear(36, 8); P(16, 26, 13); B.spring(17, 13); P(6, 13, 8); B.key(9, 6); B.crystal(11, 8, 0, 0.8);
   B.spring(115, 24); P(116, 124, 19); B.crystal(120, 19, 1); B.en('dron', 128, 13, { x0: 118, x1: 138 }); P(128, 134, 15); B.gear(131, 13); B.row(128, 134, 14);
   // salida: puerta de hielo que se abre con las 3 llaves
   B.cp(118, 24); B.en('erizo', 126, 23); B.crystal(130, 24, 2); B.door(136, 20, 23); B.block(136, 147, 15, 19); B.crystal(146, 24, 0, 1.3);
@@ -1074,7 +1074,7 @@ LEVELS['3-4'] = function () {
   B.fall(57, 13, 2); B.jumper(61, 16, 7, 0.5); B.fall(64, 12, 2); B.jumper(68, 16, 7, 1.6); B.fall(71, 11, 2); B.gear(72, 8); B.fall(75, 12, 2); B.row(57, 76, 9);
   B.ground(79, 104); B.cp(81, 14); B.en('alien', 88, 13); B.en('erizo', 98, 13);
   B.arc(104, 108, 11, 2); B.pitWarp(105, 107, 205, 13); B.ground(108, 128); B.en('patrulla', 118, 13); B.crystal(126, 14, 3);
-  B.mover(131, 12, 3, 96, 0, 0.9, 0); B.jumper(137, 16, 7, 0.3); B.jumper(143, 16, 7, 1.5); B.fall(150, 11, 2); B.gear(151, 8); B.mover(155, 12, 3, 0, 72, 1.2, 0.7); B.row(131, 158, 9);
+  B.mover(138, 12, 3, 6 * T, 0, 0.55, 0); B.jumper(137, 16, 7, 0.3); B.jumper(143, 16, 7, 1.5); B.fall(150, 11, 2); B.gear(151, 8); B.mover(155, 12, 3, 0, 72, 1.2, 0.7); B.row(131, 158, 9);
   B.ground(161, 170); B.cp(163, 14);
   // la isla: se llega en una roca que cruza el río
   B.mover(173, 12, 3, 3 * T, 0, 0.7, 0); B.jumper(178, 16, 6, 0.9); B.block(183, 190, 13, 15); B.crystal(189, 13, 3, 1.3); B.block(198, 199, 0, 15);
@@ -1085,13 +1085,13 @@ LEVELS['3-4'] = function () {
 LEVELS['3-5'] = function () {
   const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.ground(0, 209); B.hid(6, 10, 'vida'); B.box(10, 10, 'escudo'); B.row(13, 20, 12);
-  const roof = (a, b) => { B.block(a, a, 10, 13); B.block(b, b, 10, 13); B.block(a, b, 9, 9); B.row(a + 1, b - 1, 13); };
+  const roof = (a, b) => { B.block(a, a, 10, 11); B.block(b, b, 10, 11); B.block(a, b, 9, 9); B.row(a + 1, b - 1, 13); };          // refugio: se entra por debajo de los pilares
   roof(26, 32); B.en('patrulla', 38, 13); B.arc(42, 46, 11, 2); B.block(44, 44, 14, 15, ' '); B.block(43, 45, 14, 15, ' ');
   roof(52, 57); B.en('alien', 62, 13); B.geyser(68, 14, 4, 0.5); roof(73, 79); B.box(76, 6, 'estrella'); B.cp(82, 14);
   B.block(90, 92, 12, 13); B.en('torreta', 91, 11); B.block(96, 101, 10, 13); B.fake(96, 100, 11, 13); B.gear(99, 12); B.row(96, 101, 9);
   roof(108, 113); B.en('erizo', 118, 13); B.arc(122, 128, 11, 2); B.block(123, 127, 14, 15, ' '); roof(133, 139); B.cp(142, 14); B.gear(146, 10); P(144, 148, 11);
   B.en('patrulla', 154, 13); roof(160, 166); B.geyser(171, 14, 4, 1.2); B.en('alien', 176, 13);
-  B.block(184, 185, 8, 13); B.block(196, 197, 8, 13); B.block(184, 197, 6, 7); B.crystal(187, 14, 3, 1.2); B.crystal(194, 14, 3, 1.2); B.block(205, 209, 0, 15);
+  B.block(184, 185, 8, 11); B.block(196, 197, 8, 11); B.block(184, 197, 6, 7);          // arco: se entra por debajo B.crystal(187, 14, 3, 1.2); B.crystal(194, 14, 3, 1.2); B.block(205, 209, 0, 15);
   return B.done(LV({ name: 'LLUVIA DE FUEGO', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 190 * T + T / 2, y: 14 * T }, bombs: { zones: [[22 * T, 183 * T]], every: 0.9 }, intro: '¡MIRA DÓNDE CAEN!' }));
 };
 // 3-6 · la vagoneta: la pantalla avanza sola por los túneles de la mina, con techos bajos y cintas turbo
@@ -1139,7 +1139,7 @@ LEVELS['3-9'] = function () {
   B.block(0, 2, 0, H - 1); B.block(27, 29, 0, H - 1); B.ground(3, 26); B.row(6, 12, H - 4); B.hid(16, H - 6, 'vida'); B.crystal(24, H - 2, 3, 1.2);
   B.lift(22, 24, H - 20, H - 3); B.chip(23, H - 10); P(17, 21, H - 20); B.en('patrulla', 19, H - 21); P(8, 13, H - 24); B.set(10, H - 28, '!'); B.block(3, 7, H - 26, H - 26, 'X'); B.block(3, 7, H - 32, H - 32, 'Y'); B.gear(4, H - 34);
   P(14, 19, H - 30); B.box(16, H - 34, 'escudo'); B.lift(3, 5, H - 50, H - 34); P(6, 11, H - 50); B.cp(8, H - 50); B.en('dron', 15, H - 54, { x0: 6, x1: 24 });
-  P(16, 22, H - 54); B.set(20, H - 58, '!'); B.block(23, 26, H - 58, H - 58, 'Y'); B.block(23, 26, H - 64, H - 64, 'X'); B.gear(24, H - 66); P(12, 16, H - 62); B.lift(6, 8, H - 80, H - 63); P(9, 14, H - 80);
+  P(13, 22, H - 54); B.set(20, H - 58, '!'); B.block(23, 26, H - 58, H - 58, 'Y'); B.block(23, 26, H - 64, H - 64, 'X'); B.gear(24, H - 66); P(11, 19, H - 61); B.lift(6, 8, H - 80, H - 63); P(9, 14, H - 80);
   B.block(18, 26, H - 74, H - 74); B.fake(18, 18, H - 73, H - 70); B.block(18, 26, H - 69, H - 69); B.row(19, 25, H - 71); B.gear(25, H - 71);              // cámara en la pared
   P(16, 21, H - 84); B.en('patrulla', 18, H - 85); P(22, 26, H - 88); B.cp(24, H - 88); B.lift(3, 5, 6, H - 84); B.block(6, 26, 6, 7); B.crystal(24, 6, 3, 1.3); B.row(8, 20, 4);
   return B.done(LV({ name: 'LAS CHIMENEAS', time: 240, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 15 * T + T / 2, y: 6 * T } }));
@@ -1172,7 +1172,7 @@ LEVELS['3-12'] = function () {
   const H = 20, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.ground(0, 169); B.hid(5, 14, 'vida'); B.box(9, 14, 'escudo'); B.row(11, 17, 16); B.en('patrulla', 20, 17);
   // torre 1: llave arriba
-  B.block(26, 32, 6, 17); B.block(27, 31, 7, 16, ' '); B.block(27, 27, 17, 17, ' '); B.block(28, 31, 13, 13); B.block(27, 30, 10, 10); B.pad(31, 17); B.key(29, 8); B.en('alien', 30, 12);
+  B.block(26, 32, 6, 17); B.block(27, 31, 7, 16, ' '); B.block(26, 26, 16, 17, ' '); B.block(32, 32, 16, 17, ' ');          // puertas abajo a los dos lados B.block(28, 31, 13, 13); B.block(27, 30, 10, 10); B.pad(31, 17); B.key(29, 8); B.en('alien', 30, 12);
   B.geyser(38, 18, 5, 0); B.en('erizo', 44, 17); B.block(48, 50, 16, 17); B.en('torreta', 49, 15); B.cp(54, 18); B.box(58, 14, 'laser');
   // torre 2: llave detrás de una pared agrietada
   B.block(62, 70, 8, 17); B.block(63, 69, 9, 17, ' '); B.block(62, 62, 15, 17, 'C'); B.key(66, 16); B.gear(68, 16); B.block(70, 70, 15, 17, 'F'); B.row(62, 70, 6);
@@ -1200,7 +1200,7 @@ LEVELS['3-14'] = function () {
   const B = LB(190, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.block(0, 189, 0, 2); B.ground(0, 189); B.crystal(4, 14, 3, 1.3); B.box(9, 10, 'laser'); B.hid(14, 10, 'vida'); B.row(16, 22, 12);
   B.block(26, 27, 3, 13, 'C'); B.en('patrulla', 32, 13); B.crystal(36, 14, 3); B.block(40, 50, 3, 9); B.block(46, 46, 10, 13, 'C'); B.row(41, 45, 12); B.box(48, 11, 'chip');
-  B.block(54, 70, 9, 9); B.block(54, 54, 10, 13, 'C'); B.block(70, 70, 10, 13); B.row(55, 69, 12); B.gear(66, 12); B.jumper(60, 16, 5, 0); B.block(58, 62, 14, 15, ' ');
+  B.block(54, 70, 9, 9); B.block(54, 54, 10, 13, 'C'); B.block(70, 70, 10, 11); B.row(55, 69, 12); B.gear(66, 12); B.jumper(60, 16, 5, 0); B.block(58, 62, 14, 15, ' ');
   B.cp(74, 14); B.en('alien', 80, 13); B.block(86, 87, 3, 13, 'C'); B.block(90, 104, 3, 8); B.en('erizo', 96, 13); B.crystal(100, 14, 3, 1.2);
   B.block(108, 116, 10, 13); B.block(108, 108, 10, 13, 'C'); B.block(109, 115, 11, 12, ' '); B.gear(113, 12); B.row(108, 116, 9);
   B.block(120, 121, 3, 13, 'C'); B.cp(126, 14); B.jumper(132, 16, 5, 0.6); B.block(131, 133, 14, 15, ' '); B.en('patrulla', 138, 13); B.box(142, 10, 'laser');
@@ -1281,17 +1281,18 @@ LEVELS['4-4'] = function () {
   B.arc(64, 68, 11, 2); B.block(65, 67, 14, 15, ' '); leaf(72, 79, 9); B.cp(76, 14); B.box(84, 10, 'laser'); B.en('erizo', 90, 13); B.mush(96, 14, 1); P(98, 103, 8); B.gear(101, 6);
   B.block(106, 112, 11, 13); B.fake(106, 106, 12, 13); B.block(107, 111, 12, 13, ' '); B.row(107, 111, 12); B.fly(110, 12);    // roca hueca
   leaf(116, 122, 10); B.en('patrulla', 126, 13); B.arc(130, 134, 11, 2); B.block(131, 133, 14, 15, ' '); leaf(138, 145, 9); B.cp(141, 14); B.en('dron', 150, 9, { x0: 144, x1: 160 }); B.vine(157, 5, 13); P(158, 162, 5); B.gear(160, 3);
-  leaf(166, 172, 10); B.en('alien', 176, 13); B.block(182, 183, 8, 13); B.block(196, 197, 8, 13); B.block(182, 197, 7, 7, '='); B.crystal(194, 14, 6, 1.3); B.block(198, 199, 0, 15);
+  leaf(166, 172, 10); B.en('alien', 176, 13); B.block(182, 183, 8, 11); B.block(196, 197, 8, 11); B.block(182, 197, 7, 7, '='); B.crystal(194, 14, 6, 1.3); B.block(198, 199, 0, 15);
   return B.done(LJ({ name: 'TORMENTA TROPICAL', storm: true, intro: '¡CUIDADO CON LOS RAYOS!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 189 * T + T / 2, y: 14 * T }, bombs: { zones: [[18 * T, 181 * T]], every: 1.5, style: 'bolt' } }));
 };
 // 4-5 · chorros de esporas: subida vertical por dentro de un hongo gigante, lanzado por las esporas
 LEVELS['4-5'] = function () {
   const H = 96, B = LB(30, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.block(0, 2, 0, H - 1); B.block(27, 29, 0, H - 1); B.ground(3, 26); B.row(6, 12, H - 4); B.hid(16, H - 6, 'vida'); B.crystal(24, H - 2, 6, 1.3);
-  let y = H - 2; const steps = [[5, 8], [20, 24], [12, 16], [4, 8], [19, 23], [11, 15]];
-  for (let k = 0; k < 13; k++) { const [a, b] = steps[k % 6], ny = y - 7; B.spore(((a + b) / 2) | 0, y, 7, k * 0.4, 2.6); P(a, b, ny); if (k % 3 === 1) B.row(a, b, ny - 1); if (k % 4 === 2) B.en('alien', a + 1, ny - 1); if (k === 4) B.cp(a + 2, ny); if (k === 8) B.cp(a + 2, ny); if (k === 3) B.box(a + 2, ny - 4, 'escudo'); y = ny; }
+  let y = H - 2, pa = 3, pb = 26; const steps = [[4, 10], [8, 15], [13, 20], [18, 24], [13, 20], [8, 15]];          // cada chorro está sobre la plataforma de abajo y lanza a la de arriba
+  for (let k = 0; k < 12; k++) { const [a, b] = steps[k % 6], ny = y - 7, sx = ((Math.max(a, pa) + Math.min(b, pb)) / 2) | 0; B.spore(sx, y, 7, k * 0.4, 2.6); P(a, b, ny); pa = a; pb = b; if (k % 3 === 1) B.row(a, b, ny - 1); if (k % 4 === 2) B.en('alien', a + 1, ny - 1); if (k === 4) B.cp(a + 2, ny); if (k === 8) B.cp(a + 2, ny); if (k === 3) B.box(a + 2, ny - 4, 'escudo'); y = ny; }
+  B.spore(13, y, 7, 0.3, 2.6);          // el último chorro sube por el hueco del techo hasta la antena
   B.gear(25, 70); B.vine(25, 66, 80); B.gear(4, 40); B.block(3, 6, 36, 36); B.block(3, 6, 42, 42); B.block(6, 6, 37, 41); B.fake(6, 6, 38, 41); B.row(3, 5, 39);      // nicho escondido en la pared
-  B.mush(12, 18, 1); B.gear(13, 10); B.block(3, 26, 6, 7); B.block(12, 15, 6, 7, ' '); B.crystal(22, 6, 4, 1.3); B.row(8, 20, 4);
+  B.gear(10, 8); B.block(3, 26, 6, 7); B.block(12, 15, 6, 7, ' '); B.crystal(22, 6, 4, 1.3); B.row(8, 20, 4);
   return B.done(LJ({ name: 'CHORROS DE ESPORAS', time: 230, vert: true, intro: '¡LAS ESPORAS TE LANZAN!', spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 20 * T + T / 2, y: 6 * T } }));
 };
 // 4-6 · dentro del árbol: a oscuras, las luciérnagas que encuentras te siguen y te alumbran; dos llaves abren la salida
@@ -1329,7 +1330,7 @@ LEVELS['4-8'] = function () {
   pit(80, 83, 0.2); B.set(86, 10, '!'); B.block(90, 100, 10, 10, 'X'); B.block(90, 100, 6, 6, 'Y'); B.row(90, 100, 5); B.gear(95, 4); B.en('torreta', 103, 13); B.block(102, 104, 14, 14);
   pit(108, 110, 1.1); B.en('erizo', 114, 13); B.block(118, 124, 11, 13); B.fake(124, 124, 12, 13); B.block(119, 123, 12, 13, ' '); B.gear(120, 13); B.row(118, 124, 10);     // tocón con la cara derecha falsa
   pit(128, 130, 0.5); B.cp(134, 14); B.en('torreta', 140, 13); B.block(139, 141, 14, 14); pit(146, 148, 0); B.vine(152, 5, 13); P(153, 158, 5); B.box(156, 2, 'escudo'); pit(160, 163, 0.7); B.en('alien', 168, 13);
-  B.block(174, 176, 9, 13); B.block(188, 190, 9, 13); B.block(174, 190, 8, 8, '='); B.crystal(185, 14, 5, 1.3); B.block(194, 195, 0, 15);
+  B.block(174, 176, 9, 11); B.block(188, 190, 9, 11); B.block(174, 190, 8, 8, '='); B.crystal(185, 14, 5, 1.3); B.block(194, 195, 0, 15);
   return B.done(LJ({ name: 'NIDO DE PLANTAS CARNÍVORAS', time: 240, noLava: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 182 * T + T / 2, y: 14 * T } }));
 };
 // 4-9 · el puente colgante: tablones que se descuelgan y un enjambre furioso que te persigue
@@ -1389,7 +1390,7 @@ LEVELS['4-13'] = function () {
   B.fall(72, 13, 2); B.fall(76, 12, 2); B.ground(80, 120); B.cp(82, 14); B.spore(90, 14, 7, 0); P(87, 93, 6); B.row(87, 93, 5); B.spore(100, 14, 7, 1.2); P(97, 103, 6); B.gear(100, 4); B.en('patrulla', 110, 13);
   B.block(113, 118, 11, 13); B.fake(113, 113, 12, 13); B.block(114, 117, 12, 13, ' '); B.row(114, 117, 12); B.fly(116, 13);
   B.arc(121, 125, 11, 2); B.ground(126, 199); B.mush(130, 14, 2); B.mush(140, 14, 0); B.mush(150, 14, 1); P(132, 137, 8); P(142, 147, 7); B.gear(145, 5); P(152, 157, 8); B.cp(160, 14); B.en('alien', 166, 13); B.en('erizo', 172, 13);
-  B.block(180, 181, 9, 13); B.block(192, 193, 9, 13); B.block(180, 193, 8, 8, '='); B.crystal(189, 14, 4, 1.3); B.block(198, 199, 0, 15);
+  B.block(180, 181, 9, 11); B.block(192, 193, 9, 11); B.block(180, 193, 8, 8, '='); B.crystal(189, 14, 4, 1.3); B.block(198, 199, 0, 15);
   return B.done(LJ({ name: 'LLUVIA DE SEMILLAS', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 186 * T + T / 2, y: 14 * T }, meteors: { zones: [[26 * T, 178 * T]], every: 1.0, acc: 0, style: 'seed' } }));
 };
 // 4-14 · la cueva de las setas: a oscuras, las setas se iluminan al pasar y los interruptores cambian el camino
@@ -1400,7 +1401,7 @@ LEVELS['4-14'] = function () {
   B.set(22, 10, '!'); B.block(28, 29, 2, 13, 'X'); B.row(30, 36, 12); B.en('alien', 34, 13); B.block(38, 39, 2, 13, 'Y'); B.set(42, 10, '!');
   B.block(46, 60, 2, 8); B.row(47, 59, 13); B.mush(62, 14, 1); P(64, 70, 7); B.gear(68, 5); B.cp(74, 14); B.fly(76, 10);
   B.set(80, 10, '!'); B.block(84, 96, 11, 11, 'X'); B.block(84, 96, 7, 7, 'Y'); B.row(84, 96, 6); B.gear(90, 5); B.en('erizo', 92, 13);
-  B.jumper(102, 15, 5, 0); B.block(101, 103, 14, 15, ' '); B.en('patrulla', 110, 13); B.block(116, 124, 9, 13); B.block(117, 123, 10, 13, ' '); B.fake(124, 124, 10, 13); B.gear(119, 13); B.row(117, 123, 11);
+  B.jumper(102, 15, 5, 0); B.block(101, 103, 14, 15, ' '); B.en('patrulla', 110, 13); B.block(116, 124, 11, 13); B.block(117, 123, 12, 13, ' '); B.fake(124, 124, 12, 13); B.gear(119, 13); B.row(117, 123, 10);          // cámara baja: se salta por encima; se entra por la derecha
   B.cp(130, 14); B.set(136, 10, '!'); B.block(140, 141, 2, 13, 'Y'); B.block(150, 151, 2, 13, 'X'); B.row(142, 149, 12); B.en('alien', 146, 13); B.set(154, 10, '!');
   B.pipe(160, 14, 186, 14, true); B.jumper(166, 15, 5, 0.5); B.block(165, 167, 14, 15, ' '); B.en('erizo', 174, 13); B.block(196, 199, 0, 15);
   return B.done(LJ({ name: 'LA CUEVA DE LAS SETAS', time: 260, cave: true, dark: true, crystalLight: true, noLava: true, intro: '¡LAS SETAS SE ENCIENDEN AL PASAR!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 190 * T + T / 2, y: 14 * T } }));
@@ -1420,7 +1421,7 @@ LEVELS['4-15'] = function () {
 LEVELS['4-16'] = function () {
   const H = 20, B = LB(180, H), P = (a, b, ty) => B.block(a, b, ty, ty, '='), g = H - 2;
   B.ground(0, 179); B.hid(5, g - 4, 'vida'); B.box(9, g - 4, 'laser'); B.row(3, 8, g - 2);
-  B.block(16, 30, 12, 12); B.laser(20, 13, g - 1, 0); B.laser(26, 13, g - 1, 1.1); B.row(17, 29, g - 1); B.block(32, 33, 8, g - 1, 'C'); B.key(38, g - 1); B.block(40, 41, 8, g - 1); B.block(32, 41, 7, 7); B.en('alien', 37, g - 1);
+  B.block(16, 30, 12, 12); B.laser(20, 13, g - 1, 0); B.laser(26, 13, g - 1, 1.1); B.row(17, 29, g - 1); B.block(32, 33, 8, g - 1, 'C'); B.key(38, g - 1); B.block(40, 41, 8, g - 1); B.fake(40, 41, 14, g - 1); B.block(32, 41, 7, 7); B.en('alien', 37, g - 1);
   B.vine(44, 6, g - 1); P(45, 52, 6); B.gear(49, 4); B.cp(56, g); B.snowgun(70, g, -1, 2.8); B.row(58, 68, g - 2); B.mush(72, g, 0); P(74, 80, 11); B.key(77, 9); B.en('dron', 84, 9, { x0: 74, x1: 92 });
   B.block(88, 100, 12, 12); B.laser(91, 13, g - 1, 0.4); B.laser(95, 13, g - 1, 1.5); B.laser(99, 13, g - 1, 0.9); B.gear(95, g - 1); B.cp(104, g);
   B.block(110, 122, 8, g - 1); B.block(111, 121, 9, g - 2, ' '); B.block(110, 110, 14, g - 1, 'C'); B.fake(122, 122, 14, g - 1); B.key(116, g - 1); B.en('patrulla', 118, g - 1); B.row(111, 121, 7);
@@ -1603,7 +1604,7 @@ function die() {
 }
 function respawn() {
   const cp = L.lastCp || L.spawn;
-  P = newPlayer(cp.x, cp.y); P.inv = 1.5; G.tleft = L.time; for (const m of L.movers) if (m.raft) { m.x = Math.max(m.bx, cp.x - m.w / 2); m.go = false; } if (L.auto) L.auto.x = Math.max(0, cp.x - 3 * T); L.bl = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; });
+  P = newPlayer(cp.x, cp.y); P.inv = 1.5; if (L.hadLaser && L.g.some(r => r.includes('C'))) P.power = 'laser'; G.tleft = L.time; for (const m of L.movers) if (m.raft) { m.x = Math.max(m.bx, cp.x - m.w / 2); m.go = false; } if (L.auto) L.auto.x = Math.max(0, cp.x - 3 * T); L.bl = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; });
   spawnEnemies(); shots = [];
   if (L.chase && L.chase.on) L.chase.x = P.x - 560;
   if (L.rise && L.rise.on) L.rise.y = P.y + P.h + 460;
@@ -1728,7 +1729,8 @@ function givePower(k) {
   else if (k === 'turbo') p.tTurbo = 7;
   else if (k === 'iman') p.tMagnet = 14;
   else if (k === 'estrella') p.tStar = 9;
-  else { if (p.power === 'mini' && k !== 'mini') { p.power = k; setSize(p); if (collide(p)) { p.crouch = true; setSize(p); } } else { p.power = k; p.crouch = false; setSize(p); } }
+  else { if (k === 'laser') L.hadLaser = true;          // si muere, al reaparecer vuelve a tener el láser (para no quedarse atascado ante una pared agrietada)
+    if (p.power === 'mini' && k !== 'mini') { p.power = k; setSize(p); if (collide(p)) { p.crouch = true; setSize(p); } } else { p.power = k; p.crouch = false; setSize(p); } }
 }
 
 /* ---------- enemigos y disparos ---------- */
@@ -3736,8 +3738,8 @@ function tallerBack() { show('panel', false); if (edTest) openEditor(); else ope
 #ed .bar{pointer-events:auto;position:absolute;left:0;right:0;top:0;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left));background:linear-gradient(180deg,rgba(4,6,22,.92),rgba(4,6,22,.6))}
 #ed .bar input,#ed .bar select{font:700 13px system-ui;color:#fff;background:#020a1e;border:1px solid #29e6ff;border-radius:8px;padding:6px 8px}
 #ed .btn{font-size:12px;padding:7px 10px;border-radius:10px}
-#ed .pal{pointer-events:auto;position:absolute;left:0;right:0;bottom:0;display:flex;gap:4px;overflow-x:auto;padding:6px calc(8px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));background:linear-gradient(0deg,rgba(4,6,22,.95),rgba(4,6,22,.7));scrollbar-width:thin}
-#ed .pal button{flex:0 0 auto;width:58px;height:56px;border-radius:10px;border:1px solid rgba(41,230,255,.4);background:rgba(10,20,50,.85);color:#cfe0ff;font:700 9px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.05;text-align:center;padding:2px;cursor:pointer}
+#ed .pal{pointer-events:auto;position:absolute;left:0;right:0;bottom:0;display:flex;gap:4px;overflow-x:auto;touch-action:pan-x;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:6px calc(8px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));background:linear-gradient(0deg,rgba(4,6,22,.95),rgba(4,6,22,.7));scrollbar-width:thin}
+#ed .pal button{touch-action:pan-x;flex:0 0 auto;width:58px;height:56px;border-radius:10px;border:1px solid rgba(41,230,255,.4);background:rgba(10,20,50,.85);color:#cfe0ff;font:700 9px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.05;text-align:center;padding:2px;cursor:pointer}
 #ed .pal button span{font-size:22px}
 #ed .pal button.on,#ed .pal button.pf{border-color:#35ff8a;box-shadow:0 0 12px rgba(53,255,138,.7);color:#fff}
 #ed .msg{position:absolute;left:50%;transform:translateX(-50%);top:calc(74px + env(safe-area-inset-top));color:#ffd23c;font:800 13px system-ui;text-shadow:0 1px 3px #000;pointer-events:none;text-align:center}
@@ -3949,7 +3951,7 @@ function cloudSave(now) {
 (() => { const st = document.createElement('style'); st.textContent = `
 #uidlg{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:radial-gradient(ellipse at center,rgba(10,20,60,.72),rgba(2,4,14,.9));backdrop-filter:blur(4px)}
 #uidlg.on{display:flex;animation:uiFade .18s ease-out}
-.uiw .ucard{position:relative;max-width:min(560px,94vw);width:100%;max-height:92vh;overflow:auto;background:linear-gradient(160deg,rgba(18,28,70,.97),rgba(8,12,34,.98));border:2px solid var(--cy);border-radius:22px;padding:22px 24px 18px;text-align:center;box-shadow:0 0 0 1px rgba(255,255,255,.06) inset,0 0 40px rgba(41,230,255,.35),0 20px 60px rgba(0,0,0,.6);animation:uiPop .32s cubic-bezier(.2,1.4,.4,1)}
+.uiw .ucard{touch-action:pan-y;position:relative;max-width:min(560px,94vw);width:100%;max-height:92vh;overflow:auto;background:linear-gradient(160deg,rgba(18,28,70,.97),rgba(8,12,34,.98));border:2px solid var(--cy);border-radius:22px;padding:22px 24px 18px;text-align:center;box-shadow:0 0 0 1px rgba(255,255,255,.06) inset,0 0 40px rgba(41,230,255,.35),0 20px 60px rgba(0,0,0,.6);animation:uiPop .32s cubic-bezier(.2,1.4,.4,1)}
 .uiw .ucard.gold{border-color:#ffd23c;box-shadow:0 0 44px rgba(255,210,60,.4),0 20px 60px rgba(0,0,0,.6)}
 .uiw .ucard.red{border-color:#ff4a6a;box-shadow:0 0 44px rgba(255,74,106,.35),0 20px 60px rgba(0,0,0,.6)}
 .uiw [contenteditable]{user-select:text;-webkit-user-select:text;outline:1px dashed rgba(255,210,60,.5);border-radius:6px;cursor:text}
@@ -4107,5 +4109,9 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, playC(n, t, datos) { ED = tlUnpack(null, n, t, datos); tlPlay(false); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
+window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
+    return { id, W: l.W, H: l.H, g: l.g.map(r => Array.isArray(r) ? r.join('') : r), gk: l.gk || 1, vert: !!l.vert, water: l.water || null, spawn: l.spawn, goal: l.goal, sw: !!l.sw,
+      pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick(l.lifts, ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
+      pipes: pick(l.pipes, ['x', 'y', 'tox', 'toy', 'hid']), portals: pick(l.portals, ['x', 'y', 'tox', 'toy']), keys: pick(l.keys, ['x', 'y']), winds: pick(l.winds, ['x0', 'x1', 'y0', 'y1', 'f']), cps: pick(l.cps, ['x', 'y']), strips: pick(l.strips, ['x0', 'x1', 'y']), rise: !!l.rise, chase: !!l.chase, auto: !!l.auto, sky: !!l.sky }; },
+  playC(n, t, datos) { ED = tlUnpack(null, n, t, datos); tlPlay(false); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
 })();
