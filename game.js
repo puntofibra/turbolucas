@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.77';
+const VERSION = '0.78';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -2837,7 +2837,7 @@ function startGame() {
 function togglePause() {
   if (state !== 'play' || CON.on) return;
   paused = !paused;
-  if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>' + (CHEAT.test ? '<div style="margin-top:12px;color:#ffd23c;font:800 12px system-ui;letter-spacing:.08em">🧪 MODO PRUEBAS · TOCA PARA ACTIVAR O QUITAR</div><div class="row" id="pTest" style="max-width:640px">' + CODES.map(c => '<button class="btn' + (CHEAT[c[0].toLowerCase()] ? ' tOn' : '') + '" data-ck="' + c[0].toLowerCase() + '" style="font-size:12px;padding:8px 11px">' + c[1] + '</button>').join('') + '</div>' : ''); show('panel', true);
+  if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>' + (CHEAT.test ? '<div style="margin-top:12px;color:#ffd23c;font:800 12px system-ui;letter-spacing:.08em">🧪 MODO PRUEBAS · TOCA PARA ACTIVAR O QUITAR</div><div class="row" id="pTest" style="max-width:640px">' + CODES.map(c => '<button class="btn' + (CHEAT[c[0].toLowerCase()] ? ' tOn' : '') + '" data-ck="' + c[0].toLowerCase() + '" style="font-size:12px;padding:8px 11px">' + (c[0] === 'UNLOCK' ? '🔓 SALTAR CANDADOS' : c[1]) + '</button>').join('') + '</div>' : ''); show('panel', true);
     if (CHEAT.test) { if (!$('tOnSt')) { const s = document.createElement('style'); s.id = 'tOnSt'; s.textContent = '#pTest .btn.tOn{border-color:#35ff8a;background:rgba(20,90,50,.9);box-shadow:0 0 14px rgba(53,255,138,.7)}'; document.head.appendChild(s); }
       $('card').querySelectorAll('[data-ck]').forEach(b => b.onclick = () => { const k = b.dataset.ck; CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; saveCheats(); b.classList.toggle('tOn', CHEAT[k]); tone(CHEAT[k] ? 1200 : 500, CHEAT[k] ? 1600 : 300, 0.08, 'square', 0.05); }); } $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
   else show('panel', false);
@@ -3098,9 +3098,10 @@ function mapInfo() {
   $('mPlay').disabled = !isBuilt(n);
 }
 function mapDeny(i) { mapShake = { i, t: 0.45 }; mapMsg = { txt: 'BLOQUEADA · supera antes la fase anterior', t: 2.2 }; SFX.bump(); }
+const testBoss = i => CHEAT.test && MAP[i] && MAP[i].boss;      // en modo pruebas el jefe siempre se puede pisar (para viajar al planeta siguiente)
 function mapSelect(i) {
   if (i < 0 || i >= MAP.length || mapUnl) return;
-  if (!mapOpen(i)) return mapDeny(i);
+  if (!mapOpen(i) && !testBoss(i)) return mapDeny(i);
   if (i === mapSel) { if (!mapRoute.length) mapPlay(); return; }
   SFX.chip(); mapGo(i);
 }
@@ -3111,20 +3112,20 @@ function mapMove(d) {          // mando/teclado: va a la fase conectada que est�
   let best = -1, bs = -1e9;
   for (const k of nb) { const dx = (MAP[k].x - cur.x) * t.w, dy = (MAP[k].y - cur.y) * t.h, dd = Math.hypot(dx, dy) || 1, dot = (dx * dir[0] + dy * dir[1]) / dd; if (dot < 0.2) continue; const sc = dot * 2 - dd / 2000 + (d === 1 && k > mapSel ? 0.3 : 0) + (d === -1 && k < mapSel ? 0.3 : 0); if (sc > bs) { bs = sc; best = k; } }
   if (best < 0) return;
-  if (!mapOpen(best)) return mapDeny(best);
+  if (!mapOpen(best) && !testBoss(best)) return mapDeny(best);
   SFX.chip(); mapGo(best);
 }
 function mapPlay(force) {
   if (mapUnl || mapRoute.length || warp) return; const n = MAP[mapSel]; if (!isBuilt(n)) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; }
   // en el jefe ya superado se puede viajar al mundo siguiente; en la primera fase de un mundo, volver al anterior
-  if (!force && n.boss && PROG[n.id] && curW + 1 < WORLDS.length) return askTravel('JUGAR EL JEFE', 'VIAJAR AL PLANETA ' + WORLDS[curW + 1].n, curW + 1);
+  if (!force && n.boss && (PROG[n.id] || CHEAT.test) && curW + 1 < WORLDS.length) return askTravel('JUGAR EL JEFE', 'VIAJAR AL PLANETA ' + WORLDS[curW + 1].n, curW + 1);
   if (!force && mapSel === 0 && curW > 0) return askTravel('JUGAR FASE ' + n.id, 'VOLVER AL PLANETA ' + WORLDS[curW - 1].n, curW - 1);
   if (licGated(n.id) && !licOk()) { showPaywall(() => mapPlay(true)); return; }
   curId = n.id; evt('jugar', curId); startGame();
 }
 function askTravel(playTxt, goTxt, w) {
   const c = $('card'); c.classList.remove('tips'); SFX.chip();
-  c.innerHTML = '<h2>' + (w > curW ? '🚀 ¿SIGUIENTE PLANETA?' : '🚀 ¿VOLVER ATRÁS?') + '</h2><div style="color:#cfe0ff;margin:4px 0 10px">' + (w > curW ? 'Puedes repetir esta fase o despegar hacia <b>' + WORLDS[w].name + '</b>.' : 'Puedes jugar esta fase o volar de vuelta a <b>' + WORLDS[w].name + '</b>.') + '</div>' +
+  c.innerHTML = '<h2>' + (w > curW ? '🚀 ¿SIGUIENTE PLANETA?' : '🚀 ¿VOLVER ATRÁS?') + '</h2><div style="color:#cfe0ff;margin:4px 0 10px">' + (w > curW ? 'Puedes jugar esta fase o despegar hacia <b>' + WORLDS[w].name + '</b>.' : 'Puedes jugar esta fase o volar de vuelta a <b>' + WORLDS[w].name + '</b>.') + '</div>' +
     '<div class="row"><button class="btn" id="tvGo" style="border-color:#35ff8a;box-shadow:0 0 16px rgba(53,255,138,.6)">' + goTxt + '</button><button class="btn" id="tvPlay">' + playTxt + '</button><button class="btn" id="tvX">VOLVER</button></div>';
   show('panel', true);
   $('tvGo').onclick = () => { show('panel', false); startWarp(w); };
