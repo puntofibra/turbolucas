@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.40';
+const VERSION = '0.41';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -1941,6 +1941,7 @@ function drawWarp() {
   }
   if (t < 3.9) {                        // 2 · hiperespacio
     const u = (t - 1.75) / 2.15, sp = 0.4 + Math.sin(u * Math.PI) * 2.6, cx = VW * 0.4, cy = VHv * 0.52;
+    ctx.save(); if (W.dir < 0) { ctx.translate(VW, 0); ctx.scale(-1, 1); }      // de vuelta: todo en espejo, Lucas vuela hacia la izquierda
     const bg = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(VW, VHv)); bg.addColorStop(0, W.dir > 0 ? '#1a1060' : '#10204a'); bg.addColorStop(0.5, '#070726'); bg.addColorStop(1, '#000'); ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VHv);
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 5; i++) { const nx = ((1.4 - ((u * (1.2 + i * 0.3) + i * 0.37) % 1.4)) * VW * 1.3) - VW * 0.15, ny = VHv * (0.15 + (i * 0.19) % 0.8), r = VHv * (0.35 + 0.1 * i), g = ctx.createRadialGradient(nx, ny, 0, nx, ny, r); g.addColorStop(0, ['rgba(198,60,255,.18)', 'rgba(41,160,255,.16)', 'rgba(53,255,190,.12)', 'rgba(255,70,160,.14)', 'rgba(120,200,255,.14)'][i]); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(nx - r, ny - r, r * 2, r * 2); }
@@ -1960,6 +1961,7 @@ function drawWarp() {
     ctx.globalCompositeOperation = 'source-over';
     ctx.save(); ctx.translate(back + 8, ly); ctx.rotate(Math.PI / 2); for (let i = -1; i <= 1; i++) flame(i * h * 0.09, 0, h * (0.5 + Math.random() * 0.1), h * 0.1, i + 2); ctx.restore();
     spr(IMG['lucas-avanzando'], cx, ly + h * 0.5, h, 0.5, 1, false, -0.12);
+    ctx.restore();
     // rótulo del mundo
     const ta = Math.min(1, Math.max(0, (u - 0.12) * 4)) * Math.min(1, Math.max(0, (0.97 - u) * 6));
     if (ta > 0) { ctx.globalAlpha = ta; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const sp2 = 18 * (1 - Math.min(1, (u - 0.12) * 2)), y0 = VHv * 0.18;
