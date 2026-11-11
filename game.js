@@ -1,7 +1,7 @@
-/* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
+/* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.53';
+const VERSION = '0.54';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -59,6 +59,42 @@ function loadImages(done) {
 $('logoImg').src = 'img/' + TIER + '/logo.webp';
 $('heroImg').src = 'img/' + TIER + '/lucas-celebrando.webp';
 $('rotImg').src = 'img/' + TIER + '/lucas-golpeado.webp';
+// llamas de los propulsores de Lucas en la portada (por detrás del botón JUGAR)
+(() => {
+  const c = document.createElement('canvas'); c.id = 'heroFx'; $('title').prepend(c); const g = c.getContext('2d'), hero = $('heroImg'), sp = [];
+  const NZ = [[-60, 14, 0.85], [-6.5, 0, 1.12], [46.5, 14, 0.85]];       // bocas de los cañones de "lucas-celebrando" (px HD desde el centro y desde abajo)
+  let last = performance.now();
+  function plume(x, y, len, w, t, sd) {
+    const fl = 0.86 + 0.1 * Math.sin(t * 41 + sd * 3) + 0.07 * Math.sin(t * 77 + sd * 7), L = len * fl, sw = Math.sin(t * 23 + sd * 5) * w * 0.18;
+    g.globalCompositeOperation = 'lighter';
+    let gr = g.createRadialGradient(x, y + L * 0.3, 0, x, y + L * 0.3, L * 0.75 + w); gr.addColorStop(0, 'rgba(60,170,255,.35)'); gr.addColorStop(0.5, 'rgba(255,120,40,.14)'); gr.addColorStop(1, 'rgba(255,80,20,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y + L * 0.3, L * 0.75 + w, 0, 6.283); g.fill();
+    const lay = (ww, l2, c0, c1, s2) => { const lg = g.createLinearGradient(x, y, x, y + l2); lg.addColorStop(0, c0); lg.addColorStop(1, c1); g.fillStyle = lg; g.beginPath(); g.moveTo(x - ww / 2, y);
+      g.bezierCurveTo(x - ww * 0.75, y + l2 * 0.35, x - ww * 0.2 + s2, y + l2 * 0.8, x + s2, y + l2); g.bezierCurveTo(x + ww * 0.2 + s2, y + l2 * 0.8, x + ww * 0.75, y + l2 * 0.35, x + ww / 2, y); g.closePath(); g.fill(); };
+    lay(w * 1.25, L, 'rgba(255,90,30,.9)', 'rgba(255,40,10,0)', sw);
+    lay(w * 0.95, L * 0.78, 'rgba(255,190,60,.95)', 'rgba(255,120,30,0)', sw * 0.7);
+    lay(w * 0.62, L * 0.55, 'rgba(120,220,255,1)', 'rgba(60,140,255,0)', sw * 0.45);
+    lay(w * 0.32, L * 0.36, 'rgba(255,255,255,1)', 'rgba(200,240,255,0)', sw * 0.3);
+    // anillos de choque del escape
+    for (let k = 0; k < 2; k++) { const p = (t * 3.2 + k * 0.5 + sd * 0.3) % 1, yy = y + L * (0.15 + p * 0.5); g.fillStyle = 'rgba(255,240,200,' + 0.35 * (1 - p) + ')'; g.beginPath(); g.ellipse(x + sw * p, yy, w * 0.32 * (1 - p * 0.5), w * 0.1, 0, 0, 6.283); g.fill(); }
+    g.globalCompositeOperation = 'source-over';
+  }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const on = $('title').classList.contains('on'); if (!on || !hero.naturalWidth) { if (c.width) { c.width = 0; c.height = 0; } return; }
+    const dt = Math.min(0.05, (now - last) / 1000), t = now / 1000; last = now;
+    const W = innerWidth, H = innerHeight; if (c.width !== Math.round(W * DPR) || c.height !== Math.round(H * DPR)) { c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); }
+    g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H);
+    const r = hero.getBoundingClientRect(), k = r.height / 480, cx = r.left + r.width / 2, by = r.bottom;
+    NZ.forEach(([ox, oy, m], i) => { const x = cx + ox * k, y = by - oy * k - 3 * k; plume(x, y, r.height * 0.8 * m, 52 * k * m, t, i);
+      if (Math.random() < dt * 40) sp.push({ x: x + (Math.random() - 0.5) * 10 * k, y: y + 20 * k, vx: (Math.random() - 0.5) * 60, vy: 120 + Math.random() * 200, life: 0.5 + Math.random() * 0.4, max: 0.9, s: 1 + Math.random() * 2.2, c: Math.random() < 0.5 ? '#ffd27a' : '#9fe6ff' }); });
+    g.globalCompositeOperation = 'lighter';
+    for (const q of sp) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 0.98; g.globalAlpha = Math.max(0, q.life / q.max); g.fillStyle = q.c; g.beginPath(); g.arc(q.x, q.y, q.s, 0, 6.283); g.fill(); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    for (let i = sp.length - 1; i >= 0; i--) if (sp[i].life <= 0) sp.splice(i, 1);
+  }
+  requestAnimationFrame(frame);
+})();
 // dibuja una imagen con altura h (unidades de mundo), anclada en (ax, ay) de la imagen
 function spr(im, x, y, h, ax = 0.5, ay = 1, flip = false, rot = 0, sx = 1, sy = 1) {
   if (!im || !im.naturalWidth) return;
@@ -2788,7 +2824,7 @@ function warpUpdate(dt) {
     setWorld(W.to); const tg = W.dir > 0 ? 0 : MAP.findIndex(n => n.boss); mapSel = mapAt = tg; mapL = { x: MAP[tg].x, y: MAP[tg].y }; const t1 = mapT(), p1 = mapPt(t1, mapL.x, mapL.y); W.tx = p1[0]; W.ty = p1[1]; }
   if (W.t > 4.75 && !W.s4) { W.s4 = 1; SFX.stomp(); noise(0.45, 0.3, 700); tone(120, 50, 0.4, 'square', 0.12);
     for (let k = 0; k < 46; k++) { const a = Math.random() * 6.283, v = 80 + Math.random() * 260; mapParts.push({ x: W.tx, y: W.ty, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.45 - 40, life: 1, max: 1, col: k % 3 ? '#9ff0ff' : '#fff', size: 2 + Math.random() * 3 }); } }
-  for (const q of mapParts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 120 * dt; } mapParts = mapParts.filter(q => q.life > 0);
+  for (const q of mapParts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; if (!q.nog) q.vy += 120 * dt; } mapParts = mapParts.filter(q => q.life > 0);
   if (W.t > 5.7) { warp = null; state = 'map'; show('mapUI', true); mapInfo(); mapMsg = { txt: (W.dir > 0 ? '¡BIENVENIDO A ' : '¡DE VUELTA EN ') + WORLDS[curW].name + '!', t: 3, ok: true }; SFX.life(); setTimeout(updApply, 4000); }
 }
 function warpLucas(x, y, h, pose, fl, rot, face) {     // Lucas con sus 3 propulsores, a cualquier tamaño
@@ -2896,35 +2932,39 @@ const MAP3 = [
   { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7757, y: 0.288, rx: 0.036, built: true, prev: 9, way: [[0.745, 0.35], [0.76, 0.31]] },
   { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7109, y: 0.8758, rx: 0.036, built: true, prev: 13, way: [[0.5474, 0.8395], [0.5698, 0.8666], [0.5921, 0.8986], [0.6144, 0.9155], [0.6367, 0.9155], [0.659, 0.9172], [0.6814, 0.9206]] }
 ];
-/* ---------- mapa del planeta 4: SELVA BIOLUMINISCENTE (4 pantallas de ancho) ---------- */
+/* ---------- mapa del planeta 4: SELVA LUMINOSA (4 pantallas de ancho; paint = plataforma dibujada por el juego) ---------- */
 const MAP4 = [
-  { id: '4-1', n: '1', name: 'SENDERO LUMINOSO', x: 0.0484, y: 0.858, rx: 0.026, built: true },
-  { id: '4-2', n: '2', name: 'LIANAS GIGANTES', x: 0.1038, y: 0.858, rx: 0.026, built: true, way: [[0.076, 0.862]] },
-  { id: '4-3', n: '3', name: 'CIÉNAGA TÓXICA', x: 0.2019, y: 0.744, rx: 0.026, built: true, way: [[0.14, 0.835], [0.17, 0.78]] },
-  { id: '4-4', n: '4', name: 'TORMENTA TROPICAL', x: 0.2988, y: 0.853, rx: 0.026, built: true, way: [[0.235, 0.79], [0.265, 0.85]] },
-  { id: '4-5', n: '5', name: 'CHORROS DE ESPORAS', x: 0.3763, y: 0.705, rx: 0.026, built: true, way: [[0.335, 0.86], [0.368, 0.79]] },
-  { id: '4-6', n: '6', name: 'DENTRO DEL ÁRBOL', x: 0.2988, y: 0.541, rx: 0.026, built: true, way: [[0.37, 0.63], [0.335, 0.565]] },
-  { id: '4-7', n: '7', name: 'LAS COPAS', x: 0.2511, y: 0.319, rx: 0.026, built: true, way: [[0.262, 0.49], [0.243, 0.40]] },
-  { id: '4-8', n: '8', name: 'NIDO DE PLANTAS CARNÍVORAS', x: 0.2967, y: 0.264, rx: 0.026, built: true, way: [[0.274, 0.29]] },
-  { id: '4-9', n: '9', name: 'EL PUENTE COLGANTE', x: 0.574, y: 0.282, rx: 0.026, built: true, way: [[0.33, 0.26], [0.40, 0.30], [0.47, 0.33], [0.54, 0.30]] },
-  { id: '4-10', n: '10', name: 'LA GRAN CASCADA', x: 0.544, y: 0.765, rx: 0.026, built: true, way: [[0.578, 0.40], [0.575, 0.56], [0.555, 0.68]] },
-  { id: '4-11', n: '11', name: 'RÍO ABAJO', x: 0.606, y: 0.858, rx: 0.026, built: true, way: [[0.572, 0.83]] },
-  { id: '4-12', n: '12', name: 'EL LAGO DE LOS NENÚFARES', x: 0.645, y: 0.847, rx: 0.026, built: true, way: [[0.626, 0.86]] },
-  { id: '4-13', n: '13', name: 'LLUVIA DE SEMILLAS', x: 0.678, y: 0.831, rx: 0.026, built: true, way: [[0.662, 0.84]] },
-  { id: '4-14', n: '14', name: 'LA CUEVA DE LAS SETAS', x: 0.716, y: 0.845, rx: 0.026, built: true, way: [[0.697, 0.84]] },
-  { id: '4-15', n: '15', name: 'LA ESCALINATA', x: 0.745, y: 0.515, rx: 0.026, built: true, way: [[0.733, 0.79], [0.73, 0.68], [0.737, 0.58]] },
-  { id: '4-16', n: '16', name: 'RUINAS DEL TEMPLO', x: 0.767, y: 0.920, rx: 0.026, built: true, gold: true, way: [[0.757, 0.62], [0.764, 0.75], [0.768, 0.85]] },
-  { id: '4-J', n: '', name: 'JEFE · COLOSO DE LA SELVA', x: 0.893, y: 0.754, rx: 0.036, boss: true, built: true, way: [[0.80, 0.91], [0.845, 0.86], [0.875, 0.80]] },
-  { id: '4-B', n: '★', name: 'FASE SECRETA · NIDO DE LUCIÉRNAGAS', x: 0.2887, y: 0.195, rx: 0.02, bonus: true, built: true, prev: 7, way: [[0.293, 0.23]] },
-  { id: '4-C', n: '★', name: 'FASE SECRETA · JARDÍN FLOTANTE', x: 0.346, y: 0.143, rx: 0.02, bonus: true, built: true, prev: 17, way: [[0.315, 0.16]] },
-  { id: '4-D', n: '★', name: 'FASE SECRETA · TRAS LA CASCADA', x: 0.556, y: 0.578, rx: 0.02, bonus: true, built: true, prev: 8, way: [[0.575, 0.40], [0.565, 0.50]] }
+  { id: '4-1', n: '1', name: 'SENDERO LUMINOSO', x: 0.1325, y: 0.529, rx: 0.021, built: true },
+  { id: '4-2', n: '2', name: 'LIANAS GIGANTES', x: 0.196, y: 0.70, rx: 0.021, built: true },
+  { id: '4-3', n: '3', name: 'CIÉNAGA TÓXICA', x: 0.187, y: 0.386, rx: 0.021, built: true },
+  { id: '4-4', n: '4', name: 'TORMENTA TROPICAL', x: 0.2775, y: 0.418, rx: 0.021, built: true },
+  { id: '4-5', n: '5', name: 'CHORROS DE ESPORAS', x: 0.362, y: 0.80, rx: 0.021, built: true, paint: true },
+  { id: '4-6', n: '6', name: 'DENTRO DEL ÁRBOL', x: 0.46, y: 0.842, rx: 0.021, built: true },
+  { id: '4-7', n: '7', name: 'LAS COPAS', x: 0.516, y: 0.544, rx: 0.021, built: true },
+  { id: '4-8', n: '8', name: 'NIDO DE PLANTAS CARNÍVORAS', x: 0.5225, y: 0.331, rx: 0.021, built: true },
+  { id: '4-9', n: '9', name: 'EL PUENTE COLGANTE', x: 0.6145, y: 0.348, rx: 0.021, built: true },
+  { id: '4-10', n: '10', name: 'LA GRAN CASCADA', x: 0.5375, y: 0.887, rx: 0.021, built: true },
+  { id: '4-11', n: '11', name: 'RÍO ABAJO', x: 0.64, y: 0.872, rx: 0.021, built: true },
+  { id: '4-12', n: '12', name: 'EL LAGO DE LOS NENÚFARES', x: 0.734, y: 0.643, rx: 0.021, built: true },
+  { id: '4-13', n: '13', name: 'LLUVIA DE SEMILLAS', x: 0.67, y: 0.214, rx: 0.021, built: true },
+  { id: '4-14', n: '14', name: 'LA CUEVA DE LAS SETAS', x: 0.71, y: 0.321, rx: 0.021, built: true },
+  { id: '4-15', n: '15', name: 'LA ESCALINATA', x: 0.746, y: 0.426, rx: 0.021, built: true },
+  { id: '4-16', n: '16', name: 'RUINAS DEL TEMPLO', x: 0.811, y: 0.877, rx: 0.024, built: true, gold: true },
+  { id: '4-J', n: '', name: 'JEFE · COLOSO DE LA SELVA', x: 0.892, y: 0.56, rx: 0.03, boss: true, built: true },
+  { id: '4-B', n: '★', name: 'FASE SECRETA · NIDO DE LUCIÉRNAGAS', x: 0.44, y: 0.19, rx: 0.021, bonus: true, built: true, prev: 7, paint: true },
+  { id: '4-C', n: '★', name: 'FASE SECRETA · JARDÍN FLOTANTE', x: 0.36, y: 0.12, rx: 0.021, bonus: true, built: true, prev: 17, paint: true },
+  { id: '4-D', n: '★', name: 'FASE SECRETA · TRAS LA CASCADA', x: 0.566, y: 0.56, rx: 0.021, bonus: true, built: true, prev: 8, paint: true }
 ];
 const WORLDS = [
-  { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff' },
-  { n: 2, name: 'PLANETA DE CRISTAL', img: 'mapa2', nodes: MAP2, col: '#9ff0ff' },
-  { n: 3, name: 'PLANETA VOLCÁNICO', img: 'mapa3', nodes: MAP3, col: '#ffb040' },
-  { n: 4, name: 'SELVA LUMINOSA', img: 'mapa4', nodes: MAP4, col: '#9aff6a' }
+  { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff', fog: 'nebula' },
+  { n: 2, name: 'PLANETA DE CRISTAL', img: 'mapa2', nodes: MAP2, col: '#9ff0ff', fog: 'snow' },
+  { n: 3, name: 'PLANETA VOLCÁNICO', img: 'mapa3', nodes: MAP3, col: '#ffb040', fog: 'smoke' },
+  { n: 4, name: 'SELVA LUMINOSA', img: 'mapa4', nodes: MAP4, col: '#9aff6a', fog: 'mist', plat: 'obj-plat4', platW: 0.0419, platA: [0.494, 0.377, 0.3988] }
 ];
+// tramos sin camino dibujado: arco suave entre plataformas (la proporción del mapa se tiene en cuenta para que se vea redondo)
+WORLDS.forEach(W => { const ar = W.img === 'mapa4' ? 4.03 : W.img === 'mapa3' ? 3.03 : 1.79; W.nodes.forEach((n, i) => { if (!i || n.way) return; const p = W.nodes[n.prev !== undefined ? n.prev : i - 1], dx = (n.x - p.x) * ar, dy = n.y - p.y, d = Math.hypot(dx, dy), lift = Math.min(0.12, d * 0.22); n.way = [];
+  for (let k = 1; k < 6; k++) { const f = k / 6, bx = p.x + (n.x - p.x) * f, by = p.y + (n.y - p.y) * f - Math.sin(f * Math.PI) * lift; n.way.push([bx, by]); } }); });
+
 const ALLN = () => WORLDS.reduce((a, w) => a.concat(w.nodes), []);
 let curW = 0; try { curW = Math.min(WORLDS.length - 1, +localStorage.getItem('tl_w') || 0); } catch (e) {}
 let MAP = WORLDS[curW].nodes;
@@ -2951,7 +2991,7 @@ function devTapOn(i) {            // 10 toques rápidos sobre una fase aún no p
 }
 // el mapa llena la pantalla; si no cabe entero (pantallas cuadradas o mapas panorámicos) la cámara sigue a Lucas
 let mapCam = null, mapCamT = 0;
-function mapTarget(w, h) { const fx = mapL.x * w, fy = mapL.y * h;
+function mapTarget(w, h) { const fo = mapUnl && MAP[mapUnl.i].bonus && mapUnl.t > 0.25 ? MAP[mapUnl.i] : mapL, fx = fo.x * w, fy = fo.y * h;
   return [w > VW + 1 ? Math.min(0, Math.max(VW - w, VW * 0.5 - fx)) : (VW - w) / 2, h > VHv + 1 ? Math.min(0, Math.max(VHv - h, VHv * 0.55 - fy)) : (VHv - h) / 2]; }
 function mapT() { const im = mapImg(curW), iw = im && im.naturalWidth || 16, ih = im && im.naturalHeight || 9, sc = Math.max(VW / iw, VHv / ih), w = iw * sc, h = ih * sc;
   const tg = mapTarget(w, h); if (!mapCam || mapCam.w !== w || mapCam.h !== h) mapCam = { x: tg[0], y: tg[1], w, h };
@@ -3027,9 +3067,11 @@ function askTravel(playTxt, goTxt, w) {
 function mapUpdate(dt) {
   const t = mapT();
   if (mapUnl) {
-    if (!mapUnl.snd) { mapUnl.snd = true; tone(220, 1320, 1.5, 'sawtooth', 0.05); tone(330, 1980, 1.5, 'sine', 0.08); }
-    mapUnl.t += dt / 1.6;
-    if (mapUnl.t >= 1) { const i = mapUnl.i; mapUnl = null; SFX.life(); const [x, y] = mapPt(t, MAP[i].x, MAP[i].y); for (let k = 0; k < 34; k++) { const a = Math.random() * 6.283, v = 60 + Math.random() * 200; mapParts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - 60, life: 0.9, max: 0.9, col: k % 2 ? '#7fe9ff' : '#fff', size: 2 + Math.random() * 2.5 }); } if (!MAP[i].bonus) mapGo(i); }
+    const sb = MAP[mapUnl.i].bonus;
+    if (!mapUnl.snd) { mapUnl.snd = true; if (sb) { tone(180, 520, 1.0, 'sine', 0.06); } else { tone(220, 1320, 1.5, 'sawtooth', 0.05); tone(330, 1980, 1.5, 'sine', 0.08); } }
+    mapUnl.t += dt / (sb ? 3.2 : 1.6);
+    if (sb) secretFx(t, mapUnl);
+    if (mapUnl.t >= 1) { const i = mapUnl.i; mapUnl = null; SFX.life(); const [x, y] = mapPt(t, MAP[i].x, MAP[i].y); if (!MAP[i].bonus) { for (let k = 0; k < 34; k++) { const a = Math.random() * 6.283, v = 60 + Math.random() * 200; mapParts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - 60, life: 0.9, max: 0.9, col: k % 2 ? '#7fe9ff' : '#fff', size: 2 + Math.random() * 2.5 }); } mapGo(i); } else mapMsg = { txt: '★ ¡FASE SECRETA DESCUBIERTA! ★', t: 3.2, ok: true }; }
   }
   let step = 330 * dt;
   while (mapRoute.length && step > 0) {
@@ -3039,7 +3081,7 @@ function mapUpdate(dt) {
     else { mapL = { x: mapL.x + dx / d * step / t.w, y: mapL.y + dy / d * step / t.h }; step = 0; }
   }
   if (mapRoute.length) { const [lx, ly] = mapPt(t, mapL.x, mapL.y); for (let k = 0; k < 2; k++) mapParts.push({ x: lx + (Math.random() - 0.5) * 14, y: ly + (Math.random() - 0.5) * 8, vx: -mapFace * (20 + Math.random() * 50), vy: 10 + Math.random() * 40, life: 0.5, max: 0.5, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffd08a', size: 1.5 + Math.random() * 2.2 }); }
-  for (const q of mapParts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 120 * dt; }
+  for (const q of mapParts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; if (!q.nog) q.vy += 120 * dt; }
   mapParts = mapParts.filter(q => q.life > 0);
   mapShake.t = Math.max(0, mapShake.t - dt); mapMsg.t = Math.max(0, mapMsg.t - dt);
 }
@@ -3048,43 +3090,77 @@ function polyAt(pts, f) {            // punto a la fracción f (0..1) de una lí
   let d = f * tot; for (let i = 0; i < ls.length; i++) { if (d <= ls[i] || i === ls.length - 1) { const k = ls[i] ? Math.min(1, d / ls[i]) : 0; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k, i]; } d -= ls[i]; }
   return [pts[0][0], pts[0][1], 0];
 }
-function mapFog(x, y, rx, fade, i) {
-  const R = rx * 2.6;
-  for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283 + time * 0.15 + i, d = R * (0.35 + 0.25 * Math.sin(time * 0.7 + k * 1.7)), px = x + Math.cos(a) * d * (fade < 1 ? 1 + (1 - fade) * 3 : 1), py = y + Math.sin(a) * d * 0.55, r = R * (0.45 + 0.12 * Math.sin(time + k));
-    const g = ctx.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, 'rgba(225,235,255,' + 0.55 * fade + ')'); g.addColorStop(1, 'rgba(200,215,240,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill(); }
-  if (fade < 1 && Math.random() < 0.6) mapParts.push({ x: x + (Math.random() - 0.5) * R, y: y + (Math.random() - 0.5) * R * 0.5, vx: (Math.random() - 0.5) * 200, vy: -40 - Math.random() * 60, life: 0.7, max: 0.7, col: '#ffffff', size: 2 });
+const FOGC = { nebula: ['150,120,255', '90,170,255', '#e6dcff'], snow: ['225,240,255', '190,215,245', '#ffffff'], smoke: ['70,55,65', '110,70,60', '#ffb040'], mist: ['150,255,200', '90,220,160', '#eaff6a'] };
+function mapFog(x, y, rx, a, i, v) {          // nube que tapa una base secreta; v = remolino (0..1) al descubrirla
+  const st = WORLDS[curW].fog || 'snow', C = FOGC[st], R = rx * 2.7 * (1 - v * 0.85), sp = 0.15 + v * v * 9;
+  for (let k = 0; k < 11; k++) { const an = k / 11 * 6.283 + time * sp + i + v * v * 6, d = R * (0.3 + 0.28 * Math.sin(time * 0.7 + k * 1.7)), px = x + Math.cos(an) * d, py = y + Math.sin(an) * d * 0.55, r = R * (0.42 + 0.14 * Math.sin(time + k));
+    const g = ctx.createRadialGradient(px, py, 0, px, py, Math.max(1, r)); g.addColorStop(0, 'rgba(' + C[k % 2] + ',' + (st === 'smoke' ? 0.8 : 0.6) * a + ')'); g.addColorStop(1, 'rgba(' + C[k % 2] + ',0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, Math.max(1, r), 0, 6.283); ctx.fill(); }
+  // el núcleo de la nube, más denso, para que no se vea lo que hay debajo
+  const g = ctx.createRadialGradient(x, y, 0, x, y, R * 0.8); g.addColorStop(0, 'rgba(' + C[0] + ',' + 0.85 * a + ')'); g.addColorStop(1, 'rgba(' + C[0] + ',0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, R * 0.8, R * 0.5, 0, 0, 6.283); ctx.fill();
+  // brillitos propios de cada planeta (polvo de estrellas, copos, brasas, luciérnagas)
+  if (Math.random() < 0.18 * a) mapParts.push({ x: x + (Math.random() - 0.5) * R * 1.6, y: y + (Math.random() - 0.5) * R * 0.8, vx: (Math.random() - 0.5) * 20, vy: st === 'smoke' ? -25 - Math.random() * 20 : st === 'snow' ? 15 : (Math.random() - 0.5) * 20, life: 1.4, max: 1.4, col: C[2], size: 1.2 + Math.random() * 1.6, nog: 1 });
+}
+function secretFx(t, u) {                    // la secuencia de "descubrir" una base secreta
+  const n = MAP[u.i], [x, y] = mapPt(t, n.x, n.y), R = n.rx * t.u, C = FOGC[WORLDS[curW].fog || 'snow'];
+  if (u.t > 0.32 && u.t < 0.6) { if (!u.s1) { u.s1 = 1; tone(70, 420, 0.95, 'sawtooth', 0.045); tone(140, 840, 0.95, 'triangle', 0.04); }
+    mapShake = { i: u.i, t: 0.05 }; for (let k = 0; k < 3; k++) { const a = Math.random() * 6.283, d = R * (3 + Math.random() * 2); mapParts.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, vx: -Math.cos(a) * d * 2.2, vy: -Math.sin(a) * d * 1.3, life: 0.45, max: 0.45, col: k ? C[2] : '#ffffff', size: 1.5 + Math.random() * 2, nog: 1 }); } }
+  if (u.t >= 0.6 && !u.s2) { u.s2 = 1; SFX.life(); tone(500, 2600, 0.7, 'sine', 0.09); tone(750, 3000, 0.5, 'triangle', 0.05, 0.08);
+    for (let k = 0; k < 70; k++) { const a = Math.random() * 6.283, v = 80 + Math.random() * 320; mapParts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - 120, life: 1.2 + Math.random() * 0.6, max: 1.8, col: ['#ffd23c', '#fff6c8', '#ffffff', C[2]][k % 4], size: 1.8 + Math.random() * 3 }); } }
+}
+function drawSecretFx(x, y, R, p) {           // destello, ondas y columna de luz (p = progreso del descubrimiento)
+  if (p < 0.6) return; const q = (p - 0.6) / 0.4; ctx.globalCompositeOperation = 'lighter';
+  const bw = R * (1.3 - q * 0.6), bh = R * 9, ba = Math.max(0, 1 - q) * 0.75, bg = ctx.createLinearGradient(x, y - bh, x, y); bg.addColorStop(0, 'rgba(255,230,140,0)'); bg.addColorStop(1, 'rgba(255,240,180,' + ba + ')');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(x - bw * 0.3, y - bh); ctx.lineTo(x + bw * 0.3, y - bh); ctx.lineTo(x + bw, y); ctx.lineTo(x - bw, y); ctx.fill();
+  for (let k = 0; k < 3; k++) { const w = q * 2.2 - k * 0.25; if (w <= 0 || w >= 1) continue; ctx.strokeStyle = 'rgba(255,225,120,' + (1 - w) + ')'; ctx.lineWidth = 6 * (1 - w) + 1; ctx.beginPath(); ctx.ellipse(x, y, R * (1 + w * 7), R * (1 + w * 7) * 0.4, 0, 0, 6.283); ctx.stroke(); }
+  if (q < 0.25) { const fa = 1 - q / 0.25, fg = ctx.createRadialGradient(x, y, 0, x, y, R * 8); fg.addColorStop(0, 'rgba(255,255,255,' + fa + ')'); fg.addColorStop(0.3, 'rgba(255,230,150,' + fa * 0.6 + ')'); fg.addColorStop(1, 'rgba(255,200,80,0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(x, y, R * 8, 0, 6.283); ctx.fill(); }
+  ctx.globalCompositeOperation = 'source-over';
+}
+function drawTrail(pts, frac, col, u, r0, r1, i) {    // camino de puntitos de luz entre dos plataformas
+  let tot = 0; for (let k = 1; k < pts.length; k++) tot += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+  const step = Math.max(9, 0.0105 * u), nd = Math.floor(tot / step), rd = Math.max(1.6, 0.0032 * u);
+  for (let k = 1; k < nd; k++) { const f = k / nd; if (f > frac) break; const d = f * tot; if (d < r0 || tot - d < r1) continue;
+    const [px, py] = polyAt(pts, f), w = 0.55 + 0.45 * Math.sin(time * 5 - d / (0.03 * u) + i);
+    ctx.fillStyle = 'rgba(0,0,15,.5)'; ctx.beginPath(); ctx.arc(px, py + rd * 0.35, rd * 1.55, 0, 6.283); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45 + 0.55 * w; ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(px, py, rd, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.5 * w; ctx.beginPath(); ctx.arc(px - rd * 0.25, py - rd * 0.25, rd * 0.45, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+}
+function drawPaintPlat(x, y, s) {             // plataforma dibujada por el juego (para las bases que no vienen en la ilustración)
+  const W = WORLDS[curW], im = W.plat && xi(W.plat); if (!okI(im)) return; const t = mapT(), w = W.platW * t.w * s, h = w * W.platA[2];
+  ctx.drawImage(im, x - w * W.platA[0], y - h * W.platA[1], w, h);
 }
 function drawMap() {
   mapCamStep(); const t = mapT(), u = t.u, im = mapImg(curW);
   if (im && im.naturalWidth) ctx.drawImage(im, t.ox, t.oy, t.w, t.h); else drawBackground();
-  // tramos del tubo: apagados si la fase está bloqueada, con pulsos de energía si está abierta
+  // caminos de luz entre fases (sólo los ya abiertos; el de una base secreta aparece al descubrirla)
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (let i = 1; i < MAP.length; i++) {
-    const n = MAP[i], open = mapOpen(i), unl = mapUnl && mapUnl.i === i ? mapUnl.t : (open ? 1 : 0);
-    const way = n.way.map(p => mapPt(t, p[0], p[1])), a = mapPt(t, MAP[mapPrev(i)].x, MAP[mapPrev(i)].y), b = mapPt(t, n.x, n.y), full = [a, ...way, b];
+    const n = MAP[i], open = mapOpen(i), ing = mapUnl && mapUnl.i === i, unl = ing ? (n.bonus ? Math.min(1, mapUnl.t / 0.32) : mapUnl.t) : (open ? 1 : 0);
+    if (unl <= 0) continue;
+    const pv = MAP[mapPrev(i)], way = n.way.map(p => mapPt(t, p[0], p[1])), a = mapPt(t, pv.x, pv.y), b = mapPt(t, n.x, n.y), full = [a, ...way, b];
+    drawTrail(full, unl, n.bonus ? '#ffd34a' : WORLDS[curW].col, u, pv.rx * u * 0.85, n.rx * u * 0.85, i);
     if (unl < 1) {
-      const [sx, sy, si] = polyAt(way, unl);
-      if (unl > 0) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 0.05 * u); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.3, 'rgba(120,235,255,.7)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, 0.05 * u, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
-        if (Math.random() < 0.8) mapParts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 160, vy: (Math.random() - 0.5) * 160, life: 0.5, max: 0.5, col: '#bff6ff', size: 2 + Math.random() * 2 }); }
-    }
-    if (unl >= 1) {
+      const [sx, sy] = polyAt(full, unl); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 0.05 * u); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.3, n.bonus ? 'rgba(255,220,110,.7)' : 'rgba(120,235,255,.7)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, 0.05 * u, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+      if (Math.random() < 0.8) mapParts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 160, vy: (Math.random() - 0.5) * 160, life: 0.5, max: 0.5, col: n.bonus ? '#fff0b0' : '#bff6ff', size: 2 + Math.random() * 2 });
+    } else {
       ctx.globalCompositeOperation = 'lighter';
-      for (let k = 0; k < 3; k++) { const [x, y] = polyAt(full, (time * 0.22 + k / 3 + i * 0.13) % 1), r = (n.bonus ? 0.012 : 0.02) * u, g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.35, n.bonus ? 'rgba(255,215,90,.6)' : 'rgba(140,240,255,.6)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); }
+      for (let k = 0; k < 2; k++) { const [x, y] = polyAt(full, (time * 0.22 + k / 2 + i * 0.13) % 1), r = (n.bonus ? 0.012 : 0.016) * u, g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(0.35, n.bonus ? 'rgba(255,215,90,.55)' : 'rgba(140,240,255,.5)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); }
       ctx.globalCompositeOperation = 'source-over';
     }
   }
   // plataformas de cada fase
   const post = [];
   for (let i = 0; i < MAP.length; i++) {
-    const n = MAP[i], open = mapOpen(i) && !(mapUnl && mapUnl.i === i), dn = PROG[n.id], sel = i === mapSel, pu = 0.5 + 0.5 * Math.sin(time * 4 + i), rx = n.rx * u, ry = rx * 0.4;
+    const n = MAP[i], ing = mapUnl && mapUnl.i === i, sp = ing && n.bonus ? mapUnl.t : 1, open = mapOpen(i) && (!ing || (n.bonus && sp >= 0.6)), dn = PROG[n.id], sel = i === mapSel, pu = 0.5 + 0.5 * Math.sin(time * 4 + i), rx = n.rx * u, ry = rx * 0.4;
     let [x, y] = mapPt(t, n.x, n.y); if (mapShake.i === i && mapShake.t > 0) x += Math.sin(mapShake.t * 60) * 5;
     const col = dn ? '53,255,138' : n.boss ? '255,70,80' : n.gold || n.bonus ? '255,205,70' : '41,230,255';
     if (!open) {
-      const fade = mapUnl && mapUnl.i === i ? 1 - Math.max(0, mapUnl.t - 0.75) * 4 : 1;
-      if (n.bonus) { mapFog(x, y, rx, fade, i); continue; }          // las bases secretas están tapadas por la niebla hasta que se descubren
+      const fade = ing && !n.bonus ? 1 - Math.max(0, mapUnl.t - 0.75) * 4 : 1;
+      if (n.bonus) { mapFog(x, y, rx, 1, i, ing ? Math.max(0, Math.min(1, (sp - 0.32) / 0.28)) : 0); continue; }          // las bases secretas están tapadas por una nube hasta que se descubren
       ctx.globalAlpha = fade; spr(IMG['ico-candado'], x, y + ry * 0.75 + Math.sin(time * 2 + i) * 1.5, rx * 1.55, 0.5, 1); ctx.globalAlpha = 1;
       continue;
     }
+    if (ing && n.bonus) { const q = Math.min(1, (sp - 0.6) / 0.15), s = q < 1 ? Math.sin(q * 2.1) * 1.18 : 1; if (n.paint) drawPaintPlat(x, y, Math.max(0.05, s)); drawSecretFx(x, y, rx, sp); if (sp < 0.66) continue; }
+    else if (n.paint) drawPaintPlat(x, y, 1);
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = 3 + pu * 2; ctx.strokeStyle = 'rgba(' + col + ',' + (0.55 + 0.35 * pu) + ')'; ctx.shadowColor = 'rgb(' + col + ')'; ctx.shadowBlur = 14;
     ctx.beginPath(); ctx.ellipse(x, y, rx * 0.9, ry * 0.9, 0, 0, 6.283); ctx.stroke(); ctx.shadowBlur = 0;
@@ -3146,13 +3222,13 @@ addEventListener('appinstalled', () => { $('btnInstall').style.display = 'none';
 $('btnInstall').onclick = () => {
   if (deferred) { deferred.prompt(); deferred = null; }
   else if (isIOS) show('ios', true);
-  else infoPanel('INSTALAR', 'Abre el menú del navegador <b>⋮</b> y elige <b>"Instalar aplicación"</b> o <b>"Añadir a pantalla de inicio"</b>.<br>Tendrás TURBOLUCAS como una app más, a pantalla completa.');
+  else infoPanel('INSTALAR', 'Abre el menú del navegador <b>⋮</b> y elige <b>"Instalar aplicación"</b> o <b>"Añadir a pantalla de inicio"</b>.<br>Tendrás COSMOLUCAS como una app más, a pantalla completa.');
 };
 $('iosOk').onclick = () => show('ios', false);
 // compartir: solo texto + enlace, para que WhatsApp muestre la tarjeta con imagen
 $('btnShare').onclick = () => {
-  const url = 'https://puntofibra.github.io/turbolucas/', text = '¡Juega a TURBOLUCAS! Ayuda a Lucas a cruzar la estación orbital 🚀';
-  if (navigator.share) navigator.share({ title: 'TURBOLUCAS', text, url }).catch(() => {});
+  const url = 'https://puntofibra.github.io/turbolucas/', text = '¡Juega a COSMOLUCAS! Viaja con Lucas por 4 planetas 🚀';
+  if (navigator.share) navigator.share({ title: 'COSMOLUCAS', text, url }).catch(() => {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank');
 };
 
@@ -3177,7 +3253,7 @@ try { const k = 'tl_vis_' + new Date().toISOString().slice(0, 10); if (!localSto
 @media (max-height:460px){.card.tips{padding:8px 12px;max-height:96vh}.card.tips h2{font-size:18px;margin:0}.tabs{margin:2px 0 6px}.tabs .btn{padding:5px 8px;font-size:11px}.tfoot{margin-top:6px}.tfoot .btn{padding:6px 14px}.tit{padding:6px 8px}}.tfoot{text-align:center;margin-top:10px}`; document.head.appendChild(st); })();
 const TIPS = {
   'DÓNDE JUGAR': `<div class="tgrid">
-    <div class="tit"><div class="ic">📱</div><p><b>Móvil y tablet</b><br>Siempre en horizontal. Pulsa <b>INSTALAR</b> y tendrás TURBOLUCAS como una app más: a pantalla completa y sin barras del navegador.</p></div>
+    <div class="tit"><div class="ic">📱</div><p><b>Móvil y tablet</b><br>Siempre en horizontal. Pulsa <b>INSTALAR</b> y tendrás COSMOLUCAS como una app más: a pantalla completa y sin barras del navegador.</p></div>
     <div class="tit"><div class="ic">💻</div><p><b>PC y portátil</b><br>En Chrome, Edge, Firefox o Safari. Pulsa <span class="k">F</span> o <b>PANTALLA COMPLETA</b>. También se puede instalar como aplicación.</p></div>
     <div class="tit"><div class="ic">📺</div><p><b>Smart TV</b><br>Abre el navegador de la tele (Samsung, LG, Android TV, Google TV, Fire TV…) y entra en <b>puntofibra.github.io/turbolucas</b>. Se disfruta mucho más con un mando o un teclado conectado a la tele.</p></div>
     <div class="tit"><div class="ic">⚡</div><p><b>Siempre al día</b><br>El juego se actualiza solo con fases y mejoras nuevas, y una vez cargado sigue funcionando aunque se vaya la conexión.</p></div></div>`,
@@ -3372,7 +3448,7 @@ const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
   const tabs = ['TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
-  $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · TURBOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
+  $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · COSMOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
   const B = $('abody');
@@ -3806,5 +3882,5 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { noEnemies() { enemies = []; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); } };
+window.__TL = { noEnemies() { enemies = []; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
 })();

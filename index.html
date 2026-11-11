@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>TURBOLUCAS</title>
+<title>COSMOLUCAS</title>
 <meta name="description" content="El juego de plataformas espacial de Lucas. Un juego de FuturMovil.">
 <meta name="theme-color" content="#070a1e">
 <meta property="og:type" content="website">
-<meta property="og:title" content="TURBOLUCAS">
-<meta property="og:description" content="Ayuda a Lucas a cruzar la estación orbital. ¡Juega gratis!">
+<meta property="og:title" content="COSMOLUCAS">
+<meta property="og:description" content="Viaja con el robot Lucas por 4 planetas. ¡Juega gratis!">
 <meta property="og:url" content="https://puntofibra.github.io/turbolucas/">
-<meta property="og:image" content="https://puntofibra.github.io/turbolucas/img/og.jpg">
+<meta property="og:image" content="https://puntofibra.github.io/turbolucas/img/og.jpg?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -28,7 +28,10 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 .ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:10;padding:16px;text-align:center}
 .ov.on{display:flex}
 #title{background:linear-gradient(180deg,rgba(7,10,30,.35),rgba(7,10,30,.78))}
-#title .logo{width:min(78vw,620px);max-height:26vh;object-fit:contain;filter:drop-shadow(0 0 18px rgba(80,120,255,.55))}
+#title .logo{width:min(78vw,620px);max-height:26vh;object-fit:contain;filter:drop-shadow(0 0 16px rgba(53,255,138,.45));position:relative;z-index:1}
+#heroFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+#title>*:not(#heroFx){position:relative;z-index:1}
+#title>#ver.ver{position:fixed}
 #title .hero{height:min(30vh,290px);margin:1vh 0;animation:bob 2.2s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(41,230,255,.35))}
 @keyframes bob{50%{transform:translateY(-10px)}}
 .btn{font:inherit;font-weight:800;letter-spacing:.06em;color:#fff;border:2px solid var(--cy);background:rgba(12,20,52,.82);border-radius:14px;padding:12px 22px;cursor:pointer;box-shadow:0 0 14px rgba(41,230,255,.45),inset 0 0 12px rgba(41,230,255,.18);transition:transform .08s}
@@ -97,7 +100,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 <canvas id="cv"></canvas>
 
 <div id="title" class="ov on">
-  <img class="logo" id="logoImg" alt="TURBOLUCAS">
+  <img class="logo" id="logoImg" alt="COSMOLUCAS">
   <img class="hero" id="heroImg" alt="Lucas">
   <button class="btn big" id="btnPlay">JUGAR</button>
   <div class="row">
@@ -150,7 +153,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 </div></div>
 
 <script src="js/qrcode.min.js"></script>
-<script src="game.js?v=53"></script>
+<script src="game.js?v=54"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 </script>

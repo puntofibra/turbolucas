@@ -1,7 +1,7 @@
 {
-  "name": "TURBOLUCAS",
-  "short_name": "TURBOLUCAS",
-  "description": "El juego de plataformas espacial de Lucas. Un juego de FuturMovil.",
+  "name": "COSMOLUCAS",
+  "short_name": "COSMOLUCAS",
+  "description": "El juego de plataformas espacial del robot Lucas. Un juego de FuturMovil.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
