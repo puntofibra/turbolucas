@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.29';
+const VERSION = '0.30';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -754,6 +754,28 @@ LEVELS['2-1'] = function () {
   return B.done({ name: 'LLANURA HELADA', time: 220, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 169 * T + T / 2, y: 14 * T } });
 };
 
+/* ---------- fase 2-2: CUEVAS DE CRISTAL (a oscuras: solo brillan los cristales; carámbanos en el techo, un abismo con cristales saltarines y una cámara secreta dentro de la roca) ---------- */
+LEVELS['2-2'] = function () {
+  const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 209, 0, 2);
+  // A · entrada a la cueva
+  B.ground(0, 30); B.crystal(4, 14, 0, 1.2); B.crystal(13, 14, 1); B.crystal(23, 14, 2); B.row(6, 10, 12); B.hid(16, 10, 'vida'); B.box(20, 10, 'escudo'); B.en('patrulla', 26, 13); B.block(7, 20, 3, 4); B.icicle(9, 5); B.icicle(14, 5); B.icicle(18, 5);
+  // B · techo bajo con carámbanos
+  B.mover(31, 12, 3, 72, 0, 1.2, 0); B.arc(31, 35, 10, 1); B.ground(36, 70); B.block(40, 60, 3, 7); B.icicle(44, 8, 1); B.icicle(49, 8, 1); B.icicle(54, 8, 1);
+  B.row(41, 59, 12); B.en('alien', 47, 13); B.en('erizo', 57, 13); B.crystal(42, 14, 1); B.crystal(59, 14, 0); B.spring(64, 14); P(65, 69, 9); B.row(65, 68, 8); B.gear(67, 6); B.crystal(70, 9, 2, 0.8);
+  // C · el abismo de las plataformas que suben y bajan
+  B.mover(72, 13, 2, 0, 60, 1.3, 0); B.mover(75, 11, 2, 0, 60, 1.3, 1.6); B.arc(71, 78, 9, 2); B.crystal(73, 15, 1, 1.5);
+  B.ground(78, 150); B.cp(80, 14); B.en('dron', 88, 9, { x0: 82, x1: 96 }); B.box(90, 10, 'laser'); B.set(93, 10, 'B'); B.box(94, 10, 'chip'); B.set(95, 10, 'B'); B.en('patrulla', 100, 13); B.crystal(97, 14, 2);
+  // la roca con cámara secreta: túnel por abajo… y una pared falsa por arriba
+  P(104, 106, 10); B.block(108, 113, 3, 11); B.fake(108, 112, 6, 10); B.gear(111, 8); B.row(109, 111, 7); B.row(109, 112, 10); B.row(108, 113, 13); B.crystal(115, 14, 1);
+  // D · galería de carámbanos gigantes
+  B.block(124, 142, 3, 5); B.icicle(127, 6, 1); B.icicle(131, 6, 1); B.icicle(135, 6, 1); B.icicle(139, 6, 1); B.row(126, 140, 13); B.crystal(122, 14, 0, 1.3); B.crystal(130, 14, 1); B.en('erizo', 145, 13); B.crystal(148, 14, 2);
+  // E · abismo de cristales saltarines
+  B.block(153, 154, 12, 15); B.spring(153, 12); B.block(157, 159, 10, 15); B.spring(158, 10); B.arc(151, 160, 7, 3); B.gear(155, 5); B.crystal(154, 12, 0, 0.7);
+  B.ground(161, 205); B.cp(164, 14); B.en('dron', 172, 8, { x0: 166, x1: 180 }); B.en('alien', 178, 13); B.box(184, 10, 'estrella'); B.en('patrulla', 186, 13); B.crystal(182, 14, 1, 1.2);
+  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.crystal(203, 14, 2, 1.4); B.block(206, 209, 0, 15);
+  return B.done({ name: 'CUEVAS DE CRISTAL', time: 230, theme: 'ice', cave: true, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } });
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -1201,6 +1223,9 @@ function drawDark() {
   const light = (x, y, r, a = 1) => { const sx = (x - cam.x) / q, sy = (y - cam.y) / q, rr = r / q; if (sx < -rr || sx > w + rr || sy < -rr || sy > h + rr) return; const g2 = d.createRadialGradient(sx, sy, rr * 0.15, sx, sy, rr); g2.addColorStop(0, 'rgba(0,0,0,' + a + ')'); g2.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g2; d.fillRect(sx - rr, sy - rr, rr * 2, rr * 2); };
   const p = P; light(p.x + p.w / 2, p.y + p.h / 2, (p.tStar > 0 ? 340 : 235) + Math.sin(time * 7) * 5); light(p.x + p.w / 2, p.y + p.h, 120, 0.8);
   for (const cp of L.cps) light(cp.x, cp.y - 60, cp.on ? 150 : 70, cp.on ? 0.9 : 0.55);
+  for (const c of L.crys) light(c.x, c.y - 30 * c.h, 150 * c.h, 0.85);
+  for (const ic of L.icicles) if (ic.st < 3) light(ic.x, ic.y + 20, 40, 0.45);
+  for (const pd of L.pads) if (pd.crystal) light(pd.x + 24, pd.y - 20, 90, 0.8);
   for (const po of L.portals) light(po.x, po.y, 135, 0.9);
   light(L.goal.x, L.goal.y - 130, 230);
   for (const l of L.lasers) if (laserOn(l)) for (let y = l.y0 + 20; y < l.y1; y += 44) light(l.x, y, 62, 0.75);
@@ -1285,7 +1310,17 @@ function bgLayer(im, h, bottom, par) {
 // cielo del planeta de cristal: aurora boreal, planeta anillado, montañas de hielo y nieve que cae
 const MTN = [0, 1].map(l => { const pts = []; let seed = 11 + l * 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; for (let x = 0; x <= 3000; x += 70 + rnd() * 90) pts.push([x, 0.25 + rnd() * 0.6]); return pts; });
 const FLAKES = []; for (let i = 0; i < 110; i++) FLAKES.push({ x: Math.random(), y: Math.random(), s: 0.6 + Math.random() * 1.8, v: 18 + Math.random() * 40, ph: Math.random() * 6 });
+function drawCaveBg() {              // interior de la cueva: roca oscura, estalactitas al fondo y destellos de cristal
+  const g = ctx.createLinearGradient(0, 0, 0, VHv); g.addColorStop(0, '#060818'); g.addColorStop(0.5, '#0c1634'); g.addColorStop(1, '#14264a'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VHv);
+  for (const [par, col, sz] of [[0.1, '#0f1d3d', 1], [0.25, '#0a1530', 1.4]]) { const off = cam.x * par; ctx.fillStyle = col;
+    ctx.beginPath(); ctx.moveTo(0, 0); for (let x = -((off) % 90) - 90; x < VW + 90; x += 45) { const i = Math.floor((x + off) / 45), h = (30 + ((i * 53) % 70)) * sz; ctx.lineTo(x, 0); ctx.lineTo(x + 22, h); ctx.lineTo(x + 45, 0); } ctx.lineTo(VW, 0); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, VHv); for (let x = -((off) % 120) - 120; x < VW + 120; x += 60) { const i = Math.floor((x + off) / 60), h = (40 + ((i * 37) % 90)) * sz; ctx.lineTo(x, VHv); ctx.lineTo(x + 30, VHv - h); ctx.lineTo(x + 60, VHv); } ctx.lineTo(VW, VHv); ctx.closePath(); ctx.fill(); }
+  ctx.globalCompositeOperation = 'lighter';
+  for (const s2 of STARS) { if (s2.l !== 3) continue; const px = ((s2.x * 1400 - cam.x * 0.12) % 1400 + 1400) % 1400; if (px > VW) continue; const a = Math.max(0, Math.sin(time * 2 + s2.tw * 3)); ctx.fillStyle = 'rgba(140,230,255,' + a * 0.7 + ')'; ctx.fillRect(px, s2.y * VHv, 2, 2); }
+  ctx.globalCompositeOperation = 'source-over';
+}
 function drawIceBg() {
+  if (L.cave) { drawCaveBg(); return; }
   const g = ctx.createLinearGradient(0, 0, 0, VHv); g.addColorStop(0, '#040824'); g.addColorStop(0.55, '#0e2150'); g.addColorStop(1, '#2b5a8f'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VHv);
   for (const s2 of STARS) { const px = ((s2.x * 1400 - cam.x * 0.03 * s2.l) % 1400 + 1400) % 1400; if (px > VW || s2.y > 0.6) continue; ctx.globalAlpha = 0.4 + 0.4 * Math.sin(time * 1.5 + s2.tw); ctx.fillStyle = '#fff'; ctx.fillRect(px, s2.y * VHv, s2.s, s2.s); } ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'lighter';          // aurora
@@ -1306,7 +1341,7 @@ function drawIceBg() {
 }
 function drawWater() {}
 function drawSnow() {               // copos por delante de todo, en pantalla
-  if (L.theme !== 'ice' || L.water) return; const storm = L.winds.length ? Math.max(0, ...L.winds.map(w => w.k || 0)) : 0, dir = L.winds.length ? Math.sign(L.winds[0].f) : 0;
+  if (L.theme !== 'ice' || L.water || L.cave) return; const storm = L.winds.length ? Math.max(0, ...L.winds.map(w => w.k || 0)) : 0, dir = L.winds.length ? Math.sign(L.winds[0].f) : 0;
   ctx.fillStyle = '#fff';
   for (const f of FLAKES) { f.y += f.v * 0.0003 * (1 + storm); f.x += (Math.sin(time + f.ph) * 0.0002) + dir * storm * 0.004; if (f.y > 1) { f.y = 0; f.x = Math.random(); } f.x = (f.x + 1) % 1;
     ctx.globalAlpha = 0.5 + 0.4 * f.s / 2.4; ctx.beginPath(); ctx.arc(f.x * VW, f.y * VHv, f.s, 0, 6.283); ctx.fill(); }
@@ -1800,7 +1835,7 @@ const MAP1 = [
 /* ---------- mapa del mundo 2: PLANETA DE CRISTAL ---------- */
 const MAP2 = [
   { id: '2-1', n: '1', name: 'LLANURA HELADA', x: 0.104, y: 0.4955, rx: 0.04, built: true },
-  { id: '2-2', n: '2', name: 'CUEVAS DE CRISTAL', x: 0.3475, y: 0.657, rx: 0.04, way: [[0.165, 0.453], [0.22, 0.488], [0.25, 0.56], [0.29, 0.625]] },
+  { id: '2-2', n: '2', name: 'CUEVAS DE CRISTAL', x: 0.3475, y: 0.657, rx: 0.04, built: true, way: [[0.165, 0.453], [0.22, 0.488], [0.25, 0.56], [0.29, 0.625]] },
   { id: '2-3', n: '3', name: 'BAJO EL HIELO', x: 0.3635, y: 0.437, rx: 0.038, way: [[0.35, 0.59], [0.355, 0.52]] },
   { id: '2-4', n: '4', name: 'TORMENTA DE NIEVE', x: 0.4985, y: 0.491, rx: 0.038, way: [[0.415, 0.448], [0.455, 0.475]] },
   { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, way: [[0.53, 0.555], [0.585, 0.627]] },
