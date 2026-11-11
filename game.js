@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.70';
+const VERSION = '0.71';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -1141,7 +1141,7 @@ LEVELS['3-9'] = function () {
   P(14, 19, H - 30); B.box(16, H - 34, 'escudo'); B.lift(3, 5, H - 50, H - 34); P(6, 11, H - 50); B.cp(8, H - 50); B.en('dron', 15, H - 54, { x0: 6, x1: 24 });
   P(13, 22, H - 54); B.set(20, H - 58, '!'); B.block(23, 26, H - 58, H - 58, 'Y'); B.block(23, 26, H - 64, H - 64, 'X'); B.gear(24, H - 66); P(11, 19, H - 61); B.lift(6, 8, H - 80, H - 63); P(9, 14, H - 80);
   B.block(18, 26, H - 74, H - 74); B.fake(18, 18, H - 73, H - 70); B.block(18, 26, H - 69, H - 69); B.row(19, 25, H - 71); B.gear(25, H - 71);              // cámara en la pared
-  P(16, 21, H - 84); B.en('patrulla', 18, H - 85); P(22, 26, H - 88); B.cp(24, H - 88); B.lift(3, 5, 6, H - 84); B.block(6, 26, 6, 7); B.crystal(24, 6, 3, 1.3); B.row(8, 20, 4);
+  P(16, 21, H - 84); B.en('patrulla', 18, H - 85); P(22, 26, H - 86); B.cp(24, H - 86); B.lift(3, 5, 6, H - 84); B.block(6, 26, 6, 7); B.crystal(24, 6, 3, 1.3); B.row(8, 20, 4);
   return B.done(LV({ name: 'LAS CHIMENEAS', time: 240, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 15 * T + T / 2, y: 6 * T } }));
 };
 // 3-10 · engranajes gigantes: plataformas de la maquinaria y una red de escotillas; la última lleva a la sala de la antena
@@ -1710,7 +1710,10 @@ function updatePlayer(dt) {
       else { burst(k.x, k.y - 45, 30, '#ff9a3c', 300, 0.7, -100, 4); burst(k.x, k.y - 45, 16, '#ffd060', 200, 0.5, 0, 3); noise(0.4, 0.15, 300); } } }
   items = items.filter(i => !i.got);
   // punto de control, portal, meta
-  for (const cp of L.cps) if (!cp.on && Math.abs(cx - cp.x) < 30 && p.y + p.h > cp.y - 120 && p.y + p.h < cp.y + 30) { cp.on = true; L.lastCp = cp; SFX.check(); pop(cp.x, cp.y - 90, 'PUNTO DE CONTROL', '#35ff8a'); burst(cp.x, cp.y - 60, 20, '#35ff8a', 200, 0.6, 0, 3); }
+  // punto de control: se activa al pasarlo (aunque vayas saltando por encima o por debajo); siempre cuenta el más avanzado
+  const feet = p.y + p.h, cpPass = cp => L.vert ? feet <= cp.y + 40 && Math.abs(cx - cp.x) < 7 * T : cx >= cp.x - 24 && Math.abs(feet - cp.y) < 7 * T;
+  const cpAhead = cp => !L.lastCp || (L.vert ? cp.y < L.lastCp.y : cp.x > L.lastCp.x);
+  for (const cp of L.cps) if (!cp.on && !p.dead && cpPass(cp)) { cp.on = true; if (cpAhead(cp)) L.lastCp = cp; SFX.check(); pop(cp.x, cp.y - 90, 'PUNTO DE CONTROL', '#35ff8a'); burst(cp.x, cp.y - 60, 20, '#35ff8a', 200, 0.6, 0, 3); }
   if (p.tele <= 0) for (const po of L.portals) if (Math.abs(cx - po.x) < 26 && Math.abs(cy - po.y) < 44) {
     burst(po.x, po.y, 26, '#c63cff', 260, 0.6, 0, 4); SFX.portal();
     p.x = po.tox - p.w / 2; p.y = po.toy - p.h; p.vx = 0; p.vy = 0; p.tele = 1.2; p.inv = Math.max(p.inv, 0.8);
