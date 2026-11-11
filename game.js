@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.44';
+const VERSION = '0.45';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -642,7 +642,7 @@ LEVELS['1-J'] = function () {
   const B = LB(80, 16);
   B.ground(0, 79); B.row(5, 8, 12);
   B.set(10, 10, 'B'); B.box(11, 10, 'escudo'); B.set(12, 10, 'B'); B.box(15, 10, 'laser');
-  B.block(18, 20, 9, 9, '='); B.gear(19, 7); B.en('patrulla', 23, 13); B.en('dron', 28, 10, { x0: 25, x1: 33 }); B.row(25, 31, 12);
+  B.pad(16, 14); B.block(18, 20, 9, 9, '='); B.gear(19, 7); B.en('patrulla', 23, 13); B.en('dron', 28, 10, { x0: 25, x1: 33 }); B.row(25, 31, 12);
   B.cp(35, 14); B.box(38, 10, 'chip'); B.hid(33, 10, 'vida');
   B.block(42, 43, 0, 10); B.block(78, 79, 0, 15);                                  // puerta de la arena y pared del fondo
   B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13);
@@ -705,7 +705,7 @@ function bossUpdate(dt) {
     else if (b.st !== 'stun') hurt();
   }
   for (const s2 of shots) if (s2.mine && s2.life > 0 && overlap({ x: s2.x - s2.w / 2, y: s2.y - s2.h / 2, w: s2.w, h: s2.h }, r)) {
-    s2.life = 0; if (b.st === 'stun') bossHit(); else { burst(s2.x, s2.y, 8, '#cfe0ff', 140, 0.25, 0, 2.5); tone(2400, 1800, 0.05, 'square', 0.05); } }
+    s2.life = 0; if (b.st === 'stun') bossHit(); else { b.lz = (b.lz || 0) + 1; b.flash = Math.max(b.flash, 0.08); if (b.lz >= 4) { b.lz = 0; bossHit(); } else { burst(s2.x, s2.y, 8, '#ffd23c', 140, 0.25, 0, 2.5); tone(2400, 1800, 0.05, 'square', 0.05); } } }
   for (const w of L.waves) { w.x += w.dir * w.sp * dt; if (w.x < a.x0 - 20 || w.x > a.x1 + 20) w.dead = true;
     if (!p.dead && !p.win && p.y + p.h > gy - 38 && Math.abs(p.x + p.w / 2 - w.x) < 30) hurt(); }
   L.waves = L.waves.filter(w => !w.dead);
@@ -1217,9 +1217,10 @@ const ENEMY = {
   dron: { img: 'enemigo-dron-anim', h: 61.8, ax: 0.5216, w: 46, bh: 40, speed: 80, stomp: true, pts: 200, fly: true },
   torreta: { img: 'enemigo-torreta-anim', h: 71, w: 54, bh: 56, speed: 0, stomp: true, pts: 300 }
 };
-function newPlayer(x, y) {
-  return { x: x - 20, y: y - 78, w: 40, h: 78, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jbuf: 0, crouch: false,
-    power: null, shield: false, tTurbo: 0, tMagnet: 0, tStar: 0, inv: 0, dead: false, deadT: 0, win: false, winT: 0, idle: 0, sq: 0, tele: 0, drop: false, cool: 0 };
+function newPlayer(x, y) {          // en las fases de jefe empiezas (y reapareces) con escudo, láser y vuelo sin límite: solo sirven para esa fase
+  const kit = !!(L && L.bossLvl);
+  return { kit, kitMsg: kit, fly: kit, x: x - 20, y: y - 78, w: 40, h: 78, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jbuf: 0, crouch: false,
+    power: kit ? 'laser' : null, shield: kit, tTurbo: 0, tMagnet: 0, tStar: 0, inv: 0, dead: false, deadT: 0, win: false, winT: 0, idle: 0, sq: 0, tele: 0, drop: false, cool: 0 };
 }
 function spawnEnemies() {
   enemies = L.ents.map(e => {
@@ -1299,6 +1300,7 @@ function respawn() {
   for (const ic of L.icicles) { ic.st = 0; ic.x = ic.x0; ic.y = ic.y0; }
 }
 function updatePlayer(dt) {
+  if (P.kitMsg) { P.kitMsg = false; pop(P.x + P.w / 2, P.y - 50, '¡ESCUDO, LÁSER Y VUELO PARA EL JEFE!', '#7fe9ff'); SFX.life(); }
   const p = P;
   if (p.dead) {
     p.deadT += dt; p.vy += 1800 * (L.gk < 1 ? 0.6 : 1) * dt; p.y += p.vy * dt;
@@ -1339,7 +1341,7 @@ function updatePlayer(dt) {
     }
   }
   if (!wet && !K.jump && p.vy < -260 && !p.boost) p.vy = -260;               // salto corto si sueltas
-  if ((p.tTurbo > 0 || CHEAT.fly) && K.jump) p.vy = Math.max(p.vy - 3600 * dt, -330);   // turbo: volar
+  if ((p.tTurbo > 0 || CHEAT.fly || p.fly) && K.jump) p.vy = Math.max(p.vy - 3600 * dt, -330);   // turbo: volar
   if (wet) p.vy = Math.min(p.vy + 640 * dt, 170); else p.vy = Math.min(p.vy + 2000 * L.gk * dt, L.gk < 1 ? 560 : 900);
   const wasAir = !p.onGround, vyBefore = p.vy, feet0 = p.y + p.h;
   moveEnt(p, dt);
@@ -2039,7 +2041,7 @@ function drawPlayer() {
   // llamas de los 3 propulsores
   if (!p.dead) {
     if (p.wet && Math.random() < 0.25) parts.push({ x: cx + (Math.random() - 0.5) * 20, y: p.y + p.h - 6, vx: (Math.random() - 0.5) * 20, vy: -30, life: 1.2, max: 1.2, col: 'rgba(220,250,255,.8)', size: 1.5 + Math.random() * 2.5, grav: -120 });
-    const fl = p.wet ? 0 : p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
+    const fl = p.wet ? 0 : p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly || p.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
     const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = CAN[pose].map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
     if (p.onGround) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,130,40,' + (0.2 + 0.08 * Math.sin(time * 40)) + ')'; ctx.beginPath(); ctx.ellipse(mouths[1][0], p.y + p.h + 1, 30 * mini, 5 * mini, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
     if (fl > 0) mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 ? 1.1 : 1), 9 * mini, i + 1));
@@ -2144,7 +2146,7 @@ function drawHUD() {
     if (b.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + b.flash * 2 + ')'; ctx.fillRect(bx, by2 + 10, bw, 10); } }
   // poderes activos
   const p = P, act = [];
-  if (p.power === 'laser' || CHEAT.laser) act.push(['poder-laser', 0]); if (p.power === 'mini') act.push(['poder-mini', 0]); if (p.shield) act.push(['poder-escudo', 0]);
+  if (p.power === 'laser' || CHEAT.laser) act.push(['poder-laser', 0]); if (p.power === 'mini') act.push(['poder-mini', 0]); if (p.shield) act.push(['poder-escudo', 0]); if (p.fly) act.push(['poder-turbo', 0]);
   if (p.tTurbo > 0) act.push(['poder-turbo', p.tTurbo / 7]); if (p.tMagnet > 0) act.push(['poder-iman', p.tMagnet / 14]); if (p.tStar > 0) act.push(['poder-estrella5g', p.tStar / 9]);
   act.forEach(([n, f], i) => { const x = pad + 18 + i * 44, y = 76; spr(IMG[n], x, y, 36, 0.5, 0.5);
     if (f > 0) { ctx.strokeStyle = '#35ff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 20, -1.5708, -1.5708 + 6.283 * f); ctx.stroke(); } });
