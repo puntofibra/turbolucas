@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.58';
+const VERSION = '0.59';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -1648,7 +1648,7 @@ function updatePlayer(dt) {
     }
   }
   else if (jumpPressed && p.dj && !p.onGround && !p.climb && !p.dead && !(p.tTurbo > 0 || CHEAT.fly || p.fly)) {   // doble salto en el aire
-    p.dj = false; p.vy = p.power === 'mini' ? -680 : -760; p.boost = 1; p.jbuf = 0; p.sq = 1; p.flip = 0.42;
+    p.dj = false; p.vy = p.power === 'mini' ? -430 : -470; p.boost = 1; p.jbuf = 0; p.sq = 1; p.flip = 0.42;
     const fx = p.x + p.w / 2, fy = p.y + p.h; (L.djr = L.djr || []).push({ x: fx, y: fy, t0: time });
     tone(520, 1560, 0.18, 'triangle', 0.08); tone(780, 2340, 0.16, 'sine', 0.05, 0.04);
     for (let i = 0; i < 26; i++) { const a = Math.PI * (0.15 + 0.7 * Math.random()), v = 160 + Math.random() * 260; parts.push({ x: fx + (Math.random() - 0.5) * 20, y: fy, vx: Math.cos(a) * v * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * v * 0.6, life: 0.45, max: 0.45, col: ['#7ff6ff', '#ffffff', '#35ff8a', '#bff9ff'][i % 4], size: 2 + Math.random() * 2.5, grav: 200 }); }
@@ -1850,7 +1850,7 @@ function drawLavaPits() {
   const hole = x => !isWallT(L.g[L.H - 1][x]) && !L.warps.some(w => (x + 0.5) * T > w.x0 && (x + 0.5) * T < w.x1);
   for (let x = x0; x <= x1; x++) { if (!hole(x)) continue; let e = x; while (e + 1 <= x1 && hole(e + 1)) e++;
     ctx.globalCompositeOperation = 'lighter'; const gl = ctx.createLinearGradient(0, y - 120, 0, y); gl.addColorStop(0, sw ? 'rgba(80,255,120,0)' : 'rgba(255,90,20,0)'); gl.addColorStop(1, sw ? 'rgba(80,255,140,.3)' : 'rgba(255,110,30,.45)'); ctx.fillStyle = gl; ctx.fillRect(x * T, y - 120, (e + 1 - x) * T, 120); ctx.globalCompositeOperation = 'source-over';
-    (sw ? swampBand : lavaBand)(x * T - 1, (e + 1 - x) * T + 2, y, VHv); if (Math.random() < 0.05 * (e - x + 1)) parts.push({ x: (x + Math.random() * (e + 1 - x)) * T, y: y, vx: (Math.random() - 0.5) * 60, vy: -200 - Math.random() * 200, life: 0.8, max: 0.8, col: sw ? (Math.random() < 0.5 ? '#c8ff8a' : '#5ae06a') : Math.random() < 0.5 ? '#ffb040' : '#ff5a1a', size: 2.5, grav: 900 }); x = e; }
+    ctx.save(); ctx.beginPath(); ctx.rect(x * T, y - 60, (e + 1 - x) * T, VHv + 60); ctx.clip(); (sw ? swampBand : lavaBand)(x * T - 1, (e + 1 - x) * T + 2, y, VHv); ctx.restore(); if (Math.random() < 0.05 * (e - x + 1)) parts.push({ x: (x + Math.random() * (e + 1 - x)) * T, y: y, vx: (Math.random() - 0.5) * 60, vy: -200 - Math.random() * 200, life: 0.8, max: 0.8, col: sw ? (Math.random() < 0.5 ? '#c8ff8a' : '#5ae06a') : Math.random() < 0.5 ? '#ffb040' : '#ff5a1a', size: 2.5, grav: 900 }); x = e; }
 }
 function drawGeysers() {
   for (const gz of L.geysers) { if (gz.x < cam.x - 80 || gz.x > cam.x + VW + 80) continue; const x = gz.x, y = gz.y;
