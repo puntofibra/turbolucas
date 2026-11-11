@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.12';
+const VERSION = '0.13';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -23,11 +23,11 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 
 /* ---------- imagenes ---------- */
 const NAMES = ['lucas-quieto', 'lucas-avanzando', 'lucas-saltando', 'lucas-cayendo', 'lucas-golpeado', 'lucas-celebrando', 'lucas-agachado',
-  'enemigo-patrulla-anim', 'enemigo-dron-anim', 'enemigo-erizo-anim', 'enemigo-torreta', 'enemigo-alien-anim',
+  'enemigo-patrulla-anim', 'enemigo-dron-anim', 'enemigo-erizo-anim', 'enemigo-torreta-anim', 'enemigo-alien-anim',
   'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'jefe1', 'mapa1', 'ico-candado', 'ico-estrella', 'ico-estrella-off', 'ico-bandera', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
   'poder-laser', 'poder-escudo', 'poder-turbo', 'poder-iman', 'poder-mini', 'poder-estrella5g'];
 const IMG = {};
-const FRAMES = { 'enemigo-dron-anim': 4, 'enemigo-patrulla-anim': 4, 'enemigo-alien-anim': 4, 'enemigo-erizo-anim': 4 };      // imágenes que son una tira de fotogramas de animación
+const FRAMES = { 'enemigo-dron-anim': 4, 'enemigo-patrulla-anim': 4, 'enemigo-alien-anim': 4, 'enemigo-erizo-anim': 4, 'enemigo-torreta-anim': 3 };      // imágenes que son una tira de fotogramas de animación
 let loaded = 0;
 function loadImages(done) {
   NAMES.forEach(n => {
@@ -263,7 +263,7 @@ const ENEMY = {
   alien: { img: 'enemigo-alien-anim', h: 59.8, ax: 0.5141, fps: 4.5, w: 48, bh: 46, speed: 30, stomp: true, pts: 100 },
   erizo: { img: 'enemigo-erizo-anim', h: 52.6, fps: 7, w: 50, bh: 44, speed: 48, stomp: false, pts: 300 },
   dron: { img: 'enemigo-dron-anim', h: 61.8, ax: 0.5216, w: 46, bh: 40, speed: 80, stomp: true, pts: 200, fly: true },
-  torreta: { img: 'enemigo-torreta', h: 64, w: 54, bh: 56, speed: 0, stomp: true, pts: 300 }
+  torreta: { img: 'enemigo-torreta-anim', h: 71, w: 54, bh: 56, speed: 0, stomp: true, pts: 300 }
 };
 function newPlayer(x, y) {
   return { x: x - 20, y: y - 78, w: 40, h: 78, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jbuf: 0, crouch: false,
@@ -447,9 +447,10 @@ function updateEnemies(dt) {
       e.x += e.dir * e.d.speed * dt; if (e.x < e.x0) e.dir = 1; if (e.x > e.x1) e.dir = -1;
       e.y = e.by + Math.sin(e.t * 2.2) * 26;
     } else if (e.type === 'torreta') {
-      e.dir = p.x < e.x ? -1 : 1; e.timer -= dt;
+      e.dir = p.x < e.x ? -1 : 1; e.timer -= dt; e.shotT = Math.max(0, (e.shotT || 0) - dt);
+      e.near = Math.abs(p.x - e.x) < 620 && Math.abs(p.y - e.y) < 260;
       if (e.timer <= 0 && Math.abs(p.x - e.x) < 620 && Math.abs(p.y - e.y) < 260) {
-        e.timer = 2.3; shots.push({ mine: false, x: e.x + e.w / 2 + e.dir * 34, y: e.y + 14, vx: e.dir * 250, vy: 0, w: 14, h: 14, life: 3.2 }); SFX.shot();
+        e.timer = 2.3; e.shotT = 0.28; shots.push({ mine: false, x: e.x + e.w / 2 + e.dir * 34, y: e.y + 14, vx: e.dir * 250, vy: 0, w: 14, h: 14, life: 3.2 }); SFX.shot();
         burst(e.x + e.w / 2 + e.dir * 34, e.y + 18, 6, '#ff9a3c', 100, 0.25, 0, 3);
       }
     } else {
@@ -699,7 +700,7 @@ function drawWorld() {
   for (const e of enemies) {
     if (!vis(e.x)) continue;
     const cx = e.x + e.w / 2, by = e.y + e.h, eim = IMG[e.d.img], eax = e.d.ax || 0.5, efl = e.d.faceR ? e.dir < 0 : e.dir > 0;
-    if (eim._n) eim._f = e.dead ? 0 : Math.floor(e.t * (e.d.fps || 22));
+    if (eim._n) eim._f = e.dead ? 0 : e.type === 'torreta' ? (e.shotT > 0 ? 2 : e.near && e.timer < 0.6 ? 1 : 0) : Math.floor(e.t * (e.d.fps || 22));
     if (e.dead) { if (e.how === 'squish') spr(IMG[e.d.img], cx, by, e.d.h, eax, 1, efl, 0, 1.25, 0.25); else spr(IMG[e.d.img], cx, by - e.d.h / 2, e.d.h, 0.5, 0.5, efl, e.dead * 9); continue; }
     const wob = e.d.fly || e.type === 'torreta' ? 0 : Math.sin(e.t * 9) * 0.04;
     spr(IMG[e.d.img], cx, by + (e.type === 'alien' ? 4 : 2), e.d.h, eax, 1, efl, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1);
