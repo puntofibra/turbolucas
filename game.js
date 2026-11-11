@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.36';
+const VERSION = '0.37';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -872,7 +872,7 @@ LEVELS['2-B'] = function () {
   const H = 22, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   const shape = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') B.chip(x + i, y + j); }));
   // A · el "2" de chips sobre las nubes
-  B.ground(0, 14); P(7, 12, 15); shape(8, 8, ['###', '..#', '###', '#..', '###']); B.hid(16, 16, 'vida'); B.crystal(2, 20, 1, 1.3);
+  B.ground(0, 14); P(7, 12, 15); shape(8, 8, ['###', '..#', '###', '#..', '###']); B.hid(4, 16, 'vida'); B.crystal(2, 20, 1, 1.3);
   // B · islas y cristales saltarines
   B.arc(14, 20, 16, 3); B.ground(20, 26); B.spring(24, 20); P(28, 33, 10); B.gear(31, 8); B.row(28, 33, 9); B.crystal(21, 20, 0);
   // C · estrellas fugaces
@@ -2330,7 +2330,24 @@ const SECRETS = [
   { f: '1-4', img: '1-4b', t: 'Repisa del tercer engranaje', d: 'Encima del techo de cajas, el saltador de la derecha te lanza a una repisa pegada a la pared con el tercer engranaje.' },
   { f: '1-B', img: '1-Ba', t: 'Vida oculta bajo el 5G', d: 'Justo a la derecha de la plataforma del "5G" de chips, salta en el aire: un bloque invisible esconde una vida.' },
   { f: '1-B', img: '1-Bb', t: 'Isla del cielo', d: 'Al final, el saltador te lanza muy alto (con la gravedad lunar) a una isla escondida con el tercer engranaje y un arco de chips.' },
-  { f: '1-J', img: '1-Ja', t: 'Vida antes del jefe', d: 'Junto al punto de control de antes de la arena, salta a la izquierda de la caja: un bloque invisible te da una vida para la pelea.' }
+  { f: '1-J', img: '1-Ja', t: 'Vida antes del jefe', d: 'Junto al punto de control de antes de la arena, salta a la izquierda de la caja: un bloque invisible te da una vida para la pelea.' },
+  { f: '2-1', img: '2-1a', t: 'Vida oculta junto a los chips', d: 'Al empezar, justo a la derecha de la primera fila de chips, salta: aparece un bloque invisible con una vida.' },
+  { f: '2-1', img: '2-1b', t: 'La torre de la pared falsa', d: 'La torre baja de hielo del tramo 4 está hueca por abajo: camina contra ella y la atraviesas. Dentro hay chips y un engranaje.' },
+  { f: '2-1', img: '2-1c', t: 'El agujero de la cueva secreta', d: 'Después del punto de control, déjate caer por el agujero (en vez de saltarlo): no mueres, caes en una cueva secreta llena de chips con el tercer engranaje. El portal te devuelve al camino.' },
+  { f: '2-2', img: '2-2a', t: 'Vida oculta en la entrada', d: 'Entre la fila de chips y la caja del escudo, salta: hay un bloque invisible con una vida.' },
+  { f: '2-2', img: '2-2b', t: 'Cámara dentro de la roca', d: 'Antes de la gran roca, sube a la plataforma pequeña y salta hacia la roca: su parte de arriba es una pared falsa con un engranaje y chips dentro.' },
+  { f: '2-3', img: '2-3a', t: 'Vida oculta al zambullirte', d: 'Nada más empezar, nada hacia arriba en la zona de los primeros chips: un bloque invisible esconde una vida.' },
+  { f: '2-3', img: '2-3b', t: 'La roca hueca', d: 'Tras las corrientes, la roca grande tiene una pared falsa a media altura: entra nadando y coge el engranaje.' },
+  { f: '2-3', img: '2-3c', t: 'La cámara sellada', d: 'Al final hay un techo de bloques de hielo: rómpelo nadando hacia arriba y entrarás en una cámara llena de chips con el tercer engranaje.' },
+  { f: '2-4', img: '2-4a', t: 'Vida oculta antes de la ventisca', d: 'Al empezar, a la derecha de los chips, salta: bloque invisible con una vida.' },
+  { f: '2-4', img: '2-4b', t: 'El agujero de la gruta', d: 'Después del primer cristal saltarín, déjate caer por el agujero: llegas a una gruta secreta bajo la nieve con el tercer engranaje.' },
+  { f: '2-4', img: '2-4c', t: 'Montículo de nieve hueco', d: 'Al final, el montículo de nieve bajo se atraviesa andando: dentro hay un engranaje.' },
+  { f: '2-5', img: '2-5a', t: 'Vida oculta antes de la avalancha', d: 'Al empezar, antes de la caja del escudo, salta: hay una vida escondida. ¡Cógela rápido, que viene la avalancha!' },
+  { f: '2-5', img: '2-5b', t: 'Ruta alta de la avalancha', d: 'En las dos rutas, el cristal saltarín te sube por encima del techo de carámbanos: ahí arriba está el engranaje.' },
+  { f: '2-6', img: '2-6a', t: 'El portal escondido en el agujero', d: 'En el suelo de la mina, a la derecha, hay un agujero: cae por él a una galería oculta con chips, un engranaje y un portal que te lleva a una cámara secreta del pozo con otro engranaje.' },
+  { f: '2-6', img: '2-6b', t: 'Vida oculta en el fondo del pozo', d: 'En el suelo de la mina, a la derecha de la primera fila de chips, salta: bloque invisible con una vida.' },
+  { f: '2-B', img: '2-Ba', t: 'Vida oculta sobre las nubes', d: 'Nada más empezar, salta un poco a la derecha: aparece un bloque invisible con una vida.' },
+  { f: '2-J', img: '2-Ja', t: 'Vida antes del Guardián de Hielo', d: 'Junto al punto de control de antes de la arena, salta a la izquierda de la caja: bloque invisible con una vida.' }
 ];
 let admTab = 'TRUCOS', admLl = [], admSt = null;
 function openAdmin() {
