@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.78';
+const VERSION = '0.79';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3601,7 +3601,9 @@ function admPaint() {
     $('tAdd').onclick = async () => { const u = +$('tU').value; try { const r = await admOp('tmpAdd', { truco: $('tT').value, mins: u ? Math.max(1, +$('tN').value || 1) * u : 0, teclas: $('tK').value, pad: pad.join('+'), toques: +$('tQ').value || 0, nota: $('tNo').value }); paint(r.tmp); tmpLoad(); admMsg('✔ Truco temporal creado'); SFX.life(); } catch (e) { admMsg(e.message, 1); } };
   } else if (admTab === 'NIVELES') {
     B.innerHTML = '<div style="color:#8ea3e6">Código secreto de cada fase. Si un jugador lo escribe en TALLER › CARGAR UN NIVEL, se le abren todos los candados hasta esa fase (incluida). Las que no se haya pasado quedan con 0 estrellas; las que ya tenía conservan las suyas.</div><div class="amsg" id="amsg">Cargando…</div><div id="nvC"></div>';
-    admOp('nivLlaves', { ids: ALLN().map(n => n.id) }).then(r => { const c = r.cods || {}; admMsg(''); $('nvC').innerHTML = WORLDS.map(w => '<h3>PLANETA ' + w.n + ' · ' + esc(w.name) + '</h3><div class="arow">' + w.nodes.map(n => '<div class="akey" style="min-width:150px;text-align:center"><span style="color:#8ea3e6">' + lvlName(n) + '</span><br><b style="color:#ffd23c;font:900 20px monospace;letter-spacing:.15em;user-select:all">' + esc(c[n.id] || '—') + '</b></div>').join('') + '</div>').join(''); }).catch(e => admMsg(e.message, 1));
+    admOp('nivLlaves', { ids: ALLN().map(n => n.id) }).then(r => { const c = r.cods || {}; admMsg(''); $('nvC').innerHTML = WORLDS.map(w => '<h3>PLANETA ' + w.n + ' · ' + esc(w.name) + '</h3><div class="arow">' + w.nodes.map(n => '<div class="akey" style="min-width:150px;text-align:center"><span style="color:#8ea3e6">' + lvlName(n) + '</span><br><b style="color:#ffd23c;font:900 20px monospace;letter-spacing:.15em;user-select:all">' + esc(c[n.id] || '—') + '</b>' + (c[n.id] ? '<br><button class="btn" style="margin-top:6px" data-cp="' + esc(c[n.id]) + '">📋 COPIAR</button>' : '') + '</div>').join('') + '</div>').join('');
+      $('nvC').querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { const t = b.dataset.cp; let ok = false; try { await navigator.clipboard.writeText(t); ok = true; } catch (e) { try { const x = document.createElement('textarea'); x.value = t; x.style.position = 'fixed'; x.style.opacity = '0'; document.body.appendChild(x); x.select(); ok = document.execCommand('copy'); x.remove(); } catch (e2) {} }
+        b.textContent = ok ? '✔ COPIADO' : '✖ NO SE PUDO'; tone(1200, 1500, 0.06, 'square', 0.05); setTimeout(() => { b.textContent = '📋 COPIAR'; }, 1500); }); }).catch(e => admMsg(e.message, 1));
   } else if (admTab === 'PAGOS') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="pgA"></div><div id="pgT"></div>'; admLicTexts($('pgT'));
     const fd = t => t ? new Date(t).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -3768,7 +3770,7 @@ function tlAskCode() {
   c.innerHTML = '<h2>CARGAR UN NIVEL</h2><div style="color:#cfe0ff;margin:6px 0">Escribe el código de 6 letras y números que te han pasado:</div><input id="tlC" maxlength="6" style="font:900 26px system-ui;letter-spacing:.3em;text-transform:uppercase;width:220px;text-align:center;padding:8px;border-radius:10px;border:2px solid #29e6ff;background:#020a1e;color:#fff"><div id="tlM" style="min-height:1.4em;color:#ffd23c;margin-top:6px"></div><div class="row"><button class="btn" id="tlG">CARGAR</button><button class="btn" id="tlB2">VOLVER</button></div>';
   show('panel', true); $('tlB2').onclick = () => openTaller(); setTimeout(() => $('tlC').focus(), 100);
   $('tlG').onclick = async () => { const code = $('tlC').value.trim().toUpperCase(); if (code.length !== 6) { $('tlM').textContent = 'El código tiene 6 caracteres'; return; } $('tlM').textContent = 'Buscando…';
-    const lk = await api({ a: 'nivLlave', c: code, ids: ALLN().map(n => n.id) }); if (lk.ok && lk.id && unlockTo(lk.id)) return;
+    const lk = await api({ a: 'nivLlave', c: code, ids: ALLN().map(n => n.id) }); if (lk.ok && lk.id) { const nd = ALLN().find(n => n.id === lk.id); $('tlM').textContent = ''; if (nd && await uiConfirm('🔓 CÓDIGO DE NIVEL', 'Tu partida se ajustará a la fase <b>' + lvlName(nd) + '</b>:<br>todas las anteriores quedarán abiertas (conservas tus estrellas) y desde ahí en adelante, con candado.', 'AJUSTAR', 'CANCELAR')) unlockTo(lk.id); return; }
     if (ACC) { const r = await api({ a: 'nivCopiar', ses: ACC.ses, c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en tu taller con el código ' + r.c); }
     else { const r = await api({ a: 'nivGet', c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } const l = tlLocal(); l.unshift({ lid: 'L' + Date.now(), n: r.n, t: r.t, datos: r.datos, f: Date.now() }); tlLocalSave(l); SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en este dispositivo'); } };
 }
@@ -3970,11 +3972,14 @@ let gsiOk = false;
 function gsiLoad(cb) { if (window.google && google.accounts) return cb(); if (gsiOk) return setTimeout(() => gsiLoad(cb), 300); gsiOk = true; const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = cb; document.head.appendChild(sc); }
 let PRV = 0; try { PRV = +(localStorage.getItem('tl_rv') || 0); } catch (e) {}          // versión de reinicio del progreso (LOCK): manda sobre las copias viejas de otros dispositivos
 function lvlName(n) { const w = WORLDS.find(w => w.nodes.includes(n)); return n.boss ? 'JEFE ' + w.n : n.bonus ? 'SECRETA ' + w.n : n.id; }
-function unlockTo(id) {     // código de nivel: abre todos los candados hasta esa fase (las no superadas quedan con 0 estrellas)
+function unlockTo(id) {     // código de nivel: ajusta la partida a esa fase. Hacia atrás todo abierto (con sus estrellas o a 0), esa fase lista para jugar y desde ahí en adelante, candados
   const all = ALLN().filter(n => typeof LEVELS[n.id] === 'function'), k = all.findIndex(n => n.id === id); if (k < 0) return false;
-  for (let i = 0; i <= k; i++) DEV[all[i].id] = 1; try { localStorage.setItem('tl_dev', JSON.stringify(DEV)); } catch (e) {} cloudSave(true);
+  const keep = new Set(all.slice(0, k).map(n => n.id)), np = {}; for (const i in PROG) if (keep.has(i)) np[i] = PROG[i]; PROG = np;
+  for (const i in GOT) if (!keep.has(i)) delete GOT[i];
+  DEV = {}; for (let i = 0; i <= k; i++) DEV[all[i].id] = 1; CHEAT.unlock = false; saveCheats();
+  PRV = Date.now(); try { localStorage.setItem('tl_rv', String(PRV)); localStorage.setItem('tl_dev', JSON.stringify(DEV)); localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {} cloudSave(true);   // el reinicio manda también en los otros dispositivos de la cuenta
   const wi = WORLDS.findIndex(w => w.nodes.some(n => n.id === id)); setWorld(wi); mapSel = Math.max(0, MAP.findIndex(n => n.id === id)); openMap();
-  mapUnl = { i: mapSel, t: 0, snd: false }; SFX.life(); mapMsg = { txt: '🔓 CANDADOS ABIERTOS HASTA ' + lvlName(all[k]), t: 3.5, ok: true }; return true;
+  mapUnl = { i: mapSel, t: 0, snd: false }; SFX.life(); mapMsg = { txt: '🔓 PARTIDA AJUSTADA A ' + lvlName(all[k]), t: 3.5, ok: true }; return true;
 }
 function mergeProg(cloud) {      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor (salvo que en la nube se haya reiniciado)
   const cp = (cloud && cloud.prog) || {}, cg = (cloud && cloud.got) || {};
