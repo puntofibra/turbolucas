@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.26';
+const VERSION = '0.27';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -523,11 +523,11 @@ LEVELS['1-2'] = function () {
   B.mover(152, 13, 3, 60, 0, 1.3, 0); B.mover(158, 12, 3, 0, 60, 1.5, 1); B.mover(164, 13, 3, 60, 0, 1.4, 2); B.row(153, 167, 9);
   // E · galería de láseres
   B.ground(170, 230);
-  B.en('alien', 176, 13); B.laser(181, 6, 13, 0); B.row(183, 185, 12); B.pad(186, 14); B.block(186, 188, 8, 8, '='); B.gear(187, 6); B.laser(191, 6, 13, 1.4); B.row(193, 196, 12);
+  B.box(174, 10, 'estrella'); B.en('alien', 176, 13); B.laser(181, 6, 13, 0); B.row(183, 185, 12); B.pad(186, 14); B.block(186, 188, 8, 8, '='); B.gear(187, 6); B.laser(191, 6, 13, 1.4); B.row(193, 196, 12);
   B.laser(198, 6, 13, 0.7); B.box(202, 10, 'iman'); B.en('dron', 206, 10, { x0: 201, x1: 212 }); B.block(214, 217, 12, 13); B.en('torreta', 216, 11); B.row(220, 224, 11);
   // F · recta final con fosos, túnel bajo y escalera
   B.cp(227, 14); B.ground(234, 240); B.arc(230, 234, 11, 2); B.en('erizo', 237, 13); B.ground(244, 299); B.arc(240, 244, 11, 2);
-  B.en('patrulla', 248, 13); B.block(252, 260, 10, 12); B.block(262, 262, 13, 13); B.row(252, 260, 13); B.box(264, 10, 'estrella'); B.en('patrulla', 268, 13); B.en('patrulla', 273, 13); B.en('erizo', 278, 13);
+  B.en('patrulla', 248, 13); B.block(252, 260, 10, 12); B.block(262, 262, 13, 13); B.row(252, 260, 13); B.box(264, 10, 'chip'); B.en('patrulla', 268, 13); B.en('patrulla', 273, 13); B.en('erizo', 278, 13);
   for (let i = 1; i <= 4; i++) B.block(281 + i, 281 + i, 14 - i, 13);
   B.row(282, 285, 8); B.block(296, 301, 0, 15);
   // sala secreta: lluvia de chips
@@ -572,7 +572,7 @@ LEVELS['1-4'] = function () {
   B.block(14, 22, 86, 86); B.pad(15, 86); B.row(17, 21, 85); B.box(19, 82, 'chip'); B.box(20, 82, 'chip');
   B.block(3, 5, 84, 84); B.gear(4, 82); B.arc(6, 12, 84, 2);                  // engranaje 1: a la izquierda del saltador
   // C · ascensor antigravedad entre drones
-  P(12, 17, 79); B.en('alien', 14, 78); P(19, 23, 81);
+  P(12, 17, 79); B.en('alien', 14, 78); B.box(15, 75, 'estrella'); P(19, 23, 81);
   B.lift(20, 22, 62, 78); for (let r = 64; r <= 76; r += 2) B.chip(21, r);
   B.en('dron', 21, 72, { x0: 14, x1: 27 }); B.en('dron', 21, 66, { x0: 15, x1: 28 });
   P(23, 28, 63); B.cp(26, 63); P(13, 18, 63); B.gear(14, 61); B.row(15, 18, 62);   // engranaje 2: al salir del ascensor por la izquierda
@@ -586,7 +586,7 @@ LEVELS['1-4'] = function () {
   P(4, 8, 31); P(10, 14, 28); B.box(12, 24, 'laser'); P(16, 20, 25); B.en('dron', 18, 21, { x0: 8, x1: 26 }); P(10, 14, 22); P(4, 8, 19); B.cp(6, 19);
   P(10, 14, 16); B.row(10, 14, 15); P(4, 8, 13);
   // F · la cima: antena 5G
-  P(3, 7, 11); B.block(9, 30, 10, 11); B.en('patrulla', 14, 9); B.en('patrulla', 19, 9); B.arc(9, 22, 7, 3); B.box(17, 5, 'estrella');
+  P(3, 7, 11); B.block(9, 30, 10, 11); B.en('patrulla', 14, 9); B.en('patrulla', 19, 9); B.arc(9, 22, 7, 3); B.box(17, 5, 'chip');
   return B.done({ name: 'TORRE DE ANTENAS', time: 210, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 26 * T + T / 2, y: 10 * T }, rise: { y: H * T + 400, speed: 40, startY: 103 * T, on: false } });
 };
 /* ---------- fase secreta 1-B: PASEO ESPACIAL (gravedad lunar, lluvia de meteoritos, islas flotantes y lluvia de chips final) ---------- */
@@ -601,7 +601,7 @@ LEVELS['1-B'] = function () {
   // C · empieza la lluvia de meteoritos
   B.ground(32, 52); B.en('patrulla', 44, 19); B.box(46, 16, 'laser'); B.en('erizo', 49, 19);
   B.arc(52, 60, 15, 3); B.mover(54, 18, 3, 110, 0, 0.9, 0); B.ground(60, 78); B.cp(62, 20);
-  B.en('dron', 68, 15, { x0: 62, x1: 76 }); B.en('patrulla', 74, 19);
+  B.box(61, 16, 'estrella'); B.en('dron', 68, 15, { x0: 62, x1: 76 }); B.en('patrulla', 74, 19);
   P(64, 67, 14); P(70, 73, 9); P(76, 79, 5); B.row(70, 73, 8); B.gear(78, 3);              // engranaje 2: escalera al cielo
   // D · el gran vacío
   B.mover(80, 17, 2, 0, 60, 1.2, 0); B.mover(84, 15, 2, 0, 60, 1.2, 1.5); B.arc(80, 87, 12, 3);
@@ -611,7 +611,7 @@ LEVELS['1-B'] = function () {
   B.pad(108, 20); P(112, 117, 7); B.gear(116, 5); B.arc(111, 118, 5, 2);                   // engranaje 3: isla del cielo
   B.mover(112, 18, 3, 80, 0, 1.1, 0); B.ground(118, 165); B.cp(120, 20);
   // F · lluvia de chips y meta
-  B.box(131, 16, 'estrella'); B.en('erizo', 150, 19);
+  B.box(124, 16, 'iman'); B.en('erizo', 150, 19);
   for (let i = 1; i <= 4; i++) B.block(151 + i, 151 + i, 20 - i, 19);
   B.row(152, 155, 14); B.block(162, 165, 0, 21);
   return B.done({ name: 'PASEO ESPACIAL', time: 170, space: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
