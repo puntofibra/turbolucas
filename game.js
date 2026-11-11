@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.68';
+const VERSION = '0.69';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -1625,6 +1625,8 @@ function updatePlayer(dt) {
   p.tele = Math.max(0, p.tele - dt); p.cool = Math.max(0, p.cool - dt); p.sq = Math.max(0, p.sq - dt * 4);
   // agacharse
   const wantCrouch = (K.down || performance.now() < touchCrouchT) && p.onGround && p.power !== 'mini';
+  if (p.crouch && p.onGround && onOneWay(p)) { p.dropT = (p.dropT || 0) + dt;          // agachado 2 s encima de un suelo atravesable: lo atraviesas hacia abajo
+    if (p.dropT >= 2) { p.dropT = 0; p.crouch = false; setSize(p); p.drop = true; p.y += 6; p.onGround = false; p.vy = 60; p.dropHold = 0.25; } } else p.dropT = 0;
   if (wantCrouch && !p.crouch) { p.crouch = true; setSize(p); }
   else if (!wantCrouch && p.crouch && canStand(p)) { p.crouch = false; setSize(p); }
   // horizontal
@@ -1641,7 +1643,7 @@ function updatePlayer(dt) {
   p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
   if (p.onGround || p.climb) { p.dj = true; p.jy0 = p.y + p.h; } p.flip = Math.max(0, (p.flip || 0) - dt);
   p.jbuf = jumpPressed ? 0.12 : Math.max(0, p.jbuf - dt);
-  p.drop = false;
+  p.dropHold = Math.max(0, (p.dropHold || 0) - dt); p.drop = p.dropHold > 0;
   const wet = !!(L.water && p.y + p.h * 0.4 > L.water.y); if (wet !== !!p.wet) { if (Math.abs(p.vy) > 60) { burst(p.x + p.w / 2, L.water.y, 14, '#dff8ff', 200, 0.5, 600, 3); noise(0.25, 0.12, 1200); } p.wet = wet; }
   if (wet && jumpPressed) {             // nadar: cada pulsación es una brazada (cerca de la superficie, salta fuera)
     p.vy = p.y < L.water.y + 30 ? -680 : Math.min(p.vy, 0) - 380; if (p.vy < -420 && p.y >= L.water.y + 30) p.vy = -420; p.jbuf = 0; p.coyote = 0; p.onGround = false; p.sq = 0.6;
