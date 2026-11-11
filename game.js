@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.43';
+const VERSION = '0.44';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -513,6 +513,9 @@ function LB(W, H) {
   B.fake = (x0, x1, y0, y1) => B.block(x0, x1, y0, y1, 'F');                                                                   // pared falsa: se atraviesa
   B.pitWarp = (a, b, tox, toty) => (B.warps = B.warps || []).push({ x0: a * T, x1: (b + 1) * T, tox: tox * T + T / 2, toy: toty * T });  // agujero que lleva a una zona secreta
   B.crystal = (x, ty, c, h) => (B.crys = B.crys || []).push({ x: x * T + T / 2, y: ty * T, c: c || 0, h: h || 1 });
+  B.cog = (x, ty, r) => (B.cogs = B.cogs || []).push({ x: x * T + T / 2, y: ty * T + T / 2, r: r * T });                    // engranaje gigante de fondo
+  B.geyser = (x, ty, h, ph = 0, per = 3.2) => (B.geysers = B.geysers || []).push({ x: x * T + T / 2, y: ty * T, h: h * T, ph, per });   // géiser de fuego que sale del suelo
+  B.fall = (x, ty, wt) => B.movers.push({ bx: x * T, by: ty * T, w: wt * T, ax: 0, ay: 0, sp: 0, ph: 0, x: x * T, y: ty * T, dx: 0, dy: 0, fall: true, st: 0, ft: 0, vy: 0 });   // roca que se hunde al pisarla
   B.done = o => { B.plats = calcPlats(g, W, H); return Object.assign(B, o); };
   return B;
 }
@@ -709,6 +712,7 @@ function bossUpdate(dt) {
 }
 const TINT = {};
 function tintOf(im, col) { const k = col + '|' + im.src; if (TINT[k] || !im.naturalWidth) return TINT[k]; const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height); return (TINT[k] = c); }
+function tintCv(im, col) { const c = tintOf(im, col); if (c && !c.naturalWidth) { c.naturalWidth = c.width; c.naturalHeight = c.height; c._n = im._n; } return c; }
 function drawBoss() {
   const b = L.boss; if (!b || b.gone) return;
   const j2 = iceI('jefe2'), im = j2 ? (b.hp <= b.max / 2 && iceI('jefe2-roto')) || j2 : IMG.jefe1; if (!im || !im.naturalWidth) return;
@@ -721,6 +725,7 @@ function drawBoss() {
   const rot = b.st === 'stun' ? 0.1 * Math.sin(time * 3) : b.st === 'die' ? (Math.random() - 0.5) * 0.12 : Math.sin(time * 2) * 0.03;
   const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(fs, 1); ctx.drawImage(src, -w / 2, -h, w, h); ctx.restore(); };
   draw(im, 1);
+  if (L.theme === 'lava') { const t5 = tintOf(im, 'rgba(255,90,30,1)'); if (t5) draw(t5, 0.3 + 0.08 * Math.sin(time * 4)); }
   if (L.theme === 'ice' && !j2) { const t4 = tintOf(im, 'rgba(120,225,255,1)'); if (t4) draw(t4, 0.32 + 0.06 * Math.sin(time * 3)); }
   if (ph2 || b.st === 'die') { const t2 = tintOf(im, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(time * 8))); if (Math.random() < 0.3) parts.push({ x: x + (Math.random() - 0.5) * 140, y: y - Math.random() * 200, vx: (Math.random() - 0.5) * 60, vy: -60 - Math.random() * 60, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#ffd23c' : '#8a8fa8', size: 2.5, grav: 0 }); }
   if (b.flash > 0) { const t3 = tintOf(im, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); }
@@ -906,6 +911,255 @@ LEVELS['2-J'] = function () {
   B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13); B.crystal(45, 14, 2, 1.2); B.crystal(75, 14, 1, 1.2);
   return B.done({ name: 'GUARDIÁN DE HIELO', bossName: 'GUARDIÁN DE HIELO', bossHp: 8, time: 260, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
 };
+/* ================== MUNDO 3: PLANETA VOLCÁNICO ================== */
+const LV = o => Object.assign({ theme: 'lava', time: 220 }, o);
+LEVELS['3-1'] = function () {
+  const B = LB(190, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  // A · primeros pasos sobre la ceniza
+  B.ground(0, 30); B.crystal(3, 14, 3, 1.2); B.row(5, 9, 12); B.hid(11, 10, 'vida'); B.set(14, 10, 'B'); B.box(15, 10, 'chip'); B.set(16, 10, 'B'); B.box(17, 10, 'escudo'); B.en('patrulla', 24, 13);
+  // B · primer charco de lava y los géiseres
+  B.arc(30, 35, 11, 2); B.ground(35, 62); B.geyser(41, 14, 4, 0); B.row(43, 47, 12); P(44, 47, 11); B.gear(46, 9); B.geyser(51, 14, 4, 1.6); B.en('alien', 56, 13); B.crystal(60, 14, 3);
+  // C · rocas que se hunden al pisarlas
+  B.fall(64, 13, 2); B.fall(68, 12, 2); B.fall(72, 13, 2); B.row(64, 73, 10); B.ground(76, 104); B.cp(78, 14);
+  B.block(82, 82, 12, 13); B.block(84, 90, 10, 10); B.row(84, 90, 9); B.box(87, 7, 'laser'); B.en('erizo', 96, 13); B.geyser(100, 14, 5, 0.8);
+  // D · el agujero oscuro (lleva a una cueva secreta) y el montículo hueco
+  B.arc(104, 109, 11, 2); B.pitWarp(105, 108, 180, 13); B.ground(109, 140); B.en('patrulla', 115, 13);
+  B.block(124, 130, 11, 13); B.fake(124, 130, 12, 13); B.row(125, 129, 12); B.gear(127, 13); B.crystal(122, 14, 3, 0.9); B.en('alien', 136, 13);
+  // E · recta final
+  B.arc(140, 144, 11, 2); B.ground(144, 172); B.geyser(150, 14, 4, 0.4); B.geyser(156, 14, 4, 2.0); B.en('alien', 161, 13);
+  for (let i = 1; i <= 4; i++) B.block(163 + i, 163 + i, 14 - i, 13); B.row(164, 167, 8); B.block(173, 175, 0, 15);
+  // cueva secreta
+  B.ground(176, 189); B.block(176, 189, 0, 8); B.block(189, 189, 0, 15); B.row(178, 187, 12); B.row(179, 186, 10); B.gear(184, 12); B.crystal(178, 14, 3, 1.2); B.portal(187, 14, 112, 14);
+  return B.done(LV({ name: 'LLANURA DE CENIZA', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 170 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-2'] = function () {
+  const B = LB(200, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 24); B.hid(7, 10, 'vida'); B.box(10, 10, 'turbo'); B.row(12, 18, 12); B.en('patrulla', 20, 13); B.crystal(2, 14, 3, 1.3);
+  // A · la ola de géiseres
+  B.ground(24, 70); for (let i = 0; i < 5; i++) B.geyser(29 + i * 4, 14, 5, i * 0.45, 3.4); B.row(28, 46, 11);
+  P(48, 51, 11); P(53, 57, 9); B.gear(55, 7); B.en('dron', 58, 9, { x0: 50, x1: 66 }); B.geyser(61, 14, 6, 0.3); B.en('erizo', 66, 13);
+  // B · lago de lava con rocas flotantes
+  B.mover(72, 12, 3, 96, 0, 1.0, 0); B.mover(82, 11, 3, 0, 48, 1.4, 1); B.row(72, 88, 9); B.gear(83, 7); B.ground(91, 140); B.cp(93, 14);
+  B.block(98, 100, 12, 13); B.en('torreta', 99, 11); B.geyser(104, 14, 5, 1); B.box(106, 10, 'escudo'); B.geyser(109, 14, 5, 2); B.en('patrulla', 115, 13);
+  // C · la roca con túnel secreto
+  P(121, 124, 11); B.block(126, 129, 9, 13); B.fake(126, 129, 12, 13); B.gear(128, 13); B.row(126, 129, 8); B.crystal(132, 14, 3);
+  // D · última carrera
+  B.arc(140, 146, 10, 3); B.fall(142, 12, 2); B.ground(146, 199); B.geyser(152, 14, 6, 0.6); B.geyser(158, 14, 6, 1.8); B.en('alien', 164, 13);
+  for (let i = 1; i <= 4; i++) B.block(169 + i, 169 + i, 14 - i, 13); B.row(170, 173, 8); B.crystal(186, 14, 3, 1.4); B.block(190, 199, 0, 15);
+  return B.done(LV({ name: 'GÉISERES DE FUEGO', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 182 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-3'] = function () {
+  const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 209, 0, 2);
+  B.ground(0, 28); B.crystal(4, 14, 3, 1.2); B.row(6, 10, 12); B.hid(14, 10, 'vida'); B.box(18, 10, 'escudo'); B.en('patrulla', 24, 13);
+  // A · galería de techo bajo con géiseres
+  B.arc(28, 33, 11, 2); B.ground(33, 64); B.block(38, 58, 3, 7); B.geyser(42, 14, 4, 0); B.geyser(48, 14, 4, 1); B.geyser(54, 14, 4, 2); B.row(40, 57, 12); B.en('alien', 45, 13); B.en('erizo', 56, 13);
+  B.pad(61, 14); P(62, 66, 9); B.gear(64, 7); B.crystal(66, 9, 3, 0.8);
+  // B · el pozo de magma
+  B.fall(67, 12, 2); B.fall(71, 11, 2); B.fall(75, 12, 2); B.arc(67, 76, 8, 2); B.ground(78, 140); B.cp(80, 14);
+  B.en('dron', 88, 9, { x0: 82, x1: 96 }); B.box(90, 10, 'laser'); B.set(93, 10, 'B'); B.box(94, 10, 'chip'); B.set(95, 10, 'B');
+  // C · la roca con cámara secreta (pared falsa por arriba)
+  P(102, 104, 10); B.block(106, 111, 3, 11); B.fake(106, 110, 6, 10); B.gear(109, 8); B.row(107, 109, 7); B.row(107, 110, 10); B.row(106, 111, 13);
+  // D · callejón de géiseres
+  B.block(116, 136, 3, 6); for (let i = 0; i < 4; i++) B.geyser(119 + i * 5, 14, 5, i * 0.7); B.row(118, 135, 13); B.en('patrulla', 133, 13);
+  // E · abismo con plataformas de salto
+  B.block(143, 144, 12, 15); B.pad(143, 12); B.block(147, 149, 10, 15); B.pad(148, 10); B.arc(141, 150, 7, 3); B.gear(146, 5);
+  B.ground(151, 205); B.cp(154, 14); B.en('dron', 168, 8, { x0: 160, x1: 176 }); B.en('alien', 174, 13); B.box(178, 10, 'estrella'); B.en('patrulla', 182, 13); B.geyser(186, 14, 4, 0.5);
+  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.crystal(203, 14, 3, 1.4); B.block(206, 209, 0, 15);
+  return B.done(LV({ name: 'CRÁTER DEL VOLCÁN', time: 230, cave: true, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-4'] = function () {
+  const B = LB(230, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 20); B.hid(5, 10, 'vida'); B.box(9, 10, 'chip'); B.row(11, 17, 12); B.crystal(2, 14, 3, 1.2);
+  // A · cruzar el río de magma
+  B.fall(22, 13, 2); B.mover(26, 12, 3, 60, 0, 1.1, 0); B.fall(33, 12, 2); B.fall(37, 13, 2); B.arc(22, 38, 9, 2);
+  B.ground(40, 56); B.en('patrulla', 47, 13); B.box(50, 10, 'escudo'); B.geyser(54, 14, 4, 0);
+  // B · rocas que suben y bajan
+  B.mover(58, 12, 3, 0, 60, 1.2, 0); B.mover(63, 10, 3, 0, 60, 1.2, 1.5); P(68, 71, 9); B.gear(70, 7); B.fall(73, 12, 2); B.fall(77, 12, 2); B.row(58, 78, 8);
+  B.ground(81, 105); B.cp(83, 14); B.en('alien', 90, 13); B.geyser(94, 14, 5, 1); B.en('erizo', 99, 13);
+  // C · un agujero sin lava… ¿adónde llevará?
+  B.arc(105, 109, 11, 2); B.pitWarp(106, 108, 212, 13); B.ground(109, 130); B.en('patrulla', 120, 13); B.crystal(127, 14, 3);
+  // D · el gran río
+  B.fall(132, 13, 2); B.fall(136, 12, 2); B.mover(140, 12, 3, 96, 0, 1.0, 0); B.fall(147, 11, 2); B.gear(148, 8); B.fall(151, 12, 2); B.mover(155, 12, 3, 0, 72, 1.3, 0.7); B.fall(160, 12, 2); B.fall(164, 13, 2); B.row(132, 165, 9);
+  B.ground(168, 199); B.cp(170, 14); B.en('patrulla', 178, 13); B.geyser(183, 14, 5, 0.3);
+  for (let i = 1; i <= 4; i++) B.block(185 + i, 185 + i, 14 - i, 13); B.row(186, 189, 8); B.block(200, 205, 0, 15);
+  // orilla secreta
+  B.ground(206, 229); B.block(206, 229, 0, 8); B.block(229, 229, 0, 15); B.row(208, 226, 12); B.row(210, 224, 10); B.gear(220, 12); B.crystal(208, 14, 3, 1.3); B.portal(227, 14, 112, 14);
+  return B.done(LV({ name: 'RÍO DE MAGMA', time: 230, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 195 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-5'] = function () {
+  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 40); B.hid(6, 10, 'vida'); B.box(10, 10, 'escudo'); B.row(13, 20, 12); B.en('patrulla', 28, 13); B.block(33, 37, 10, 10); B.row(33, 37, 13);
+  // A · empieza a llover fuego: refugios de roca
+  B.arc(41, 45, 11, 2); B.ground(45, 80); B.block(52, 56, 10, 10); B.row(52, 56, 13); B.geyser(60, 14, 4, 0); B.en('alien', 66, 13); B.block(69, 71, 10, 10); B.box(70, 7, 'estrella'); P(74, 78, 10); B.gear(76, 8);
+  B.fall(82, 12, 2); B.arc(81, 86, 10, 2); B.ground(86, 120); B.cp(88, 14); B.en('dron', 98, 9, { x0: 90, x1: 106 }); B.en('erizo', 105, 13); B.block(110, 112, 12, 13); B.en('torreta', 111, 11);
+  // B · el montículo hueco
+  B.block(114, 119, 11, 13); B.fake(114, 119, 12, 13); B.row(115, 118, 12); B.gear(117, 13);
+  // C · géiseres bajo la lluvia
+  B.arc(120, 125, 11, 2); B.ground(125, 170); B.geyser(130, 14, 4, 0.5); B.geyser(136, 14, 4, 1.7); P(140, 144, 11); P(146, 150, 8); B.gear(148, 6); B.block(155, 160, 10, 10); B.row(155, 160, 13); B.en('patrulla', 164, 13);
+  B.fall(172, 12, 2); B.arc(171, 175, 10, 2); B.ground(175, 219); B.en('alien', 185, 13);
+  for (let i = 1; i <= 4; i++) B.block(194 + i, 194 + i, 14 - i, 13); B.row(195, 198, 8); B.crystal(210, 14, 3, 1.3); B.block(212, 219, 0, 15);
+  return B.done(LV({ name: 'LLUVIA DE FUEGO', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 205 * T + T / 2, y: 14 * T }, meteors: { zones: [[42 * T, 200 * T]], every: 1.1, acc: 0 } }));
+};
+LEVELS['3-6'] = function () {
+  const B = LB(260, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 259, 0, 2);
+  B.ground(0, 26); B.hid(6, 10, 'vida'); B.box(10, 10, 'turbo'); B.row(13, 20, 12); B.crystal(3, 14, 3, 1.2);
+  // A · ¡la lava viene detrás!
+  B.arc(26, 29, 11, 2); B.ground(29, 60); B.en('patrulla', 40, 13); B.strip(31, 45); B.row(32, 44, 12); B.block(50, 52, 12, 13); B.row(50, 52, 11);
+  B.fall(62, 13, 2); B.fall(66, 12, 2); B.ground(69, 110); B.cp(71, 14); B.box(75, 10, 'iman'); B.strip(77, 97); B.row(78, 96, 12); B.en('alien', 100, 13); B.block(104, 106, 12, 13);
+  // B · la gran roca: por encima… o por su túnel secreto
+  B.block(110, 110, 12, 13); B.block(112, 118, 9, 13); B.fake(112, 118, 11, 13); B.row(112, 118, 12); B.gear(116, 12); B.row(112, 118, 8);
+  // C · plataforma de salto y géiseres
+  B.arc(120, 124, 10, 2); B.ground(124, 170); B.pad(130, 14); P(132, 136, 9); B.gear(134, 7); B.row(132, 136, 8); B.en('patrulla', 145, 13); B.geyser(150, 14, 4, 0); B.geyser(156, 14, 4, 1.6); B.cp(166, 14);
+  // D · sprint hasta la salida
+  B.strip(172, 195); B.row(173, 194, 12); B.ground(170, 210); B.fall(212, 12, 2); B.arc(211, 215, 10, 2); B.ground(215, 259); B.en('alien', 222, 13); P(228, 232, 10); B.gear(230, 8);
+  for (let i = 1; i <= 4; i++) B.block(239 + i, 239 + i, 14 - i, 13); B.row(240, 243, 8); B.block(255, 259, 0, 15);
+  return B.done(LV({ name: 'TÚNELES DE LAVA', time: 200, cave: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 250 * T + T / 2, y: 14 * T }, chase: { x: -9999, speed: 172, startX: 15 * T, on: false, style: 'lava' } }));
+};
+LEVELS['3-7'] = function () {
+  const B = LB(240, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 20); B.hid(5, 10, 'vida'); B.box(9, 10, 'escudo'); B.row(12, 18, 12); B.crystal(2, 14, 3, 1.2);
+  // A · el puente sobre el río
+  P(21, 33, 12); B.fall(34, 12, 2); P(36, 60, 12); B.en('patrulla', 28, 11); B.en('dron', 45, 8, { x0: 38, x1: 56 }); B.block(48, 52, 7, 7); B.laser(50, 8, 11, 0); B.row(22, 59, 10);
+  B.ground(61, 80); B.cp(63, 14); B.box(68, 10, 'laser'); B.en('alien', 74, 13); B.crystal(78, 14, 3);
+  // B · tramos que se derrumban
+  P(81, 89, 12); B.fall(90, 12, 2); P(92, 103, 12); B.fall(104, 12, 2); P(106, 117, 12); B.fall(118, 12, 2); P(120, 124, 12); P(128, 129, 12); B.fall(130, 12, 2); P(132, 140, 12);
+  B.en('patrulla', 96, 11); B.en('erizo', 112, 11); B.en('dron', 124, 8, { x0: 118, x1: 132 }); B.row(82, 139, 10); B.gear(110, 9);
+  B.pitWarp(125, 127, 224, 13);            // ¡el hueco del puente no tiene lava!
+  // C · la orilla de la fortaleza
+  B.ground(141, 215); B.cp(143, 14); B.block(150, 152, 12, 13); B.en('torreta', 151, 11); B.geyser(158, 14, 5, 0.5); B.en('patrulla', 166, 13); P(172, 176, 11); P(178, 182, 8); B.gear(180, 6);
+  for (let i = 1; i <= 4; i++) B.block(195 + i, 195 + i, 14 - i, 13); B.row(196, 199, 8); B.block(216, 219, 0, 15);
+  // cueva bajo el puente
+  B.ground(220, 239); B.block(220, 239, 0, 8); B.block(239, 239, 0, 15); B.row(222, 236, 12); B.gear(230, 12); B.crystal(222, 14, 3, 1.2); B.portal(237, 14, 145, 14);
+  return B.done(LV({ name: 'EL GRAN PUENTE', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 207 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-8'] = function () {
+  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 30); B.hid(6, 10, 'vida'); B.box(10, 10, 'chip'); B.row(13, 19, 12); B.en('patrulla', 25, 13);
+  // A · cintas transportadoras y láseres
+  B.ground(30, 80); B.strip(32, 50); B.block(38, 52, 8, 8); B.laser(42, 9, 13, 0); B.laser(47, 9, 13, 1.2); B.row(39, 51, 13); B.en('alien', 56, 13);
+  B.lift(60, 62, 5, 13); for (let r = 6; r <= 12; r += 2) B.chip(61, r); P(63, 68, 5); B.gear(66, 3); B.row(63, 68, 4);
+  // B · horno
+  B.mover(81, 12, 3, 48, 0, 1.2, 0); B.ground(85, 140); B.cp(87, 14); B.block(92, 94, 12, 13); B.en('torreta', 93, 11); B.strip(97, 115); B.block(103, 107, 8, 8); B.laser(105, 9, 13, 1); B.row(98, 114, 12); B.en('erizo', 120, 13);
+  // C · la máquina hueca
+  B.block(124, 124, 12, 13); B.block(126, 133, 10, 13); B.fake(126, 133, 12, 13); B.row(126, 133, 12); B.gear(130, 13); B.row(126, 133, 9);
+  // D · ascensor de calor y salida
+  B.fall(142, 12, 2); B.arc(141, 145, 10, 2); B.ground(145, 219); B.lift(150, 152, 5, 13); P(153, 158, 5); B.gear(156, 3); B.row(153, 158, 4); B.en('dron', 165, 9, { x0: 158, x1: 174 });
+  B.block(168, 177, 8, 8); B.laser(170, 9, 13, 0.4); B.laser(175, 9, 13, 1.6); B.row(169, 176, 13);
+  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.block(210, 219, 0, 15);
+  return B.done(LV({ name: 'LA FUNDICIÓN', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 202 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-9'] = function () {
+  const H = 110, B = LB(34, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 2, 8, H - 1); B.block(31, 33, 8, H - 1); B.ground(3, 30); B.row(6, 12, H - 4); B.hid(16, H - 6, 'vida'); B.crystal(28, H - 2, 3, 1.2);
+  // cámara secreta en la pared (se atraviesa su lado derecho)
+  B.block(3, 9, 49, 49); B.block(3, 8, 56, 56); B.block(9, 9, 50, 56); B.fake(9, 9, 53, 55); B.gear(5, 52); B.row(3, 8, 51); B.row(4, 7, 54);
+  const xs = [[5, 9], [12, 16], [19, 23], [25, 29], [19, 23], [12, 16]]; let k = 0;
+  for (let y = H - 5; y >= 12; y -= 3, k++) { let [a, b] = xs[k % 6]; if (y >= 47 && y <= 58 && a < 11) { a = 12; b = 16; } P(a, b, y);
+    if (k % 5 === 3) B.en('patrulla', a + 2, y - 1); if (k % 4 === 1) B.row(a, b, y - 1); if (k === 9) B.box(a + 2, y - 4, 'escudo'); if (k === 20) B.gear(a + 2, y - 2); if (k === 26) B.en('dron', 15, y - 2, { x0: 6, x1: 26 }); if (k === 14) B.cp(a + 2, y); }
+  B.lift(26, 28, 66, 80); B.gear(27, 64);
+  B.block(9, 30, 8, 9); B.arc(10, 24, 6, 3); B.crystal(29, 8, 3, 1.3); B.box(20, 4, 'chip');
+  return B.done(LV({ name: 'LAS CHIMENEAS', time: 230, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 26 * T + T / 2, y: 8 * T }, rise: { y: H * T + 400, speed: 44, startY: (H - 8) * T, on: false, style: 'lava' } }));
+};
+LEVELS['3-10'] = function () {
+  const B = LB(220, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 22); B.cog(8, 7, 3); B.hid(12, 10, 'vida'); B.box(16, 10, 'escudo'); B.row(5, 10, 12);
+  // A · plataformas de la maquinaria
+  B.mover(24, 12, 3, 0, 72, 1.2, 0); B.mover(30, 10, 3, 0, 72, 1.2, 1.5); B.mover(36, 12, 3, 60, 0, 1.0, 0); B.row(24, 40, 8);
+  B.ground(42, 70); B.cog(56, 8, 4); B.en('patrulla', 50, 13); B.geyser(60, 14, 5, 0); B.box(64, 10, 'laser');
+  // B · en diagonal
+  B.mover(72, 12, 3, 48, -48, 1.1, 0); B.mover(80, 10, 3, 48, 48, 1.1, 1.6); P(87, 90, 9); B.gear(89, 7); B.row(72, 86, 8);
+  B.ground(92, 140); B.cp(94, 14); B.en('alien', 100, 13); B.en('erizo', 110, 13); B.cog(117, 6, 5);
+  B.block(124, 130, 11, 13); B.fake(124, 130, 12, 13); B.row(125, 129, 12); B.gear(127, 13);
+  // C · la cadena de engranajes sobre la lava
+  B.mover(142, 12, 3, 0, 60, 1.4, 0); B.mover(148, 11, 3, 0, 60, 1.4, 1.4); B.mover(154, 12, 3, 60, 0, 1.2, 0.7); B.gear(156, 8); B.fall(161, 12, 2); B.mover(165, 11, 3, 0, 60, 1.4, 2.2); B.fall(171, 12, 2); B.row(142, 172, 9); B.cog(158, 4, 4);
+  B.ground(175, 219); B.cp(177, 14); B.en('dron', 185, 9, { x0: 178, x1: 194 }); B.cog(200, 7, 4);
+  for (let i = 1; i <= 4; i++) B.block(194 + i, 194 + i, 14 - i, 13); B.row(195, 198, 8); B.block(210, 219, 0, 15);
+  return B.done(LV({ name: 'ENGRANAJES GIGANTES', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 205 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-11'] = function () {
+  const H = 22, B = LB(176, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 14); B.hid(4, 16, 'vida'); B.box(8, 16, 'escudo'); B.row(5, 11, 18); B.crystal(2, 20, 3, 1.3);
+  // A · rocas a la deriva sobre el mar de lava
+  B.fall(16, 18, 2); B.fall(21, 16, 2); B.fall(26, 14, 2); B.arc(16, 27, 12, 2); B.ground(30, 40); B.en('alien', 35, 19); P(33, 36, 13); B.gear(35, 11);
+  B.mover(42, 17, 3, 90, 0, 0.9, 0); B.ground(50, 64); B.cp(52, 20); B.en('dron', 58, 15, { x0: 52, x1: 64 }); B.box(56, 16, 'laser');
+  // B · escalera de rocas que se hunden
+  for (let i = 0; i < 8; i++) { const x = 66 + i * 4, y = 18 - Math.round(Math.sin(i * 0.9) * 4); B.fall(x, y, 2); B.chip(x, y - 1); B.chip(x + 1, y - 1); }
+  B.ground(98, 125); B.en('patrulla', 104, 19); B.block(114, 118, 12, 19); B.fake(114, 118, 17, 19); B.row(114, 118, 18); B.gear(116, 19); B.row(114, 118, 11);
+  // C · el último salto
+  B.mover(127, 16, 3, 0, 72, 1.3, 0); B.fall(133, 15, 2); B.fall(138, 13, 2); P(142, 145, 9); B.gear(144, 7); B.row(127, 141, 11);
+  B.ground(147, 175); B.cp(149, 20); B.en('erizo', 156, 19); for (let i = 1; i <= 4; i++) B.block(159 + i, 159 + i, 20 - i, 19); B.row(160, 163, 14); B.block(172, 175, 0, 21);
+  return B.done(LV({ name: 'ROCAS FLOTANTES', time: 190, sky: true, gk: 0.55, intro: '¡GRAVEDAD BAJA!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 167 * T + T / 2, y: 20 * T }, meteors: { zones: [[40 * T, 140 * T]], every: 1.4, acc: 0 } }));
+};
+LEVELS['3-12'] = function () {
+  const B = LB(208, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 24); B.hid(5, 10, 'vida'); B.box(9, 10, 'escudo'); B.row(11, 17, 12); B.en('patrulla', 20, 13);
+  // A · primera muralla
+  B.ground(24, 70); B.pad(28, 14); B.block(30, 33, 8, 13); B.en('torreta', 32, 7); B.row(30, 33, 6); B.geyser(38, 14, 5, 0); B.geyser(42, 14, 5, 1.2);
+  B.block(46, 50, 8, 8); B.laser(48, 9, 13, 0.5); B.gear(48, 12); B.en('alien', 55, 13); B.box(60, 10, 'laser');
+  // B · el foso
+  B.fall(72, 13, 2); B.fall(76, 12, 2); B.fall(80, 13, 2); B.row(72, 81, 10); B.ground(83, 130); B.cp(85, 14);
+  B.pad(90, 14); B.block(92, 96, 7, 13); B.en('torreta', 94, 6); B.en('erizo', 105, 13); B.block(108, 116, 8, 8); B.laser(110, 9, 13, 0); B.laser(114, 9, 13, 1.1); B.en('patrulla', 120, 13);
+  // C · la torre con puerta falsa
+  B.pad(122, 14); B.block(124, 128, 6, 13); B.fake(124, 128, 11, 13); B.row(124, 128, 12); B.gear(126, 13); B.row(124, 128, 5);
+  // D · segundo foso y la puerta del castillo
+  B.mover(132, 12, 3, 0, 60, 1.3, 0); B.fall(138, 12, 2); B.mover(142, 11, 3, 0, 60, 1.3, 1.5); B.row(132, 145, 9); B.ground(147, 207); B.cp(149, 14);
+  B.geyser(155, 14, 5, 0); B.geyser(159, 14, 5, 0.6); B.geyser(163, 14, 5, 1.2); B.block(168, 170, 12, 13); B.en('torreta', 169, 11); B.en('dron', 176, 9, { x0: 170, x1: 186 }); P(180, 184, 11); P(186, 190, 8); B.gear(188, 6);
+  for (let i = 1; i <= 3; i++) B.block(191 + i, 191 + i, 14 - i, 13); B.block(203, 207, 0, 15);
+  return B.done(LV({ name: 'MURALLAS DE LA FORTALEZA', time: 240, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } }));
+};
+LEVELS['3-J'] = function () {
+  const B = LB(80, 16);
+  B.ground(0, 79); B.row(5, 8, 12); B.crystal(3, 14, 3, 1.3);
+  B.set(10, 10, 'B'); B.box(11, 10, 'escudo'); B.set(12, 10, 'B'); B.box(15, 10, 'laser'); B.block(18, 21, 9, 9); B.gear(20, 7); B.row(18, 21, 8); B.pad(16, 14);
+  B.geyser(24, 14, 4, 0); B.en('patrulla', 27, 13); B.en('dron', 30, 10, { x0: 26, x1: 34 }); B.row(25, 31, 12);
+  B.cp(35, 14); B.box(38, 10, 'chip'); B.hid(33, 10, 'vida');
+  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13); B.crystal(45, 14, 3, 1.2); B.crystal(75, 14, 3, 1.2);
+  return B.done(LV({ name: 'SEÑOR DEL MAGMA', bossName: 'SEÑOR DEL MAGMA', bossHp: 10, time: 260, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true }));
+};
+LEVELS['3-B'] = function () {
+  const H = 22, B = LB(170, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  const shape = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') B.chip(x + i, y + j); }));
+  B.ground(0, 14); P(7, 12, 15); shape(8, 8, ['###', '..#', '###', '..#', '###']); B.hid(4, 16, 'vida'); B.crystal(2, 20, 3, 1.3);
+  B.arc(14, 20, 16, 3); B.ground(20, 26); B.pad(24, 20); P(28, 33, 10); B.gear(31, 8); B.row(28, 33, 9);
+  B.arc(26, 34, 15, 3); B.ground(34, 50); B.en('alien', 42, 19); B.box(46, 16, 'laser'); B.mover(52, 18, 3, 90, 0, 0.9, 0); B.arc(50, 58, 14, 3);
+  B.ground(58, 76); B.cp(60, 20); B.en('dron', 66, 15, { x0: 60, x1: 74 }); P(63, 66, 14); P(69, 72, 9); P(74, 77, 5); B.gear(76, 3); B.row(69, 72, 8);
+  for (let i = 0; i < 8; i++) { const x = 80 + i * 4, y = 17 - Math.round(Math.sin(i * 0.9) * 4); B.fall(x, y, 2); B.chip(x, y - 1); B.chip(x + 1, y - 1); }
+  B.ground(113, 165); B.cp(115, 20); B.box(120, 16, 'iman'); B.pad(126, 20); P(128, 132, 9); B.gear(130, 7); B.en('erizo', 140, 19); B.crystal(150, 20, 3, 1.2);
+  for (let i = 1; i <= 4; i++) B.block(150 + i, 150 + i, 20 - i, 19); B.row(151, 154, 14); B.block(162, 165, 0, 21);
+  return B.done(LV({ name: 'TESORO DEL VOLCÁN', time: 170, sky: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
+    meteors: { zones: [[34 * T, 112 * T]], every: 1.05, acc: 0 }, rain: { x0: 121 * T, x1: 148 * T, dur: 9, t: 0, st: 0, acc: 0 } }));
+};
+LEVELS['3-13'] = function () {
+  const H = 22, B = LB(180, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 16); B.hid(5, 16, 'vida'); B.box(9, 16, 'turbo'); B.row(4, 12, 18); B.crystal(2, 20, 3, 1.3);
+  // A · corrientes de aire caliente
+  B.wind(18, 40, 6, 19, 380, 0); B.fall(19, 18, 2); B.fall(25, 16, 2); B.fall(31, 17, 2); B.fall(37, 15, 2); B.row(19, 38, 12); B.ground(42, 58); B.en('alien', 50, 19); P(46, 49, 14); B.gear(48, 12);
+  // B · isla con tesoro escondido
+  B.mover(60, 17, 3, 0, 90, 1.1, 0); B.ground(66, 90); B.cp(68, 20); B.en('patrulla', 76, 19); B.block(82, 86, 14, 19); B.fake(82, 86, 17, 19); B.row(82, 86, 18); B.gear(84, 19); B.row(82, 86, 13);
+  // C · contra el viento
+  B.wind(92, 125, 6, 19, -320, 1.2); B.fall(93, 18, 2); B.fall(98, 17, 2); B.mover(103, 16, 3, 72, 0, 1.0, 0); B.fall(111, 16, 2); B.fall(116, 17, 2); B.fall(121, 18, 2); B.row(93, 122, 13);
+  B.ground(125, 179); B.cp(127, 20); B.en('dron', 136, 15, { x0: 128, x1: 146 }); B.pad(144, 20); P(146, 150, 9); B.gear(148, 7); B.en('erizo', 156, 19);
+  for (let i = 1; i <= 4; i++) B.block(160 + i, 160 + i, 20 - i, 19); B.row(161, 164, 14); B.block(176, 179, 0, 21);
+  return B.done(LV({ name: 'ISLA FLOTANTE', time: 200, sky: true, gk: 0.6, intro: '¡CORRIENTES DE CALOR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 170 * T + T / 2, y: 20 * T }, meteors: { zones: [[60 * T, 160 * T]], every: 1.5, acc: 0 } }));
+};
+LEVELS['3-14'] = function () {
+  const B = LB(210, 16), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 209, 0, 2);
+  B.ground(0, 26); B.crystal(4, 14, 3, 1.3); B.crystal(12, 14, 3); B.hid(8, 10, 'vida'); B.box(16, 10, 'escudo'); B.row(18, 24, 12); B.en('patrulla', 22, 13);
+  // A · vagonetas abandonadas (rocas que se hunden)
+  B.fall(28, 13, 2); B.fall(32, 12, 2); B.fall(36, 13, 2); B.ground(40, 80); B.block(44, 64, 3, 7); B.crystal(46, 14, 3); B.geyser(50, 14, 4, 0); B.en('alien', 54, 13); B.geyser(58, 14, 4, 1.4); B.crystal(62, 14, 3);
+  B.pad(68, 14); P(69, 73, 9); B.gear(71, 7); B.en('erizo', 76, 13);
+  // B · galería de cristales rojos
+  B.mover(82, 12, 3, 60, 0, 1.2, 0); B.ground(88, 140); B.cp(90, 14); for (let x = 94; x < 136; x += 7) B.crystal(x, 14, 3, 0.8 + (x % 3) * 0.2); B.en('dron', 100, 9, { x0: 92, x1: 110 }); B.box(104, 10, 'laser'); B.en('patrulla', 116, 13);
+  B.block(122, 128, 9, 13); B.fake(122, 128, 11, 13); B.row(122, 128, 12); B.gear(126, 12); B.block(120, 120, 12, 13); B.row(122, 128, 8);
+  // C · el pozo y la salida
+  B.block(143, 144, 12, 15); B.pad(143, 12); B.block(147, 149, 10, 15); B.pad(148, 10); B.arc(141, 150, 7, 3); B.gear(146, 5);
+  B.ground(151, 209); B.cp(154, 14); B.geyser(162, 14, 5, 0.5); B.en('alien', 170, 13); B.box(176, 10, 'estrella'); B.en('patrulla', 182, 13);
+  for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.crystal(203, 14, 3, 1.4); B.block(206, 209, 0, 15);
+  return B.done(LV({ name: 'MINA DE CRISTAL ROJO', time: 230, cave: true, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } }));
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -918,7 +1172,7 @@ function buildLevel() {
     l.gears.forEach((g, i) => { g.i = i; g.old = gs.has(i); });
     o.b.forEach(k => { const [x, y] = k.split(',').map(Number); if (l.g[y] && (l.g[y][x] === '?' || l.g[y][x] === 'I')) l.g[y][x] = l.g[y][x] === 'I' ? ' ' : 'U'; });
     if (o.r && l.rain) l.rain.st = 2; }
-  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.icicles = (l.icicles || []).map(c => Object.assign({ x: c.x0, y: c.y0, st: 0, t: 0, vy: 0 }, c)); l.winds = l.winds || []; l.warps = l.warps || []; l.crys = l.crys || []; l.lastCp = null; if (l.bossLvl) bossInit(l);
+  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.icicles = (l.icicles || []).map(c => Object.assign({ x: c.x0, y: c.y0, st: 0, t: 0, vy: 0 }, c)); l.winds = l.winds || []; l.warps = l.warps || []; l.crys = l.crys || []; l.geysers = l.geysers || []; l.cogs = l.cogs || []; l.lastCp = null; if (l.bossLvl) bossInit(l);
   return l;
 }
 const tileAt = (tx, ty) => (tx < 0 || tx >= L.W) ? '#' : (ty < 0 || ty >= L.H) ? ' ' : L.g[ty][tx];
@@ -1094,7 +1348,7 @@ function updatePlayer(dt) {
       L.g[ty][tx] = '?'; p.y = (ty + 1) * T + 0.01; p.vy = 0; hitBlock(tx, ty); burst(tx * T + T / 2, ty * T + T / 2, 22, '#fff', 220, 0.5, 0, 3); tone(1568, 2093, 0.18, 'triangle', 0.1); break; } }
   if (p.vy >= 0) p.boost = 0;
   if (p.vy >= 0 && !p.drop) for (const m of L.movers) {        // plataformas móviles: te llevan encima
-    if (p.x + p.w > m.x + 4 && p.x < m.x + m.w - 4 && feet0 <= m.y - m.dy + 10 && p.y + p.h >= m.y - 2) { p.y = m.y - p.h - 0.01; p.vy = 0; p.onGround = true; p.x += m.dx; if (collide(p)) p.x -= m.dx; break; }
+    if (m.st === 3) continue; if (p.x + p.w > m.x + 4 && p.x < m.x + m.w - 4 && feet0 <= m.y - m.dy + 10 && p.y + p.h >= m.y - 2) { if (m.fall && !m.st) { m.st = 1; m.ft = 0; } p.y = m.y - p.h - 0.01; p.vy = 0; p.onGround = true; p.x += m.dx; if (collide(p)) p.x -= m.dx; break; }
   }
   if (p.onGround) for (const pd of L.pads) {                    // plataformas de salto
     const c = p.x + p.w / 2; if (c > pd.x - 4 && c < pd.x + pd.w + 4 && Math.abs(p.y + p.h - pd.y) < 5) { p.vy = pd.crystal ? -1040 : -1180; if (pd.crystal) { tone(1200, 2400, 0.2, 'triangle', 0.08); tone(1800, 3600, 0.15, 'sine', 0.05, 0.05); } p.onGround = false; p.boost = 1; p.coyote = 0; p.sq = 1; pd.t = 0; if (p.crouch) { p.crouch = false; setSize(p); } tone(180, 900, 0.28, 'sawtooth', 0.09); tone(360, 1500, 0.24, 'square', 0.05); burst(c, pd.y, 16, pd.crystal ? '#e6a0ff' : '#35ff8a', 260, 0.45, 0, 3); break; }
@@ -1236,7 +1490,7 @@ function updateStage(dt) {
   }
   const ch = L.chase;
   if (ch) {
-    if (!ch.on && p.x > ch.startX) { ch.on = true; ch.x = p.x - 620; pop(p.x + p.w / 2, p.y - 40, ch.style === 'snow' ? '¡AVALANCHA!' : '¡CORRE!', ch.style === 'snow' ? '#ffffff' : '#ff5a6a'); if (ch.style === 'snow') noise(2.5, 0.25, 500); [330, 440, 330, 440, 330, 440].forEach((f, i) => tone(f, f, 0.14, 'sawtooth', 0.1, i * 0.15)); shake = 0.3; }
+    if (!ch.on && p.x > ch.startX) { ch.on = true; ch.x = p.x - 620; pop(p.x + p.w / 2, p.y - 40, ch.style === 'snow' ? '¡AVALANCHA!' : ch.style === 'lava' ? '¡OLA DE LAVA!' : '¡CORRE!', ch.style === 'snow' ? '#ffffff' : ch.style === 'lava' ? '#ffb040' : '#ff5a6a'); if (ch.style === 'snow') noise(2.5, 0.25, 500); [330, 440, 330, 440, 330, 440].forEach((f, i) => tone(f, f, 0.14, 'sawtooth', 0.1, i * 0.15)); shake = 0.3; }
     if (ch.on && !p.win && !p.dead) { ch.x += ch.speed * dt; ch.x = Math.max(ch.x, p.x - VW * 0.8); if (CHEAT.stop) ch.x = Math.min(ch.x, p.x - 230); if (p.x < ch.x + 4) die(); }
   }
   const mt = L.meteors;
@@ -1253,13 +1507,60 @@ function updateStage(dt) {
     }
     L.mets = L.mets.filter(m => !m.dead);
   }
+  for (const gz of L.geysers) {          // géiseres de fuego: avisan burbujeando y luego escupen
+    const k = ((time + gz.ph) % gz.per), on = k > 0.9 && k < 2.0; gz.warn = k > 0.15 && k <= 0.9; if (on && !gz.on && Math.abs(gz.x - (p.x + p.w / 2)) < VW) { noise(0.9, 0.1, 300); tone(90, 60, 0.6, 'sawtooth', 0.04); } gz.on = on;
+    if (on && !p.dead && !p.win && !CHEAT.ghost && Math.abs(p.x + p.w / 2 - gz.x) < 16 + p.w / 2 && p.y + p.h > gz.y - gz.h && p.y < gz.y) { if (p.tStar > 0) {} else hurt(); }
+  }
   const rs = L.rise;
   if (rs) {
-    if (!rs.on && p.y + p.h < rs.startY) { rs.on = true; pop(p.x + p.w / 2, p.y - 40, rs.style === 'water' ? '¡EL AGUA HELADA SUBE!' : '¡EL PLASMA SUBE!', rs.style === 'water' ? '#9ff0ff' : '#35ff8a'); [220, 262, 330, 392].forEach((f, i) => tone(f, f * 1.5, 0.2, 'sawtooth', 0.08, i * 0.14)); shake = 0.3; }
+    if (!rs.on && p.y + p.h < rs.startY) { rs.on = true; pop(p.x + p.w / 2, p.y - 40, rs.style === 'water' ? '¡EL AGUA HELADA SUBE!' : rs.style === 'lava' ? '¡EL MAGMA SUBE!' : '¡EL PLASMA SUBE!', rs.style === 'water' ? '#9ff0ff' : rs.style === 'lava' ? '#ffb040' : '#35ff8a'); [220, 262, 330, 392].forEach((f, i) => tone(f, f * 1.5, 0.2, 'sawtooth', 0.08, i * 0.14)); shake = 0.3; }
     if (rs.on && !p.win && !p.dead) { rs.y -= rs.speed * dt; rs.y = Math.min(rs.y, p.y + p.h + VHv * 0.62); if (CHEAT.stop) rs.y = Math.max(rs.y, p.y + p.h + 170); if (p.y + p.h > rs.y + 10) die(); }
   }
 }
+function lavaBand(x0, ww, y, dep) {          // superficie de lava: ondas, costras oscuras y burbujas
+  const g2 = ctx.createLinearGradient(0, y - 6, 0, y + Math.min(dep, 240)); g2.addColorStop(0, '#fff2a0'); g2.addColorStop(0.06, '#ffb030'); g2.addColorStop(0.3, '#f05a12'); g2.addColorStop(1, '#7a1606'); ctx.fillStyle = g2;
+  ctx.beginPath(); ctx.moveTo(x0, y + dep); for (let x = x0; x <= x0 + ww + 12; x += 12) ctx.lineTo(x, y + Math.sin(x * 0.03 + time * 2.6) * 4 + Math.sin(x * 0.011 - time * 1.4) * 3); ctx.lineTo(x0 + ww + 12, y + dep); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(70,12,6,.45)'; for (let i = 0; i < Math.ceil(ww / 70); i++) { const xx = x0 + ((Math.floor(x0 / 70) + i) * 70) - x0 % 70 + ((time * 14 + i * 37) % 50), yy = y + 18 + ((i * 29) % 40); ctx.beginPath(); ctx.ellipse(xx, yy, 16 + (i % 3) * 6, 4, 0, 0, 6.283); ctx.fill(); }
+  ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,220,120,.5)'; for (let i = 0; i < Math.ceil(ww / 90); i++) { const ph = (time * 0.8 + i * 0.37) % 1, xx = x0 + ((i * 131 + Math.floor(x0)) % Math.max(1, ww)); ctx.globalAlpha = 1 - ph; ctx.beginPath(); ctx.arc(xx, y - ph * 10, 2 + ph * 5, 0, 6.283); ctx.fill(); } ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+function drawLavaPits() {
+  if (L.theme !== 'lava' || L.vert || L.noLava) return; const x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1), y = (L.H - 0.72) * T;
+  const hole = x => !isWallT(L.g[L.H - 1][x]) && !L.warps.some(w => (x + 0.5) * T > w.x0 && (x + 0.5) * T < w.x1);
+  for (let x = x0; x <= x1; x++) { if (!hole(x)) continue; let e = x; while (e + 1 <= x1 && hole(e + 1)) e++;
+    ctx.globalCompositeOperation = 'lighter'; const gl = ctx.createLinearGradient(0, y - 120, 0, y); gl.addColorStop(0, 'rgba(255,90,20,0)'); gl.addColorStop(1, 'rgba(255,110,30,.45)'); ctx.fillStyle = gl; ctx.fillRect(x * T, y - 120, (e + 1 - x) * T, 120); ctx.globalCompositeOperation = 'source-over';
+    lavaBand(x * T - 1, (e + 1 - x) * T + 2, y, VHv); if (Math.random() < 0.05 * (e - x + 1)) parts.push({ x: (x + Math.random() * (e + 1 - x)) * T, y: y, vx: (Math.random() - 0.5) * 60, vy: -200 - Math.random() * 200, life: 0.8, max: 0.8, col: Math.random() < 0.5 ? '#ffb040' : '#ff5a1a', size: 2.5, grav: 900 }); x = e; }
+}
+function drawGeysers() {
+  for (const gz of L.geysers) { if (gz.x < cam.x - 80 || gz.x > cam.x + VW + 80) continue; const x = gz.x, y = gz.y;
+    ctx.fillStyle = '#2a1018'; ctx.beginPath(); ctx.ellipse(x, y + 2, 22, 7, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ff7a20'; ctx.beginPath(); ctx.ellipse(x, y + 1, 13, 4, 0, 0, 6.283); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    if (gz.warn) { const a = 0.3 + 0.3 * Math.sin(time * 30); const g2 = ctx.createRadialGradient(x, y, 2, x, y, 40); g2.addColorStop(0, 'rgba(255,160,40,' + a + ')'); g2.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = g2; ctx.fillRect(x - 40, y - 40, 80, 50);
+      if (Math.random() < 0.5) parts.push({ x: x + (Math.random() - 0.5) * 20, y: y - 2, vx: (Math.random() - 0.5) * 40, vy: -120 - Math.random() * 120, life: 0.4, max: 0.4, col: '#ffb040', size: 2, grav: 600 }); }
+    if (gz.on) { const k = ((time + gz.ph) % gz.per) - 0.9, hh = gz.h * Math.min(1, k * 6) * (0.92 + 0.08 * Math.sin(time * 40)), top = y - hh;
+      const g2 = ctx.createLinearGradient(0, top, 0, y); g2.addColorStop(0, 'rgba(255,90,20,0)'); g2.addColorStop(0.15, 'rgba(255,120,30,.75)'); g2.addColorStop(0.6, 'rgba(255,200,80,.9)'); g2.addColorStop(1, 'rgba(255,250,200,.95)'); ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.moveTo(x - 14, y); for (let yy = y; yy > top; yy -= 14) ctx.lineTo(x - 14 - Math.sin(yy * 0.1 + time * 25) * 5 - (y - yy) / gz.h * 6, yy); ctx.lineTo(x, top - 12); for (let yy = top; yy < y; yy += 14) ctx.lineTo(x + 14 + Math.sin(yy * 0.1 - time * 25) * 5 + (y - yy) / gz.h * 6, yy); ctx.closePath(); ctx.fill();
+      const g3 = ctx.createRadialGradient(x, y - hh / 2, 4, x, y - hh / 2, Math.max(40, hh * 0.7)); g3.addColorStop(0, 'rgba(255,140,40,.35)'); g3.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = g3; ctx.fillRect(x - hh, top - 20, hh * 2, hh + 40);
+      if (Math.random() < 0.9) parts.push({ x: x + (Math.random() - 0.5) * 16, y: top + Math.random() * 20, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 100, life: 0.5, max: 0.5, col: Math.random() < 0.5 ? '#ffd060' : '#ff6a1a', size: 2.5, grav: 500 }); }
+    ctx.globalCompositeOperation = 'source-over'; }
+}
+function drawRock(m, x, y, w) {        // roca volcánica flotante (las que se hunden tiemblan antes)
+  if (m.st === 3) return; const jx = m.st === 1 ? Math.sin(time * 60) * 2.5 : 0, h = 30; x += jx;
+  ctx.globalCompositeOperation = 'lighter'; const g0 = ctx.createRadialGradient(x + w / 2, y + h, 2, x + w / 2, y + h, w * 0.6); g0.addColorStop(0, 'rgba(255,100,30,' + (m.fall ? 0.35 : 0.22) + ')'); g0.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = g0; ctx.fillRect(x - w * 0.1, y, w * 1.2, h * 2.4); ctx.globalCompositeOperation = 'source-over';
+  const g2 = ctx.createLinearGradient(0, y, 0, y + h + 16); g2.addColorStop(0, '#5a2a3a'); g2.addColorStop(0.35, '#3a1428'); g2.addColorStop(1, '#1a0812'); ctx.fillStyle = g2;
+  ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x + 6, y - 1); ctx.lineTo(x + w - 6, y - 1); ctx.lineTo(x + w, y + 5); ctx.lineTo(x + w - 10, y + h * 0.7); ctx.lineTo(x + w * 0.62, y + h + 12); ctx.lineTo(x + w * 0.38, y + h + 6); ctx.lineTo(x + 12, y + h * 0.65); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#120408'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = m.fall ? 'rgba(255,140,40,' + (m.st === 1 ? 1 : 0.75) + ')' : 'rgba(255,120,40,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + w * 0.2, y + 8); ctx.lineTo(x + w * 0.35, y + 16); ctx.lineTo(x + w * 0.5, y + 12); ctx.moveTo(x + w * 0.6, y + 10); ctx.lineTo(x + w * 0.72, y + 20); ctx.lineTo(x + w * 0.55, y + h); ctx.stroke();
+  ctx.fillStyle = '#ff8a30'; ctx.fillRect(x + 6, y - 1, w - 12, 2.5);
+}
+function drawCogs() {
+  for (const c of L.cogs) { if (c.x + c.r < cam.x || c.x - c.r > cam.x + VW) continue; const n = Math.max(8, Math.round(c.r / 14)), a0 = time * 0.4 * (c.r > 3 * T ? 0.6 : 1) * ((c.x / T | 0) % 2 ? 1 : -1);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(a0); ctx.fillStyle = '#2a1424'; ctx.strokeStyle = 'rgba(255,120,40,.5)'; ctx.lineWidth = 3; ctx.beginPath();
+    for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * 6.283, rr = i % 2 ? c.r : c.r * 0.86, a2 = (i + 1) / (n * 2) * 6.283; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); ctx.lineTo(Math.cos(a2) * rr, Math.sin(a2) * rr); }
+    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#160812'; ctx.beginPath(); ctx.arc(0, 0, c.r * 0.55, 0, 6.283); ctx.fill(); ctx.fillStyle = '#3a1c2c';
+    for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * 1.5708); ctx.fillRect(-c.r * 0.08, 0, c.r * 0.16, c.r * 0.6); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, c.r * 0.16, 0, 6.283); ctx.fillStyle = '#ff7a24'; ctx.fill(); ctx.restore(); }
+}
 function drawStageBack() {          // por detrás de los personajes
+  drawLavaPits(); drawGeysers();
   if (CHEAT.floor) {                 // puentes láser sobre los huecos
     CHEAT.floorT += 1 / 60; const gy = (L.H - 2) * T, x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1);
     const hole = x => !isSolid(L.g[L.H - 2][x]) && L.g[L.H - 2][x] !== '=' && !isSolid(L.g[L.H - 1][x]);
@@ -1290,6 +1591,7 @@ function drawStageBack() {          // por detrás de los personajes
   const PI = iceI('plataforma-hielo') || IMG.plataforma, PFX = PI === IMG.plataforma ? [0.165, 0.835] : [0.31, 0.69];
   for (const m of L.movers) { const w = m.w + 10, x = m.x - 5, y = m.y - 2, h = PI && PI.naturalWidth ? w * PI.naturalHeight / PI.naturalWidth : 14;
     ctx.globalCompositeOperation = 'lighter'; for (const fx of PFX) { const g2 = ctx.createRadialGradient(x + w * fx, y + h, 0, x + w * fx, y + h, w * 0.16); g2.addColorStop(0, 'rgba(255,190,60,.5)'); g2.addColorStop(1, 'rgba(255,190,60,0)'); ctx.fillStyle = g2; ctx.fillRect(x + w * fx - w * 0.16, y + h - 4, w * 0.32, w * 0.18); } ctx.globalCompositeOperation = 'source-over';
+    if (L.theme === 'lava' || m.fall) { drawRock(m, x, y, w); continue; }
     if (PI && PI.naturalWidth) ctx.drawImage(PI, x, y, w, h); else { ctx.fillStyle = '#2c386e'; ctx.fillRect(x, y, w, 14); } }
   for (const pd of L.pads) if (pd.crystal) { const k = Math.max(0, 1 - pd.t * 5), cx = pd.x + pd.w / 2, y = pd.y, sq = 1 - k * 0.3;      // cristal saltarín
     ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(cx, y - 18, 2, cx, y - 18, 44); gg.addColorStop(0, 'rgba(230,120,255,' + (0.35 + 0.15 * Math.sin(time * 6) + k * 0.4) + ')'); gg.addColorStop(1, 'rgba(198,60,255,0)'); ctx.fillStyle = gg; ctx.fillRect(cx - 44, y - 62, 88, 70); ctx.globalCompositeOperation = 'source-over';
@@ -1346,6 +1648,12 @@ function drawStageFront() {         // por delante: láseres, muro, plasma
     ctx.fillStyle = '#c8e2f5'; for (let i = 0; i < 6; i++) { const a2 = time * 8 + i, bx = x - 20 + (i % 3) * 8, by = (L.H - 2) * T - 24 - (i % 2) * 40; ctx.beginPath(); ctx.arc(bx + Math.cos(a2) * 4, by, 22, 0, 6.283); ctx.fill(); }
     for (let i = 0; i < 3; i++) parts.push({ x: x + Math.random() * 20, y: top + Math.random() * hh, vx: 120 + Math.random() * 200, vy: -60 + Math.random() * 60, life: 0.6, max: 0.6, col: '#ffffff', size: 2 + Math.random() * 3, grav: 300 });
     if (Math.random() < 0.2) shake = Math.max(shake, 0.06); }
+  else if (ch && ch.on && ch.style === 'lava') { const x = ch.x, top = cam.y - 20, hh = VHv + 40;          // ola de lava que te persigue
+    const g2 = ctx.createLinearGradient(x - 460, 0, x + 20, 0); g2.addColorStop(0, 'rgba(90,10,0,.98)'); g2.addColorStop(0.6, 'rgba(230,70,10,.97)'); g2.addColorStop(0.92, 'rgba(255,190,60,.97)'); g2.addColorStop(1, 'rgba(255,240,160,0)'); ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.moveTo(cam.x - 60, top); for (let y = top; y <= top + hh; y += 24) ctx.lineTo(x + Math.sin(y * 0.03 + time * 7) * 14, y); ctx.lineTo(cam.x - 60, top + hh); ctx.closePath(); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter'; const g3 = ctx.createLinearGradient(x, 0, x + 120, 0); g3.addColorStop(0, 'rgba(255,120,30,.55)'); g3.addColorStop(1, 'rgba(255,120,30,0)'); ctx.fillStyle = g3; ctx.fillRect(x, top, 120, hh); ctx.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 3; i++) parts.push({ x: x + Math.random() * 20, y: top + Math.random() * hh, vx: 80 + Math.random() * 220, vy: -120 + Math.random() * 80, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#ffb040' : '#ff5a1a', size: 2.5 + Math.random() * 2, grav: 500 });
+    if (Math.random() < 0.2) shake = Math.max(shake, 0.06); }
   else if (ch && ch.on) { const x = ch.x, top = cam.y - 20, hh = VHv + 40;
     const g2 = ctx.createLinearGradient(x - 420, 0, x, 0); g2.addColorStop(0, 'rgba(120,0,60,.96)'); g2.addColorStop(0.75, 'rgba(255,30,80,.85)'); g2.addColorStop(1, 'rgba(255,120,160,.95)'); ctx.fillStyle = g2; ctx.fillRect(cam.x - 60, top, x - cam.x + 60, hh);
     ctx.globalCompositeOperation = 'lighter'; const g3 = ctx.createLinearGradient(x, 0, x + 90, 0); g3.addColorStop(0, 'rgba(255,60,110,.7)'); g3.addColorStop(1, 'rgba(255,60,110,0)'); ctx.fillStyle = g3; ctx.fillRect(x, top, 90, hh);
@@ -1357,6 +1665,10 @@ function drawStageFront() {         // por delante: láseres, muro, plasma
     ctx.beginPath(); ctx.moveTo(x0, y + 900); for (let x = x0; x <= x0 + ww + 16; x += 16) ctx.lineTo(x, y + Math.sin(x * 0.025 + time * 3) * 5 + Math.sin(x * 0.01 - time * 1.7) * 4); ctx.lineTo(x0 + ww + 16, y + 900); ctx.closePath(); ctx.fill();
     ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(200,245,255,.5)'; for (let i = 0; i < 14; i++) { const xx = x0 + ((i * 131 + time * 30) % ww), yy = y + 14 + (i % 3) * 10; ctx.fillRect(xx, yy, 18, 3); } ctx.globalCompositeOperation = 'source-over';
     if (Math.random() < 0.6) parts.push({ x: x0 + Math.random() * ww, y: y + 6, vx: 0, vy: -40 - Math.random() * 60, life: 0.8, max: 0.8, col: Math.random() < 0.5 ? '#dff8ff' : '#9fe0ff', size: 2.2, grav: 0 }); }
+  else if (rs && rs.on && rs.style === 'lava') { const y = rs.y, x0 = cam.x - 20, ww = VW + 40;          // magma que sube
+    ctx.globalCompositeOperation = 'lighter'; const g3 = ctx.createLinearGradient(0, y - 110, 0, y); g3.addColorStop(0, 'rgba(255,90,20,0)'); g3.addColorStop(1, 'rgba(255,110,30,.55)'); ctx.fillStyle = g3; ctx.fillRect(x0, y - 110, ww, 110); ctx.globalCompositeOperation = 'source-over';
+    lavaBand(x0, ww, y, 900);
+    if (Math.random() < 0.7) parts.push({ x: x0 + Math.random() * ww, y: y + 4, vx: (Math.random() - 0.5) * 40, vy: -80 - Math.random() * 160, life: 0.7, max: 0.7, col: Math.random() < 0.5 ? '#ffb040' : '#ff5a1a', size: 2.5, grav: 300 }); }
   else if (rs && rs.on) { const y = rs.y, x0 = cam.x - 20, ww = VW + 40;
     ctx.globalCompositeOperation = 'lighter'; const g3 = ctx.createLinearGradient(0, y - 90, 0, y); g3.addColorStop(0, 'rgba(53,255,138,0)'); g3.addColorStop(1, 'rgba(53,255,138,.5)'); ctx.fillStyle = g3; ctx.fillRect(x0, y - 90, ww, 90); ctx.globalCompositeOperation = 'source-over';
     const g2 = ctx.createLinearGradient(0, y, 0, y + 300); g2.addColorStop(0, 'rgba(160,255,200,.97)'); g2.addColorStop(0.12, 'rgba(40,220,120,.94)'); g2.addColorStop(1, 'rgba(0,70,60,.97)'); ctx.fillStyle = g2;
@@ -1374,6 +1686,9 @@ function drawDark() {
   for (const cp of L.cps) light(cp.x, cp.y - 60, cp.on ? 150 : 70, cp.on ? 0.9 : 0.55);
   for (const c of L.crys) light(c.x, c.y - 30 * c.h, 150 * c.h, 0.85);
   for (const ic of L.icicles) if (ic.st < 3) light(ic.x, ic.y + 20, 40, 0.45);
+  if (L.theme === 'lava') { for (const gz of L.geysers) light(gz.x, gz.y - (gz.on ? gz.h / 2 : 10), gz.on ? gz.h * 0.8 : 50, gz.on ? 0.9 : 0.5);
+    if (!L.vert && !L.noLava) for (let x = Math.floor(cam.x / T); x < (cam.x + VW) / T + 1; x += 2) if (x >= 0 && x < L.W && !isWallT(L.g[L.H - 1][x])) light(x * T + T / 2, (L.H - 1) * T, 120, 0.7);
+    if (L.rise && L.rise.on) for (let x = cam.x; x < cam.x + VW + 100; x += 160) light(x, L.rise.y, 220, 0.9); }
   for (const pd of L.pads) if (pd.crystal) light(pd.x + 24, pd.y - 20, 90, 0.8);
   for (const po of L.portals) light(po.x, po.y, 135, 0.9);
   light(L.goal.x, L.goal.y - 130, 230);
@@ -1404,7 +1719,12 @@ function update(dt) {
       if (G.tleft <= 10 && G.tleft > 0 && Math.ceil(before) !== Math.ceil(G.tleft)) tone(1245, 1245, 0.08, 'square', 0.1);
       if (G.tleft <= 0) { pop(P.x + P.w / 2, P.y - 30, '¡SE ACABÓ EL TIEMPO!', '#ff5a6a'); die(); }
     }
-    for (const m of L.movers) { const k = Math.sin(time * m.sp + m.ph), nx = m.bx + k * m.ax, ny = m.by + k * m.ay; m.dx = nx - m.x; m.dy = ny - m.y; m.x = nx; m.y = ny; }
+    for (const m of L.movers) { if (m.fall) { const oy = m.y;
+        if (m.st === 1) { m.ft += dt; if (m.ft > 0.5) { m.st = 2; m.vy = 0; noise(0.25, 0.08, 120); } }
+        else if (m.st === 2) { m.vy = Math.min(m.vy + 1700 * dt, 900); m.y += m.vy * dt; if (m.y > L.H * T + 300) { m.st = 3; m.ft = 0; } }
+        else if (m.st === 3) { m.ft += dt; if (m.ft > 3) { m.st = 0; m.y = m.by; m.vy = 0; } }
+        m.dx = 0; m.dy = m.y - oy; continue; }
+      const k = Math.sin(time * m.sp + m.ph), nx = m.bx + k * m.ax, ny = m.by + k * m.ay; m.dx = nx - m.x; m.dy = ny - m.y; m.x = nx; m.y = ny; }
     updatePlayer(dt);
     if (state !== 'play') return;
     updateEnemies(dt);
@@ -1514,8 +1834,29 @@ function drawSnow() {               // copos por delante de todo, en pantalla
   ctx.globalAlpha = 1;
   if (storm > 0.05) { ctx.fillStyle = 'rgba(225,240,255,' + storm * 0.22 + ')'; ctx.fillRect(0, 0, VW, VHv); }
 }
+function drawLavaBg() {              // planeta volcánico: cielo rojizo, volcanes a lo lejos y brasas que suben
+  if (L.cave) { drawCaveBg(); ctx.fillStyle = 'rgba(140,30,10,.22)'; ctx.fillRect(0, 0, VW, VHv); const gl = ctx.createLinearGradient(0, VHv * 0.6, 0, VHv); gl.addColorStop(0, 'rgba(255,80,20,0)'); gl.addColorStop(1, 'rgba(255,80,20,.18)'); ctx.fillStyle = gl; ctx.fillRect(0, VHv * 0.6, VW, VHv * 0.4); return; }
+  const g = ctx.createLinearGradient(0, 0, 0, VHv); g.addColorStop(0, '#0e0418'); g.addColorStop(0.45, '#2e0b26'); g.addColorStop(0.8, '#6a1c1a'); g.addColorStop(1, '#a8361a'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VHv);
+  for (const s2 of STARS) { const px = ((s2.x * 1400 - cam.x * 0.03 * s2.l) % 1400 + 1400) % 1400; if (px > VW || s2.y > 0.55) continue; ctx.globalAlpha = 0.35 + 0.35 * Math.sin(time * 1.5 + s2.tw); ctx.fillStyle = '#ffe8d0'; ctx.fillRect(px, s2.y * VHv, s2.s, s2.s); } ctx.globalAlpha = 1;
+  { const px = VW * 0.78 - cam.x * 0.012, py = VHv * 0.18, r = 38, pg = ctx.createRadialGradient(px - 12, py - 12, 3, px, py, r); pg.addColorStop(0, '#f4e0ff'); pg.addColorStop(0.6, '#9a7ab8'); pg.addColorStop(1, '#3a2458'); ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
+    const p2 = VW * 0.2 - cam.x * 0.008; ctx.fillStyle = '#5a3a6a'; ctx.beginPath(); ctx.arc(p2, VHv * 0.12, 18, 0, 6.283); ctx.fill(); }
+  const up = (L.H * T - VHv - cam.y) * 0.1;
+  [[0.05, VHv * 0.62, VHv * 0.34, '#3a1430', 0], [0.14, VHv * 0.8, VHv * 0.3, '#22091c', 1]].forEach(([par, base, hh, col, l]) => {
+    const off = cam.x * par; ctx.beginPath(); ctx.moveTo(0, VHv); const pts = MTN[l];
+    for (let rep2 = 0; rep2 < 3; rep2++) for (const [mx, mh] of pts) { const x = mx + rep2 * 3000 - (off % 3000); if (x < -200 || x > VW + 200) continue; ctx.lineTo(x, base + up * (l + 1) - mh * hh); }
+    ctx.lineTo(VW, VHv); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = l ? 'rgba(255,110,40,.35)' : 'rgba(255,90,60,.2)'; ctx.lineWidth = 2; ctx.stroke();
+    if (l === 0) { const vx = ((VW * 0.62 - off * 0.6) % (VW * 1.6) + VW * 1.6) % (VW * 1.6) - VW * 0.3, vy = base + up - hh * 0.95;          // volcán humeante
+      ctx.fillStyle = '#2c0f24'; ctx.beginPath(); ctx.moveTo(vx - hh * 0.9, base + up + 40); ctx.lineTo(vx - hh * 0.12, vy); ctx.lineTo(vx + hh * 0.12, vy); ctx.lineTo(vx + hh * 0.9, base + up + 40); ctx.closePath(); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter'; const cg = ctx.createRadialGradient(vx, vy, 2, vx, vy, hh * 0.4); cg.addColorStop(0, 'rgba(255,170,60,.8)'); cg.addColorStop(1, 'rgba(255,60,20,0)'); ctx.fillStyle = cg; ctx.fillRect(vx - hh * 0.4, vy - hh * 0.4, hh * 0.8, hh * 0.8);
+      ctx.strokeStyle = 'rgba(255,120,30,.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(vx - 4, vy); ctx.quadraticCurveTo(vx - hh * 0.2, vy + hh * 0.3, vx - hh * 0.35, vy + hh * 0.75); ctx.moveTo(vx + 5, vy); ctx.quadraticCurveTo(vx + hh * 0.15, vy + hh * 0.4, vx + hh * 0.3, vy + hh * 0.8); ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(60,40,60,.35)'; for (let i = 0; i < 6; i++) { const ph = (time * 0.12 + i / 6) % 1; ctx.beginPath(); ctx.arc(vx + Math.sin(i * 2 + time * 0.3) * 20 + ph * 60, vy - ph * hh * 0.9, 14 + ph * 40, 0, 6.283); ctx.fill(); } }
+  });
+  const gl = ctx.createLinearGradient(0, VHv * 0.55, 0, VHv); gl.addColorStop(0, 'rgba(255,90,20,0)'); gl.addColorStop(1, 'rgba(255,90,20,.2)'); ctx.fillStyle = gl; ctx.fillRect(0, VHv * 0.55, VW, VHv * 0.45);
+  ctx.globalCompositeOperation = 'lighter'; for (const f of FLAKES) { f.y -= f.v * 0.00025; f.x += Math.sin(time + f.ph) * 0.0003; if (f.y < 0) { f.y = 1; f.x = Math.random(); } ctx.globalAlpha = 0.3 + 0.4 * f.s / 2.4; ctx.fillStyle = f.s > 1.6 ? '#ffb040' : '#ff6a20'; ctx.fillRect(f.x * VW, f.y * VHv, f.s, f.s); } ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
 function drawBackground() {
   if (L.theme === 'ice') { drawIceBg(); return; }
+  if (L.theme === 'lava') { drawLavaBg(); return; }
   const g = ctx.createLinearGradient(0, 0, 0, VHv);
   g.addColorStop(0, '#05071a'); g.addColorStop(0.6, '#0d1036'); g.addColorStop(1, '#241046');
   ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VHv);
@@ -1577,6 +1918,12 @@ function drawTiles() {
   for (const pl of L.plats) {
     if (pl.x1 < x0 - 1 || pl.x0 > x1 + 1) continue;
     const w = (pl.x1 - pl.x0 + 1) * T + 10, x = pl.x0 * T - 5, y = pl.ty * T - 2 + Math.sin(time * 2 + pl.x0) * 1.2;
+    if (L.theme === 'lava') { const yy = pl.ty * T;          // pasarela de metal oxidado con remaches al rojo
+      const g2 = ctx.createLinearGradient(0, yy, 0, yy + 20); g2.addColorStop(0, '#6a4a5a'); g2.addColorStop(0.25, '#3a2232'); g2.addColorStop(1, '#1a0c16'); ctx.fillStyle = g2; ctx.fillRect(x + 3, yy, w - 6, 18);
+      ctx.fillStyle = '#ff8a30'; ctx.fillRect(x + 3, yy, w - 6, 2.5); ctx.strokeStyle = '#120408'; ctx.lineWidth = 2; ctx.strokeRect(x + 3, yy, w - 6, 18);
+      ctx.strokeStyle = 'rgba(20,6,14,.8)'; ctx.lineWidth = 2; ctx.beginPath(); for (let xx = x + 3; xx < x + w - 20; xx += 24) { ctx.moveTo(xx, yy + 18); ctx.lineTo(xx + 12, yy + 4); ctx.lineTo(xx + 24, yy + 18); } ctx.stroke();
+      ctx.fillStyle = '#ffb060'; for (let xx = x + 10; xx < x + w - 6; xx += 24) { ctx.beginPath(); ctx.arc(xx, yy + 7, 1.8, 0, 6.283); ctx.fill(); }
+      continue; }
     if (PI && PI.naturalWidth) {
       const h = w * PI.naturalHeight / PI.naturalWidth, a = 0.3 + 0.14 * Math.sin(time * 7 + pl.x0);
       ctx.globalCompositeOperation = 'lighter';
@@ -1588,6 +1935,7 @@ function drawTiles() {
   // suelo y bloques macizos
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (L.g[ty][tx] === '#') solidTile(tx, ty, G, gOk, gw, gh);
   if (L.theme === 'ice') iceDeco(x0, x1, y0, y1);
+  else if (L.theme === 'lava') for (const c of L.crys) { if (c.x < cam.x - 80 || c.x > cam.x + VW + 80) continue; drawCrystal(c.x, c.y, c.c, c.h); }
   // cajas (de izquierda a derecha, para que cada una tape el lateral de la anterior)
   drawBoxes(x0, x1, y0, y1);
 }
@@ -1604,7 +1952,8 @@ function solidTile(tx, ty, G, gOk, gw, gh) {
       else { ctx.save(); ctx.translate(x, y + T); ctx.scale(1, -1); ctx.drawImage(G, sx, gh, gw, gh, 0, -0.5, T + 0.5, T + 0.5); ctx.restore(); }
     } else { ctx.fillStyle = '#263060'; ctx.fillRect(x, y, T + 0.5, T + 0.5); if (d === 0) { ctx.fillStyle = '#29e6ff'; ctx.fillRect(x, y, T + 0.5, 2.5); } }
     if (L.theme === 'ice' && G !== IMG['suelo-hielo']) { ctx.fillStyle = 'rgba(175,228,255,.3)'; ctx.fillRect(x, y, T + 0.5, T + 0.5); }
-    ctx.fillStyle = L.theme === 'ice' ? '#0c2a4a' : '#080b1c';
+    else if (L.theme === 'lava') { ctx.fillStyle = 'rgba(70,12,28,.55)'; ctx.fillRect(x, y, T + 0.5, T + 0.5); if (d === 0) { ctx.fillStyle = '#ff7a24'; ctx.fillRect(x, y, T + 0.5, 3); ctx.fillStyle = 'rgba(255,160,60,.35)'; ctx.fillRect(x, y + 3, T + 0.5, 3); } }
+    ctx.fillStyle = L.theme === 'ice' ? '#0c2a4a' : L.theme === 'lava' ? '#1a0610' : '#080b1c';
     if (tx > 0 && !isWallT(L.g[ty][tx - 1])) ctx.fillRect(x, y, 2.5, T + 0.5);
     if (tx < L.W - 1 && !isWallT(L.g[ty][tx + 1])) ctx.fillRect(x + T - 2.5, y, 2.5, T + 0.5);
     if (ty < L.H - 1 && !isWallT(L.g[ty + 1][tx])) ctx.fillRect(x, y + T - 2.5, T + 0.5, 2.5);
@@ -1631,8 +1980,8 @@ function iceDeco(x0, x1, y0, y1) {
   for (const c of L.crys) { if (c.x < cam.x - 80 || c.x > cam.x + VW + 80) continue; drawCrystal(c.x, c.y, c.c, c.h); }
 }
 function drawCrystal(x, y, c, h) {
-  { const ci = iceI('cristal-' + (c % 3)); if (ci) { const col = ['41,200,255', '198,90,255', '53,255,190'][c % 3], s2 = 30 * h; ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over'; spr(ci, x, y + 3, 60 * h, 0.5, 1); return; } }
-  const col = [['#1f8fd0', '#d8f8ff', '#5fd0ff', '41,200,255'], ['#7a2ad8', '#f0c8ff', '#b070ff', '198,90,255'], ['#1aa088', '#d0fff0', '#40e0b0', '53,255,190']][c % 3], s2 = 30 * h;
+  { const ci = c < 3 && iceI('cristal-' + (c % 3)); if (ci) { const col = ['41,200,255', '198,90,255', '53,255,190'][c % 3], s2 = 30 * h; ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over'; spr(ci, x, y + 3, 60 * h, 0.5, 1); return; } }
+  const col = [['#1f8fd0', '#d8f8ff', '#5fd0ff', '41,200,255'], ['#7a2ad8', '#f0c8ff', '#b070ff', '198,90,255'], ['#1aa088', '#d0fff0', '#40e0b0', '53,255,190'], ['#a01828', '#ffd8c8', '#ff5a4a', '255,70,50']][c % 4], s2 = 30 * h;
   ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col[3] + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col[3] + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over';
   for (const [dx, hh, ww, rr] of [[-10, 1.1, 7, -0.25], [11, 1.25, 7, 0.22], [0, 1.9, 10, 0]]) { ctx.save(); ctx.translate(x + dx * h, y); ctx.rotate(rr); const H2 = s2 * hh, W2 = ww * h, g2 = ctx.createLinearGradient(-W2, 0, W2, 0); g2.addColorStop(0, col[0]); g2.addColorStop(0.5, col[1]); g2.addColorStop(1, col[2]); ctx.fillStyle = g2;
     ctx.beginPath(); ctx.moveTo(-W2, 0); ctx.lineTo(-W2, -H2 * 0.75); ctx.lineTo(0, -H2); ctx.lineTo(W2, -H2 * 0.75); ctx.lineTo(W2, 0); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
@@ -1721,7 +2070,7 @@ function drawWorld() {
   // punto de control y meta
   for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 78, 26, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y, 84); ctx.globalAlpha = 1; }
   if (vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y, 250); }
-  drawTiles();
+  drawCogs(); drawTiles();
   drawStageBack();
   // chips y engranajes
   for (const c of L.chips) if (!c.got && vis(c.x)) { const s = Math.cos(time * 4 + c.t); spr(IMG['obj-chip'], c.x, c.y + Math.sin(time * 3 + c.t) * 3, 26, 0.5, 0.5, false, 0, Math.abs(s) * 0.85 + 0.15, 1); }
@@ -1740,6 +2089,7 @@ function drawWorld() {
     if (e.dead) { if (e.how === 'squish') spr(eim, cx, by, eh, eax, 1, efl, 0, 1.25, 0.25); else spr(eim, cx, by - eh / 2, eh, 0.5, 0.5, efl, e.dead * 9); continue; }
     const wob = e.d.fly || e.type === 'torreta' ? 0 : Math.sin(e.t * 9) * 0.04;
     spr(eim, cx, by + (e.type === 'alien' ? 4 : 2), eh, eax, 1, efl, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1);
+    if (L.theme === 'lava' && !iv) { const tc = tintCv(eim, 'rgba(255,80,20,1)'); if (tc) { tc._f = eim._f; ctx.globalAlpha = 0.34 + 0.06 * Math.sin(time * 5 + e.x); spr(tc, cx, by + (e.type === 'alien' ? 4 : 2), eh, eax, 1, efl, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1); ctx.globalAlpha = 1; } }
   }
   if (L.boss) drawBoss();
   drawPlayer();
@@ -1941,7 +2291,7 @@ function warpLucas(x, y, h, pose, fl, rot, face) {     // Lucas con sus 3 propul
 function drawWarp() {
   const W = warp; if (!W) { drawMap(); return; } const t = W.t, toW = WORLDS[W.to];
   if (t < 1.75) {                       // 1 · carga y despegue desde el mapa
-    const k = t < 1 ? 0 : (t - 1) / 0.75, z = 1 + k * k * 0.7, hL = Math.max(58, 0.074 * mapT().w);
+    const k = t < 1 ? 0 : (t - 1) / 0.75, z = 1 + k * k * 0.7, hL = Math.max(58, 0.074 * mapT().u);
     ctx.save(); ctx.translate(W.sx, W.sy); ctx.scale(z, z); ctx.translate(-W.sx, -W.sy); mapHideLucas = true; drawMap(); mapHideLucas = false; ctx.restore();
     ctx.fillStyle = 'rgba(2,4,16,' + (k * 0.88) + ')'; ctx.fillRect(0, 0, VW, VHv);
     const ch = Math.min(1, t), sh = t < 1 ? ch * 5 : 2, lx = W.sx + (Math.random() - 0.5) * sh, ly = W.sy - k * k * (VHv + 400) + (Math.random() - 0.5) * sh;
@@ -1967,7 +2317,7 @@ function drawWarp() {
     ctx.globalAlpha = 1;
     // destino que se acerca
     if (u > 0.55) { const a = (u - 0.55) / 0.45, px = VW * (1.25 - a * 0.42), py = VHv * 0.42, r = VHv * (0.08 + a * a * 0.55);
-      const pg = ctx.createRadialGradient(px - r * 0.3, py - r * 0.35, r * 0.1, px, py, r); if (W.to === 1) { pg.addColorStop(0, '#eaffff'); pg.addColorStop(0.5, '#6fd8ff'); pg.addColorStop(1, '#1a4a9a'); } else { pg.addColorStop(0, '#d8e8ff'); pg.addColorStop(0.5, '#6a78b0'); pg.addColorStop(1, '#1a1a4a'); }
+      const pg = ctx.createRadialGradient(px - r * 0.3, py - r * 0.35, r * 0.1, px, py, r); if (W.to === 1) { pg.addColorStop(0, '#eaffff'); pg.addColorStop(0.5, '#6fd8ff'); pg.addColorStop(1, '#1a4a9a'); } else if (W.to === 2) { pg.addColorStop(0, '#ffe8a0'); pg.addColorStop(0.45, '#ff6a1a'); pg.addColorStop(1, '#4a0a14'); } else { pg.addColorStop(0, '#d8e8ff'); pg.addColorStop(0.5, '#6a78b0'); pg.addColorStop(1, '#1a1a4a'); }
       ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'lighter';
       const at = ctx.createRadialGradient(px, py, r * 0.95, px, py, r * 1.25); at.addColorStop(0, 'rgba(160,240,255,.5)'); at.addColorStop(1, 'rgba(160,240,255,0)'); ctx.fillStyle = at; ctx.beginPath(); ctx.arc(px, py, r * 1.25, 0, 6.283); ctx.fill();
       ctx.strokeStyle = 'rgba(200,240,255,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(px, py, r * 1.7, r * 0.32, -0.3, 0, 6.283); ctx.stroke(); }
@@ -1992,7 +2342,7 @@ function drawWarp() {
   const a = Math.min(1, (t - 3.9) / 0.95), z = 1 + (1 - easeIO(a)) * 0.6, tx = W.tx || VW / 2, ty = W.ty || VHv / 2, landed = t >= 4.75;
   const shk = landed && t < 5.05 ? (5.05 - t) * 40 : 0;
   ctx.save(); ctx.translate(tx + (Math.random() - 0.5) * shk, ty + (Math.random() - 0.5) * shk); ctx.scale(z, z); ctx.translate(-tx, -ty); mapHideLucas = !landed; drawMap(); mapHideLucas = false; ctx.restore();
-  if (!landed) { const d = Math.min(1, (t - 3.9) / 0.85), hL = Math.max(58, 0.074 * mapT().w), ly = ty - (1 - d * d) * (VHv + 200);
+  if (!landed) { const d = Math.min(1, (t - 3.9) / 0.85), hL = Math.max(58, 0.074 * mapT().u), ly = ty - (1 - d * d) * (VHv + 200);
     warpLucas(tx, ly, hL, 'lucas-cayendo', 0.6 + (1 - d) * 0.8, 0); }
   else if (t < 5.4) { const r = (t - 4.75) * 900, al = Math.max(0, 1 - (t - 4.75) / 0.65); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(160,245,255,' + al + ')'; ctx.lineWidth = 6 * al + 1; ctx.beginPath(); ctx.ellipse(tx, ty, r, r * 0.36, 0, 0, 6.283); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
   if (t < 4.3) { ctx.fillStyle = 'rgba(255,255,255,' + Math.max(0, 1 - (t - 3.9) / 0.4) + ')'; ctx.fillRect(0, 0, VW, VHv); }
@@ -2019,14 +2369,34 @@ const MAP2 = [
   { id: '2-J', n: '', name: 'JEFE · GUARDIÁN DE HIELO', x: 0.8725, y: 0.401, rx: 0.058, boss: true, built: true, way: [[0.71, 0.33], [0.775, 0.315], [0.83, 0.355]] },
   { id: '2-B', n: '★', name: 'FASE SECRETA · AURORA', x: 0.618, y: 0.19, rx: 0.024, bonus: true, built: true, prev: 5, way: [[0.635, 0.305], [0.613, 0.26], [0.615, 0.224]] }
 ];
+/* ---------- mapa del mundo 3: PLANETA VOLCÁNICO (panorámico: la cámara sigue a Lucas) ---------- */
+const MAP3 = [
+  { id: '3-1', n: '1', name: 'LLANURA DE CENIZA', x: 0.0399, y: 0.5574, rx: 0.038, built: true },
+  { id: '3-2', n: '2', name: 'GÉISERES DE FUEGO', x: 0.0904, y: 0.3978, rx: 0.038, built: true, way: [[0.0354, 0.479]] },
+  { id: '3-3', n: '3', name: 'CRÁTER DEL VOLCÁN', x: 0.2921, y: 0.3716, rx: 0.038, built: true, way: [[0.16, 0.411], [0.23, 0.37]] },
+  { id: '3-4', n: '4', name: 'RÍO DE MAGMA', x: 0.2073, y: 0.538, rx: 0.038, built: true, way: [[0.316, 0.43], [0.283, 0.52], [0.25, 0.545]] },
+  { id: '3-5', n: '5', name: 'LLUVIA DE FUEGO', x: 0.0882, y: 0.7373, rx: 0.038, built: true, way: [[0.149, 0.55], [0.07, 0.6], [0.06, 0.68]] },
+  { id: '3-6', n: '6', name: 'TÚNELES DE LAVA', x: 0.2006, y: 0.8556, rx: 0.038, built: true, way: [[0.1414, 0.839]] },
+  { id: '3-7', n: '7', name: 'EL GRAN PUENTE', x: 0.3248, y: 0.7373, rx: 0.038, built: true, way: [[0.26, 0.817]] },
+  { id: '3-8', n: '8', name: 'LA FUNDICIÓN', x: 0.5053, y: 0.5177, rx: 0.038, built: true, way: [[0.357, 0.693], [0.48, 0.524]] },
+  { id: '3-9', n: '9', name: 'LAS CHIMENEAS', x: 0.6138, y: 0.7314, rx: 0.038, built: true, way: [[0.567, 0.583], [0.597, 0.695]] },
+  { id: '3-10', n: '10', name: 'ENGRANAJES GIGANTES', x: 0.7235, y: 0.397, rx: 0.038, built: true, way: [[0.672, 0.684], [0.683, 0.583], [0.638, 0.459], [0.586, 0.414], [0.597, 0.335], [0.672, 0.335]] },
+  { id: '3-11', n: '11', name: 'ROCAS FLOTANTES', x: 0.7536, y: 0.5524, rx: 0.038, built: true, way: [[0.7366, 0.4704]] },
+  { id: '3-12', n: '12', name: 'MURALLAS DE LA FORTALEZA', x: 0.827, y: 0.6672, rx: 0.038, gold: true, built: true, way: [[0.7793, 0.6394]] },
+  { id: '3-J', n: '', name: 'JEFE · SEÑOR DEL MAGMA', x: 0.8848, y: 0.5177, rx: 0.05, boss: true, built: true, way: [[0.865, 0.6056]] },
+  { id: '3-B', n: '★', name: 'FASE SECRETA · TESORO DEL VOLCÁN', x: 0.5377, y: 0.8361, rx: 0.03, bonus: true, built: true, prev: 8, way: [[0.59, 0.8], [0.56, 0.83]] },
+  { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7757, y: 0.288, rx: 0.036, built: true, prev: 9, way: [[0.745, 0.36], [0.762, 0.32]] },
+  { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7109, y: 0.8758, rx: 0.036, built: true, prev: 13, way: [[0.623, 0.898], [0.679, 0.909]] }
+];
 const WORLDS = [
   { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff' },
-  { n: 2, name: 'PLANETA DE CRISTAL', img: 'mapa2', nodes: MAP2, col: '#9ff0ff' }
+  { n: 2, name: 'PLANETA DE CRISTAL', img: 'mapa2', nodes: MAP2, col: '#9ff0ff' },
+  { n: 3, name: 'PLANETA VOLCÁNICO', img: 'mapa3', nodes: MAP3, col: '#ffb040' }
 ];
 const ALLN = () => WORLDS.reduce((a, w) => a.concat(w.nodes), []);
 let curW = 0; try { curW = Math.min(WORLDS.length - 1, +localStorage.getItem('tl_w') || 0); } catch (e) {}
 let MAP = WORLDS[curW].nodes;
-function setWorld(w) { curW = w; MAP = WORLDS[w].nodes; mapImg(w); try { localStorage.setItem('tl_w', String(w)); } catch (e) {} }
+function setWorld(w) { mapCam = null; curW = w; MAP = WORLDS[w].nodes; mapImg(w); try { localStorage.setItem('tl_w', String(w)); } catch (e) {} }
 function mapImg(w) { const k = WORLDS[w].img; if (!IMG[k]) { const im = new Image(); im.src = 'img/' + TIER + '/' + k + '.webp?v=' + VERSION; IMG[k] = im; } return IMG[k]; }
 const worldOf = id => WORLDS.findIndex(w => w.nodes.some(n => n.id === id));
 const bossOf = w => WORLDS[w].nodes.find(n => n.boss);
@@ -2047,7 +2417,15 @@ function devTapOn(i) {            // 10 toques rápidos sobre una fase aún no p
   DEV[n.id] = 1; try { localStorage.setItem('tl_dev', JSON.stringify(DEV)); } catch (e) {}
   devTap = { i: -1, n: 0, t: 0 }; SFX.life(); mapMsg = { txt: 'MODO PRUEBAS · FASE ' + n.id + ' ABIERTA', t: 2.6 }; mapGo(i); return true;
 }
-function mapT() { const im = mapImg(curW), iw = im && im.naturalWidth || 16, ih = im && im.naturalHeight || 9, sc = Math.max(VW / iw, VHv / ih); return { sc, w: iw * sc, h: ih * sc, ox: (VW - iw * sc) / 2, oy: (VHv - ih * sc) * 0.4 }; }
+// el mapa llena la pantalla; si no cabe entero (pantallas cuadradas o mapas panorámicos) la cámara sigue a Lucas
+let mapCam = null, mapCamT = 0;
+function mapTarget(w, h) { const fx = mapL.x * w, fy = mapL.y * h;
+  return [w > VW + 1 ? Math.min(0, Math.max(VW - w, VW * 0.5 - fx)) : (VW - w) / 2, h > VHv + 1 ? Math.min(0, Math.max(VHv - h, VHv * 0.55 - fy)) : (VHv - h) / 2]; }
+function mapT() { const im = mapImg(curW), iw = im && im.naturalWidth || 16, ih = im && im.naturalHeight || 9, sc = Math.max(VW / iw, VHv / ih), w = iw * sc, h = ih * sc;
+  const tg = mapTarget(w, h); if (!mapCam || mapCam.w !== w || mapCam.h !== h) mapCam = { x: tg[0], y: tg[1], w, h };
+  return { sc, w, h, u: Math.min(w, h * 1.8), ox: Math.min(0, Math.max(VW - w, mapCam.x)), oy: Math.min(0, Math.max(VHv - h, mapCam.y)) }; }
+function mapCamStep() { const t = mapT(), tg = mapTarget(t.w, t.h), now = performance.now(), dt = Math.min(0.05, (now - (mapCamT || now)) / 1000); mapCamT = now;
+  const k = Math.min(1, dt * 3.5); mapCam.x += (tg[0] - mapCam.x) * k; mapCam.y += (tg[1] - mapCam.y) * k; }
 const mapPt = (t, fx, fy) => [t.ox + fx * t.w, t.oy + fy * t.h];
 function mapPath(a, b) {            // puntos (en fracciones) para ir de la fase a a la fase b siguiendo el tubo
   const up = i => { const l = [i]; while (i > 0) { i = mapPrev(i); l.push(i); } return l; };
@@ -2059,7 +2437,7 @@ function mapPath(a, b) {            // puntos (en fracciones) para ir de la fase
 function mapGo(i) { mapRoute = mapPath(mapAt, i); mapSel = i; mapInfo(); }
 function openMap() {
   audio(); startMusic(); goFull();
-  state = 'map'; paused = false; mapRoute = []; mapAt = mapSel; mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y };
+  state = 'map'; paused = false; mapRoute = []; mapAt = mapSel; mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null;
   show('title', false); show('panel', false); show('top', false); show('touch', false); show('mapUI', true); mapInfo(); checkRot();
 }
 function toMap(advance) {
@@ -2137,7 +2515,7 @@ function polyAt(pts, f) {            // punto a la fracción f (0..1) de una lí
   return [pts[0][0], pts[0][1], 0];
 }
 function drawMap() {
-  const t = mapT(), u = t.w, im = mapImg(curW);
+  mapCamStep(); const t = mapT(), u = t.u, im = mapImg(curW);
   if (im && im.naturalWidth) ctx.drawImage(im, t.ox, t.oy, t.w, t.h); else drawBackground();
   // tramos del tubo: apagados si la fase está bloqueada, con pulsos de energía si está abierta
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -2208,7 +2586,7 @@ cv.addEventListener('pointerdown', e => {
   if (state === 'warp') { if (warp && warp.t > 1.8 && warp.t < 3.9) warp.t = 3.9; return; }
   if (state !== 'map') return;
   const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC, t = mapT();
-  for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.w; if (((x - nx) / (rx * 1.75)) ** 2 + ((y - ny - rx * 0.2) / (rx * 1.2)) ** 2 < 1) { if (!devTapOn(i)) mapSelect(i); return; } }
+  for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.u; if (((x - nx) / (rx * 1.75)) ** 2 + ((y - ny - rx * 0.2) / (rx * 1.2)) ** 2 < 1) { if (!devTapOn(i)) mapSelect(i); return; } }
 });
 $('mPlay').onclick = () => mapPlay(); $('mBack').onclick = toMenu;
 $('btnPlay').onclick = () => { if (ACC || GUEST) openMap(); else showAccess(); };
