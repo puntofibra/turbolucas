@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.63';
+const VERSION = '0.64';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -272,7 +272,7 @@ function pollPad() {
 
 
 /* ---------- consola secreta de trucos (10 toques rápidos sobre PAUSA) ---------- */
-const CHEAT = { ghost: false, live: false, floor: false, stop: false, kill: false, unlock: false, laser: false, fly: false, time: false, floorT: 0 };
+const CHEAT = { full: false, ghost: false, live: false, floor: false, stop: false, kill: false, unlock: false, laser: false, fly: false, time: false, floorT: 0 };
 // los trucos se guardan en el dispositivo: siguen activos al cambiar de fase, al actualizarse el juego o al volver otro día
 try { const sv = JSON.parse(localStorage.getItem('tl_ch') || '{}'); for (const k in sv) if (k in CHEAT && k !== 'floorT') CHEAT[k] = !!sv[k]; } catch (e) {}
 function saveCheats() { try { const o = {}; for (const k in CHEAT) if (k !== 'floorT' && CHEAT[k]) o[k] = 1; localStorage.setItem('tl_ch', JSON.stringify(o)); } catch (e) {} }
@@ -467,6 +467,9 @@ function conRun(raw) {
   }
   if (cmd === 'OPEN') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = true); CHEAT.floorT = 0; saveCheats(); say('>> TODOS LOS TRUCOS ACTIVADOS ✔', 'g big', 24); CODES.forEach(c => say('   ✔ ' + c[0] + ' · ' + c[1], 'g', 0, true)); SFX.power(); return; }
   if (cmd === 'CLOSE') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = false); saveCheats(); say('>> TODOS LOS TRUCOS DESACTIVADOS', 'r big', 22); tone(500, 120, 0.3, 'square', 0.06); say(activeTxt(), 'y', 0, true); return; }
+  if (cmd === 'FULLACCESS' || cmd === 'FULL ACCESS') { CHEAT.full = !CHEAT.full; saveCheats();
+    if (CHEAT.full) { say('>> FULL ACCESS ACTIVADO ✔', 'g big', 26); say('   Licencia gratis en este dispositivo: todo el juego desbloqueado, sin cartel de pago.', '', 10); SFX.power(); }
+    else { say('>> FULL ACCESS DESACTIVADO', 'r', 22); say('   Vuelve a hacer falta la licencia desde la fase 3-2.', '', 10); tone(500, 120, 0.3, 'square', 0.06); } return; }
   if (cmd === 'LOCK') { PROG = {}; DEV = {}; GOT = {}; CHEAT.unlock = false; saveCheats(); try { localStorage.setItem('tl_prog', '{}'); localStorage.setItem('tl_dev', '{}'); localStorage.setItem('tl_got', '{}'); } catch (e) {} setWorld(0); mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; cloudSave(true);
     say('>> TODOS LOS CANDADOS BLOQUEADOS 🔒', 'r big', 24); say('   El juego vuelve a empezar desde la fase 1-1, como si nunca hubieras jugado.', '', 10); tone(400, 90, 0.5, 'sawtooth', 0.06); return; }
   if (cmd === 'ADMIN') { conAdmin(); return; }
@@ -3987,6 +3990,7 @@ const lt = (k, f) => String(((LTX[k] && LTX[k][f]) || LT0[k][f])).replace(/\{PRE
 setTimeout(() => api({ a: 'licTxt' }).then(r => { if (r.ok && r.txt) { LTX = r.txt; try { localStorage.setItem('tl_ltx', JSON.stringify(LTX)); } catch (e) {} } }), 3000);
 const licGated = id => { const w = +String(id).split('-')[0]; return w >= 4 || (w === 3 && id !== '3-1'); };
 function licOk() {
+  if (CHEAT.full) return true;
   if (!ACC || !LIC) return false; if (LIC.estado === 'activa') return true;
   if (LIC.estado === 'pendiente') { if ((LIC.fallos || 0) === 0) return true; if (LIC.fallos === 1) return Date.now() - (LIC.pedido || 0) < 3600e3; }
   return false;
