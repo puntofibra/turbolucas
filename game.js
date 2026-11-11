@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.35';
+const VERSION = '0.36';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -634,7 +634,7 @@ LEVELS['1-J'] = function () {
   B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13);
   return B.done({ name: 'EL GUARDIÁN', time: 240, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
 };
-function bossInit(l) { l.boss = { x: (l.arena.x0 + l.arena.x1) / 2, y: 9.8 * T, hover0: 9.8 * T, hp: 6, max: 6, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, shotT: 1, vy: 0, dieT: 0, boomT: 0, gone: false }; l.waves = []; }
+function bossInit(l) { const hp = l.bossHp || 6; l.boss = { x: (l.arena.x0 + l.arena.x1) / 2, y: 9.8 * T, hover0: 9.8 * T, hp, max: hp, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, shotT: 1, vy: 0, dieT: 0, boomT: 0, gone: false }; l.waves = []; }
 function bossGate(close) { for (let y = 11; y <= 13; y++) for (let x = 42; x <= 43; x++) L.g[y][x] = close ? '#' : ' '; }
 function bossReset() { const b = L.boss; if (!b || b.gone) return; bossGate(false); Object.assign(b, { x: (L.arena.x0 + L.arena.x1) / 2, y: b.hover0, hp: b.max, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, vy: 0 }); L.waves = []; }
 const BOSS_H = 200, bossRect = b => ({ x: b.x - 68, y: b.y - 172, w: 136, h: 166 });
@@ -660,7 +660,7 @@ function bossUpdate(dt) {
     b.x += (tx - b.x) * Math.min(1, dt * 1.6); b.y = b.hover0 + Math.sin(time * 2.5) * 14;
     b.shotT -= dt;
     if (b.shotT <= 0 && !p.dead) { const n = ph2 ? 5 : 3, sp = ph2 ? 330 : 270, cx0 = b.x, cy0 = b.y - 130, an = Math.atan2(p.y + p.h / 2 - cy0, p.x + p.w / 2 - cx0);
-      for (let k = 0; k < n; k++) { const aa = an + (k - (n - 1) / 2) * 0.24; shots.push({ mine: false, x: cx0, y: cy0, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, w: 16, h: 16, life: 4 }); }
+      for (let k = 0; k < n; k++) { const aa = an + (k - (n - 1) / 2) * 0.24; shots.push({ mine: false, x: cx0, y: cy0, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, w: 16, h: 16, life: 4, ice: L.theme === 'ice' }); }
       b.shotT = ph2 ? 1.05 : 1.45; tone(300, 120, 0.25, 'sawtooth', 0.09); burst(cx0, cy0, 12, '#ff9a3c', 160, 0.35, 0, 3); }
     if (b.t > (ph2 ? 4.2 : 5.5)) { b.st = 'aim'; b.t = 0; tone(200, 1400, 0.8, 'square', 0.05); }
   } else if (b.st === 'aim') {
@@ -669,6 +669,7 @@ function bossUpdate(dt) {
   } else if (b.st === 'slam') {
     b.vy += 3800 * dt; b.y += b.vy * dt;
     if (b.y >= gy) { b.y = gy; b.st = 'stun'; b.t = 0; shake = 0.7; noise(0.6, 0.3, 500); tone(70, 35, 0.6, 'sawtooth', 0.15);
+      if (L.theme === 'ice') { for (let k = 0; k < (ph2 ? 6 : 4); k++) L.icicles.push({ x0: 0, y0: 0, x: a.x0 + 60 + Math.random() * (a.x1 - a.x0 - 120), y: cam.y - 60 - Math.random() * 160, st: 2, vy: 0, big: Math.random() < 0.5 }); pop(b.x, b.y - 300, '¡CUIDADO ARRIBA!', '#9ff0ff'); }
       const ws = ph2 ? 520 : 420; L.waves.push({ x: b.x - 70, dir: -1, sp: ws }, { x: b.x + 70, dir: 1, sp: ws });
       burst(b.x - 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4); burst(b.x + 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4);
       if (ph2 && enemies.filter(e => !e.dead).length < 3) { const tx = b.x < mid ? a.x1 - 2 * T : a.x0 + T, d = ENEMY.patrulla; enemies.push({ type: 'patrulla', d, w: d.w, h: d.bh, x: tx, y: 4 * T, vx: 0, vy: 0, dir: b.x < mid ? -1 : 1, dead: 0, t: 0, timer: 1 }); } }
@@ -709,6 +710,7 @@ function drawBoss() {
   const rot = b.st === 'stun' ? 0.1 * Math.sin(time * 3) : b.st === 'die' ? (Math.random() - 0.5) * 0.12 : Math.sin(time * 2) * 0.03;
   const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(fs, 1); ctx.drawImage(src, -w / 2, -h, w, h); ctx.restore(); };
   draw(im, 1);
+  if (L.theme === 'ice') { const t4 = tintOf(im, 'rgba(120,225,255,1)'); if (t4) draw(t4, 0.32 + 0.06 * Math.sin(time * 3)); }
   if (ph2 || b.st === 'die') { const t2 = tintOf(im, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(time * 8))); if (Math.random() < 0.3) parts.push({ x: x + (Math.random() - 0.5) * 140, y: y - Math.random() * 200, vx: (Math.random() - 0.5) * 60, vy: -60 - Math.random() * 60, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#ffd23c' : '#8a8fa8', size: 2.5, grav: 0 }); }
   if (b.flash > 0) { const t3 = tintOf(im, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); }
   // núcleo (el punto débil) y ojo
@@ -882,6 +884,16 @@ LEVELS['2-B'] = function () {
   for (let i = 1; i <= 4; i++) B.block(150 + i, 150 + i, 20 - i, 19); B.row(151, 154, 14); B.block(162, 165, 0, 21);
   return B.done({ name: 'AURORA', time: 170, theme: 'ice', sky: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
     meteors: { zones: [[34 * T, 112 * T]], every: 1.05, acc: 0, style: 'comet' }, rain: { x0: 121 * T, x1: 148 * T, dur: 9, t: 0, st: 0, acc: 0 } });
+};
+/* ---------- jefe 2-J: GUARDIÁN DE HIELO (el mismo coloso, ahora congelado: arena que resbala, ráfagas de esquirlas de hielo, y al aplastar el suelo hace caer carámbanos del cielo; 8 golpes) ---------- */
+LEVELS['2-J'] = function () {
+  const B = LB(80, 16);
+  B.ground(0, 79); B.row(5, 8, 12); B.crystal(3, 14, 0, 1.3);
+  B.set(10, 10, 'B'); B.box(11, 10, 'escudo'); B.set(12, 10, 'B'); B.box(15, 10, 'laser'); B.block(18, 21, 9, 9); B.icicle(19, 10); B.icicle(21, 10); B.gear(20, 7); B.row(18, 21, 8); B.spring(16, 14);
+  B.en('patrulla', 24, 13); B.en('dron', 29, 10, { x0: 25, x1: 33 }); B.row(25, 31, 12); B.crystal(27, 14, 1);
+  B.cp(35, 14); B.box(38, 10, 'chip'); B.hid(33, 10, 'vida');
+  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13); B.crystal(45, 14, 2, 1.2); B.crystal(75, 14, 1, 1.2);
+  return B.done({ name: 'GUARDIÁN DE HIELO', bossName: 'GUARDIÁN DE HIELO', bossHp: 8, time: 260, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
 };
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
@@ -1717,6 +1729,7 @@ function drawWorld() {
   ctx.globalCompositeOperation = 'lighter';
   for (const s of shots) {
     if (s.mine) { ctx.fillStyle = 'rgba(255,60,90,.4)'; ctx.fillRect(s.x - 18, s.y - 6, 36, 12); ctx.fillStyle = '#ff6a8a'; ctx.fillRect(s.x - 12, s.y - 3, 24, 6); ctx.fillStyle = '#fff'; ctx.fillRect(s.x - 9, s.y - 1, 18, 2); }
+    else if (s.ice) { ctx.fillStyle = 'rgba(120,220,255,.45)'; ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, 6.283); ctx.fill(); ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(s.x - 9, s.y); ctx.lineTo(s.x, s.y - 9); ctx.lineTo(s.x + 9, s.y); ctx.lineTo(s.x, s.y + 9); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, 6.283); ctx.fill(); }
     else { ctx.fillStyle = 'rgba(255,140,40,.4)'; ctx.beginPath(); ctx.arc(s.x, s.y, 13, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ffb24a'; ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, 6.283); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, 6.283); ctx.fill(); }
   }
   for (const q of parts) {
@@ -1755,7 +1768,7 @@ function drawHUD() {
     ctx.restore(); ctx.textAlign = 'center';
   }
   if (L.boss && L.boss.fight && !L.boss.gone) { const b = L.boss, bw = Math.min(320, w * 0.4), bx = w / 2 - bw / 2, by2 = 62;
-    ctx.font = '800 11px system-ui,sans-serif'; ctx.textAlign = 'center'; txt('EL GUARDIÁN', w / 2, by2, '#ff8a9a');
+    ctx.font = '800 11px system-ui,sans-serif'; ctx.textAlign = 'center'; txt(L.bossName || 'EL GUARDIÁN', w / 2, by2, L.theme === 'ice' ? '#9ff0ff' : '#ff8a9a');
     ctx.fillStyle = 'rgba(5,7,26,.8)'; ctx.fillRect(bx - 2, by2 + 8, bw + 4, 14); for (let k = 0; k < b.max; k++) { const on = k < b.hp; ctx.fillStyle = on ? (b.hp <= b.max / 2 ? '#ff3a4a' : '#ff6a3a') : '#2a1a2a'; ctx.fillRect(bx + k * bw / b.max + 1, by2 + 10, bw / b.max - 2, 10); }
     if (b.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + b.flash * 2 + ')'; ctx.fillRect(bx, by2 + 10, bw, 10); } }
   // poderes activos
@@ -1860,7 +1873,7 @@ function levelDone() {
   const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId]; bossBeatBefore = !first;
   PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score) }; saveProg();
   { const ci = MAP.findIndex(n => n.id === curId); justOpened = first ? MAP.findIndex((n, k) => k > 0 && !n.bonus && mapPrev(k) === ci) : -1; }
-  $('card').innerHTML = '<h2>' + (curId === '1-J' ? '¡MUNDO 1 COMPLETADO!' : '¡FASE SUPERADA!') + '</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
+  $('card').innerHTML = '<h2>' + (/-J$/.test(curId) ? '¡MUNDO ' + curId[0] + ' COMPLETADO!' : '¡FASE SUPERADA!') + '</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
     '<div class="stat"><span>Chips</span><b>' + G.chips + '</b></div><div class="stat"><span>Engranajes</span><b>' + G.gears + ' / 3</b></div>' +
     '<div class="stat"><span>Tiempo</span><b>' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + '</b></div><div class="stat"><span>Bonus por tiempo sobrante</span><b>+' + bonus + '</b></div>' +
     '<div class="stat"><span>Puntos</span><b>' + G.score + (G.score > old.best ? ' · ¡RÉCORD!' : '') + '</b></div>' +
@@ -1978,7 +1991,7 @@ const MAP2 = [
   { id: '2-4', n: '4', name: 'TORMENTA DE NIEVE', x: 0.4985, y: 0.491, rx: 0.038, built: true, way: [[0.415, 0.448], [0.455, 0.475]] },
   { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, built: true, way: [[0.53, 0.555], [0.585, 0.627]] },
   { id: '2-6', n: '6', name: 'POZO DE LA MINA', x: 0.651, y: 0.351, rx: 0.036, gold: true, built: true, way: [[0.67, 0.555], [0.666, 0.45]] },
-  { id: '2-J', n: '', name: 'JEFE · GUARDIÁN DE HIELO', x: 0.8725, y: 0.401, rx: 0.058, boss: true, way: [[0.71, 0.33], [0.775, 0.315], [0.83, 0.355]] },
+  { id: '2-J', n: '', name: 'JEFE · GUARDIÁN DE HIELO', x: 0.8725, y: 0.401, rx: 0.058, boss: true, built: true, way: [[0.71, 0.33], [0.775, 0.315], [0.83, 0.355]] },
   { id: '2-B', n: '★', name: 'FASE SECRETA · AURORA', x: 0.618, y: 0.19, rx: 0.024, bonus: true, built: true, prev: 5, way: [[0.635, 0.305], [0.613, 0.26], [0.615, 0.224]] }
 ];
 const WORLDS = [
@@ -2030,6 +2043,7 @@ function toMap(advance) {
   const i = MAP.findIndex(n => n.id === curId);
   if (advance && justOpened >= 0) { mapUnl = { i: justOpened, t: 0, snd: false }; }
   else if (advance && i >= 0 && MAP[i].boss && curW + 1 < WORLDS.length && !bossBeatBefore) { setTimeout(() => { if (state === 'map') startWarp(curW + 1); }, 1100); }
+  else if (advance && i >= 0 && MAP[i].boss && curW + 1 >= WORLDS.length) { mapMsg = { txt: '¡MUNDO ' + WORLDS[curW].n + ' SUPERADO! EL MUNDO ' + (WORLDS[curW].n + 1) + ' LLEGARÁ PRONTO', t: 4, ok: true }; }
   else if (advance && i >= 0) { const nx = MAP.findIndex((n, k) => k > i && !n.bonus && mapPrev(k) === i); if (nx >= 0 && mapOpen(nx)) mapGo(nx); }
   justOpened = -1;
   mapInfo(); checkRot(); setTimeout(updApply, 4000);
