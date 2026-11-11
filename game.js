@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.61';
+const VERSION = '0.62';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -454,7 +454,7 @@ function conRun(raw) {
     say('*** ACCESO CONCEDIDO ***', 'g big', 30);
     say('CÓDIGOS SECRETOS DISPONIBLES:', 'w', 16);
     CODES.forEach(c => { say(c[0] + '  -  ' + c[1], 'y', 26); say('   ' + c[2], '', 9); });
-    say('OPEN  -  ACTIVA TODOS LOS TRUCOS A LA VEZ', 'y', 20); say('CLOSE  -  DESACTIVA TODOS LOS TRUCOS', 'y', 20);
+    say('OPEN  -  ACTIVA TODOS LOS TRUCOS A LA VEZ', 'y', 20); say('CLOSE  -  DESACTIVA TODOS LOS TRUCOS', 'y', 20); say('LOCK  -  BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)', 'y', 20);
     say('Escribe un código para activarlo o desactivarlo.', 'd', 10);
     SFX.power(); return;
   }
@@ -467,6 +467,8 @@ function conRun(raw) {
   }
   if (cmd === 'OPEN') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = true); CHEAT.floorT = 0; saveCheats(); say('>> TODOS LOS TRUCOS ACTIVADOS ✔', 'g big', 24); CODES.forEach(c => say('   ✔ ' + c[0] + ' · ' + c[1], 'g', 0, true)); SFX.power(); return; }
   if (cmd === 'CLOSE') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = false); saveCheats(); say('>> TODOS LOS TRUCOS DESACTIVADOS', 'r big', 22); tone(500, 120, 0.3, 'square', 0.06); say(activeTxt(), 'y', 0, true); return; }
+  if (cmd === 'LOCK') { PROG = {}; DEV = {}; GOT = {}; CHEAT.unlock = false; saveCheats(); try { localStorage.setItem('tl_prog', '{}'); localStorage.setItem('tl_dev', '{}'); localStorage.setItem('tl_got', '{}'); } catch (e) {} setWorld(0); mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; cloudSave(true);
+    say('>> TODOS LOS CANDADOS BLOQUEADOS 🔒', 'r big', 24); say('   El juego vuelve a empezar desde la fase 1-1, como si nunca hubieras jugado.', '', 10); tone(400, 90, 0.5, 'sawtooth', 0.06); return; }
   if (cmd === 'ADMIN') { conAdmin(); return; }
   if (cmd === 'CLS' || cmd === 'LIMPIAR') { conOut.innerHTML = ''; say('', '', 0, true); return; }
   if (cmd === 'SALIR' || cmd === 'EXIT') { closeConsole(); return; }
@@ -3048,6 +3050,7 @@ function mapPath(a, b) {            // puntos (en fracciones) para ir de la fase
 }
 function mapGo(i) { mapFreeT = 0; mapRoute = mapPath(mapAt, i); mapSel = i; mapInfo(); }
 function openMap() {
+  try { licRefresh(); } catch (e) {}
   audio(); startMusic(); goFull();
   state = 'map'; paused = false; mapRoute = []; mapAt = mapSel; mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null;
   show('title', false); show('panel', false); show('top', false); show('touch', false); show('mapUI', true); mapInfo(); checkRot();
@@ -3060,7 +3063,7 @@ function toMap(advance) {
   const i = MAP.findIndex(n => n.id === curId);
   if (advance && justOpened >= 0) { mapUnl = { i: justOpened, t: 0, snd: false }; }
   else if (advance && i >= 0 && MAP[i].boss && curW + 1 < WORLDS.length && !bossBeatBefore) { setTimeout(() => { if (state === 'map') startWarp(curW + 1); }, 1100); }
-  else if (advance && i >= 0 && MAP[i].boss && curW + 1 >= WORLDS.length) { mapMsg = { txt: '¡PLANETA ' + WORLDS[curW].n + ' SUPERADO! EL PLANETA ' + (WORLDS[curW].n + 1) + ' LLEGARÁ PRONTO', t: 4, ok: true }; }
+  else if (advance && i >= 0 && MAP[i].boss && curW + 1 >= WORLDS.length) { setTimeout(() => { if (state === 'map') showTheEnd(); }, 900); }
   else if (advance && i >= 0) { const nx = MAP.findIndex((n, k) => k > i && !n.bonus && mapPrev(k) === i); if (nx >= 0 && mapOpen(nx)) mapGo(nx); }
   justOpened = -1;
   mapInfo(); checkRot(); setTimeout(updApply, 4000);
@@ -3093,6 +3096,7 @@ function mapPlay(force) {
   // en el jefe ya superado se puede viajar al mundo siguiente; en la primera fase de un mundo, volver al anterior
   if (!force && n.boss && PROG[n.id] && curW + 1 < WORLDS.length) return askTravel('JUGAR EL JEFE', 'VIAJAR AL PLANETA ' + WORLDS[curW + 1].n, curW + 1);
   if (!force && mapSel === 0 && curW > 0) return askTravel('JUGAR FASE ' + n.id, 'VOLVER AL PLANETA ' + WORLDS[curW - 1].n, curW - 1);
+  if (licGated(n.id) && !licOk() && !CHEAT.unlock && !(L && L.custom)) { showPaywall(() => mapPlay(true)); return; }
   curId = n.id; evt('jugar', curId); startGame();
 }
 function askTravel(playTxt, goTxt, w) {
@@ -3477,7 +3481,7 @@ const SECRETS = [
   { f: '4-C', img: 'n4-Ca', t: "Vida oculta junto al 4", d: "Al empezar, a la izquierda del 4 de chips, salta: bloque invisible con una vida." },
   { f: '4-D', img: 'n4-Da', t: "Vida oculta en el tesoro", d: "Al empezar, a la derecha de la entrada, salta: bloque invisible con una vida." }
 ];
-let admTab = 'TRUCOS', admLl = [], admSt = null;
+let admTab = 'PAGOS', admLl = [], admSt = null;
 function openAdmin() {
   closeConsole(); if (state === 'play' && !paused) togglePause();
   const a = $('adm'); a.classList.add('on'); admPaint();
@@ -3491,7 +3495,7 @@ async function admOp(op, d) {
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
-  const tabs = ['TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
+  const tabs = ['PAGOS', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
   $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · COSMOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
@@ -3536,6 +3540,16 @@ function admPaint() {
       $('tL').querySelectorAll('[data-td]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } try { const r = await admOp('tmpDel', { id: b.dataset.td }); paint(r.tmp); tmpLoad(); admMsg('✔ Eliminado: ya no le sirve a nadie'); } catch (e) { admMsg(e.message, 1); } }); };
     admOp('tmpList').then(r => paint(r.tmp)).catch(e => admMsg(e.message, 1));
     $('tAdd').onclick = async () => { const u = +$('tU').value; try { const r = await admOp('tmpAdd', { truco: $('tT').value, mins: u ? Math.max(1, +$('tN').value || 1) * u : 0, teclas: $('tK').value, pad: pad.join('+'), toques: +$('tQ').value || 0, nota: $('tNo').value }); paint(r.tmp); tmpLoad(); admMsg('✔ Truco temporal creado'); SFX.life(); } catch (e) { admMsg(e.message, 1); } };
+  } else if (admTab === 'PAGOS') {
+    B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="pgA"></div><div id="pgT"></div>'; admLicTexts($('pgT'));
+    const fd = t => t ? new Date(t).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+    const paint = r => { const l = r.lic || [], pend = l.filter(x => x.estado === 'pendiente').length; admMsg(pend ? pend + ' pago(s) pendiente(s) de validar. Comprueba en myPOS que te ha llegado el dinero antes de aceptar.' : 'No hay pagos pendientes. Se guardan en el Sheet, pestaña "licencias".');
+      const col = { pendiente: '#ffd23c', activa: '#35ff8a', rechazada: '#ff5a6a' };
+      $('pgA').innerHTML = l.map((x, i) => '<div class="akey arow"><span style="flex:1;min-width:180px"><b>' + esc(x.nombre) + '</b><br><span style="color:#8ea3e6;font-size:12px">' + esc(x.email) + '</span></span><b style="color:' + (col[x.estado] || '#fff') + ';width:100px">' + esc(String(x.estado).toUpperCase()) + '</b><span style="color:#8ea3e6;font-size:12px;width:150px">Pedido ' + fd(x.pedido) + '<br>' + x.fallos + ' fallo(s) · ' + x.intentos + ' intento(s)</span>' +
+        (x.estado !== 'activa' ? '<button class="btn" style="border-color:#35ff8a" data-pok="' + i + '">ACEPTAR</button>' : '') + (x.estado !== 'rechazada' ? '<button class="btn red" data-pno="' + i + '">RECHAZAR</button>' : '') + '</div>').join('') || '<div class="akey">Todavía nadie ha comprado la licencia.</div>';
+      $('pgA').querySelectorAll('[data-pok],[data-pno]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } const x = l[+(b.dataset.pok || b.dataset.pno)], ok = b.dataset.pok !== undefined;
+        try { paint(await admOp(ok ? 'licOk' : 'licNo', { email: x.email })); admMsg(ok ? '✔ Licencia de ' + x.nombre + ' activada' : '✖ Pago de ' + x.nombre + ' rechazado: se le bloquean las fases desde la 3-2'); } catch (e) { admMsg(e.message, 1); } }); };
+    admOp('licList').then(paint).catch(e => admMsg(e.message, 1));
   } else if (admTab === 'RANKING') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="rkA"></div>';
     api(Object.assign({ a: 'ranking' }, who())).then(r => { if (!r.ok) return admMsg(r.error, 1); admMsg(r.total + ' jugador(es) en el ranking. Se guarda en el Sheet, pestaña "ranking".');
@@ -3659,7 +3673,7 @@ async function openTaller(info) {
   const load = async i => { const x = list[i]; if (x.c) { const r = await api({ a: 'nivGet', c: x.c }); if (!r.ok) throw new Error(r.error); return tlUnpack(r.c, r.n, r.t, r.datos); } const l = tlLocal().find(q => q.lid === x.lid); const d = tlUnpack(null, l.n, l.t, l.datos); d.lid = l.lid; return d; };
   B.querySelectorAll('[data-tp]').forEach(b => b.onclick = async () => { try { ED = await load(+b.dataset.tp); tlPlay(false); } catch (e) { infoPanel('ERROR', esc(e.message)); } });
   B.querySelectorAll('[data-te]').forEach(b => b.onclick = async () => { try { ED = await load(+b.dataset.te); openEditor(); } catch (e) { infoPanel('ERROR', esc(e.message)); } });
-  B.querySelectorAll('[data-tr]').forEach(b => b.onclick = async () => { const x = list[+b.dataset.tr], n = (prompt('Nuevo nombre del nivel:', x.n) || '').trim().slice(0, 30); if (!n) return;
+  B.querySelectorAll('[data-tr]').forEach(b => b.onclick = async () => { const x = list[+b.dataset.tr], n = ((await uiPrompt('CAMBIAR NOMBRE', 'Nuevo nombre del nivel:', x.n)) || '').trim().slice(0, 30); if (!n) return;
     if (x.c) await api({ a: 'nivNombre', ses: ACC.ses, c: x.c, n }); else { const l = tlLocal(), q = l.find(z => z.lid === x.lid); if (q) { q.n = n; tlLocalSave(l); } } openTaller(); });
   B.querySelectorAll('[data-td]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } const x = list[+b.dataset.td];
     if (x.c) await api({ a: 'nivBorrar', ses: ACC.ses, c: x.c }); else tlLocalSave(tlLocal().filter(z => z.lid !== x.lid)); openTaller(); });
@@ -3886,13 +3900,13 @@ function mergeProg(cloud) {      // junta lo de este dispositivo con lo de la nu
 }
 function accDone(r) {
   ACC = { ses: r.ses, email: r.email, nombre: r.nombre }; GUEST = false; try { localStorage.setItem('tl_acc', JSON.stringify(ACC)); localStorage.removeItem('tl_guest'); } catch (e) {}
-  mergeProg(r.progreso); cloudSave(true); accChip(); SFX.win(); accClose(); openMap(); mapMsg = { txt: '¡HOLA, ' + String(ACC.nombre).toUpperCase() + '! PROGRESO GUARDADO EN LA NUBE', t: 3.2, ok: true };
+  mergeProg(r.progreso); setLic(r.lic); cloudSave(true); accChip(); SFX.win(); accClose(); openMap(); mapMsg = { txt: '¡HOLA, ' + String(ACC.nombre).toUpperCase() + '! PROGRESO GUARDADO EN LA NUBE', t: 3.2, ok: true };
 }
 function showAccount() {
   accCard('<h2>👤 ' + esc(ACC.nombre) + '</h2><div style="color:#cfe0ff;font-size:14px;margin:4px 0 10px">' + esc(ACC.email) + '<br>Tu progreso se guarda solo en la nube ☁️</div><div class="amsg2" id="amsg2"></div><div class="row"><button class="btn" id="aSync">SINCRONIZAR AHORA</button><button class="btn" id="aOut2" style="border-color:#ff4a6a">CERRAR SESIÓN</button><button class="btn" id="aSw2">CAMBIAR DE USUARIO</button><button class="btn" id="aX2">VOLVER</button></div>');
-  $('aSync').onclick = async () => { accMsg('Sincronizando…'); const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); cloudSave(true); accMsg('✔ Todo al día'); } else accMsg(r.error === 'SESION' ? 'La sesión ha caducado: vuelve a entrar' : r.error, 1); };
-  $('aOut2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); accClose(); };
-  $('aSw2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); showLogin(); };
+  $('aSync').onclick = async () => { accMsg('Sincronizando…'); const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); setLic(r.lic); cloudSave(true); accMsg('✔ Todo al día'); } else accMsg(r.error === 'SESION' ? 'La sesión ha caducado: vuelve a entrar' : r.error, 1); };
+  $('aOut2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; setLic(null); try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); accClose(); };
+  $('aSw2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; setLic(null); try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); showLogin(); };
   $('aX2').onclick = accClose;
 }
 let cloudT = 0;
@@ -3900,8 +3914,134 @@ function cloudSave(now) {
   if (!ACC) return; clearTimeout(cloudT);
   cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW } }); if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
 }
+/* ======================= VENTANAS DEL JUEGO (sustituyen a los avisos nativos del navegador) ======================= */
+(() => { const st = document.createElement('style'); st.textContent = `
+#uidlg{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:radial-gradient(ellipse at center,rgba(10,20,60,.72),rgba(2,4,14,.9));backdrop-filter:blur(4px)}
+#uidlg.on{display:flex;animation:uiFade .18s ease-out}
+.uiw .ucard{position:relative;max-width:min(560px,94vw);width:100%;max-height:92vh;overflow:auto;background:linear-gradient(160deg,rgba(18,28,70,.97),rgba(8,12,34,.98));border:2px solid var(--cy);border-radius:22px;padding:22px 24px 18px;text-align:center;box-shadow:0 0 0 1px rgba(255,255,255,.06) inset,0 0 40px rgba(41,230,255,.35),0 20px 60px rgba(0,0,0,.6);animation:uiPop .32s cubic-bezier(.2,1.4,.4,1)}
+.uiw .ucard.gold{border-color:#ffd23c;box-shadow:0 0 44px rgba(255,210,60,.4),0 20px 60px rgba(0,0,0,.6)}
+.uiw .ucard.red{border-color:#ff4a6a;box-shadow:0 0 44px rgba(255,74,106,.35),0 20px 60px rgba(0,0,0,.6)}
+.uiw [contenteditable]{user-select:text;-webkit-user-select:text;outline:1px dashed rgba(255,210,60,.5);border-radius:6px;cursor:text}
+.uiw .ucard.pv{animation:none;margin:0 auto 14px}
+.uiw .uic{font-size:46px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 0 14px rgba(41,230,255,.6))}
+#uidlg h2{margin:0 0 10px;font-size:clamp(20px,4.6vh,30px);letter-spacing:.04em;text-shadow:0 0 16px var(--cy)}
+.uiw .ucard.gold h2{text-shadow:0 0 18px rgba(255,210,60,.8);color:#fff4c8}
+.uiw .utx{color:#d6e2ff;font-size:15px;line-height:1.55;margin:0 auto 14px;max-width:470px}
+.uiw .utx b{color:#fff}
+.uiw .uprice{display:inline-block;margin:2px 0 14px;padding:8px 22px;border-radius:999px;background:linear-gradient(90deg,#ffd23c,#ff9a3c);color:#2a1400;font-weight:900;font-size:24px;letter-spacing:.04em;box-shadow:0 0 24px rgba(255,190,60,.6)}
+.uiw .uperks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 16px;text-align:left}
+.uiw .uperks div{background:rgba(41,230,255,.07);border:1px solid rgba(41,230,255,.25);border-radius:12px;padding:8px 10px;font-size:13px;color:#cfe0ff}
+.uiw .urow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.uiw .urow .btn{font-size:15px;padding:11px 20px}
+.uiw .btn.ok{border-color:var(--gr);box-shadow:0 0 18px rgba(53,255,138,.55),inset 0 0 12px rgba(53,255,138,.2)}
+.uiw .btn.pay{border-color:#ffd23c;background:linear-gradient(180deg,rgba(80,56,8,.9),rgba(40,26,4,.9));box-shadow:0 0 22px rgba(255,210,60,.6),inset 0 0 12px rgba(255,210,60,.25);font-size:18px!important;padding:13px 28px!important}
+#uidlg input{width:100%;font:inherit;font-size:17px;color:#fff;background:rgba(5,10,30,.9);border:2px solid rgba(41,230,255,.5);border-radius:12px;padding:10px 14px;margin:0 0 14px;outline:none;user-select:text;-webkit-user-select:text}
+.uiw .usmall{color:#8ea3e6;font-size:12px;margin-top:10px}
+@keyframes uiFade{from{opacity:0}to{opacity:1}}
+@keyframes uiPop{from{transform:scale(.82) translateY(20px);opacity:0}to{transform:none;opacity:1}}`; document.head.appendChild(st);
+  const d = document.createElement('div'); d.id = 'uidlg'; d.className = 'uiw'; document.body.appendChild(d); })();
+// muestra una ventana con botones; devuelve una promesa con el botón pulsado (o el texto escrito si hay campo)
+function uiDialog(o) {
+  return new Promise(res => { const d = $('uidlg'); try { SFX.chip(); } catch (e) {}
+    d.innerHTML = '<div class="ucard ' + (o.tone || '') + '">' + (o.icon ? '<div class="uic">' + o.icon + '</div>' : '') + (o.title ? '<h2>' + o.title + '</h2>' : '') + (o.html ? '<div class="utx">' + o.html + '</div>' : '') +
+      (o.input !== undefined ? '<input id="uiIn" maxlength="' + (o.max || 40) + '" value="' + esc(o.input) + '">' : '') +
+      '<div class="urow">' + o.buttons.map((b, i) => '<button class="btn ' + (b.cls || '') + '" data-ui="' + i + '">' + b.t + '</button>').join('') + '</div>' + (o.foot ? '<div class="usmall">' + o.foot + '</div>' : '') + '</div>';
+    d.classList.add('on'); const inp = $('uiIn'); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
+    const done = v => { d.classList.remove('on'); d.innerHTML = ''; res(v); };
+    d.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { const bt = o.buttons[+b.dataset.ui]; if (bt.fn) { bt.fn(); return; } done(inp ? (bt.v ? inp.value : null) : bt.v); });
+    if (inp) inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
+  });
+}
+const uiAlert = (title, html, icon) => uiDialog({ title, html, icon, buttons: [{ t: 'ENTENDIDO', cls: 'ok', v: true }] });
+const uiConfirm = (title, html, ok, no, icon) => uiDialog({ title, html, icon, buttons: [{ t: no || 'CANCELAR', v: false }, { t: ok || 'ACEPTAR', cls: 'ok', v: true }] });
+const uiPrompt = (title, html, val) => uiDialog({ title, html, input: val || '', buttons: [{ t: 'CANCELAR', v: false }, { t: 'GUARDAR', cls: 'ok', v: true }] });
+
+// fin del contenido publicado: cartel de "próximamente" y aviso por correo al creador
+function showTheEnd() {
+  const nw = WORLDS.length, nf = Object.keys(PROG).length; SFX.win();
+  api(Object.assign({ a: 'finJuego', w: nw, n: nf }, who()));
+  uiDialog({ icon: '🏆', tone: 'gold', title: '¡HAS COMPLETADO COSMOLUCAS!', html: '¡Increíble! Has superado los <b>' + nw + ' planetas</b> y has derrotado a todos los jefes. Eres de los primeros en llegar hasta aquí. 🚀<br><br>Lucas ya está calentando los propulsores para viajar a <b>nuevos planetas</b>: muy pronto llegarán más niveles, nuevos jefes y más secretos por descubrir.<br><br>¡Vuelve pronto, la aventura continúa!', buttons: [{ t: '¡ALLÍ ESTARÉ!', cls: 'ok', v: 1 }], foot: 'PRÓXIMAMENTE · PLANETA ' + (nw + 1) });
+}
+
+/* ======================= LICENCIA: pago único de 1,49 € con myPOS ======================= */
+// a partir de la fase 2 del planeta 3 hace falta la licencia; el pago lo valida a mano el administrador desde el panel (pestaña PAGOS)
+const LIC_URL = 'https://mypos.com/@futurmovil/1.49', LIC_PRECIO = '1,49 €';
+let LIC = null; try { LIC = JSON.parse(localStorage.getItem('tl_lic') || 'null'); } catch (e) {}
+let licT = 0;
+const LT0 = {
+  main: { t: '¿TE ESTÁ GUSTANDO COSMOLUCAS?', h: '¡Lucas ha llegado al <b>Planeta Volcánico</b> y aún le quedan aventuras increíbles por delante!<br>Desbloquea el juego completo con un <b>pago único</b>, para siempre.' },
+  guest: { t: '¿TE ESTÁ GUSTANDO COSMOLUCAS?', h: 'Has llegado muy lejos, ¡y lo mejor está por llegar! Para seguir la aventura de Lucas solo hace falta un <b>pago único de {PRECIO}</b>.<br><br>La licencia se guarda en tu cuenta, así que primero <b>entra o crea tu cuenta gratis</b>.' },
+  conf: { t: '¿HAS COMPLETADO EL PAGO?', h: 'Se ha abierto la página de pago de myPOS. Cuando hayas pagado <b>{PRECIO}</b>, vuelve aquí y confirma tu compra para activar tu licencia.' },
+  ok0: { t: '¡GRACIAS POR TU COMPRA!', h: 'Tu licencia de <b>COSMOLUCAS</b> ya está guardada en tu cuenta: podrás jugar en todos tus dispositivos.<br><br>¡A por el Planeta Volcánico, Lucas te espera! 🚀' },
+  ok1: { t: '¡GRACIAS POR TU COMPRA!', h: 'Hemos recibido tu confirmación. Mientras verificamos el pago tienes el juego <b>desbloqueado durante 1 hora</b>.<br><br>¡A por el Planeta Volcánico, Lucas te espera! 🚀' },
+  ok2: { t: '¡GRACIAS POR TU COMPRA!', h: 'Después de dos intentos de pago fallidos, tu licencia se activará <b>en las próximas horas</b>, en cuanto verifiquemos el pago.<br><br>Cuando esté lista podrás seguir jugando desde aquí mismo.' },
+  rej1: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hubo un problema con tu pago y no se ha podido verificar, por eso se han vuelto a bloquear las fases desde el Planeta 3.<br><br>Vuelve a intentarlo: al confirmar tendrás el juego <b>desbloqueado 1 hora</b> mientras comprobamos el pago.<br><br>Pago único de <b>{PRECIO}</b>.' },
+  rej2: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hemos intentado verificar tu pago dos veces y no ha llegado, por eso se han vuelto a bloquear las fases desde el Planeta 3.<br><br>Si vuelves a pagar, esta vez la licencia se activará <b>cuando confirmemos el pago</b> (en las próximas horas).<br><br>Pago único de <b>{PRECIO}</b>.' },
+  pend1: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Tu hora de juego mientras comprobábamos el pago ha terminado. En cuanto verifiquemos tu pago se desbloqueará todo el juego automáticamente.' },
+  pend2: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Después de dos intentos de pago que no pudimos verificar, tu licencia se activará <b>en cuanto confirmemos que el pago ha llegado</b>. Suele tardar unas horas.<br><br>¡Gracias por tu paciencia!' }
+};
+const LT_NOM = { main: 'Cartel de pago (fase 3-2)', guest: 'Sin cuenta', conf: 'Después de pulsar PAGAR', ok0: 'Gracias (1ª compra)', ok1: 'Gracias (tras 1 rechazo: 1 hora)', ok2: 'Gracias (tras 2 rechazos: espera)', rej1: 'Pago rechazado 1 vez', rej2: 'Pago rechazado 2 veces', pend1: 'Pendiente: hora terminada', pend2: 'Pendiente (3er intento)' };
+const LT_IC = { main: '🚀', guest: '🚀', conf: '💳', ok0: '🎉', ok1: '🎉', ok2: '🙏', rej1: '⚠️', rej2: '⚠️', pend1: '⏳', pend2: '⏳' };
+let LTX = {}; try { LTX = JSON.parse(localStorage.getItem('tl_ltx') || '{}') || {}; } catch (e) {}
+const lt = (k, f) => String(((LTX[k] && LTX[k][f]) || LT0[k][f])).replace(/\{PRECIO\}/g, LIC_PRECIO);
+setTimeout(() => api({ a: 'licTxt' }).then(r => { if (r.ok && r.txt) { LTX = r.txt; try { localStorage.setItem('tl_ltx', JSON.stringify(LTX)); } catch (e) {} } }), 3000);
+const licGated = id => { const w = +String(id).split('-')[0]; return w >= 4 || (w === 3 && id !== '3-1'); };
+function licOk() {
+  if (!ACC || !LIC) return false; if (LIC.estado === 'activa') return true;
+  if (LIC.estado === 'pendiente') { if ((LIC.fallos || 0) === 0) return true; if (LIC.fallos === 1) return Date.now() - (LIC.pedido || 0) < 3600e3; }
+  return false;
+}
+function setLic(l) { LIC = l || null; try { if (LIC) localStorage.setItem('tl_lic', JSON.stringify(LIC)); else localStorage.removeItem('tl_lic'); } catch (e) {} licWipe(); }
+function licWipe() {          // si un pago se rechazó, se pierde lo conseguido desde la fase de pago (en todos los dispositivos)
+  if (!ACC || !LIC) return; const f = LIC.fallos || 0; let done = 0; try { done = +(localStorage.getItem('tl_lw_' + ACC.email) || 0); } catch (e) {}
+  if (f <= done) return; try { localStorage.setItem('tl_lw_' + ACC.email, String(f)); } catch (e) {}
+  if (LIC.estado === 'activa') return;
+  for (const id in PROG) if (licGated(id)) delete PROG[id]; for (const id in GOT) if (licGated(id)) delete GOT[id];
+  try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {}
+  if (curW > 2) setWorld(2); if (state === 'map') { const i = MAP.findIndex(n => !PROG[n.id]); mapSel = mapAt = Math.max(0, Math.min(i < 0 ? 0 : i, MAP.length - 1)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; mapInfo(); }
+  cloudSave(true);
+}
+async function licRefresh(force) { if (!ACC || (!force && Date.now() - licT < 60000)) return; licT = Date.now(); const r = await api({ a: 'licEstado', ses: ACC.ses }); if (r.ok) setLic(r.lic); }
+const LIC_PERKS = '<div class="uperks"><div>🔓 <b>Todos los planetas</b> y fases secretas</div><div>☁️ Se guarda en <b>tu cuenta</b></div><div>📱 Móvil, tablet, PC y tele</div><div>🚫 Sin suscripciones ni anuncios</div></div>';
+function licMainHtml(h) { return h + '</div><div class="uprice">' + LIC_PRECIO + '</div>' + LIC_PERKS + '<div>'; }
+function licOpenPay() { try { const a = document.createElement('a'); a.href = LIC_URL; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = LIC_URL; } }
+async function showPaywall(retry) {
+  await licRefresh(true);
+  if (licOk()) { if (retry) retry(); return; }
+  if (!ACC) { const v = await uiDialog({ icon: LT_IC.guest, tone: 'gold', title: lt('guest', 't'), html: lt('guest', 'h'), buttons: [{ t: 'AHORA NO', v: 0 }, { t: 'ENTRAR / CREAR CUENTA', cls: 'ok', v: 1 }] }); if (v) showLogin(); return; }
+  const f = LIC ? LIC.fallos || 0 : 0, est = LIC ? LIC.estado : '';
+  if (est === 'pendiente') {        // pagado pero aún sin verificar (y ya sin la hora de cortesía)
+    const k = f >= 2 ? 'pend2' : 'pend1', v = await uiDialog({ icon: LT_IC[k], title: lt(k, 't'), html: lt(k, 'h'), buttons: [{ t: 'VOLVER', v: 0 }, { t: 'COMPROBAR AHORA', cls: 'ok', v: 1 }] });
+    if (v) { await licRefresh(true); if (licOk()) { await uiAlert('¡LICENCIA ACTIVADA!', 'Tu pago está verificado. ¡A disfrutar del juego completo!', '🎉'); if (retry) retry(); } else uiAlert('AÚN NO', 'Todavía no hemos podido verificar tu pago. Vuelve a comprobarlo en un rato.', '⏳'); }
+    return;
+  }
+  const k = est === 'rechazada' ? (f >= 2 ? 'rej2' : 'rej1') : 'main';
+  const v = await uiDialog({ icon: LT_IC[k], tone: k === 'main' ? 'gold' : 'red', title: lt(k, 't'), html: k === 'main' ? licMainHtml(lt(k, 'h')) : lt(k, 'h'), buttons: [{ t: 'AHORA NO', v: 0 }, { t: '💳 PAGAR ' + LIC_PRECIO, cls: 'pay', v: 1 }], foot: 'Pago seguro con myPOS · ' + esc(ACC.email) });
+  if (!v) return;
+  licOpenPay();
+  const ok = await uiDialog({ icon: LT_IC.conf, title: lt('conf', 't'), html: lt('conf', 'h'), buttons: [{ t: 'CANCELAR', v: 0 }, { t: 'ABRIR EL PAGO OTRA VEZ', fn: licOpenPay }, { t: '✔ CONFIRMAR COMPRA', cls: 'ok', v: 1 }] });
+  if (!ok) return;
+  const r = await api({ a: 'licPagar', ses: ACC.ses }); if (!r.ok) { uiAlert('UPS…', 'No hemos podido registrar tu compra: ' + esc(r.error || 'sin conexión') + '. Inténtalo de nuevo.', '📡'); return; }
+  setLic(r.lic); SFX.win();
+  const kk = licOk() ? (LIC.fallos === 1 ? 'ok1' : 'ok0') : 'ok2';
+  await uiDialog({ icon: LT_IC[kk], tone: kk === 'ok2' ? '' : 'gold', title: lt(kk, 't'), html: lt(kk, 'h'), buttons: [{ t: kk === 'ok2' ? 'ENTENDIDO' : 'SEGUIR JUGANDO', cls: 'ok', v: 1 }] });
+  if (kk !== 'ok2' && retry) retry();
+}
+// panel de admin: los carteles tal cual salen en el juego, con el título y el texto editables
+function admLicTexts(box) {
+  box.innerHTML = '<h3 style="margin:18px 0 6px">TEXTOS DE LOS CARTELES DE PAGO</h3><div style="color:#8ea3e6;margin-bottom:10px">Toca el título o el texto de cualquier cartel para cambiarlo y pulsa GUARDAR TEXTOS. Escribe {PRECIO} donde quieras que salga el precio.</div><div class="uiw" id="ltBox"></div>' +
+    '<div class="row"><button class="btn" id="ltSave" style="border-color:#35ff8a">GUARDAR TEXTOS</button><button class="btn red" id="ltReset">VOLVER A LOS ORIGINALES</button></div><div class="amsg" id="ltMsg"></div>';
+  const raw = (k, f) => String((LTX[k] && LTX[k][f]) || LT0[k][f]);
+  $('ltBox').innerHTML = Object.keys(LT0).map(k => '<div style="color:#ffd23c;font-weight:800;margin:10px 0 4px">' + LT_NOM[k] + '</div><div class="ucard pv ' + (k === 'main' || k.startsWith('ok') && k !== 'ok2' || k === 'guest' ? 'gold' : k.startsWith('rej') ? 'red' : '') + '"><div class="uic">' + LT_IC[k] + '</div><h2 contenteditable="true" data-lk="' + k + '" data-lf="t">' + raw(k, 't') + '</h2><div class="utx" contenteditable="true" data-lk="' + k + '" data-lf="h">' + raw(k, 'h') + '</div>' +
+    (k === 'main' ? '<div class="uprice">' + LIC_PRECIO + '</div>' + LIC_PERKS : '') + '<div class="urow">' + (k === 'main' || k.startsWith('rej') ? '<button class="btn">AHORA NO</button><button class="btn pay">💳 PAGAR ' + LIC_PRECIO + '</button>' : k === 'conf' ? '<button class="btn">CANCELAR</button><button class="btn">ABRIR EL PAGO OTRA VEZ</button><button class="btn ok">✔ CONFIRMAR COMPRA</button>' : '<button class="btn ok">' + (k.startsWith('pend') ? 'COMPROBAR AHORA' : k === 'guest' ? 'ENTRAR / CREAR CUENTA' : 'SEGUIR JUGANDO') + '</button>') + '</div></div>').join('');
+  const msg = t => { $('ltMsg').textContent = t; };
+  $('ltSave').onclick = async () => { const o = {}; $('ltBox').querySelectorAll('[data-lk]').forEach(el => { const k = el.dataset.lk, f = el.dataset.lf, h = el.innerHTML.trim(); if (h && h !== LT0[k][f]) (o[k] = o[k] || {})[f] = h; });
+    try { await admOp('licTxtSet', { txt: JSON.stringify(o) }); LTX = o; try { localStorage.setItem('tl_ltx', JSON.stringify(o)); } catch (e) {} msg('✔ Textos guardados: los jugadores verán los nuevos carteles'); } catch (e) { msg(e.message); } };
+  $('ltReset').onclick = async () => { if ($('ltReset').dataset.ok !== '1') { $('ltReset').dataset.ok = '1'; $('ltReset').textContent = '¿SEGURO?'; return; } try { await admOp('licTxtSet', { txt: '{}' }); LTX = {}; try { localStorage.setItem('tl_ltx', '{}'); } catch (e) {} admLicTexts(box); } catch (e) { msg(e.message); } };
+}
+
 accChip();
-if (ACC) setTimeout(async () => { const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); cloudSave(); } else if (r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, 2500);
+if (ACC) setTimeout(async () => { const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); setLic(r.lic); cloudSave(); } else if (r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, 2500);
 
 /* ---------- actualización automática ---------- */
 // Mira cada minuto si hay versión nueva. Nunca recarga en mitad de una partida: espera a que el jugador vuelva al menú.
@@ -3929,5 +4069,5 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
+window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
 })();
