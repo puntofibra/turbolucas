@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.33';
+const VERSION = '0.34';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -841,6 +841,30 @@ LEVELS['2-5'] = function () {
   for (let i = 1; i <= 4; i++) B.block(271 + i, 271 + i, 14 - i, 13); B.row(272, 275, 8); B.crystal(290, 14, 2, 1.4); B.block(294, 299, 0, 15);
   return B.done({ name: 'AVALANCHA', time: 200, theme: 'ice', ice: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 284 * T + T / 2, y: 14 * T }, chase: { x: -9999, speed: 178, startX: 15 * T, on: false, style: 'snow' } });
 };
+/* ---------- fase 2-6: POZO DE LA MINA (escalada por un pozo helado mientras sube el agua congelada; géiser de vapor, plataformas que bailan, techo de hielo… y un agujero en el suelo que esconde un portal) ---------- */
+LEVELS['2-6'] = function () {
+  const H = 118, B = LB(34, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 2, 8, H - 1); B.block(31, 33, 8, H - 1);
+  // suelo de la mina… con un agujero que lleva a una galería oculta
+  B.block(3, 25, 110, 111); B.block(28, 30, 110, 111); B.ground(3, 30); B.row(4, 24, 114); B.gear(6, 114); B.crystal(15, 116, 1, 1.2); B.portal(29, 116, 5, 55);
+  B.row(6, 10, 108); B.hid(12, 106, 'vida'); B.crystal(4, 110, 0); B.en('patrulla', 18, 109);
+  // A · primeros saltos
+  P(6, 10, 107); P(13, 17, 104); P(20, 24, 101); B.box(22, 97, 'escudo'); P(25, 29, 98); B.row(25, 29, 97); P(12, 21, 95); B.en('patrulla', 19, 94);
+  // B · géiser de vapor entre drones
+  B.lift(9, 11, 78, 94); for (let r = 80; r <= 92; r += 3) B.chip(10, r); B.en('dron', 10, 86, { x0: 4, x1: 16 }); P(12, 16, 79); B.cp(14, 79); P(3, 7, 79); B.row(3, 7, 78);
+  // C · cristales saltarines y torreta
+  P(19, 23, 76); B.spring(22, 76); P(24, 29, 71); B.en('torreta', 27, 70); P(16, 20, 68); B.icicle(18, 62); B.block(15, 21, 61, 61); P(8, 12, 65); P(3, 7, 62); B.row(8, 12, 64);
+  // cámara secreta (se llega por el portal del agujero… o atravesando su pared)
+  B.block(3, 9, 49, 49); B.block(3, 8, 56, 56); B.block(9, 9, 50, 56); B.fake(9, 9, 53, 55); B.gear(5, 52); B.row(3, 8, 51); B.row(4, 7, 54); B.crystal(7, 56, 2, 0.8);
+  // D · plataformas que suben y bajan
+  P(10, 14, 59); P(17, 21, 56); B.mover(23, 53, 3, 0, 36, 1.3, 0); B.mover(17, 50, 3, 0, 36, 1.3, 3.14); B.mover(11, 47, 3, 0, 36, 1.3, 0); B.arc(18, 25, 50, 1); P(4, 8, 44); B.box(6, 40, 'laser');
+  // E · techo de hielo
+  P(4, 8, 41); B.block(3, 30, 38, 38); B.block(4, 8, 38, 38, 'B'); B.en('patrulla', 20, 37);
+  P(10, 14, 35); P(17, 21, 32); B.en('dron', 15, 28, { x0: 6, x1: 26 }); P(24, 28, 29); B.spring(26, 29); P(24, 29, 24); B.row(24, 29, 23); P(16, 20, 21); P(8, 12, 18); P(3, 6, 15); B.gear(4, 13); P(14, 18, 15); B.icicle(16, 9);
+  // la boca del pozo
+  P(8, 12, 12); P(3, 7, 9); B.block(9, 30, 8, 9); B.en('patrulla', 16, 7); B.arc(10, 24, 6, 3); B.crystal(29, 8, 1, 1.3); B.box(20, 4, 'chip');
+  return B.done({ name: 'POZO DE LA MINA', time: 230, theme: 'ice', vert: true, spawn: { x: 5 * T, y: 110 * T }, goal: { x: 26 * T + T / 2, y: 8 * T }, rise: { y: H * T + 400, speed: 42, startY: 104 * T, on: false, style: 'water' } });
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -1190,7 +1214,7 @@ function updateStage(dt) {
   }
   const rs = L.rise;
   if (rs) {
-    if (!rs.on && p.y + p.h < rs.startY) { rs.on = true; pop(p.x + p.w / 2, p.y - 40, '¡EL PLASMA SUBE!', '#35ff8a'); [220, 262, 330, 392].forEach((f, i) => tone(f, f * 1.5, 0.2, 'sawtooth', 0.08, i * 0.14)); shake = 0.3; }
+    if (!rs.on && p.y + p.h < rs.startY) { rs.on = true; pop(p.x + p.w / 2, p.y - 40, rs.style === 'water' ? '¡EL AGUA HELADA SUBE!' : '¡EL PLASMA SUBE!', rs.style === 'water' ? '#9ff0ff' : '#35ff8a'); [220, 262, 330, 392].forEach((f, i) => tone(f, f * 1.5, 0.2, 'sawtooth', 0.08, i * 0.14)); shake = 0.3; }
     if (rs.on && !p.win && !p.dead) { rs.y -= rs.speed * dt; rs.y = Math.min(rs.y, p.y + p.h + VHv * 0.62); if (CHEAT.stop) rs.y = Math.max(rs.y, p.y + p.h + 170); if (p.y + p.h > rs.y + 10) die(); }
   }
 }
@@ -1284,7 +1308,12 @@ function drawStageFront() {         // por delante: láseres, muro, plasma
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); for (let y = top; y < top + hh; y += 18) { const xx = x + (Math.random() - 0.5) * 14; if (y === top) ctx.moveTo(xx, y); else ctx.lineTo(xx, y); } ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
     if (Math.random() < 0.7) parts.push({ x: x + Math.random() * 20, y: top + Math.random() * hh, vx: 60 + Math.random() * 160, vy: (Math.random() - 0.5) * 80, life: 0.5, max: 0.5, col: Math.random() < 0.5 ? '#ff5a8a' : '#ffd0e0', size: 2.5, grav: 0 }); }
   const rs = L.rise;
-  if (rs && rs.on) { const y = rs.y, x0 = cam.x - 20, ww = VW + 40;
+  if (rs && rs.on && rs.style === 'water') { const y = rs.y, x0 = cam.x - 20, ww = VW + 40;          // agua helada que sube
+    const g2 = ctx.createLinearGradient(0, y, 0, y + 320); g2.addColorStop(0, 'rgba(220,250,255,.95)'); g2.addColorStop(0.08, 'rgba(90,190,240,.9)'); g2.addColorStop(1, 'rgba(10,50,120,.97)'); ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.moveTo(x0, y + 900); for (let x = x0; x <= x0 + ww + 16; x += 16) ctx.lineTo(x, y + Math.sin(x * 0.025 + time * 3) * 5 + Math.sin(x * 0.01 - time * 1.7) * 4); ctx.lineTo(x0 + ww + 16, y + 900); ctx.closePath(); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(200,245,255,.5)'; for (let i = 0; i < 14; i++) { const xx = x0 + ((i * 131 + time * 30) % ww), yy = y + 14 + (i % 3) * 10; ctx.fillRect(xx, yy, 18, 3); } ctx.globalCompositeOperation = 'source-over';
+    if (Math.random() < 0.6) parts.push({ x: x0 + Math.random() * ww, y: y + 6, vx: 0, vy: -40 - Math.random() * 60, life: 0.8, max: 0.8, col: Math.random() < 0.5 ? '#dff8ff' : '#9fe0ff', size: 2.2, grav: 0 }); }
+  else if (rs && rs.on) { const y = rs.y, x0 = cam.x - 20, ww = VW + 40;
     ctx.globalCompositeOperation = 'lighter'; const g3 = ctx.createLinearGradient(0, y - 90, 0, y); g3.addColorStop(0, 'rgba(53,255,138,0)'); g3.addColorStop(1, 'rgba(53,255,138,.5)'); ctx.fillStyle = g3; ctx.fillRect(x0, y - 90, ww, 90); ctx.globalCompositeOperation = 'source-over';
     const g2 = ctx.createLinearGradient(0, y, 0, y + 300); g2.addColorStop(0, 'rgba(160,255,200,.97)'); g2.addColorStop(0.12, 'rgba(40,220,120,.94)'); g2.addColorStop(1, 'rgba(0,70,60,.97)'); ctx.fillStyle = g2;
     ctx.beginPath(); ctx.moveTo(x0, y + 900); for (let x = x0; x <= x0 + ww + 16; x += 16) ctx.lineTo(x, y + Math.sin(x * 0.03 + time * 4) * 6 + Math.sin(x * 0.011 - time * 2.3) * 5); ctx.lineTo(x0 + ww + 16, y + 900); ctx.closePath(); ctx.fill();
@@ -1928,7 +1957,7 @@ const MAP2 = [
   { id: '2-3', n: '3', name: 'BAJO EL HIELO', x: 0.3635, y: 0.437, rx: 0.038, built: true, way: [[0.35, 0.59], [0.355, 0.52]] },
   { id: '2-4', n: '4', name: 'TORMENTA DE NIEVE', x: 0.4985, y: 0.491, rx: 0.038, built: true, way: [[0.415, 0.448], [0.455, 0.475]] },
   { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, built: true, way: [[0.53, 0.555], [0.585, 0.627]] },
-  { id: '2-6', n: '6', name: 'POZO DE LA MINA', x: 0.651, y: 0.351, rx: 0.036, gold: true, way: [[0.67, 0.555], [0.666, 0.45]] },
+  { id: '2-6', n: '6', name: 'POZO DE LA MINA', x: 0.651, y: 0.351, rx: 0.036, gold: true, built: true, way: [[0.67, 0.555], [0.666, 0.45]] },
   { id: '2-J', n: '', name: 'JEFE · GUARDIÁN DE HIELO', x: 0.8725, y: 0.401, rx: 0.058, boss: true, way: [[0.71, 0.33], [0.775, 0.315], [0.83, 0.355]] },
   { id: '2-B', n: '★', name: 'FASE SECRETA · AURORA', x: 0.618, y: 0.19, rx: 0.024, bonus: true, prev: 5, way: [[0.635, 0.305], [0.613, 0.26], [0.615, 0.224]] }
 ];
