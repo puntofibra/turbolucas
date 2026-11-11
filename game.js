@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.10';
+const VERSION = '0.11';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -23,11 +23,11 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 
 /* ---------- imagenes ---------- */
 const NAMES = ['lucas-quieto', 'lucas-avanzando', 'lucas-saltando', 'lucas-cayendo', 'lucas-golpeado', 'lucas-celebrando', 'lucas-agachado',
-  'enemigo-patrulla', 'enemigo-dron-anim', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien',
+  'enemigo-patrulla-anim', 'enemigo-dron-anim', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien-anim',
   'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'jefe1', 'mapa1', 'ico-candado', 'ico-estrella', 'ico-estrella-off', 'ico-bandera', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
   'poder-laser', 'poder-escudo', 'poder-turbo', 'poder-iman', 'poder-mini', 'poder-estrella5g'];
 const IMG = {};
-const FRAMES = { 'enemigo-dron-anim': 4 };      // imágenes que son una tira de fotogramas de animación
+const FRAMES = { 'enemigo-dron-anim': 4, 'enemigo-patrulla-anim': 4, 'enemigo-alien-anim': 4 };      // imágenes que son una tira de fotogramas de animación
 let loaded = 0;
 function loadImages(done) {
   NAMES.forEach(n => {
@@ -259,8 +259,8 @@ let state = 'load', paused = false, P = null, cam = { x: 0, y: 0 }, time = 0, sh
 let enemies = [], items = [], shots = [], parts = [], pops = [], bumps = [];
 let G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0, tleft: LEVEL_TIME };
 const ENEMY = {
-  patrulla: { img: 'enemigo-patrulla', h: 66, w: 40, bh: 58, speed: 62, stomp: true, pts: 100 },
-  alien: { img: 'enemigo-alien', h: 58, w: 48, bh: 46, speed: 30, stomp: true, pts: 100 },
+  patrulla: { img: 'enemigo-patrulla-anim', h: 69.8, ax: 0.5228, fps: 9, faceR: true, w: 40, bh: 58, speed: 62, stomp: true, pts: 100 },
+  alien: { img: 'enemigo-alien-anim', h: 59.8, ax: 0.5141, fps: 4.5, w: 48, bh: 46, speed: 30, stomp: true, pts: 100 },
   erizo: { img: 'enemigo-erizo', h: 56, w: 50, bh: 44, speed: 48, stomp: false, pts: 300 },
   dron: { img: 'enemigo-dron-anim', h: 61.8, ax: 0.5216, w: 46, bh: 40, speed: 80, stomp: true, pts: 200, fly: true },
   torreta: { img: 'enemigo-torreta', h: 64, w: 54, bh: 56, speed: 0, stomp: true, pts: 300 }
@@ -698,11 +698,11 @@ function drawWorld() {
   // enemigos
   for (const e of enemies) {
     if (!vis(e.x)) continue;
-    const cx = e.x + e.w / 2, by = e.y + e.h, eim = IMG[e.d.img], eax = e.d.ax || 0.5;
-    if (eim._n) eim._f = e.dead ? 0 : Math.floor(e.t * 22);
-    if (e.dead) { if (e.how === 'squish') spr(IMG[e.d.img], cx, by, e.d.h, eax, 1, e.dir > 0, 0, 1.25, 0.25); else spr(IMG[e.d.img], cx, by - e.d.h / 2, e.d.h, 0.5, 0.5, e.dir > 0, e.dead * 9); continue; }
+    const cx = e.x + e.w / 2, by = e.y + e.h, eim = IMG[e.d.img], eax = e.d.ax || 0.5, efl = e.d.faceR ? e.dir < 0 : e.dir > 0;
+    if (eim._n) eim._f = e.dead ? 0 : Math.floor(e.t * (e.d.fps || 22));
+    if (e.dead) { if (e.how === 'squish') spr(IMG[e.d.img], cx, by, e.d.h, eax, 1, efl, 0, 1.25, 0.25); else spr(IMG[e.d.img], cx, by - e.d.h / 2, e.d.h, 0.5, 0.5, efl, e.dead * 9); continue; }
     const wob = e.d.fly || e.type === 'torreta' ? 0 : Math.sin(e.t * 9) * 0.04;
-    spr(IMG[e.d.img], cx, by + (e.type === 'alien' ? 4 : 2), e.d.h, eax, 1, e.dir > 0, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1);
+    spr(IMG[e.d.img], cx, by + (e.type === 'alien' ? 4 : 2), e.d.h, eax, 1, efl, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1);
   }
   drawPlayer();
   // disparos
