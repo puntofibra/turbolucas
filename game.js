@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.64';
+const VERSION = '0.65';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -2111,7 +2111,7 @@ function drawStageBack() {          // por detrás de los personajes
   const PI = iceI('plataforma-hielo') || selI('plataforma-selva') || IMG.plataforma, PFX = PI === IMG.plataforma ? [0.165, 0.835] : [0.31, 0.69];
   for (const m of L.movers) { const w = m.w + 10, x = m.x - 5, y = m.y - 2, h = PI && PI.naturalWidth ? w * PI.naturalHeight / PI.naturalWidth : 14;
     ctx.globalCompositeOperation = 'lighter'; for (const fx of PFX) { const g2 = ctx.createRadialGradient(x + w * fx, y + h, 0, x + w * fx, y + h, w * 0.16); g2.addColorStop(0, 'rgba(255,190,60,.5)'); g2.addColorStop(1, 'rgba(255,190,60,0)'); ctx.fillStyle = g2; ctx.fillRect(x + w * fx - w * 0.16, y + h - 4, w * 0.32, w * 0.18); } ctx.globalCompositeOperation = 'source-over';
-    if (L.theme === 'jungle' && m.fall && L.planks) { if (m.st === 3) continue; const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0; for (let xx = x + 4; xx < x + w - 4; xx += 16) { ctx.fillStyle = m.st === 1 ? '#a86a32' : '#7a4a22'; ctx.fillRect(xx + jx, y + 2, 14, 12); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.strokeRect(xx + jx, y + 2, 14, 12); } continue; }
+    if ((L.theme === 'jungle' && m.fall && L.planks) || m.plank) { if (m.st === 3) continue; const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0; for (let xx = x + 4; xx < x + w - 4; xx += 16) { ctx.fillStyle = m.st === 1 ? '#a86a32' : '#7a4a22'; ctx.fillRect(xx + jx, y + 2, 14, 12); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.strokeRect(xx + jx, y + 2, 14, 12); } continue; }
     if (L.theme === 'jungle' && m.fall) { drawLily(m, x, y, w); continue; }
     if (m.raft) { ctx.fillStyle = '#6a4220'; for (let k = 0; k < Math.round(w / 18); k++) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x + k * 18, y, 17, 20, 8) : ctx.rect(x + k * 18, y, 17, 20); ctx.fill(); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.stroke(); } ctx.strokeStyle = '#c8a060'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x + w, y + 6); ctx.moveTo(x, y + 14); ctx.lineTo(x + w, y + 14); ctx.stroke(); for (let k = 0; k < 2; k++) parts.push({ x: x + Math.random() * w, y: y + 22, vx: -40 - Math.random() * 40, vy: -20, life: 0.4, max: 0.4, col: '#c8fff0', size: 2, grav: 200 }); continue; }
     if (L.theme === 'lava' || m.fall) { drawRock(m, x, y, w); continue; }
@@ -3260,8 +3260,11 @@ addEventListener('pointerup', e => {
 });
 $('mPlay').onclick = () => mapPlay(); $('mBack').onclick = toMenu;
 $('btnPlay').onclick = () => { if (ACC || GUEST) openMap(); else showAccess(); };
-$('btnPause').onclick = togglePause;
-$('btnMute').onclick = () => { audio(); setSnd(!sndOn); };
+// en iPhone los toques cerca del borde de arriba a veces no llegan como "click": estos botones responden al levantar el dedo
+function tapBind(el, fn) { if (!el) return; let last = 0; const go = e => { if (e) { e.preventDefault(); e.stopPropagation(); } const n = Date.now(); if (n - last < 450) return; last = n; fn(); };
+  el.addEventListener('touchend', go, { passive: false }); el.addEventListener('click', go); }
+tapBind($('btnPause'), togglePause);
+tapBind($('btnMute'), () => { audio(); setSnd(!sndOn); });
 $('btnSnd').onclick = () => { audio(); setSnd(!sndOn); if (sndOn) SFX.chip(); };
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play' && !paused) togglePause(); });
 // instalar
@@ -3625,9 +3628,10 @@ const TL_PAL = [
   ['C', '💥', 'Pared agrietada (láser)'], ['!', '❗', 'Interruptor'], ['X', '🟥', 'Bloque rojo'], ['Y', '🟦', 'Bloque azul'], ['D', '🚪', 'Puerta de llaves'],
   ['o:chip', '🪙', 'Chip'], ['o:gear', '⚙️', 'Engranaje'], ['o:key', '🔑', 'Llave'],
   ['o:en:patrulla', '🤖', 'Robot patrulla'], ['o:en:dron', '🚁', 'Dron'], ['o:en:erizo', '🦔', 'Erizo'], ['o:en:alien', '👽', 'Alien'], ['o:en:torreta', '🔫', 'Torreta'],
-  ['o:pad', '⏫', 'Saltador'], ['o:spring', '💎', 'Cristal saltarín'], ['o:moverH', '↔️', 'Plataforma móvil ↔'], ['o:moverV', '↕️', 'Plataforma móvil ↕'], ['o:fall', '🪨', 'Roca que se hunde'],
+  ['o:pad', '⏫', 'Saltador'], ['o:spring', '💎', 'Cristal saltarín'], ['o:moverH', '↔️', 'Plataforma móvil ↔'], ['o:moverV', '↕️', 'Plataforma móvil ↕'], ['o:fall', '🪨', 'Roca que se hunde'], ['o:plank', '🪵', 'Peldaño que se cae'], ['o:portal', '🌀', 'Portal (pon 2: ida y vuelta)'],
   ['o:laser', '🔴', 'Láser'], ['o:lavafall', '🌋', 'Cortina de lava'], ['o:geyser', '🔥', 'Géiser'], ['o:jumper', '☄️', 'Bola de magma'], ['o:icicle', '🧊', 'Carámbano'], ['o:snowgun', '⛄', 'Cañón de nieve'],
   ['o:mush', '🍄', 'Seta trampolín'], ['o:vine', '🌿', 'Liana (trepar)'], ['o:spore', '🌸', 'Chorro de esporas'], ['o:fly', '✨', 'Luciérnaga'], ['o:crystal', '🔮', 'Cristal / seta deco'], ['o:cp', '🚩', 'Punto de control'], ['start', '🟢', 'Salida de Lucas'], ['goal', '📡', 'Antena (meta)']];
+const TL_FX = [['', 'Sin efecto'], ['water', '🌊 Inundado'], ['chase', '🏃 Te persigue'], ['meteors', '☄️ Meteoritos'], ['dark', '🌑 A oscuras']];
 const TL_BOX = ['chip', 'escudo', 'laser', 'turbo', 'iman', 'mini', 'estrella', 'vida'], TL_THEMES = [['', 'Estación'], ['ice', 'Cristal'], ['lava', 'Volcán'], ['jungle', 'Selva']];
 let edCamY = null, ED = null, edTool = '#', edBox = 'escudo', edCam = 0, edTest = false, edDirty = false, edHover = null, edDrag = null, edUndo = [];
 function tlNew(n) { const w = 120, h = 16, g = []; for (let y = 0; y < h; y++) g.push((y >= h - 2 ? '#' : ' ').repeat(w)); return { n: n || 'Mi nivel', t: '', w, h, g, bx: {}, o: [], s: [3, h - 3], e: [w - 6, h - 3], c: null }; }
@@ -3639,17 +3643,23 @@ function buildCustom(d) {
     else if (o.k.startsWith('en:')) { const t = o.k.slice(3); B.en(t, x, y, t === 'dron' ? { x0: x - 5, x1: x + 5 } : {}); }
     else if (o.k === 'pad') B.pad(x, y + 1); else if (o.k === 'spring') B.spring(x, y + 1); else if (o.k === 'cp') B.cp(x, y + 1); else if (o.k === 'crystal') B.crystal(x, y + 1, d.t === 'lava' ? 3 : d.t === 'jungle' ? 4 + x % 3 : x % 3);
     else if (o.k === 'mush') B.mush(x, y + 1, x % 3); else if (o.k === 'vine') B.vine(x, Math.max(0, y - 6), y); else if (o.k === 'spore') B.spore(x, y + 1, 6, (x % 4) * 0.5); else if (o.k === 'fly') B.fly(x, y);
-    else if (o.k === 'moverH') B.mover(x, y, 3, 2.5 * T, 0, 1.1); else if (o.k === 'moverV') B.mover(x, y, 3, 0, 2.5 * T, 1.1); else if (o.k === 'fall') B.fall(x, y, 2);
+    else if (o.k === 'moverH') B.mover(x, y, 3, 2.5 * T, 0, 1.1); else if (o.k === 'moverV') B.mover(x, y, 3, 0, 2.5 * T, 1.1); else if (o.k === 'fall') B.fall(x, y, 2); else if (o.k === 'plank') { B.fall(x, y, 1); B.movers[B.movers.length - 1].plank = true; }
     else if (o.k === 'laser') B.laser(x, y, y + 2, (x % 4) * 0.5); else if (o.k === 'lavafall') B.lavafall(x, y, y + 3, (x % 4) * 0.5); else if (o.k === 'geyser') B.geyser(x, y + 1, 4, (x % 5) * 0.6);
     else if (o.k === 'jumper') B.jumper(x, y + 1, 4, (x % 4) * 0.5); else if (o.k === 'icicle') B.icicle(x, y); else if (o.k === 'snowgun') B.snowgun(x, y + 1, -1, 3); }
-  const keys = d.o.filter(o => o.k === 'key').length;
-  return B.done({ name: d.n, theme: th, ice: d.t === 'ice', time: 300, custom: true, noLava: d.t !== 'lava' && d.t !== 'jungle', spawn: { x: d.s[0] * T + T / 2, y: (d.s[1] + 1) * T }, goal: { x: d.e[0] * T + T / 2, y: (d.e[1] + 1) * T } });
+  const pts = d.o.filter(o => o.k === 'portal');          // portales por parejas: el 1º con el 2º, el 3º con el 4º… (ida y vuelta)
+  for (let i = 0; i + 1 < pts.length; i += 2) { const a = pts[i], b = pts[i + 1]; B.portal(a.x, a.y + 1, b.x + 1, b.y + 1); B.portal(b.x, b.y + 1, a.x + 1, a.y + 1); }
+  const fx = {}, sx = d.s[0];
+  if (d.fx === 'water') fx.water = { y: (d.h - 7) * T };
+  if (d.fx === 'chase') fx.chase = { x: -9999, speed: 150, startX: (sx + 6) * T, on: false, style: d.t === 'ice' ? 'snow' : d.t === 'jungle' ? 'swarm' : undefined };
+  if (d.fx === 'meteors') fx.meteors = { zones: [[(sx + 8) * T, Math.max(sx + 12, d.e[0] - 4) * T]], every: 1.3, acc: 0, style: d.t === 'ice' ? 'comet' : d.t === 'jungle' ? 'seed' : undefined };
+  if (d.fx === 'dark') fx.dark = true;
+  return B.done(Object.assign(fx, { name: d.n, theme: th, ice: d.t === 'ice', time: 300, custom: true, noLava: d.t !== 'lava' && d.t !== 'jungle', spawn: { x: d.s[0] * T + T / 2, y: (d.s[1] + 1) * T }, goal: { x: d.e[0] * T + T / 2, y: (d.e[1] + 1) * T } }));
 }
 LEVELS['TALLER'] = () => buildCustom(ED || tlNew());
 // --- guardar: con cuenta en la nube (código de 6 letras/números); sin cuenta, en este dispositivo
 function tlLocal() { try { return JSON.parse(localStorage.getItem('tl_lvls') || '[]'); } catch (e) { return []; } }
 function tlLocalSave(l) { try { localStorage.setItem('tl_lvls', JSON.stringify(l)); } catch (e) {} }
-const tlPack = d => JSON.stringify({ v: 1, t: d.t, w: d.w, h: d.h, g: d.g, bx: d.bx, o: d.o, s: d.s, e: d.e });
+const tlPack = d => JSON.stringify({ v: 1, t: d.t, fx: d.fx || '', w: d.w, h: d.h, g: d.g, bx: d.bx, o: d.o, s: d.s, e: d.e });
 function tlUnpack(c, n, t, datos) { const d = JSON.parse(datos); return Object.assign(tlNew(n), d, { n, c, t: d.t || t || '' }); }
 async function tlSave() {
   const msg = t => { const m = $('edMsg'); if (m) m.textContent = t; };
@@ -3722,7 +3732,7 @@ function openEditor() {
   show('panel', false); show('title', false); show('top', false); show('touch', false); show('mapUI', false);
   state = 'edit'; paused = false; curId = 'TALLER'; L = buildLevel(); spawnEnemies(); P = newPlayer(L.spawn.x, L.spawn.y); items = []; shots = []; parts = []; cam.y = L.H * T - VHv; edCam = Math.max(0, Math.min(cam.x, L.W * T - VW)); cam.x = edCam;
   edCamY = null; const e = $('ed'); e.classList.add('on');
-  e.innerHTML = '<div class="bar"><input id="edN" maxlength="30" value="' + esc(ED.n) + '" style="width:150px"><select id="edT">' + TL_THEMES.map(t => '<option value="' + t[0] + '"' + (t[0] === (ED.t || '') ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select>' +
+  e.innerHTML = '<div class="bar"><input id="edN" maxlength="30" value="' + esc(ED.n) + '" style="width:120px"><select id="edT">' + TL_THEMES.map(t => '<option value="' + t[0] + '"' + (t[0] === (ED.t || '') ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select><select id="edFx" title="Efecto del nivel">' + TL_FX.map(t => '<option value="' + t[0] + '"' + (t[0] === (ED.fx || '') ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select>' +
     '<span style="color:#8ea3e6;font:700 12px system-ui">Largo</span><button class="btn" id="edW-">−</button><span id="edWv" style="color:#fff;font:800 13px system-ui;min-width:30px;text-align:center">' + ED.w + '</span><button class="btn" id="edW+">+</button>' +
     '<select id="edBx" title="Premio de la caja sorpresa">' + TL_BOX.map(b => '<option value="' + b + '"' + (b === edBox ? ' selected' : '') + '>❓ ' + POWER_NAME[b === 'chip' ? 'vida' : b].replace('+1 VIDA', b === 'chip' ? 'CHIP' : '+1 VIDA') + '</option>').join('') + '</select>' +
     '<button class="btn" id="edU">DESHACER</button><button class="btn" id="edMv">✋ MOVER</button><span style="flex:1"></span>' + (ED.c ? '<span style="color:#ffd23c;font:800 13px system-ui">' + ED.c + '</span>' : '') + '<button class="btn" id="edP" style="border-color:#35ff8a">▶ PROBAR</button><button class="btn" id="edS">GUARDAR</button><button class="btn" id="edX">SALIR</button></div>' +
@@ -3732,6 +3742,8 @@ function openEditor() {
   e.querySelectorAll('.pal button').forEach(b => b.onclick = () => { edTool = b.dataset.t; e.querySelectorAll('.pal button').forEach(q => q.classList.toggle('on', q === b)); $('edMv').classList.remove('on'); tone(900, 900, 0.04, 'square', 0.05); });
   $('edN').oninput = () => { ED.n = $('edN').value; edDirty = true; };
   $('edT').onchange = () => { ED.t = $('edT').value; edRebuild(); };
+  const edLay = () => { const bh = e.querySelector('.bar').offsetHeight; $('edScr').style.top = (bh + 6) + 'px'; $('edMsg').style.top = (bh + 26) + 'px'; }; edLay(); setTimeout(edLay, 50); addEventListener('resize', edLay);
+  $('edFx').onchange = () => { ED.fx = $('edFx').value; edDirty = true; edRebuild(); };
   $('edBx').onchange = () => { edBox = $('edBx').value; };
   $('edW-').onclick = () => edResize(-20); $('edW+').onclick = () => edResize(20);
   $('edU').onclick = () => { const u = edUndo.pop(); if (u) { ED = u; edRebuild(); } };
@@ -3754,7 +3766,8 @@ function edPut(tx, ty, erase) {
   if (t === 'erase') { if (!ob && cur === ' ') return; ED.o = ED.o.filter(o => o !== ob); setT(' '); delete ED.bx[key]; }
   else if (t === 'start') { ED.s = [tx, ty]; }
   else if (t === 'goal') { ED.e = [tx, ty]; }
-  else if (t.startsWith('o:')) { const k = t.slice(2); if (ob && ob.k === k) return; ED.o = ED.o.filter(o => o !== ob); ED.o.push({ k, x: tx, y: ty }); if (cur !== ' ' && cur !== '=') setT(' '); }
+  else if (t.startsWith('o:')) { const k = t.slice(2); if (ob && ob.k === k) return; ED.o = ED.o.filter(o => o !== ob); ED.o.push({ k, x: tx, y: ty }); if (cur !== ' ' && cur !== '=') setT(' ');
+    if (k === 'portal') { const n = ED.o.filter(o => o.k === 'portal').length, m = $('edMsg'); if (m) m.textContent = n % 2 ? '🌀 Portal de entrada puesto: ahora pon el portal de salida' : '🌀 ¡Pareja de portales lista! Se puede ir y volver por ellos'; } }
   else { if (cur === t && (t !== '?' || ED.bx[key] === edBox)) return; setT(t); if (ob) ED.o = ED.o.filter(o => o !== ob); if (t === '?') ED.bx[key] = edBox; else delete ED.bx[key]; }
   edRebuild();
 }
@@ -3764,7 +3777,7 @@ cv.addEventListener('pointerdown', e => { if (state !== 'edit') return; e.preven
   edSnap(); edDrag = { erase: e.button === 2, last: tx + ',' + ty }; edPut(tx, ty, e.button === 2); });
 cv.addEventListener('pointermove', e => { if (state !== 'edit') return; const [tx, ty] = edCell(e); edHover = [tx, ty]; if (!edDrag) return;
   if (edDrag.pan) { edCam = edDrag.cam - (e.clientX - edDrag.x) * DPR / SC; edCamY = edDrag.camY - (e.clientY - edDrag.y) * DPR / SC; return; }
-  const k = tx + ',' + ty; if (k !== edDrag.last && !['start', 'goal'].includes(edTool)) { edDrag.last = k; edPut(tx, ty, edDrag.erase); } });
+  const k = tx + ',' + ty; if (k !== edDrag.last && !['start', 'goal', 'o:portal'].includes(edTool)) { edDrag.last = k; edPut(tx, ty, edDrag.erase); } });
 addEventListener('pointerup', () => { edDrag = null; });
 cv.addEventListener('contextmenu', e => { if (state === 'edit') e.preventDefault(); });
 cv.addEventListener('wheel', e => { if (state !== 'edit') return; if (e.shiftKey) edCamY += e.deltaY; else edCam += (e.deltaX || e.deltaY) * 1.2; e.preventDefault(); }, { passive: false });
@@ -3787,7 +3800,7 @@ function drawEditorOverlay() {
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const c = ED.g[y][x];
     if (c === 'I') { ctx.setLineDash([5, 4]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.strokeRect(x * T + 3, y * T + 3, T - 6, T - 6); ctx.setLineDash([]); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('?', x * T + T / 2, y * T + T / 2 + 1); }
     if (c === 'F') { ctx.fillStyle = 'rgba(198,60,255,.28)'; ctx.fillRect(x * T, y * T, T, T); } }
-  for (const o of ED.o) if (o.x >= x0 && o.x <= x1 && ['laser', 'lavafall', 'jumper', 'snowgun', 'icicle'].includes(o.k)) { ctx.globalAlpha = 0.6; ctx.fillText(TL_PAL.find(p => p[0] === 'o:' + o.k)[1], o.x * T + T / 2, o.y * T + T / 2); ctx.globalAlpha = 1; }
+  for (const o of ED.o) if (o.x >= x0 && o.x <= x1 && ['laser', 'lavafall', 'jumper', 'snowgun', 'icicle', 'portal'].includes(o.k)) { ctx.globalAlpha = 0.6; ctx.fillText(TL_PAL.find(p => p[0] === 'o:' + o.k)[1], o.x * T + T / 2, o.y * T + T / 2); ctx.globalAlpha = 1; }
   if (ED.s) { ctx.strokeStyle = '#35ff8a'; ctx.lineWidth = 2; ctx.strokeRect(ED.s[0] * T + 1, ED.s[1] * T + 1, T - 2, T - 2); }
   if (edHover) { const [hx, hy] = edHover; ctx.strokeStyle = '#ffd23c'; ctx.lineWidth = 3; ctx.strokeRect(hx * T + 1.5, hy * T + 1.5, T - 3, T - 3); const p = TL_PAL.find(q => q[0] === edTool); if (p && edTool !== 'move') { ctx.globalAlpha = 0.55; ctx.fillText(p[1], hx * T + T / 2, hy * T + T / 2); ctx.globalAlpha = 1; } }
   ctx.restore(); ctx.textBaseline = 'alphabetic';
@@ -4073,5 +4086,5 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
+window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, playC(n, t, datos) { ED = tlUnpack(null, n, t, datos); tlPlay(false); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
 })();
