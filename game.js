@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.49';
+const VERSION = '0.50';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -187,7 +187,7 @@ function pollPad() {
   const gp = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).find(g => g);
   if (!gp) return;
   const b = i => gp.buttons[i] && gp.buttons[i].pressed, ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
-  padNames(gp);
+  padNames(gp); if (state === 'edit') { edPadPoll(gp); return; }
   if (CON.on) { padConsole(gp, b, ax, ay); return; }
   if (b(3) && !padPrev.tri && paused && $('pauseT')) pauseTapOn(true);
   padPrev.tri = b(3);
@@ -1167,10 +1167,10 @@ LEVELS['3-J'] = function () {
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
 let gotT = 0; function gotSave() { clearTimeout(gotT); gotT = setTimeout(() => { try { localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {} cloudSave(); }, 400); }
-function gotMark(kind, v) { const o = gotOf(curId); if (kind === 'r') o.r = 1; else if (!o[kind].includes(v)) o[kind].push(v); gotSave(); }
+function gotMark(kind, v) { if (L && L.custom) return; const o = gotOf(curId); if (kind === 'r') o.r = 1; else if (!o[kind].includes(v)) o[kind].push(v); gotSave(); }
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
-  { const o = gotOf(curId), cs = new Set(o.c), gs = new Set(o.g);
+  if (!l.custom) { const o = gotOf(curId), cs = new Set(o.c), gs = new Set(o.g);
     l.chips.forEach((c, i) => { c.i = i; if (cs.has(i)) c.got = true; });
     l.gears.forEach((g, i) => { g.i = i; g.old = gs.has(i); });
     o.b.forEach(k => { const [x, y] = k.split(',').map(Number); if (l.g[y] && (l.g[y][x] === '?' || l.g[y][x] === 'I')) l.g[y][x] = l.g[y][x] === 'I' ? ' ' : 'U'; });
@@ -2231,7 +2231,7 @@ function drawHUD() {
   spr(IMG['obj-chip'], pad + 112, 26, 24, 0.5, 0.5); txt(String(G.chips), pad + 130, 26, '#ffe27a');
   for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < G.gears ? 1 : 0.28; spr(IMG['obj-engranaje'], pad + 196 + i * 28, 26, 24, 0.5, 0.5); } ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; txt(String(G.score).padStart(6, '0'), w / 2, 26);
-  ctx.font = '700 12px system-ui,sans-serif'; txt('PLANETA ' + curId, w / 2, 46, '#9fb4ff');
+  ctx.font = '700 12px system-ui,sans-serif'; txt(L.custom ? 'TALLER · ' + L.name : 'PLANETA ' + curId, w / 2, 46, '#9fb4ff');
   { // reloj: se pone rojo y late cuando quedan 30 s
     const tl = Math.ceil(G.tleft), low = tl <= 30, vlow = tl <= 10, tx = Math.min(w - 190, w / 2 + 200), pu = low ? 1 + (vlow ? 0.16 : 0.08) * Math.abs(Math.sin(time * (vlow ? 10 : 5))) : 1, col = low ? '#ff4a5a' : '#fff';
     ctx.save(); ctx.translate(tx, 30); ctx.scale(pu, pu);
@@ -2258,7 +2258,7 @@ function render() {
   ctx.setTransform(SC, 0, 0, SC, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!L) { ctx.fillStyle = '#070a1e'; ctx.fillRect(0, 0, VW, VHv); return; }
-  if (state === 'warp') drawWarp(); else if (state === 'map') drawMap(); else { drawBackground(); drawWorld(); if (L.water) drawWater(); if (L.dark && state !== 'title') drawDark(); drawSnow(); }
+  if (state === 'warp') drawWarp(); else if (state === 'map') drawMap(); else if (state === 'edit') { cam.x = edCam = Math.max(0, Math.min(edCam, L.W * T - VW)); const yb = L.H * T - (VHv - 92); if (edCamY === null) edCamY = yb; cam.y = edCamY = Math.max(Math.min(-50, yb), Math.min(yb, edCamY)); drawBackground(); drawWorld(); drawEditorOverlay(); const sc = $('edScr'); if (sc && document.activeElement !== sc) sc.value = Math.round(edCam / Math.max(1, L.W * T - VW) * 1000); } else { drawBackground(); drawWorld(); if (L.water) drawWater(); if (L.dark && state !== 'title') drawDark(); drawSnow(); }
   if (state === 'play' || state === 'done' || state === 'over') drawHUD();
   const vg = ctx.createRadialGradient(VW / 2, VHv / 2, VHv * 0.45, VW / 2, VHv / 2, Math.max(VW, VHv) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,10,.45)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VHv);
@@ -2344,11 +2344,11 @@ function cheatsOff() { let any = false; for (const c of CODES) { const k = c[0].
 function toMenu() { cheatsOff(); setTimeout(updApply, 300);      // volver a la portada apaga los trucos (recargar o actualizarse no)
   paused = false; state = 'title'; show('panel', false); show('mapUI', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
 function levelDone() {
-  state = 'done'; show('touch', false); $('card').classList.remove('tips'); evt('superada', curId);
+  state = 'done'; show('touch', false); $('card').classList.remove('tips'); if (!L.custom) evt('superada', curId);
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
   const secs = Math.floor(G.clock), bonus = Math.ceil(G.tleft) * 10; G.score += bonus;
   const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId]; bossBeatBefore = !first;
-  PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score), rb: G.tr ? old.rb || 0 : Math.max(old.rb || 0, G.score) }; saveProg(); rankSend();
+  if (!L.custom) PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score), rb: G.tr ? old.rb || 0 : Math.max(old.rb || 0, G.score) }; if (!L.custom) { saveProg(); rankSend(); }
   { const ci = MAP.findIndex(n => n.id === curId); justOpened = first ? MAP.findIndex((n, k) => k > 0 && !n.bonus && mapPrev(k) === ci) : -1; }
   $('card').innerHTML = '<h2>' + (/-J$/.test(curId) ? '¡PLANETA ' + curId[0] + ' COMPLETADO!' : '¡FASE SUPERADA!') + '</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
     '<div class="stat"><span>Chips</span><b>' + G.chips + '</b></div><div class="stat"><span>Engranajes</span><b>' + G.gears + ' / 3</b></div>' +
@@ -2546,6 +2546,7 @@ function openMap() {
 }
 function toMap(advance) {
   tmpOff();
+  if (L && L.custom) { tallerBack(); return; }
   paused = false; state = 'map';
   show('panel', false); show('top', false); show('touch', false); show('mapUI', true);
   const i = MAP.findIndex(n => n.id === curId);
@@ -2782,6 +2783,7 @@ function infoPanel(title, html) {
 }
 $('btnTips').onclick = () => { audio(); SFX.chip(); showTips(); };
 $('btnRank').onclick = () => { audio(); SFX.chip(); showRanking(); };
+$('btnTaller').onclick = () => { audio(); SFX.chip(); openTaller(); };
 $('btnWeb').onclick = () => { SFX.chip(); setTimeout(() => { location.href = 'https://puntofibra.github.io/web/'; }, 120); };
 
 /* ---------- ADMIN: entrada con llave NFC (o QR desde un móvil Android) y menú oculto ---------- */
@@ -3008,6 +3010,164 @@ function conAdmin() {
 /* ---------- cuentas: jugar con cuenta (progreso en la nube, en cualquier dispositivo) o sin cuenta (solo este dispositivo) ---------- */
 const GOOGLE_ID = '454055120059-nuhaop4r62urc3u036cc3grpqo71ulg7.apps.googleusercontent.com';
 let ACC = null, GUEST = false; try { ACC = JSON.parse(localStorage.getItem('tl_acc') || 'null'); GUEST = localStorage.getItem('tl_guest') === '1'; } catch (e) {}
+/* ======================= TALLER ESPACIAL: crea tus niveles en una cuadrícula ======================= */
+const TL_PAL = [
+  ['erase', '🧽', 'Borrar'], ['#', '🧱', 'Suelo'], ['=', '➖', 'Plataforma'], ['?', '❓', 'Caja sorpresa'], ['B', '📦', 'Caja rompible'], ['I', '👻', 'Bloque invisible (vida)'], ['F', '🌫️', 'Pared falsa'],
+  ['C', '💥', 'Pared agrietada (láser)'], ['!', '❗', 'Interruptor'], ['X', '🟥', 'Bloque rojo'], ['Y', '🟦', 'Bloque azul'], ['D', '🚪', 'Puerta de llaves'],
+  ['o:chip', '🪙', 'Chip'], ['o:gear', '⚙️', 'Engranaje'], ['o:key', '🔑', 'Llave'],
+  ['o:en:patrulla', '🤖', 'Robot patrulla'], ['o:en:dron', '🚁', 'Dron'], ['o:en:erizo', '🦔', 'Erizo'], ['o:en:alien', '👽', 'Alien'], ['o:en:torreta', '🔫', 'Torreta'],
+  ['o:pad', '⏫', 'Saltador'], ['o:spring', '💎', 'Cristal saltarín'], ['o:moverH', '↔️', 'Plataforma móvil ↔'], ['o:moverV', '↕️', 'Plataforma móvil ↕'], ['o:fall', '🪨', 'Roca que se hunde'],
+  ['o:laser', '🔴', 'Láser'], ['o:lavafall', '🌋', 'Cortina de lava'], ['o:geyser', '🔥', 'Géiser'], ['o:jumper', '☄️', 'Bola de magma'], ['o:icicle', '🧊', 'Carámbano'], ['o:snowgun', '⛄', 'Cañón de nieve'],
+  ['o:crystal', '🔮', 'Cristal decorativo'], ['o:cp', '🚩', 'Punto de control'], ['start', '🟢', 'Salida de Lucas'], ['goal', '📡', 'Antena (meta)']];
+const TL_BOX = ['chip', 'escudo', 'laser', 'turbo', 'iman', 'mini', 'estrella', 'vida'], TL_THEMES = [['', 'Estación'], ['ice', 'Cristal'], ['lava', 'Volcán']];
+let edCamY = null, ED = null, edTool = '#', edBox = 'escudo', edCam = 0, edTest = false, edDirty = false, edHover = null, edDrag = null, edUndo = [];
+function tlNew(n) { const w = 120, h = 16, g = []; for (let y = 0; y < h; y++) g.push((y >= h - 2 ? '#' : ' ').repeat(w)); return { n: n || 'Mi nivel', t: '', w, h, g, bx: {}, o: [], s: [3, h - 3], e: [w - 6, h - 3], c: null }; }
+function buildCustom(d) {
+  const B = LB(d.w, d.h), th = d.t || undefined, P = (x, y) => y;
+  d.g.forEach((r, y) => { for (let x = 0; x < d.w; x++) { const c = r[x]; if (!c || c === ' ') continue; if (c === '?') B.box(x, y, (d.bx || {})[x + ',' + y] || 'chip'); else if (c === 'I') B.hid(x, y, 'vida'); else B.set(x, y, c); } });
+  for (const o of d.o) { const x = o.x, y = o.y;
+    if (o.k === 'chip') B.chip(x, y); else if (o.k === 'gear') B.gear(x, y); else if (o.k === 'key') B.key(x, y);
+    else if (o.k.startsWith('en:')) { const t = o.k.slice(3); B.en(t, x, y, t === 'dron' ? { x0: x - 5, x1: x + 5 } : {}); }
+    else if (o.k === 'pad') B.pad(x, y + 1); else if (o.k === 'spring') B.spring(x, y + 1); else if (o.k === 'cp') B.cp(x, y + 1); else if (o.k === 'crystal') B.crystal(x, y + 1, d.t === 'lava' ? 3 : x % 3);
+    else if (o.k === 'moverH') B.mover(x, y, 3, 2.5 * T, 0, 1.1); else if (o.k === 'moverV') B.mover(x, y, 3, 0, 2.5 * T, 1.1); else if (o.k === 'fall') B.fall(x, y, 2);
+    else if (o.k === 'laser') B.laser(x, y, y + 2, (x % 4) * 0.5); else if (o.k === 'lavafall') B.lavafall(x, y, y + 3, (x % 4) * 0.5); else if (o.k === 'geyser') B.geyser(x, y + 1, 4, (x % 5) * 0.6);
+    else if (o.k === 'jumper') B.jumper(x, y + 1, 4, (x % 4) * 0.5); else if (o.k === 'icicle') B.icicle(x, y); else if (o.k === 'snowgun') B.snowgun(x, y + 1, -1, 3); }
+  const keys = d.o.filter(o => o.k === 'key').length;
+  return B.done({ name: d.n, theme: th, ice: d.t === 'ice', time: 300, custom: true, noLava: d.t !== 'lava', spawn: { x: d.s[0] * T + T / 2, y: (d.s[1] + 1) * T }, goal: { x: d.e[0] * T + T / 2, y: (d.e[1] + 1) * T } });
+}
+LEVELS['TALLER'] = () => buildCustom(ED || tlNew());
+// --- guardar: con cuenta en la nube (código de 6 letras/números); sin cuenta, en este dispositivo
+function tlLocal() { try { return JSON.parse(localStorage.getItem('tl_lvls') || '[]'); } catch (e) { return []; } }
+function tlLocalSave(l) { try { localStorage.setItem('tl_lvls', JSON.stringify(l)); } catch (e) {} }
+const tlPack = d => JSON.stringify({ v: 1, t: d.t, w: d.w, h: d.h, g: d.g, bx: d.bx, o: d.o, s: d.s, e: d.e });
+function tlUnpack(c, n, t, datos) { const d = JSON.parse(datos); return Object.assign(tlNew(n), d, { n, c, t: d.t || t || '' }); }
+async function tlSave() {
+  const msg = t => { const m = $('edMsg'); if (m) m.textContent = t; };
+  if (!ED.s || !ED.e) return msg('Pon la salida de Lucas y la antena');
+  if (ACC) { msg('Guardando…'); const r = await api({ a: 'nivGuardar', ses: ACC.ses, c: ED.c, n: ED.n, t: ED.t, datos: tlPack(ED) }); if (!r.ok) return msg('✖ ' + r.error); ED.c = r.c; edDirty = false; msg('✔ Guardado · código ' + r.c); SFX.chip(); }
+  else { const l = tlLocal(); if (!ED.lid) ED.lid = 'L' + Date.now(); const i = l.findIndex(x => x.lid === ED.lid), it = { lid: ED.lid, n: ED.n, t: ED.t, datos: tlPack(ED), f: Date.now() }; if (i >= 0) l[i] = it; else l.unshift(it); tlLocalSave(l); edDirty = false; msg('✔ Guardado en este dispositivo (entra con tu cuenta para tener código y compartirlo)'); SFX.chip(); }
+}
+// --- la lista de niveles del taller
+async function openTaller(info) {
+  closeEditor(true); state = 'title'; show('title', true);
+  const c = $('card'); c.classList.add('tips');
+  c.innerHTML = '<h2>🛠️ TALLER ESPACIAL</h2><div class="tbody" id="tlB"><div style="text-align:center;color:#8ea3e6">Cargando…</div></div><div class="row"><button class="btn" id="tlNew">NUEVO NIVEL</button><button class="btn" id="tlCode">CARGAR CÓDIGO</button><button class="btn" id="tlX">VOLVER</button></div>';
+  show('panel', true); $('tlX').onclick = () => show('panel', false);
+  $('tlNew').onclick = () => { ED = tlNew('Nivel ' + (new Date().toLocaleDateString('es-ES'))); openEditor(); };
+  $('tlCode').onclick = () => tlAskCode();
+  let list = [];
+  if (ACC) { const r = await api({ a: 'nivMios', ses: ACC.ses }); if (r.ok) list = r.niveles.map(x => ({ c: x.c, n: x.n, t: x.t, f: x.f })); }
+  else list = tlLocal().map(x => ({ lid: x.lid, n: x.n, t: x.t, f: x.f }));
+  const B = $('tlB'); if (!B) return;
+  B.innerHTML = (info ? '<div style="text-align:center;color:#35ff8a;margin-bottom:8px">' + info + '</div>' : '') + (ACC ? '' : '<div style="text-align:center;color:#ffd23c;margin-bottom:8px">Sin cuenta tus niveles se guardan solo en este dispositivo. Entra con tu cuenta para tenerlos en la nube con un código y compartirlos.</div>') +
+    (list.length ? list.map((x, i) => '<div class="stat" style="flex-wrap:wrap;gap:6px"><span><b>' + esc(x.n) + '</b> <span style="color:#8ea3e6">' + (TL_THEMES.find(t => t[0] === (x.t || '')) || ['', ''])[1] + (x.c ? ' · código <b style="color:#ffd23c">' + x.c + '</b>' : '') + '</span></span><span style="display:flex;gap:4px;flex-wrap:wrap">' +
+      '<button class="btn" data-tp="' + i + '">JUGAR</button><button class="btn" data-te="' + i + '">EDITAR</button><button class="btn" data-tr="' + i + '">NOMBRE</button><button class="btn" data-td="' + i + '" style="border-color:#ff4a6a">BORRAR</button></span></div>').join('') : '<div style="text-align:center">Aún no tienes niveles. ¡Crea el primero!</div>');
+  const load = async i => { const x = list[i]; if (x.c) { const r = await api({ a: 'nivGet', c: x.c }); if (!r.ok) throw new Error(r.error); return tlUnpack(r.c, r.n, r.t, r.datos); } const l = tlLocal().find(q => q.lid === x.lid); const d = tlUnpack(null, l.n, l.t, l.datos); d.lid = l.lid; return d; };
+  B.querySelectorAll('[data-tp]').forEach(b => b.onclick = async () => { try { ED = await load(+b.dataset.tp); tlPlay(false); } catch (e) { infoPanel('ERROR', esc(e.message)); } });
+  B.querySelectorAll('[data-te]').forEach(b => b.onclick = async () => { try { ED = await load(+b.dataset.te); openEditor(); } catch (e) { infoPanel('ERROR', esc(e.message)); } });
+  B.querySelectorAll('[data-tr]').forEach(b => b.onclick = async () => { const x = list[+b.dataset.tr], n = (prompt('Nuevo nombre del nivel:', x.n) || '').trim().slice(0, 30); if (!n) return;
+    if (x.c) await api({ a: 'nivNombre', ses: ACC.ses, c: x.c, n }); else { const l = tlLocal(), q = l.find(z => z.lid === x.lid); if (q) { q.n = n; tlLocalSave(l); } } openTaller(); });
+  B.querySelectorAll('[data-td]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } const x = list[+b.dataset.td];
+    if (x.c) await api({ a: 'nivBorrar', ses: ACC.ses, c: x.c }); else tlLocalSave(tlLocal().filter(z => z.lid !== x.lid)); openTaller(); });
+}
+function tlAskCode() {
+  const c = $('card'); c.classList.remove('tips');
+  c.innerHTML = '<h2>CARGAR UN NIVEL</h2><div style="color:#cfe0ff;margin:6px 0">Escribe el código de 6 letras y números que te han pasado:</div><input id="tlC" maxlength="6" style="font:900 26px system-ui;letter-spacing:.3em;text-transform:uppercase;width:220px;text-align:center;padding:8px;border-radius:10px;border:2px solid #29e6ff;background:#020a1e;color:#fff"><div id="tlM" style="min-height:1.4em;color:#ffd23c;margin-top:6px"></div><div class="row"><button class="btn" id="tlG">CARGAR</button><button class="btn" id="tlB2">VOLVER</button></div>';
+  show('panel', true); $('tlB2').onclick = () => openTaller(); setTimeout(() => $('tlC').focus(), 100);
+  $('tlG').onclick = async () => { const code = $('tlC').value.trim().toUpperCase(); if (code.length !== 6) { $('tlM').textContent = 'El código tiene 6 caracteres'; return; } $('tlM').textContent = 'Buscando…';
+    if (ACC) { const r = await api({ a: 'nivCopiar', ses: ACC.ses, c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en tu taller con el código ' + r.c); }
+    else { const r = await api({ a: 'nivGet', c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } const l = tlLocal(); l.unshift({ lid: 'L' + Date.now(), n: r.n, t: r.t, datos: r.datos, f: Date.now() }); tlLocalSave(l); SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en este dispositivo'); } };
+}
+function tlPlay(test) { edTest = test; closeEditor(true); curId = 'TALLER'; startGame(); }
+function tallerBack() { show('panel', false); if (edTest) openEditor(); else openTaller(); }
+// --- el editor
+(() => { const st = document.createElement('style'); st.textContent = `
+#ed{position:fixed;inset:0;z-index:30;display:none;pointer-events:none;font-family:system-ui,sans-serif}
+#ed.on{display:block}
+#ed .bar{pointer-events:auto;position:absolute;left:0;right:0;top:0;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left));background:linear-gradient(180deg,rgba(4,6,22,.92),rgba(4,6,22,.6))}
+#ed .bar input,#ed .bar select{font:700 13px system-ui;color:#fff;background:#020a1e;border:1px solid #29e6ff;border-radius:8px;padding:6px 8px}
+#ed .btn{font-size:12px;padding:7px 10px;border-radius:10px}
+#ed .pal{pointer-events:auto;position:absolute;left:0;right:0;bottom:0;display:flex;gap:4px;overflow-x:auto;padding:6px calc(8px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));background:linear-gradient(0deg,rgba(4,6,22,.95),rgba(4,6,22,.7));scrollbar-width:thin}
+#ed .pal button{flex:0 0 auto;width:58px;height:56px;border-radius:10px;border:1px solid rgba(41,230,255,.4);background:rgba(10,20,50,.85);color:#cfe0ff;font:700 9px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.05;text-align:center;padding:2px;cursor:pointer}
+#ed .pal button span{font-size:22px}
+#ed .pal button.on,#ed .pal button.pf{border-color:#35ff8a;box-shadow:0 0 12px rgba(53,255,138,.7);color:#fff}
+#ed .msg{position:absolute;left:50%;transform:translateX(-50%);top:calc(74px + env(safe-area-inset-top));color:#ffd23c;font:800 13px system-ui;text-shadow:0 1px 3px #000;pointer-events:none;text-align:center}
+#ed .scr{pointer-events:auto;position:absolute;left:12px;right:12px;top:calc(50px + env(safe-area-inset-top));accent-color:#29e6ff}`; document.head.appendChild(st);
+  const d = document.createElement('div'); d.id = 'ed'; document.body.appendChild(d); })();
+function openEditor() {
+  show('panel', false); show('title', false); show('top', false); show('touch', false); show('mapUI', false);
+  state = 'edit'; paused = false; curId = 'TALLER'; L = buildLevel(); spawnEnemies(); P = newPlayer(L.spawn.x, L.spawn.y); items = []; shots = []; parts = []; cam.y = L.H * T - VHv; edCam = Math.max(0, Math.min(cam.x, L.W * T - VW)); cam.x = edCam;
+  edCamY = null; const e = $('ed'); e.classList.add('on');
+  e.innerHTML = '<div class="bar"><input id="edN" maxlength="30" value="' + esc(ED.n) + '" style="width:150px"><select id="edT">' + TL_THEMES.map(t => '<option value="' + t[0] + '"' + (t[0] === (ED.t || '') ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select>' +
+    '<span style="color:#8ea3e6;font:700 12px system-ui">Largo</span><button class="btn" id="edW-">−</button><span id="edWv" style="color:#fff;font:800 13px system-ui;min-width:30px;text-align:center">' + ED.w + '</span><button class="btn" id="edW+">+</button>' +
+    '<select id="edBx" title="Premio de la caja sorpresa">' + TL_BOX.map(b => '<option value="' + b + '"' + (b === edBox ? ' selected' : '') + '>❓ ' + POWER_NAME[b === 'chip' ? 'vida' : b].replace('+1 VIDA', b === 'chip' ? 'CHIP' : '+1 VIDA') + '</option>').join('') + '</select>' +
+    '<button class="btn" id="edU">DESHACER</button><button class="btn" id="edMv">✋ MOVER</button><span style="flex:1"></span>' + (ED.c ? '<span style="color:#ffd23c;font:800 13px system-ui">' + ED.c + '</span>' : '') + '<button class="btn" id="edP" style="border-color:#35ff8a">▶ PROBAR</button><button class="btn" id="edS">GUARDAR</button><button class="btn" id="edX">SALIR</button></div>' +
+    '<div class="msg" id="edMsg">' + (TOUCH ? 'Toca para poner · arrastra para pintar · ✋ MOVER para desplazarte' : 'Clic para poner · arrastra para pintar · rueda o flechas para desplazarte · clic derecho borra') + '</div>' +
+    '<input type="range" class="scr" id="edScr" min="0" max="1000" value="0">' +
+    '<div class="pal">' + TL_PAL.map(p => '<button data-t="' + p[0] + '"' + (p[0] === edTool ? ' class="on"' : '') + '><span>' + p[1] + '</span>' + p[2] + '</button>').join('') + '</div>';
+  e.querySelectorAll('.pal button').forEach(b => b.onclick = () => { edTool = b.dataset.t; e.querySelectorAll('.pal button').forEach(q => q.classList.toggle('on', q === b)); $('edMv').classList.remove('on'); tone(900, 900, 0.04, 'square', 0.05); });
+  $('edN').oninput = () => { ED.n = $('edN').value; edDirty = true; };
+  $('edT').onchange = () => { ED.t = $('edT').value; edRebuild(); };
+  $('edBx').onchange = () => { edBox = $('edBx').value; };
+  $('edW-').onclick = () => edResize(-20); $('edW+').onclick = () => edResize(20);
+  $('edU').onclick = () => { const u = edUndo.pop(); if (u) { ED = u; edRebuild(); } };
+  $('edMv').onclick = () => { edTool = 'move'; $('edMv').classList.add('on'); e.querySelectorAll('.pal button').forEach(q => q.classList.remove('on')); };
+  $('edP').onclick = () => { if (!ED.s || !ED.e) { $('edMsg').textContent = 'Pon la salida de Lucas y la antena'; return; } tlPlay(true); };
+  $('edS').onclick = () => tlSave();
+  $('edX').onclick = () => { if (edDirty && $('edX').dataset.ok !== '1') { $('edX').dataset.ok = '1'; $('edX').textContent = '¿SIN GUARDAR?'; return; } openTaller(); };
+  $('edScr').oninput = () => { edCam = $('edScr').value / 1000 * Math.max(0, L.W * T - VW); };
+  if (typeof preIce === 'function' && ED.t === 'ice') preIce(); if (ED.t === 'lava') preLava();
+}
+function closeEditor(keep) { const e = $('ed'); if (e) { e.classList.remove('on'); e.innerHTML = ''; } }
+function edRebuild() { const cx = edCam; curId = 'TALLER'; L = buildLevel(); spawnEnemies(); P = newPlayer(L.spawn.x, L.spawn.y); edCam = cx; edDirty = true; if (ED.t === 'ice') preIce(); if (ED.t === 'lava') preLava(); }
+function edSnap() { edUndo.push(JSON.parse(JSON.stringify(ED))); if (edUndo.length > 40) edUndo.shift(); }
+function edResize(dw) { const w = Math.max(40, Math.min(300, ED.w + dw)); if (w === ED.w) return; edSnap();
+  ED.g = ED.g.map((r, y) => w > ED.w ? r + (y >= ED.h - 2 ? '#' : ' ').repeat(w - ED.w) : r.slice(0, w)); ED.w = w; ED.o = ED.o.filter(o => o.x < w); if (ED.e && ED.e[0] >= w) ED.e = [w - 4, ED.e[1]]; if (ED.s && ED.s[0] >= w) ED.s = [2, ED.s[1]]; $('edWv').textContent = w; edRebuild(); }
+function edPut(tx, ty, erase) {
+  if (tx < 0 || ty < 0 || tx >= ED.w || ty >= ED.h) return;
+  const t = erase ? 'erase' : edTool, setT = c => { ED.g[ty] = ED.g[ty].slice(0, tx) + c + ED.g[ty].slice(tx + 1); }, key = tx + ',' + ty;
+  const cur = ED.g[ty][tx], ob = ED.o.find(o => o.x === tx && o.y === ty);
+  if (t === 'erase') { if (!ob && cur === ' ') return; ED.o = ED.o.filter(o => o !== ob); setT(' '); delete ED.bx[key]; }
+  else if (t === 'start') { ED.s = [tx, ty]; }
+  else if (t === 'goal') { ED.e = [tx, ty]; }
+  else if (t.startsWith('o:')) { const k = t.slice(2); if (ob && ob.k === k) return; ED.o = ED.o.filter(o => o !== ob); ED.o.push({ k, x: tx, y: ty }); if (cur !== ' ' && cur !== '=') setT(' '); }
+  else { if (cur === t && (t !== '?' || ED.bx[key] === edBox)) return; setT(t); if (ob) ED.o = ED.o.filter(o => o !== ob); if (t === '?') ED.bx[key] = edBox; else delete ED.bx[key]; }
+  edRebuild();
+}
+function edCell(e) { const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC; return [Math.floor((x + cam.x) / T), Math.floor((y + cam.y) / T)]; }
+cv.addEventListener('pointerdown', e => { if (state !== 'edit') return; e.preventDefault(); const [tx, ty] = edCell(e);
+  if (edTool === 'move' || e.button === 1) { edDrag = { x: e.clientX, y: e.clientY, cam: edCam, camY: edCamY, pan: true }; return; }
+  edSnap(); edDrag = { erase: e.button === 2, last: tx + ',' + ty }; edPut(tx, ty, e.button === 2); });
+cv.addEventListener('pointermove', e => { if (state !== 'edit') return; const [tx, ty] = edCell(e); edHover = [tx, ty]; if (!edDrag) return;
+  if (edDrag.pan) { edCam = edDrag.cam - (e.clientX - edDrag.x) * DPR / SC; edCamY = edDrag.camY - (e.clientY - edDrag.y) * DPR / SC; return; }
+  const k = tx + ',' + ty; if (k !== edDrag.last && !['start', 'goal'].includes(edTool)) { edDrag.last = k; edPut(tx, ty, edDrag.erase); } });
+addEventListener('pointerup', () => { edDrag = null; });
+cv.addEventListener('contextmenu', e => { if (state === 'edit') e.preventDefault(); });
+cv.addEventListener('wheel', e => { if (state !== 'edit') return; if (e.shiftKey) edCamY += e.deltaY; else edCam += (e.deltaX || e.deltaY) * 1.2; e.preventDefault(); }, { passive: false });
+addEventListener('keydown', e => { if (state !== 'edit' || (e.target && e.target.tagName === 'INPUT')) return; if (e.code === 'ArrowRight') edCam += 96; if (e.code === 'ArrowLeft') edCam -= 96; if (e.code === 'ArrowUp') edCamY -= 96; if (e.code === 'ArrowDown') edCamY += 96; if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { const u = edUndo.pop(); if (u) { ED = u; edRebuild(); } } });
+// mando: cruceta mueve el cursor, ✕ pone, ○ borra, L1/R1 cambian de pieza
+let edPad = { x: 5, y: 10, prev: {} };
+function edPadPoll(gp) { if (state !== 'edit' || !gp) return; const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), P2 = edPad.prev, edge = i => b(i) && !P2[i];
+  if (!ED) return; if (edge(15)) edPad.x++; if (edge(14)) edPad.x--; if (edge(12)) edPad.y--; if (edge(13)) edPad.y++; edPad.x = Math.max(0, Math.min(ED.w - 1, edPad.x)); edPad.y = Math.max(0, Math.min(ED.h - 1, edPad.y)); edHover = [edPad.x, edPad.y];
+  const sx = edPad.x * T - cam.x, sy = edPad.y * T - cam.y; if (sx < 80) edCam -= 96; if (sx > VW - 120) edCam += 96; if (sy < 70) edCamY -= 96; if (sy > VHv - 150) edCamY += 96;
+  if (edge(0)) { edSnap(); edPut(edPad.x, edPad.y, false); } if (edge(1)) { edSnap(); edPut(edPad.x, edPad.y, true); }
+  if (edge(4) || edge(5)) { const i = TL_PAL.findIndex(p => p[0] === edTool), n = (Math.max(0, i) + (edge(5) ? 1 : -1) + TL_PAL.length) % TL_PAL.length; edTool = TL_PAL[n][0]; const bts = $('ed').querySelectorAll('.pal button'); bts.forEach((q, k) => q.classList.toggle('on', k === n)); bts[n] && bts[n].scrollIntoView({ inline: 'center', block: 'nearest' }); }
+  if (edge(3)) tlPlay(true);
+  for (let i = 0; i < 16; i++) P2[i] = b(i); }
+function drawEditorOverlay() {
+  const x0 = Math.floor(cam.x / T), x1 = Math.min(ED.w - 1, Math.ceil((cam.x + VW) / T)), y0 = Math.max(0, Math.floor(cam.y / T)), y1 = Math.min(ED.h - 1, Math.ceil((cam.y + VHv) / T));
+  ctx.save(); ctx.translate(-cam.x, -cam.y);
+  ctx.strokeStyle = 'rgba(127,233,255,.13)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = x0; x <= x1 + 1; x++) { ctx.moveTo(x * T, y0 * T); ctx.lineTo(x * T, (y1 + 1) * T); } for (let y = y0; y <= y1 + 1; y++) { ctx.moveTo(x0 * T, y * T); ctx.lineTo((x1 + 1) * T, y * T); } ctx.stroke();
+  ctx.font = '800 22px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const c = ED.g[y][x];
+    if (c === 'I') { ctx.setLineDash([5, 4]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.strokeRect(x * T + 3, y * T + 3, T - 6, T - 6); ctx.setLineDash([]); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('?', x * T + T / 2, y * T + T / 2 + 1); }
+    if (c === 'F') { ctx.fillStyle = 'rgba(198,60,255,.28)'; ctx.fillRect(x * T, y * T, T, T); } }
+  for (const o of ED.o) if (o.x >= x0 && o.x <= x1 && ['laser', 'lavafall', 'jumper', 'snowgun', 'icicle'].includes(o.k)) { ctx.globalAlpha = 0.6; ctx.fillText(TL_PAL.find(p => p[0] === 'o:' + o.k)[1], o.x * T + T / 2, o.y * T + T / 2); ctx.globalAlpha = 1; }
+  if (ED.s) { ctx.strokeStyle = '#35ff8a'; ctx.lineWidth = 2; ctx.strokeRect(ED.s[0] * T + 1, ED.s[1] * T + 1, T - 2, T - 2); }
+  if (edHover) { const [hx, hy] = edHover; ctx.strokeStyle = '#ffd23c'; ctx.lineWidth = 3; ctx.strokeRect(hx * T + 1.5, hy * T + 1.5, T - 3, T - 3); const p = TL_PAL.find(q => q[0] === edTool); if (p && edTool !== 'move') { ctx.globalAlpha = 0.55; ctx.fillText(p[1], hx * T + T / 2, hy * T + T / 2); ctx.globalAlpha = 1; } }
+  ctx.restore(); ctx.textBaseline = 'alphabetic';
+}
 /* ---------- jugador: código anónimo del dispositivo (para no contar dos veces a la misma persona el mismo día) ---------- */
 let PID = ''; try { PID = localStorage.getItem('tl_id') || ''; if (!PID) { PID = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, '').slice(0, 16); localStorage.setItem('tl_id', PID); } } catch (e) { PID = 'x'; }
 const who = () => ({ id: PID, ses: ACC && ACC.ses || '' });
