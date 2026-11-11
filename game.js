@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.7';
+const VERSION = '0.8';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -24,7 +24,7 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 /* ---------- imagenes ---------- */
 const NAMES = ['lucas-quieto', 'lucas-avanzando', 'lucas-saltando', 'lucas-cayendo', 'lucas-golpeado', 'lucas-celebrando', 'lucas-agachado',
   'enemigo-patrulla', 'enemigo-dron', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien',
-  'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'jefe1', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
+  'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'jefe1', 'mapa1', 'ico-candado', 'ico-estrella', 'ico-estrella-off', 'ico-bandera', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
   'poder-laser', 'poder-escudo', 'poder-turbo', 'poder-iman', 'poder-mini', 'poder-estrella5g'];
 const IMG = {};
 let loaded = 0;
@@ -99,7 +99,7 @@ const BASS = [110, 110, 131, 131, 98, 98, 123, 123], ARP = [0, 3, 7, 12, 7, 3, 7
 function musicTick() {
   if (!AC || !sndOn || state !== 'play' || paused) { mNext = 0; return; }
   if (!mNext || mNext < AC.currentTime) mNext = AC.currentTime + 0.05;
-  const stepDur = 0.17 * (P && P.tStar > 0 ? 0.72 : 1);
+  const stepDur = 0.17 * (P && P.tStar > 0 ? 0.72 : 1) * (G.tleft <= 10 ? 0.6 : G.tleft <= 30 ? 0.74 : 1);
   while (mNext < AC.currentTime + 0.25) {
     const bar = Math.floor(mStep / 8) % 8, root = BASS[bar], dl = mNext - AC.currentTime;
     if (mStep % 4 === 0) tone(root / 2, root / 2, stepDur * 3.2, 'triangle', 0.11, dl);
@@ -251,9 +251,10 @@ function moveEnt(o, dt) {
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /* ---------- estado del juego ---------- */
+const LEVEL_TIME = 180;          // segundos por fase
 let state = 'load', paused = false, P = null, cam = { x: 0, y: 0 }, time = 0, shake = 0;
 let enemies = [], items = [], shots = [], parts = [], pops = [], bumps = [];
-let G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0 };
+let G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0, tleft: LEVEL_TIME };
 const ENEMY = {
   patrulla: { img: 'enemigo-patrulla', h: 66, w: 40, bh: 58, speed: 62, stomp: true, pts: 100 },
   alien: { img: 'enemigo-alien', h: 58, w: 48, bh: 46, speed: 30, stomp: true, pts: 100 },
@@ -276,7 +277,7 @@ function spawnEnemies() {
 function resetLevel(full) {
   L = buildLevel();
   spawnEnemies(); items = []; shots = []; parts = []; pops = []; bumps = [];
-  if (full) G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0 };
+  if (full) G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0, tleft: LEVEL_TIME };
   P = newPlayer(L.spawn.x, L.spawn.y);
   cam.x = 0; cam.y = L.H * T - VHv;
 }
@@ -334,7 +335,7 @@ function die() {
 function respawn() {
   const cp = L.checkpoint.on ? { x: L.checkpoint.x, y: L.checkpoint.y } : L.spawn;
   const keep = L.checkpoint.on;
-  P = newPlayer(cp.x, cp.y); P.inv = 1.5;
+  P = newPlayer(cp.x, cp.y); P.inv = 1.5; G.tleft = LEVEL_TIME;
   spawnEnemies(); shots = []; L.checkpoint.on = keep;
 }
 function updatePlayer(dt) {
@@ -480,6 +481,12 @@ function update(dt) {
   if (state === 'title' || state === 'map') { cam.x = (Math.sin(time * 0.07) * 0.5 + 0.5) * Math.max(0, L.W * T - VW); cam.y = L.H * T - VHv; }
   if (state === 'play') {
     G.clock += dt;
+    if (!P.dead && !P.win) {
+      const before = G.tleft; G.tleft = Math.max(0, G.tleft - dt);
+      if (before > 30 && G.tleft <= 30) { pop(P.x + P.w / 2, P.y - 30, '¡DATE PRISA!', '#ff5a6a'); [880, 660, 880, 660, 880].forEach((f, i) => tone(f, f, 0.12, 'square', 0.1, i * 0.13)); }
+      if (G.tleft <= 10 && G.tleft > 0 && Math.ceil(before) !== Math.ceil(G.tleft)) tone(1245, 1245, 0.08, 'square', 0.1);
+      if (G.tleft <= 0) { pop(P.x + P.w / 2, P.y - 30, '¡SE ACABÓ EL TIEMPO!', '#ff5a6a'); die(); }
+    }
     updatePlayer(dt);
     if (state !== 'play') return;
     updateEnemies(dt);
@@ -724,7 +731,17 @@ function drawHUD() {
   spr(IMG['obj-chip'], pad + 112, 26, 24, 0.5, 0.5); txt(String(G.chips), pad + 130, 26, '#ffe27a');
   for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < G.gears ? 1 : 0.28; spr(IMG['obj-engranaje'], pad + 196 + i * 28, 26, 24, 0.5, 0.5); } ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; txt(String(G.score).padStart(6, '0'), w / 2, 26);
-  ctx.font = '700 12px system-ui,sans-serif'; txt('MUNDO 1-1', w / 2, 46, '#9fb4ff');
+  ctx.font = '700 12px system-ui,sans-serif'; txt('MUNDO ' + curId, w / 2, 46, '#9fb4ff');
+  { // reloj: se pone rojo y late cuando quedan 30 s
+    const tl = Math.ceil(G.tleft), low = tl <= 30, vlow = tl <= 10, tx = Math.min(w - 190, w / 2 + 200), pu = low ? 1 + (vlow ? 0.16 : 0.08) * Math.abs(Math.sin(time * (vlow ? 10 : 5))) : 1, col = low ? '#ff4a5a' : '#fff';
+    ctx.save(); ctx.translate(tx, 30); ctx.scale(pu, pu);
+    if (low) { ctx.shadowColor = '#ff2a3a'; ctx.shadowBlur = 16; }
+    ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.fillStyle = 'rgba(5,7,26,.7)'; ctx.beginPath(); ctx.arc(-44, 0, 12, 0, 6.283); ctx.fill(); ctx.stroke();
+    const an = -1.5708 + 6.283 * (1 - G.tleft / LEVEL_TIME); ctx.beginPath(); ctx.moveTo(-44, 0); ctx.lineTo(-44 + Math.cos(an) * 8, Math.sin(an) * 8); ctx.stroke(); ctx.fillStyle = col; ctx.fillRect(-46.5, -17, 5, 4);
+    ctx.font = '800 22px system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(5,7,26,.85)'; ctx.shadowBlur = 0; ctx.fillText(Math.floor(tl / 60) + ':' + String(tl % 60).padStart(2, '0'), -24.5, 2.5);
+    if (low) { ctx.shadowColor = '#ff2a3a'; ctx.shadowBlur = 14; } ctx.fillStyle = col; ctx.fillText(Math.floor(tl / 60) + ':' + String(tl % 60).padStart(2, '0'), -26, 1);
+    ctx.restore(); ctx.textAlign = 'center';
+  }
   // poderes activos
   const p = P, act = [];
   if (p.power === 'laser') act.push(['poder-laser', 0]); if (p.power === 'mini') act.push(['poder-mini', 0]); if (p.shield) act.push(['poder-escudo', 0]);
@@ -737,10 +754,11 @@ function render() {
   ctx.setTransform(SC, 0, 0, SC, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!L) { ctx.fillStyle = '#070a1e'; ctx.fillRect(0, 0, VW, VHv); return; }
-  drawBackground(); if (state === 'map') drawMap(); else drawWorld();
+  if (state === 'map') drawMap(); else { drawBackground(); drawWorld(); }
   if (state === 'play' || state === 'done' || state === 'over') drawHUD();
   const vg = ctx.createRadialGradient(VW / 2, VHv / 2, VHv * 0.45, VW / 2, VHv / 2, Math.max(VW, VHv) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,10,.45)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VHv);
+  if (state === 'play' && G.tleft <= 30 && !P.win) { const a = (G.tleft <= 10 ? 0.34 : 0.16) * (0.5 + 0.5 * Math.sin(time * (G.tleft <= 10 ? 10 : 5))); const rg = ctx.createRadialGradient(VW / 2, VHv / 2, VHv * 0.42, VW / 2, VHv / 2, Math.max(VW, VHv) * 0.72); rg.addColorStop(0, 'rgba(255,30,50,0)'); rg.addColorStop(1, 'rgba(255,30,50,' + a + ')'); ctx.fillStyle = rg; ctx.fillRect(0, 0, VW, VHv); }
   if (state === 'load') { ctx.fillStyle = '#9fb4ff'; ctx.font = '700 16px system-ui'; ctx.textAlign = 'center'; ctx.fillText('Cargando… ' + Math.round(loaded / NAMES.length * 100) + '%', VW / 2, VHv / 2); }
 }
 let last = 0, acc = 0;
@@ -810,12 +828,13 @@ function toMenu() { setTimeout(updApply, 300); paused = false; state = 'title'; 
 function levelDone() {
   state = 'done'; show('touch', false);
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
-  const secs = Math.floor(G.clock), bonus = Math.max(0, 300 - secs) * 10; G.score += bonus;
+  const secs = Math.floor(G.clock), bonus = Math.ceil(G.tleft) * 10; G.score += bonus;
   const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId];
   PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score) }; saveProg();
+  { const ci = MAP.findIndex(n => n.id === curId); justOpened = first ? MAP.findIndex((n, k) => k > 0 && !n.bonus && mapPrev(k) === ci) : -1; }
   $('card').innerHTML = '<h2>¡FASE SUPERADA!</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
     '<div class="stat"><span>Chips</span><b>' + G.chips + '</b></div><div class="stat"><span>Engranajes</span><b>' + G.gears + ' / 3</b></div>' +
-    '<div class="stat"><span>Tiempo</span><b>' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + '</b></div>' +
+    '<div class="stat"><span>Tiempo</span><b>' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + '</b></div><div class="stat"><span>Bonus por tiempo sobrante</span><b>+' + bonus + '</b></div>' +
     '<div class="stat"><span>Puntos</span><b>' + G.score + (G.score > old.best ? ' · ¡RÉCORD!' : '') + '</b></div>' +
     '<div class="small">★ terminar · ★ los 3 engranajes · ★ sin perder vidas</div>' +
     '<div class="row"><button class="btn" id="pm">CONTINUAR</button><button class="btn" id="pr">REPETIR</button></div>';
@@ -828,34 +847,44 @@ function gameOver() {
   show('panel', true); $('pr').onclick = startGame; $('pm').onclick = () => toMap(false);
 }
 
-/* ---------- mapa del mundo 1 ---------- */
+/* ---------- mapa del mundo 1 (ilustración + camino de energía) ---------- */
+// x, y y rx van en fracciones del dibujo del mapa; way = puntos del tubo desde la fase anterior
 const MAP = [
-  { id: '1-1', n: '1', name: 'MUELLE DE CARGA', x: 0.09, y: 0.60, built: true },
-  { id: '1-2', n: '2', name: 'PASILLOS DE SERVICIO', x: 0.22, y: 0.42 },
-  { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.35, y: 0.60 },
-  { id: '1-4', n: '4', name: 'INVERNADERO ORBITAL', x: 0.48, y: 0.42 },
-  { id: '1-5', n: '5', name: 'TORRE DE ANTENAS', x: 0.61, y: 0.60 },
-  { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.80, y: 0.56, boss: true, prev: 4 },
-  { id: '1-B', n: '★', name: 'FASE SECRETA', x: 0.48, y: 0.20, bonus: true, prev: 3 }
+  { id: '1-1', n: '1', name: 'MUELLE DE CARGA', x: 0.104, y: 0.513, rx: 0.042, built: true },
+  { id: '1-2', n: '2', name: 'PASILLOS DE SERVICIO', x: 0.348, y: 0.668, rx: 0.042, way: [[0.16, 0.47], [0.20, 0.477], [0.23, 0.52], [0.26, 0.60], [0.29, 0.655]] },
+  { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.498, y: 0.518, rx: 0.042, way: [[0.39, 0.675], [0.42, 0.635], [0.45, 0.60], [0.47, 0.57]] },
+  { id: '1-4', n: '4', name: 'TORRE DE ANTENAS', x: 0.651, y: 0.369, rx: 0.036, gold: true, way: [[0.53, 0.46], [0.56, 0.42], [0.59, 0.385], [0.62, 0.37]] },
+  { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.871, y: 0.395, rx: 0.058, boss: true, way: [[0.685, 0.335], [0.71, 0.305], [0.74, 0.295], [0.78, 0.31], [0.81, 0.335], [0.84, 0.37]] },
+  { id: '1-B', n: '★', name: 'FASE SECRETA', x: 0.618, y: 0.19, rx: 0.027, bonus: true, prev: 3, way: [[0.625, 0.33], [0.603, 0.29], [0.598, 0.24], [0.595, 0.21]] }
 ];
-let PROG = {}, curId = '1-1', mapSel = 0, mapLx = 0, mapLy = 0, mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 };
+let PROG = {}, curId = '1-1', mapSel = 0, mapAt = 0, mapL = { x: MAP[0].x, y: MAP[0].y }, mapRoute = [], mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 }, mapUnl = null, mapParts = [], justOpened = -1;
 try { PROG = JSON.parse(localStorage.getItem('tl_prog') || '{}') || {}; const os = +localStorage.getItem('tl_stars_1_1') || 0; if (os && !PROG['1-1']) PROG['1-1'] = { stars: os, best: +localStorage.getItem('tl_best_1_1') || 0 }; } catch (e) { PROG = {}; }
 function saveProg() { try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); } catch (e) {} }
 const mapPrev = i => MAP[i].prev !== undefined ? MAP[i].prev : i - 1;
 const mapOpen = i => i === 0 || !!PROG[MAP[mapPrev(i)].id];
-const mapR = n => n.boss ? 34 : 26;
-const mapXY = i => [MAP[i].x * VW, MAP[i].y * VHv];
+function mapT() { const im = IMG.mapa1, iw = im && im.naturalWidth || 16, ih = im && im.naturalHeight || 9, sc = Math.max(VW / iw, VHv / ih); return { sc, w: iw * sc, h: ih * sc, ox: (VW - iw * sc) / 2, oy: (VHv - ih * sc) * 0.4 }; }
+const mapPt = (t, fx, fy) => [t.ox + fx * t.w, t.oy + fy * t.h];
+function mapPath(a, b) {            // puntos (en fracciones) para ir de la fase a a la fase b siguiendo el tubo
+  const up = i => { const l = [i]; while (i > 0) { i = mapPrev(i); l.push(i); } return l; };
+  const ua = up(a), ub = up(b), lca = ua.find(x => ub.includes(x)), pts = [];
+  for (const c of ua) { if (c === lca) break; pts.push(...MAP[c].way.slice().reverse()); const q = MAP[mapPrev(c)]; pts.push([q.x, q.y]); }
+  for (const d of ub.slice(0, ub.indexOf(lca)).reverse()) { pts.push(...MAP[d].way); pts.push([MAP[d].x, MAP[d].y]); }
+  return pts;
+}
+function mapGo(i) { mapRoute = mapPath(mapAt, i); mapSel = i; mapInfo(); }
 function openMap() {
   audio(); startMusic(); goFull();
-  state = 'map'; paused = false;
-  const [x, y] = mapXY(mapSel); mapLx = x; mapLy = y - mapR(MAP[mapSel]) - 8;
+  state = 'map'; paused = false; mapRoute = []; mapAt = mapSel; mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y };
   show('title', false); show('panel', false); show('top', false); show('touch', false); show('mapUI', true); mapInfo(); checkRot();
 }
 function toMap(advance) {
   paused = false; state = 'map';
   show('panel', false); show('top', false); show('touch', false); show('mapUI', true);
-  if (advance) { const i = MAP.findIndex(n => n.id === curId); if (i >= 0 && i + 1 < MAP.length && !MAP[i + 1].bonus && mapOpen(i + 1)) { mapSel = i + 1; SFX.check(); } }
-  mapInfo(); checkRot(); setTimeout(updApply, 1500);
+  const i = MAP.findIndex(n => n.id === curId);
+  if (advance && justOpened >= 0) { mapUnl = { i: justOpened, t: 0, snd: false }; }
+  else if (advance && i >= 0 && i < 4 && mapOpen(i + 1)) mapGo(i + 1);
+  justOpened = -1;
+  mapInfo(); checkRot(); setTimeout(updApply, 4000);
 }
 function mapInfo() {
   const n = MAP[mapSel], pr = PROG[n.id];
@@ -863,75 +892,116 @@ function mapInfo() {
   $('mSub').innerHTML = !n.built ? 'PRÓXIMAMENTE' : pr ? 'Mejor: ' + pr.best + ' puntos · <span class="mst">' + '★'.repeat(pr.stars) + '</span><span class="mso">' + '★'.repeat(3 - pr.stars) + '</span>' : '¡Fase nueva! Consigue las 3 estrellas';
   $('mPlay').disabled = !n.built;
 }
+function mapDeny(i) { mapShake = { i, t: 0.45 }; mapMsg = { txt: 'BLOQUEADA · supera antes la fase anterior', t: 2.2 }; SFX.bump(); }
 function mapSelect(i) {
-  if (i < 0 || i >= MAP.length) return;
-  if (!mapOpen(i)) { mapShake = { i, t: 0.4 }; mapMsg = { txt: 'BLOQUEADA · supera antes la fase anterior', t: 2.2 }; SFX.bump(); return; }
-  if (i === mapSel) { mapPlay(); return; }
-  mapSel = i; SFX.chip(); mapInfo();
+  if (i < 0 || i >= MAP.length || mapUnl) return;
+  if (!mapOpen(i)) return mapDeny(i);
+  if (i === mapSel) { if (!mapRoute.length) mapPlay(); return; }
+  SFX.chip(); mapGo(i);
 }
 function mapMove(d) {
+  if (mapUnl) return;
   let i = mapSel;
-  if (d === 2) i = MAP[mapSel].id === '1-4' ? 6 : mapSel; else if (d === -2) i = MAP[mapSel].bonus ? 3 : mapSel;
-  else { if (MAP[i].bonus) i = 3; i += d; if (i > 5) i = 5; }
-  if (i === mapSel || i < 0) return;
-  if (!mapOpen(i)) { mapShake = { i, t: 0.4 }; mapMsg = { txt: 'BLOQUEADA · supera antes la fase anterior', t: 2.2 }; SFX.bump(); return; }
-  mapSel = i; SFX.chip(); mapInfo();
+  if (d === 2) { if (mapSel !== 3) return; i = 5; } else if (d === -2) { if (mapSel !== 5) return; i = 3; }
+  else { i = mapSel === 5 ? 3 : mapSel + d; if (i > 4 || i < 0) return; }
+  if (!mapOpen(i)) return mapDeny(i);
+  SFX.chip(); mapGo(i);
 }
-function mapPlay() { const n = MAP[mapSel]; if (!n.built) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; } curId = n.id; startGame(); }
+function mapPlay() { if (mapUnl || mapRoute.length) return; const n = MAP[mapSel]; if (!n.built) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; } curId = n.id; startGame(); }
 function mapUpdate(dt) {
-  const [x, y] = mapXY(mapSel), ty = y - mapR(MAP[mapSel]) - 8, dx = x - mapLx, dy = ty - mapLy, d = Math.hypot(dx, dy);
-  if (d > 1) { const v = Math.min(d, Math.max(240, d * 5) * dt); mapLx += dx / d * v; mapLy += dy / d * v; if (Math.abs(dx) > 2) mapFace = dx > 0 ? 1 : -1; }
+  const t = mapT();
+  if (mapUnl) {
+    if (!mapUnl.snd) { mapUnl.snd = true; tone(220, 1320, 1.5, 'sawtooth', 0.05); tone(330, 1980, 1.5, 'sine', 0.08); }
+    mapUnl.t += dt / 1.6;
+    if (mapUnl.t >= 1) { const i = mapUnl.i; mapUnl = null; SFX.life(); const [x, y] = mapPt(t, MAP[i].x, MAP[i].y); for (let k = 0; k < 34; k++) { const a = Math.random() * 6.283, v = 60 + Math.random() * 200; mapParts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - 60, life: 0.9, max: 0.9, col: k % 2 ? '#7fe9ff' : '#fff', size: 2 + Math.random() * 2.5 }); } if (!MAP[i].bonus) mapGo(i); }
+  }
+  let step = 330 * dt;
+  while (mapRoute.length && step > 0) {
+    const [tx, ty] = mapPt(t, mapRoute[0][0], mapRoute[0][1]), [lx, ly] = mapPt(t, mapL.x, mapL.y), dx = tx - lx, dy = ty - ly, d = Math.hypot(dx, dy);
+    if (Math.abs(dx) > 1) mapFace = dx > 0 ? 1 : -1;
+    if (d <= step) { mapL = { x: mapRoute[0][0], y: mapRoute[0][1] }; mapRoute.shift(); step -= d; if (!mapRoute.length) { mapAt = mapSel; SFX.stomp(); } }
+    else { mapL = { x: mapL.x + dx / d * step / t.w, y: mapL.y + dy / d * step / t.h }; step = 0; }
+  }
+  if (mapRoute.length) { const [lx, ly] = mapPt(t, mapL.x, mapL.y); for (let k = 0; k < 2; k++) mapParts.push({ x: lx + (Math.random() - 0.5) * 14, y: ly + (Math.random() - 0.5) * 8, vx: -mapFace * (20 + Math.random() * 50), vy: 10 + Math.random() * 40, life: 0.5, max: 0.5, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffd08a', size: 1.5 + Math.random() * 2.2 }); }
+  for (const q of mapParts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 120 * dt; }
+  mapParts = mapParts.filter(q => q.life > 0);
   mapShake.t = Math.max(0, mapShake.t - dt); mapMsg.t = Math.max(0, mapMsg.t - dt);
 }
+function polyAt(pts, f) {            // punto a la fracción f (0..1) de una línea quebrada
+  let tot = 0; const ls = []; for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); ls.push(l); tot += l; }
+  let d = f * tot; for (let i = 0; i < ls.length; i++) { if (d <= ls[i] || i === ls.length - 1) { const k = ls[i] ? Math.min(1, d / ls[i]) : 0; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k, i]; } d -= ls[i]; }
+  return [pts[0][0], pts[0][1], 0];
+}
 function drawMap() {
-  ctx.fillStyle = 'rgba(4,6,22,.5)'; ctx.fillRect(0, 0, VW, VHv);
-  // cabecera
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.font = '800 14px system-ui,sans-serif'; ctx.fillStyle = '#7fe9ff'; ctx.fillText('MUNDO 1', 22, 34);
-  ctx.font = '800 26px system-ui,sans-serif'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 14; ctx.fillStyle = '#fff'; ctx.fillText('ESTACIÓN ORBITAL', 22, 62); ctx.shadowBlur = 0;
-  const done = MAP.filter(n => PROG[n.id]).length, stars = MAP.reduce((a, n) => a + (PROG[n.id] ? PROG[n.id].stars : 0), 0);
-  ctx.font = '700 13px system-ui,sans-serif'; ctx.fillStyle = '#9fb4ff'; ctx.fillText(done + ' / ' + MAP.length + ' fases', 22, 84); ctx.fillStyle = '#ffd23c'; ctx.fillText('★ ' + stars + ' / ' + MAP.length * 3, 110, 84);
-  // caminos
-  ctx.lineCap = 'round';
+  const t = mapT(), u = t.w, im = IMG.mapa1;
+  if (im && im.naturalWidth) ctx.drawImage(im, t.ox, t.oy, t.w, t.h); else drawBackground();
+  // tramos del tubo: apagados si la fase está bloqueada, con pulsos de energía si está abierta
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (let i = 1; i < MAP.length; i++) {
-    const [x0, y0] = mapXY(mapPrev(i)), [x1, y1] = mapXY(i), open = mapOpen(i), mx = (x0 + x1) / 2, my = (y0 + y1) / 2 - (MAP[i].bonus ? 0 : 18);
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(mx, my, x1, y1);
-    ctx.setLineDash([2, 13]); ctx.lineWidth = 6;
-    if (open) { ctx.lineDashOffset = -time * 22; ctx.strokeStyle = '#29e6ff'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 12; }
-    else { ctx.lineDashOffset = 0; ctx.strokeStyle = 'rgba(130,145,200,.38)'; ctx.shadowBlur = 0; }
-    ctx.stroke();
+    const n = MAP[i], open = mapOpen(i), unl = mapUnl && mapUnl.i === i ? mapUnl.t : (open ? 1 : 0);
+    const way = n.way.map(p => mapPt(t, p[0], p[1])), a = mapPt(t, MAP[mapPrev(i)].x, MAP[mapPrev(i)].y), b = mapPt(t, n.x, n.y), full = [a, ...way, b];
+    if (unl < 1) {
+      const [sx, sy, si] = polyAt(way, unl);
+      ctx.beginPath(); ctx.moveTo(sx, sy); for (let k = si + 1; k < way.length; k++) ctx.lineTo(way[k][0], way[k][1]);
+      ctx.lineWidth = (n.bonus ? 0.022 : 0.045) * u; ctx.strokeStyle = 'rgba(5,7,26,.7)'; ctx.stroke();
+      if (unl > 0) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 0.05 * u); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.3, 'rgba(120,235,255,.7)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, 0.05 * u, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+        if (Math.random() < 0.8) mapParts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 160, vy: (Math.random() - 0.5) * 160, life: 0.5, max: 0.5, col: '#bff6ff', size: 2 + Math.random() * 2 }); }
+    }
+    if (unl >= 1) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 3; k++) { const [x, y] = polyAt(full, (time * 0.22 + k / 3 + i * 0.13) % 1), r = (n.bonus ? 0.012 : 0.02) * u, g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.35, n.bonus ? 'rgba(255,215,90,.6)' : 'rgba(140,240,255,.6)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
+    }
   }
-  ctx.setLineDash([]); ctx.shadowBlur = 0;
-  // fases
+  // plataformas de cada fase
   for (let i = 0; i < MAP.length; i++) {
-    const n = MAP[i], r = mapR(n), open = mapOpen(i), dn = PROG[n.id], sel = i === mapSel, pu = 0.5 + 0.5 * Math.sin(time * 4 + i);
-    let [x, y] = mapXY(i); if (mapShake.i === i && mapShake.t > 0) x += Math.sin(mapShake.t * 60) * 5;
-    const col = dn ? '53,255,138' : n.boss ? '255,80,90' : n.bonus ? '255,210,60' : '41,230,255';
-    if (open) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, r * 0.6, x, y, r * 2.3); g.addColorStop(0, 'rgba(' + col + ',' + (0.3 + 0.18 * pu) + ')'); g.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = g; ctx.fillRect(x - r * 2.3, y - r * 2.3, r * 4.6, r * 4.6); ctx.globalCompositeOperation = 'source-over'; }
-    const dg = ctx.createRadialGradient(x - r * 0.3, y - r * 0.4, 2, x, y, r); dg.addColorStop(0, open ? '#2a3d8f' : '#34384f'); dg.addColorStop(1, open ? '#0a0f2e' : '#15172a');
-    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
-    ctx.lineWidth = 4; ctx.strokeStyle = open ? 'rgb(' + col + ')' : '#59607f'; ctx.stroke();
-    ctx.lineWidth = 1.5; ctx.strokeStyle = open ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(x, y, r - 6, 0, 6.283); ctx.stroke();
-    if (sel) { ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,' + (0.55 + 0.4 * pu) + ')'; ctx.beginPath(); ctx.arc(x, y, r + 7 + pu * 3, 0, 6.283); ctx.stroke(); }
-    if (n.boss) { ctx.globalAlpha = open ? 1 : 0.4; spr(IMG.jefe1, x, y + 2, r * 1.25, 0.5, 0.5); ctx.globalAlpha = 1; }
-    if (!open) { const ly = n.boss ? y + r - 6 : y, s = n.boss ? 0.8 : 1; // candado
-      ctx.fillStyle = '#9aa2c4'; ctx.fillRect(x - 9 * s, ly - 2 * s, 18 * s, 14 * s); ctx.lineWidth = 3.4 * s; ctx.strokeStyle = '#9aa2c4'; ctx.beginPath(); ctx.arc(x, ly - 3 * s, 6 * s, Math.PI, 0); ctx.stroke(); ctx.fillStyle = '#1a1d33'; ctx.beginPath(); ctx.arc(x, ly + 5 * s, 2.4 * s, 0, 6.283); ctx.fill(); }
-    else if (!n.boss) { ctx.font = '800 ' + (n.bonus ? 26 : 24) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = n.bonus ? '#ffd23c' : '#fff'; ctx.fillText(n.n, x, y + 1); }
-    if (dn) { ctx.font = '700 14px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let k = 0; k < 3; k++) { ctx.fillStyle = k < dn.stars ? '#ffd23c' : '#3a4270'; ctx.fillText('★', x - 15 + k * 15, y + r + 15); } }
-    else if (open && !n.built) { ctx.font = '700 9px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#9fb4ff'; ctx.fillText('PRONTO', x, y + r + 13); }
+    const n = MAP[i], open = mapOpen(i) && !(mapUnl && mapUnl.i === i), dn = PROG[n.id], sel = i === mapSel, pu = 0.5 + 0.5 * Math.sin(time * 4 + i), rx = n.rx * u, ry = rx * 0.36;
+    let [x, y] = mapPt(t, n.x, n.y); if (mapShake.i === i && mapShake.t > 0) x += Math.sin(mapShake.t * 60) * 5;
+    const col = dn ? '53,255,138' : n.boss ? '255,70,80' : n.gold || n.bonus ? '255,205,70' : '41,230,255';
+    if (!open) {
+      const fade = mapUnl && mapUnl.i === i ? 1 - Math.max(0, mapUnl.t - 0.75) * 4 : 1;
+      ctx.fillStyle = 'rgba(5,7,26,' + 0.66 * fade + ')'; ctx.beginPath(); ctx.ellipse(x, y + ry * 0.5, rx * 1.3, ry * 2.1, 0, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = fade; spr(IMG['ico-candado'], x, y + ry * 0.9, rx * 1.05, 0.5, 1); ctx.globalAlpha = 1;
+      continue;
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = 3 + pu * 2; ctx.strokeStyle = 'rgba(' + col + ',' + (0.55 + 0.35 * pu) + ')'; ctx.shadowColor = 'rgb(' + col + ')'; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.ellipse(x, y, rx * 0.86, ry * 0.86, 0, 0, 6.283); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = 'source-over';
+    if (sel) { ctx.setLineDash([rx * 0.22, rx * 0.16]); ctx.lineDashOffset = -time * 40; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 + 0.3 * pu) + ')'; ctx.beginPath(); ctx.ellipse(x, y, rx * 1.18, ry * 1.25, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
+    if (n.boss) spr(IMG.jefe1, x, y + ry * 0.4, rx * 1.2, 0.5, 1);
+    else { ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.62); ctx.font = '900 ' + Math.round(rx * 0.82) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = rx * 0.1; ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.strokeText(n.n, 0, rx * 0.06); ctx.fillStyle = n.gold || n.bonus ? '#6a3d00' : '#0d1a55'; ctx.fillText(n.n, 0, rx * 0.06); ctx.restore(); }
+    if (dn) {
+      spr(IMG['ico-bandera'], x + rx * 0.78, y - ry * 0.1, rx * 0.95, 0.12, 1, false, Math.sin(time * 3 + i) * 0.05);
+      for (let k = 0; k < 3; k++) spr(IMG[k < dn.stars ? 'ico-estrella' : 'ico-estrella-off'], x + (k - 1) * rx * 0.5, y + rx * 0.82 + (k === 1 ? rx * 0.06 : 0), rx * 0.46, 0.5, 0.5);
+    } else if (!n.built) { ctx.font = '800 ' + Math.max(9, Math.round(rx * 0.3)) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#05071a'; ctx.fillText('PRONTO', x + 1, y + rx * 0.82 + 1); ctx.fillStyle = '#cfe0ff'; ctx.fillText('PRONTO', x, y + rx * 0.82); }
   }
-  // Lucas sobre la fase elegida
-  const [tx, ty] = mapXY(mapSel), moving = Math.hypot(tx - mapLx, ty - mapR(MAP[mapSel]) - 8 - mapLy) > 3, pose = moving ? 'lucas-avanzando' : 'lucas-quieto', im = IMG[pose];
-  const k = 74 / 480, by = mapLy + Math.sin(time * 3) * 3, fs = mapFace;
-  CAN[pose].forEach((o, i) => flame(mapLx + fs * o[0] * k, by - o[1] * k - 2, (moving ? 22 : 11) * (i === 1 ? 1.1 : 1), 7, i + 1));
-  spr(im, mapLx, by, (im.naturalHeight || 240) * KS * k, ANCH[pose], 1, fs < 0, moving ? 0.06 * fs : 0);
-  if (mapMsg.t > 0) { ctx.globalAlpha = Math.min(1, mapMsg.t * 2); ctx.font = '800 15px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(mapMsg.txt).width + 28; ctx.fillStyle = 'rgba(40,10,20,.85)'; ctx.fillRect(VW / 2 - w / 2, VHv * 0.31 - 16, w, 32); ctx.strokeStyle = '#ff5a6a'; ctx.lineWidth = 2; ctx.strokeRect(VW / 2 - w / 2, VHv * 0.31 - 16, w, 32); ctx.fillStyle = '#ffd0d6'; ctx.fillText(mapMsg.txt, VW / 2, VHv * 0.31); ctx.globalAlpha = 1; }
+  // chispas y Lucas recorriendo el tubo
+  ctx.globalCompositeOperation = 'lighter';
+  for (const q of mapParts) { ctx.globalAlpha = Math.max(0, q.life / q.max); ctx.fillStyle = q.col; ctx.beginPath(); ctx.arc(q.x, q.y, q.size, 0, 6.283); ctx.fill(); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  const moving = mapRoute.length > 0, pose = moving ? 'lucas-avanzando' : 'lucas-quieto', lim = IMG[pose], [lx, ly0] = mapPt(t, mapL.x, mapL.y);
+  const hL = Math.max(58, 0.074 * u), k = hL / 480, by = ly0 + 0.004 * u - (moving ? 6 : 3) + Math.sin(time * 3) * 2.5, fs = mapFace;
+  ctx.fillStyle = 'rgba(0,0,10,.3)'; ctx.beginPath(); ctx.ellipse(lx, ly0 + 0.004 * u, hL * 0.26, hL * 0.07, 0, 0, 6.283); ctx.fill();
+  CAN[pose].forEach((o, i) => flame(lx + fs * o[0] * k, by - o[1] * k - 2, (moving ? 0.34 : 0.15) * hL * (i === 1 ? 1.1 : 1), hL * 0.09, i + 1));
+  spr(lim, lx, by, (lim.naturalHeight || 240) * KS * k, ANCH[pose], 1, fs < 0, moving ? 0.07 * fs : 0);
+  // cabecera y zona de botones
+  const hg = ctx.createLinearGradient(0, 0, 0, 110); hg.addColorStop(0, 'rgba(4,6,22,.7)'); hg.addColorStop(1, 'rgba(4,6,22,0)'); ctx.fillStyle = hg; ctx.fillRect(0, 0, VW, 110);
+  const bg = ctx.createRadialGradient(VW - 150, VHv + 20, 30, VW - 150, VHv + 20, 420); bg.addColorStop(0, 'rgba(4,6,22,.92)'); bg.addColorStop(0.5, 'rgba(4,6,22,.7)'); bg.addColorStop(1, 'rgba(4,6,22,0)'); ctx.fillStyle = bg; ctx.fillRect(VW - 570, VHv - 400, 570, 400);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = '800 14px system-ui,sans-serif'; ctx.fillStyle = '#7fe9ff'; ctx.fillText('MUNDO 1', 22, 32);
+  ctx.font = '800 26px system-ui,sans-serif'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 14; ctx.fillStyle = '#fff'; ctx.fillText('ESTACIÓN ORBITAL', 22, 60); ctx.shadowBlur = 0;
+  const done = MAP.filter(n => PROG[n.id]).length, stars = MAP.reduce((a, n) => a + (PROG[n.id] ? PROG[n.id].stars : 0), 0);
+  ctx.font = '700 13px system-ui,sans-serif'; ctx.fillStyle = '#cfe0ff'; ctx.fillText(done + ' / ' + MAP.length + ' fases', 22, 82);
+  spr(IMG['ico-estrella'], 112, 77, 16, 0.5, 0.5); ctx.fillStyle = '#ffd23c'; ctx.fillText(stars + ' / ' + MAP.length * 3, 124, 82);
+  if (mapMsg.t > 0) { ctx.globalAlpha = Math.min(1, mapMsg.t * 2); ctx.font = '800 15px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(mapMsg.txt).width + 28, my = VHv * 0.16; ctx.fillStyle = 'rgba(40,10,20,.9)'; ctx.fillRect(VW / 2 - w / 2, my - 16, w, 32); ctx.strokeStyle = '#ff5a6a'; ctx.lineWidth = 2; ctx.strokeRect(VW / 2 - w / 2, my - 16, w, 32); ctx.fillStyle = '#ffd0d6'; ctx.fillText(mapMsg.txt, VW / 2, my); ctx.globalAlpha = 1; }
   ctx.textBaseline = 'alphabetic';
 }
 cv.addEventListener('pointerdown', e => {
   if (state !== 'map') return;
-  const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC;
-  for (let i = 0; i < MAP.length; i++) { const [nx, ny] = mapXY(i); if (Math.hypot(x - nx, y - ny) < mapR(MAP[i]) + 16) { mapSelect(i); return; } }
+  const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC, t = mapT();
+  for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.w; if (((x - nx) / (rx * 1.3)) ** 2 + ((y - ny) / (rx * 0.95)) ** 2 < 1) { mapSelect(i); return; } }
 });
 $('mPlay').onclick = mapPlay; $('mBack').onclick = toMenu;
 $('btnPlay').onclick = openMap;
