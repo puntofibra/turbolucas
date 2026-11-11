@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.47';
+const VERSION = '0.48';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -187,6 +187,7 @@ function pollPad() {
   const gp = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).find(g => g);
   if (!gp) return;
   const b = i => gp.buttons[i] && gp.buttons[i].pressed, ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+  padNames(gp);
   if (CON.on) { padConsole(gp, b, ax, ay); return; }
   if (b(3) && !padPrev.tri && paused && $('pauseT')) pauseTapOn(true);
   padPrev.tri = b(3);
@@ -1233,6 +1234,7 @@ function spawnEnemies() {
   });
 }
 function resetLevel(full) {
+  if (full) tmpOff();
   L = buildLevel(); if (L.theme === 'ice') preIce(); if (L.theme === 'lava') preLava(); if (L.meteors && L.meteors.style !== 'comet') xi('meteoro');
   spawnEnemies(); items = []; shots = []; parts = []; pops = []; bumps = [];
   if (full) G = { lives: 3, chips: 0, score: 0, gears: 0, deaths: 0, clock: 0, tleft: L.time };
@@ -1306,6 +1308,7 @@ function respawn() {
   for (const ic of L.icicles) { ic.st = 0; ic.x = ic.x0; ic.y = ic.y0; }
 }
 function updatePlayer(dt) {
+  if (!G.tr && cheatOn()) G.tr = true;
   if (P.kitMsg) { P.kitMsg = false; pop(P.x + P.w / 2, P.y - 50, '¡ESCUDO, LÁSER Y VUELO PARA EL JEFE!', '#7fe9ff'); SFX.life(); }
   const p = P;
   if (p.dead) {
@@ -2345,7 +2348,7 @@ function levelDone() {
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
   const secs = Math.floor(G.clock), bonus = Math.ceil(G.tleft) * 10; G.score += bonus;
   const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId]; bossBeatBefore = !first;
-  PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score) }; saveProg();
+  PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score), rb: G.tr ? old.rb || 0 : Math.max(old.rb || 0, G.score) }; saveProg(); rankSend();
   { const ci = MAP.findIndex(n => n.id === curId); justOpened = first ? MAP.findIndex((n, k) => k > 0 && !n.bonus && mapPrev(k) === ci) : -1; }
   $('card').innerHTML = '<h2>' + (/-J$/.test(curId) ? '¡PLANETA ' + curId[0] + ' COMPLETADO!' : '¡FASE SUPERADA!') + '</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
     '<div class="stat"><span>Chips</span><b>' + G.chips + '</b></div><div class="stat"><span>Engranajes</span><b>' + G.gears + ' / 3</b></div>' +
@@ -2542,6 +2545,7 @@ function openMap() {
   show('title', false); show('panel', false); show('top', false); show('touch', false); show('mapUI', true); mapInfo(); checkRot();
 }
 function toMap(advance) {
+  tmpOff();
   paused = false; state = 'map';
   show('panel', false); show('top', false); show('touch', false); show('mapUI', true);
   const i = MAP.findIndex(n => n.id === curId);
@@ -2684,10 +2688,12 @@ function drawMap() {
   ctx.textBaseline = 'alphabetic';
 }
 cv.addEventListener('pointerdown', e => {
+  if (state === 'play') tapCount();
   if (state === 'warp') { if (warp && warp.t > 1.8 && warp.t < 3.9) warp.t = 3.9; return; }
   if (state !== 'map') return;
   const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC, t = mapT();
   for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.u; if (((x - nx) / (rx * 1.75)) ** 2 + ((y - ny - rx * 0.2) / (rx * 1.2)) ** 2 < 1) { if (!devTapOn(i)) mapSelect(i); return; } }
+  mapEmptyTap();
 });
 $('mPlay').onclick = () => mapPlay(); $('mBack').onclick = toMenu;
 $('btnPlay').onclick = () => { if (ACC || GUEST) openMap(); else showAccess(); };
@@ -2717,7 +2723,7 @@ $('btnShare').onclick = () => {
 /* ---------- portada: web del creador, consejos e instalar (todo con el estilo del juego, nada de alerts) ---------- */
 const API = 'https://script.google.com/macros/s/AKfycbxtRso7g_0i53NRLJZFdM22TF2GW2EtzgwMZ3Mavq5ZVK6Ni0lXQNVXid6U7j5RL3wodQ/exec';
 function api(d) { return fetch(API, { method: 'POST', body: JSON.stringify(d) }).then(r => r.json()).catch(() => ({ ok: false, error: 'Sin conexión. Inténtalo otra vez.' })); }
-function evt(e, f) { try { api({ a: 'evt', e, f }); } catch (x) {} }
+function evt(e, f) { try { api(Object.assign({ a: 'evt', e, f }, who())); } catch (x) {} }
 try { const k = 'tl_vis_' + new Date().toISOString().slice(0, 10); if (!localStorage.getItem(k)) { localStorage.setItem(k, '1'); setTimeout(() => evt('visita'), 3000); } } catch (e) {}
 (() => { const st = document.createElement('style'); st.textContent = `
 .card.tips{width:min(94vw,760px);max-height:92vh;display:flex;flex-direction:column;text-align:left;padding:14px 18px}
@@ -2775,11 +2781,12 @@ function infoPanel(title, html) {
   $('infX').onclick = () => show('panel', false); show('panel', true);
 }
 $('btnTips').onclick = () => { audio(); SFX.chip(); showTips(); };
+$('btnRank').onclick = () => { audio(); SFX.chip(); showRanking(); };
 $('btnWeb').onclick = () => { SFX.chip(); setTimeout(() => { location.href = 'https://puntofibra.github.io/web/'; }, 120); };
 
 /* ---------- ADMIN: entrada con llave NFC (o QR desde un móvil Android) y menú oculto ---------- */
-let ADM = null; try { ADM = sessionStorage.getItem('tl_adm'); } catch (e) {}
-const setAdm = t => { ADM = t; try { t ? sessionStorage.setItem('tl_adm', t) : sessionStorage.removeItem('tl_adm'); } catch (e) {} };
+let ADM = null; try { sessionStorage.removeItem('tl_adm'); } catch (e) {}
+const setAdm = t => { ADM = t; };          // la sesión de admin solo vive mientras el panel está abierto: siempre se pide la llave
 const HAY_NFC = 'NDEFReader' in window;
 let nfcCtl = null;
 function nfcStop() { if (nfcCtl) { try { nfcCtl.abort(); } catch (e) {} nfcCtl = null; } }
@@ -2851,7 +2858,7 @@ function openAdmin() {
   closeConsole(); if (state === 'play' && !paused) togglePause();
   const a = $('adm'); a.classList.add('on'); admPaint();
 }
-function closeAdmin() { nfcStop(); $('adm').classList.remove('on'); }
+function closeAdmin() { nfcStop(); $('adm').classList.remove('on'); setAdm(null); }
 async function admOp(op, d) {
   const r = await api(Object.assign({ a: 'adm', t: ADM, op }, d || {}));
   if (!r.ok) { if (r.error === 'ADMIN') { setAdm(null); closeAdmin(); infoPanel('SESIÓN CADUCADA', 'La sesión de administrador ha caducado. Vuelve a entrar con tu llave.'); } throw new Error(r.error || 'Error'); }
@@ -2860,7 +2867,7 @@ async function admOp(op, d) {
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
-  const tabs = ['TRUCOS', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'SISTEMA'];
+  const tabs = ['TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
   $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · TURBOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
@@ -2888,13 +2895,43 @@ function admPaint() {
     admOp('llaves').then(r => { admLl = r.llaves; paintKeys(); admMsg(admLl.length + ' llave(s) con acceso de administrador'); }).catch(e => admMsg(e.message, 1));
     $('anAdd').onclick = async () => { try { const r = await admOp('llaveAdd', { k: $('anK').value, n: $('anN').value || 'Llave' }); admLl = r.llaves; paintKeys(); $('anK').value = ''; $('anN').value = ''; admMsg('✔ Llave añadida'); SFX.life(); } catch (e) { admMsg(e.message, 1); } };
     if (HAY_NFC) $('aScan').onclick = () => { admMsg('📡 Acerca la llave nueva a la parte de atrás del móvil…'); nfcRead(async k => { $('anK').value = k; admMsg('Llave leída: ' + k + '. Ponle un nombre y pulsa GUARDAR.'); }, t => admMsg(t, 1)); };
+  } else if (admTab === 'TEMPORALES') {
+    const opts = CODES.filter(c => c[0] !== 'UNLOCK').map(c => '<option value="' + c[0].toLowerCase() + '">' + c[0] + ' · ' + esc(c[1]) + '</option>').join('');
+    B.innerHTML = '<div style="color:#8ea3e6">Trucos secretos para quien tú quieras: se activan durante una fase con una palabra del teclado, una combinación del mando o toques rápidos en la pantalla. Solo duran esa fase y no cuentan para el ranking.</div>' +
+      '<h3>CREAR TRUCO TEMPORAL</h3><div class="akey"><div class="arow"><span>Truco</span><select class="ain" id="tT">' + opts + '</select></div>' +
+      '<div class="arow"><span>Válido durante</span><input class="ain" id="tN" type="number" min="1" value="1" style="width:70px"><select class="ain" id="tU"><option value="60">horas</option><option value="1">minutos</option><option value="1440">días</option><option value="0">siempre (indefinido)</option></select></div>' +
+      '<div class="arow"><span>Palabra del teclado</span><input class="ain" id="tK" maxlength="12" placeholder="p. ej. LUCAS (opcional)" style="flex:1;min-width:140px"></div>' +
+      '<div class="arow"><span>Mando PS</span><span id="tPv" style="color:#ffd23c;min-height:1em">—</span></div><div class="arow">' + PNAMES.map(n => '<button class="btn" data-pb="' + n + '">' + n + '</button>').join('') + '<button class="btn red" id="tPc">BORRAR</button></div>' +
+      '<div class="arow"><span>Toques rápidos en la pantalla</span><input class="ain" id="tQ" type="number" min="0" max="30" value="0" style="width:70px"><span style="color:#8ea3e6">(0 = no se usa; mínimo 4)</span></div>' +
+      '<div class="arow"><span>Nota</span><input class="ain" id="tNo" maxlength="60" placeholder="Para quién es (opcional)" style="flex:1;min-width:140px"></div><div class="arow"><button class="btn on" id="tAdd">CREAR</button></div></div>' +
+      '<div class="amsg" id="amsg"></div><h3>TRUCOS TEMPORALES GUARDADOS</h3><div id="tL">Cargando…</div>';
+    const pad = []; const pv = () => { $('tPv').textContent = pad.length ? pad.join(' + ') : '—'; };
+    B.querySelectorAll('[data-pb]').forEach(b => b.onclick = () => { if (pad.length < 10) pad.push(b.dataset.pb); pv(); }); $('tPc').onclick = () => { pad.length = 0; pv(); };
+    const paint = l => { $('tL').innerHTML = l.length ? l.map(t => { const exp = t.hasta && t.hasta < Date.now(); return '<div class="akey"' + (exp ? ' style="opacity:.5"' : '') + '><b style="color:#35ff8a">' + t.truco.toUpperCase() + '</b> · ' + (t.hasta ? (exp ? 'CADUCADO' : 'hasta ' + new Date(t.hasta).toLocaleString('es-ES')) : 'sin caducidad') + (t.nota ? ' · ' + esc(t.nota) : '') +
+      '<br>' + (t.teclas ? '⌨ ' + esc(t.teclas) + '   ' : '') + (t.pad ? '🎮 ' + esc(t.pad.split('+').join(' + ')) + '   ' : '') + (t.toques ? '👆 ' + t.toques + ' toques' : '') + '<div class="arow"><button class="btn red" data-td="' + t.id + '">ELIMINAR</button></div></div>'; }).join('') : '<div>No hay ninguno.</div>';
+      $('tL').querySelectorAll('[data-td]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } try { const r = await admOp('tmpDel', { id: b.dataset.td }); paint(r.tmp); tmpLoad(); admMsg('✔ Eliminado: ya no le sirve a nadie'); } catch (e) { admMsg(e.message, 1); } }); };
+    admOp('tmpList').then(r => paint(r.tmp)).catch(e => admMsg(e.message, 1));
+    $('tAdd').onclick = async () => { const u = +$('tU').value; try { const r = await admOp('tmpAdd', { truco: $('tT').value, mins: u ? Math.max(1, +$('tN').value || 1) * u : 0, teclas: $('tK').value, pad: pad.join('+'), toques: +$('tQ').value || 0, nota: $('tNo').value }); paint(r.tmp); tmpLoad(); admMsg('✔ Truco temporal creado'); SFX.life(); } catch (e) { admMsg(e.message, 1); } };
+  } else if (admTab === 'RANKING') {
+    B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="rkA"></div>';
+    api(Object.assign({ a: 'ranking' }, who())).then(r => { if (!r.ok) return admMsg(r.error, 1); admMsg(r.total + ' jugador(es) en el ranking. Se guarda en el Sheet, pestaña "ranking".');
+      $('rkA').innerHTML = r.top.map((x, i) => '<div class="akey arow"><b style="color:#ffd23c;width:30px">' + (i + 1) + '</b><span style="flex:1">' + esc(x.n) + '</span><b style="color:#35ff8a">' + x.p + '</b><span style="color:#8ea3e6">' + x.f + ' fases · ' + x.e + '★</span><button class="btn red" data-rd="' + esc(x.n) + '">QUITAR</button></div>').join('');
+      $('rkA').querySelectorAll('[data-rd]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } await admOp('rankDel', { id: b.dataset.rd }); admPaint(); }); });
+  } else if (admTab === 'RECORDATORIO') {
+    B.innerHTML = '<div style="color:#8ea3e6">Tus accesos y trucos secretos (solo los ves tú).</div>' +
+      '<h3>ENTRAR AL PANEL DE ADMIN</h3><div class="akey">• En el mapa de cualquier planeta: <b>10 toques rápidos</b> con el dedo o el ratón en una zona vacía (sin bases).<br>• Con el mando de PlayStation, en el mapa: <b>L1 + R1 a la vez, 3 veces seguidas</b>.<br>• En una fase: pausa y <b>10 toques rápidos sobre PAUSA</b> (o 10 veces △ con el mando) para abrir la consola, y escribe <b>ADMIN</b>.<br>• Siempre te pide tu <b>llave NFC</b> (en el PC, escaneas un QR con el móvil y acercas la llave).</div>' +
+      '<h3>CONSOLA DE TRUCOS</h3><div class="akey">' + CODES.map(c => '<b style="color:#35ff8a">' + c[0] + '</b> · ' + esc(c[1]) + '<br>').join('') + 'Comandos: <b>HACK</b> (lista), <b>OPEN</b>, <b>CLOSE</b>, <b>ADMIN</b>, <b>CLS</b>, <b>SALIR</b>. Los trucos se apagan al pulsar VOLVER en el menú principal.</div>' +
+      '<h3>TRUCOS TEMPORALES</h3><div class="akey">Los creas en la pestaña TEMPORALES: palabra del teclado, combinación del mando o toques rápidos durante una fase. Duran solo esa fase.</div>' +
+      '<h3>RANKING</h3><div class="akey">Cualquier partida con un truco activo (de consola o temporal) no suma puntos al ranking.</div>' +
+      '<h3>SECRETOS DE LAS FASES</h3><div class="akey">Están con foto en la pestaña TRUCOS.</div>';
   } else if (admTab === 'ESTADÍSTICAS') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="ast"></div>';
     admOp('stats').then(r => { const s2 = r.stats || {}, t = s2.tot || { visitas: 0, partidas: 0, superadas: 0 }, dias = s2.dias || {}, jug = s2.jug || {}, win = s2.win || {};
       const bars = (o, lab) => { const e = Object.entries(o), mx = Math.max(1, ...e.map(x => x[1])); return '<div class="bars">' + (e.length ? e.map(([k, v]) => '<div class="bar"><span>' + esc(lab ? lab(k) : k) + '</span><i style="width:' + (v / mx * 100) + '%"></i><b>' + v + '</b></div>').join('') : '<div style="color:#8ea3e6">Aún no hay datos</div>') + '</div>'; };
       const last = Object.keys(dias).sort().slice(-14), dd = {}; last.forEach(k => dd[k] = dias[k]);
       const fases = {}; ALLN().forEach(n => { if (jug[n.id] || win[n.id]) fases[n.id] = jug[n.id] || 0; });
-      $('ast').innerHTML = '<div class="arow"><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.visitas + '</b><br>visitas</div><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.partidas + '</b><br>partidas</div><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.superadas + '</b><br>fases superadas</div></div>' +
+      const sem = r.semana || [], mxp = Math.max(1, ...sem.map(d => d.personas));
+      $('ast').innerHTML = '<h3>ÚLTIMOS 7 DÍAS</h3>' + sem.slice().reverse().map(d => '<div class="akey"><b style="color:#ffd23c">' + d.fecha.slice(8) + '/' + d.fecha.slice(5, 7) + '</b> · <b style="color:#35ff8a">' + d.personas + '</b> persona(s) (' + d.cuentas + ' con cuenta, ' + d.anonimos + ' anónima(s)) · ' + d.partidas + ' partidas · ' + d.niveles + ' niveles superados<div class="bars"><div class="bar"><span></span><i style="width:' + (d.personas / mxp * 100) + '%"></i><span></span></div></div>' + (d.correos.length ? '<div style="color:#8ea3e6;font-size:.9em">' + d.correos.map(esc).join(', ') + '</div>' : '') + '</div>').join('') + '<h3>TOTAL</h3>' + '<div class="arow"><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.visitas + '</b><br>visitas</div><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.partidas + '</b><br>partidas</div><div class="akey" style="flex:1"><b style="color:#35ff8a;font-size:1.6em">' + t.superadas + '</b><br>fases superadas</div></div>' +
         '<h3>JUGADORES POR DÍA (14 DÍAS)</h3>' + bars(dd, k => k.slice(8) + '/' + k.slice(5, 7)) + '<h3>PARTIDAS POR FASE</h3>' + bars(fases) + '<h3>% DE ÉXITO POR FASE</h3><div class="bars">' + ALLN().filter(n => jug[n.id]).map(n => { const pc = Math.round((win[n.id] || 0) / jug[n.id] * 100); return '<div class="bar"><span>' + n.id + '</span><i style="width:' + pc + '%"></i><b>' + pc + '%</b></div>'; }).join('') + '</div>' +
         '<div class="arow" style="margin-top:12px"><button class="btn red" id="aSR">PONER A CERO</button></div>';
       admMsg(''); $('aSR').onclick = async () => { if ($('aSR').dataset.ok !== '1') { $('aSR').dataset.ok = '1'; $('aSR').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } await admOp('statsReset'); admPaint(); };
@@ -2909,7 +2946,6 @@ function admPaint() {
 // la consola pide la llave
 let admQrT = 0;
 function conAdmin() {
-  if (ADM) { say('SESIÓN DE ADMINISTRADOR ACTIVA', 'g', 18); setTimeout(openAdmin, 700); return; }
   say('*** ACCESO RESTRINGIDO ***', 'r big', 24); say('IDENTIFICACIÓN POR LLAVE REQUERIDA', 'w', 14);
   const ok = r => { clearInterval(admQrT); { const qb = $('conQr'); if (qb) qb.remove(); } setAdm(r.adm); say(r.nueva ? 'LLAVE MAESTRA REGISTRADA ✔' : 'LLAVE RECONOCIDA ✔', 'g big', 22); say('ACCESO CONCEDIDO. ABRIENDO PANEL…', 'g', 14); SFX.win(); setTimeout(() => { if (CON.on) openAdmin(); }, 2200); };
   if (HAY_NFC) {
@@ -2942,6 +2978,51 @@ function conAdmin() {
 /* ---------- cuentas: jugar con cuenta (progreso en la nube, en cualquier dispositivo) o sin cuenta (solo este dispositivo) ---------- */
 const GOOGLE_ID = '454055120059-nuhaop4r62urc3u036cc3grpqo71ulg7.apps.googleusercontent.com';
 let ACC = null, GUEST = false; try { ACC = JSON.parse(localStorage.getItem('tl_acc') || 'null'); GUEST = localStorage.getItem('tl_guest') === '1'; } catch (e) {}
+/* ---------- jugador: código anónimo del dispositivo (para no contar dos veces a la misma persona el mismo día) ---------- */
+let PID = ''; try { PID = localStorage.getItem('tl_id') || ''; if (!PID) { PID = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, '').slice(0, 16); localStorage.setItem('tl_id', PID); } } catch (e) { PID = 'x'; }
+const who = () => ({ id: PID, ses: ACC && ACC.ses || '' });
+/* ---------- ranking: suma de tus mejores puntuaciones de cada fase conseguidas SIN trucos ---------- */
+const cheatOn = () => CODES.some(c => CHEAT[c[0].toLowerCase()]) || TMPON.length > 0;
+let rankT = null;
+function rankSend() { clearTimeout(rankT); rankT = setTimeout(() => { let p = 0, f = 0, e = 0; for (const k in PROG) { p += PROG[k].rb || 0; if (PROG[k].rb) f++; e += PROG[k].stars || 0; } if (p <= 0) return;
+  let nick = ''; try { nick = localStorage.getItem('tl_nick') || ''; } catch (x) {} api(Object.assign({ a: 'puntos', puntos: p, fases: f, estrellas: e, nombre: nick }, who())); }, 1500); }
+async function showRanking() {
+  const c = $('card'); c.classList.add('tips'); c.innerHTML = '<h2>🏆 RANKING</h2><div class="tbody" id="rkB" style="text-align:center">Cargando…</div><div class="row"><button class="btn" id="rkX">CERRAR</button></div>'; show('panel', true); $('rkX').onclick = () => show('panel', false);
+  const r = await api(Object.assign({ a: 'ranking' }, who())); const B = $('rkB'); if (!B) return;
+  if (!r.ok) { B.textContent = r.error || 'Sin conexión'; return; }
+  let nick = ''; try { nick = localStorage.getItem('tl_nick') || ''; } catch (x) {}
+  B.innerHTML = '<div style="color:#8ea3e6;margin-bottom:8px">Suma de tus mejores puntos en cada fase. Las partidas con trucos no cuentan.</div>' +
+    (r.top.length ? r.top.map((x, i) => '<div class="stat" style="' + (x.yo ? 'color:#35ff8a;text-shadow:0 0 8px #35ff8a' : '') + '"><span>' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.') + ' ' + esc(x.n) + '</span><b>' + x.p + '</b></div>').join('') : '<div>Todavía no hay nadie. ¡Sé el primero!</div>') +
+    (r.yo && r.yo.pos > 30 ? '<div class="stat" style="color:#35ff8a;margin-top:6px"><span>' + r.yo.pos + '. ' + esc(r.yo.n) + ' (tú)</span><b>' + r.yo.p + '</b></div>' : '') +
+    (!ACC ? '<div style="margin-top:12px">Tu nombre en el ranking: <input class="ain" id="rkN" maxlength="18" value="' + esc(nick) + '" placeholder="Invitado" style="font:inherit;padding:6px;border-radius:6px;border:1px solid #29e6ff;background:#020a1e;color:#fff;width:150px"> <button class="btn" id="rkS">GUARDAR</button></div>' : '');
+  if (!ACC) $('rkS').onclick = () => { try { localStorage.setItem('tl_nick', $('rkN').value.trim().slice(0, 18)); } catch (x) {} rankSend(); SFX.chip(); setTimeout(showRanking, 2600); };
+}
+/* ---------- trucos temporales del admin: se activan con una palabra, una combinación del mando o toques rápidos, solo para la fase que se está jugando ---------- */
+let TMP = [], TMPON = [];
+const TSAL = 'tl-turbo-lucas-25';
+async function sha256(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
+function tmpLoad() { api({ a: 'tmp' }).then(r => { if (r.ok) TMP = r.tmp || []; }); }
+setTimeout(tmpLoad, 4000); setInterval(tmpLoad, 300000);
+async function tmpCheck(kind, seq) {        // kind: 'k' teclas, 'p' mando, 'n' toques
+  if (state !== 'play' || !TMP.length || !crypto.subtle) return;
+  const pre = { k: 'K', p: 'P', n: 'T' }[kind], cands = kind === 'n' ? [seq] : kind === 'k' ? Array.from({ length: Math.min(12, seq.length) - 2 }, (_, i) => seq.slice(-(i + 3))) : Array.from({ length: Math.min(10, seq.length) - 1 }, (_, i) => seq.slice(-(i + 2)).join('+'));
+  for (const c of cands) { const h = await sha256(TSAL + pre + c); const t = TMP.find(x => x[kind] === h); if (t) { tmpOn(t.truco); return; } }
+}
+function tmpOn(k) { if (!(k in CHEAT) || CHEAT[k]) return; CHEAT[k] = true; if (k === 'floor') CHEAT.floorT = 0; TMPON.push(k); G.tr = true; tone(1760, 2640, 0.12, 'sine', 0.05); }
+function tmpOff() { TMPON.forEach(k => { CHEAT[k] = false; }); TMPON = []; }
+const KBUF = []; addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT') return; if (/^Key[A-Z]$|^Digit[0-9]$/.test(e.code)) { KBUF.push(e.code.slice(-1)); if (KBUF.length > 12) KBUF.shift(); tmpCheck('k', KBUF.join('')); } });
+const PBUF = [], PNAMES = ['X', 'O', 'CUADRADO', 'TRIANGULO', 'L1', 'R1', 'L2', 'R2', 'SHARE', 'OPTIONS', 'L3', 'R3', 'ARRIBA', 'ABAJO', 'IZQUIERDA', 'DERECHA'], PPREV = [];
+let l1r1 = { n: 0, t: 0, prev: false };
+function padNames(gp) {
+  for (let i = 0; i < 16; i++) { const on = !!(gp.buttons[i] && gp.buttons[i].pressed); if (on && !PPREV[i]) { PBUF.push(PNAMES[i]); if (PBUF.length > 10) PBUF.shift(); tmpCheck('p', PBUF.slice()); } PPREV[i] = on; }
+  const both = !!(gp.buttons[4] && gp.buttons[4].pressed && gp.buttons[5] && gp.buttons[5].pressed);          // L1+R1 tres veces en el mapa: panel de admin
+  if (both && !l1r1.prev && state === 'map') { const now = performance.now(); l1r1.n = now - l1r1.t < 1500 ? l1r1.n + 1 : 1; l1r1.t = now; if (l1r1.n >= 3) { l1r1.n = 0; adminAsk(true); } } l1r1.prev = both;
+}
+let taps = { n: 0, t: 0, to: null };
+function tapCount() { const now = performance.now(); taps.n = now - taps.t < 450 ? taps.n + 1 : 1; taps.t = now; clearTimeout(taps.to); taps.to = setTimeout(() => { if (taps.n >= 4) tmpCheck('n', String(taps.n)); taps.n = 0; }, 500); }
+let mapTaps = { n: 0, t: 0 };
+function mapEmptyTap() { const now = performance.now(); mapTaps.n = now - mapTaps.t < 500 ? mapTaps.n + 1 : 1; mapTaps.t = now; if (mapTaps.n >= 10) { mapTaps.n = 0; adminAsk(false); } }
+function adminAsk(pad) { if (CON.on) return; openConsole(pad); setTimeout(() => conAdmin(), 1500); }
 (() => { const st = document.createElement('style'); st.textContent = `
 .card.acc{width:min(94vw,520px);max-height:94vh;overflow-y:auto;text-align:center;padding:16px 20px}
 .opt{display:flex;gap:14px;align-items:center;text-align:left;width:100%;margin:8px 0;padding:14px 16px;border-radius:16px;border:2px solid var(--cy);background:rgba(12,20,52,.85);color:#fff;font:inherit;cursor:pointer;box-shadow:0 0 14px rgba(41,230,255,.35)}
