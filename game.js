@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.18';
+const VERSION = '0.19';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -421,7 +421,7 @@ LEVELS['1-2'] = function () {
   B.block(89, 90, 6, 10); B.block(127, 128, 6, 13);
   B.row(92, 96, 13); B.en('alien', 100, 13); B.laser(106, 11, 13, 0.3); B.row(108, 112, 13); B.en('patrulla', 116, 13); B.pad(123, 14); B.gear(126, 13);
   B.row(118, 121, 9); B.laser(115, 7, 9, 1.2); B.en('erizo', 110, 9); B.box(108, 7, 'laser'); B.laser(103, 7, 9, 0.2); B.row(96, 101, 9); B.pad(93, 10);
-  B.row(96, 104, 5); B.en('dron', 108, 3, { x0: 104, x1: 114 }); B.row(110, 120, 5); B.en('torreta', 124, 5); B.arc(128, 131, 6, 2);
+  B.row(96, 104, 5); B.en('dron', 108, 3, { x0: 104, x1: 114 }); B.row(110, 120, 5); B.en('torreta', 124, 5); B.arc(129, 132, 6, 2);
   // D · portal a la sala secreta y plataformas móviles sobre el vacío
   B.cp(134, 14); B.block(139, 141, 11, 11, '='); B.portal(140, 11, 306, 14); B.row(144, 148, 12);
   B.mover(152, 13, 3, 60, 0, 1.3, 0); B.mover(158, 12, 3, 0, 60, 1.5, 1); B.mover(164, 13, 3, 60, 0, 1.4, 2); B.row(153, 167, 9);
@@ -493,9 +493,37 @@ LEVELS['1-4'] = function () {
   P(3, 7, 11); B.block(9, 30, 10, 11); B.en('patrulla', 14, 9); B.en('patrulla', 19, 9); B.arc(9, 22, 7, 3); B.box(17, 5, 'estrella');
   return B.done({ name: 'TORRE DE ANTENAS', time: 210, vert: true, spawn: { x: 5 * T, y: (H - 2) * T }, goal: { x: 26 * T + T / 2, y: 10 * T }, rise: { y: H * T + 400, speed: 40, startY: 103 * T, on: false } });
 };
+/* ---------- fase secreta 1-B: PASEO ESPACIAL (gravedad lunar, lluvia de meteoritos, islas flotantes y lluvia de chips final) ---------- */
+LEVELS['1-B'] = function () {
+  const H = 22, B = LB(166, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  const shape = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') B.chip(x + i, y + j); }));
+  // A · el "5G" de chips en el cielo
+  B.ground(0, 16); B.row(4, 7, 18); P(8, 13, 15); shape(8, 8, ['###.###', '#...#..', '###.#.#', '..#.#.#', '###.###']);
+  // B · primeros saltos lunares
+  B.arc(16, 22, 16, 3); B.ground(22, 30); B.en('alien', 27, 19); B.box(25, 16, 'escudo');
+  P(32, 35, 15); P(37, 40, 11); B.gear(38, 8); B.arc(32, 40, 13, 3);                       // engranaje 1: en lo alto
+  // C · empieza la lluvia de meteoritos
+  B.ground(32, 52); B.en('patrulla', 44, 19); B.box(46, 16, 'laser'); B.en('erizo', 49, 19);
+  B.arc(52, 60, 15, 3); B.mover(54, 18, 3, 110, 0, 0.9, 0); B.ground(60, 78); B.cp(62, 20);
+  B.en('dron', 68, 15, { x0: 62, x1: 76 }); B.en('patrulla', 74, 19);
+  P(64, 67, 14); P(70, 73, 9); P(76, 79, 5); B.row(70, 73, 8); B.gear(78, 3);              // engranaje 2: escalera al cielo
+  // D · el gran vacío
+  B.mover(80, 17, 2, 0, 60, 1.2, 0); B.mover(84, 15, 2, 0, 60, 1.2, 1.5); B.arc(80, 87, 12, 3);
+  B.ground(87, 110); B.box(90, 16, 'iman'); B.en('alien', 95, 19); B.en('dron', 100, 14, { x0: 92, x1: 108 });
+  B.block(102, 104, 17, 19); B.en('torreta', 103, 16); P(106, 109, 15); B.row(106, 109, 14);
+  // E · saltador a la isla del cielo (o por abajo con la plataforma)
+  B.pad(108, 20); P(112, 117, 7); B.gear(116, 5); B.arc(111, 118, 5, 2);                   // engranaje 3: isla del cielo
+  B.mover(112, 18, 3, 80, 0, 1.1, 0); B.ground(118, 165); B.cp(120, 20);
+  // F · lluvia de chips y meta
+  B.box(131, 16, 'estrella'); B.en('erizo', 150, 19);
+  for (let i = 1; i <= 4; i++) B.block(151 + i, 151 + i, 20 - i, 19);
+  B.row(152, 155, 14); B.block(162, 165, 0, 21);
+  return B.done({ name: 'PASEO ESPACIAL', time: 170, space: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
+    meteors: { zones: [[34 * T, 118 * T]], every: 1.15, acc: 0 }, rain: { x0: 122 * T, x1: 148 * T, dur: 9, t: 0, st: 0, acc: 0 } });
+};
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
-  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.lastCp = null;
+  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.lastCp = null;
   return l;
 }
 const tileAt = (tx, ty) => (tx < 0 || tx >= L.W) ? '#' : (ty < 0 || ty >= L.H) ? ' ' : L.g[ty][tx];
@@ -621,7 +649,7 @@ function respawn() {
 function updatePlayer(dt) {
   const p = P;
   if (p.dead) {
-    p.deadT += dt; p.vy += 1800 * dt; p.y += p.vy * dt;
+    p.deadT += dt; p.vy += 1800 * (L.gk < 1 ? 0.6 : 1) * dt; p.y += p.vy * dt;
     if (p.deadT > 1.6) { if (G.lives <= 0) gameOver(); else respawn(); }
     return;
   }
@@ -654,7 +682,7 @@ function updatePlayer(dt) {
   }
   if (!K.jump && p.vy < -260 && !p.boost) p.vy = -260;               // salto corto si sueltas
   if (p.tTurbo > 0 && K.jump) p.vy = Math.max(p.vy - 3600 * dt, -330);   // turbo: volar
-  p.vy = Math.min(p.vy + 2000 * dt, 900);
+  p.vy = Math.min(p.vy + 2000 * L.gk * dt, L.gk < 1 ? 560 : 900);
   const wasAir = !p.onGround, vyBefore = p.vy, feet0 = p.y + p.h;
   moveEnt(p, dt);
   if (p.vy >= 0) p.boost = 0;
@@ -738,7 +766,7 @@ function updateEnemies(dt) {
         burst(e.x + e.w / 2 + e.dir * 34, e.y + 18, 6, '#ff9a3c', 100, 0.25, 0, 3);
       }
     } else {
-      e.vx = e.dir * e.d.speed; e.vy = Math.min(e.vy + 2000 * dt, 900);
+      e.vx = e.dir * e.d.speed; e.vy = Math.min(e.vy + 2000 * L.gk * dt, 900);
       moveEnt(e, dt);
       if (e.hitL) e.dir = 1; if (e.hitR) e.dir = -1;
       if (e.onGround) { const ax = e.dir > 0 ? e.x + e.w + 2 : e.x - 2, c = tileAt(Math.floor(ax / T), Math.floor((e.y + e.h + 4) / T)); if (!isSolid(c) && c !== '=') e.dir = -e.dir; }
@@ -787,6 +815,20 @@ function updateStage(dt) {
   if (ch) {
     if (!ch.on && p.x > ch.startX) { ch.on = true; ch.x = p.x - 620; pop(p.x + p.w / 2, p.y - 40, '¡CORRE!', '#ff5a6a'); [330, 440, 330, 440, 330, 440].forEach((f, i) => tone(f, f, 0.14, 'sawtooth', 0.1, i * 0.15)); shake = 0.3; }
     if (ch.on && !p.win && !p.dead) { ch.x += ch.speed * dt; ch.x = Math.max(ch.x, p.x - VW * 0.8); if (p.x < ch.x + 4) die(); }
+  }
+  const mt = L.meteors;
+  if (mt) {
+    const cxp = p.x + p.w / 2, inZone = mt.zones.some(z => cxp > z[0] && cxp < z[1]);
+    if (inZone && !p.dead && !p.win) { mt.acc += dt; if (mt.acc > mt.every) { mt.acc = Math.random() * 0.3; L.mets.push({ x: cxp - 150 + Math.random() * 800, y: cam.y - 50, vx: -50 - Math.random() * 70, vy: 230 + Math.random() * 110, r: 13 + Math.random() * 9, rot: Math.random() * 6, sp: (Math.random() - 0.5) * 6 }); if (!mt.warned) { mt.warned = 1; pop(cxp, p.y - 40, '¡METEORITOS!', '#ff9a3c'); [600, 450, 600, 450].forEach((f, i) => tone(f, f, 0.12, 'sawtooth', 0.08, i * 0.14)); } } }
+    for (const m of L.mets) {
+      m.x += m.vx * dt; m.y += m.vy * dt; m.rot += m.sp * dt;
+      if (Math.random() < 0.9) parts.push({ x: m.x + (Math.random() - 0.5) * m.r, y: m.y + (Math.random() - 0.5) * m.r, vx: -m.vx * 0.3 + (Math.random() - 0.5) * 40, vy: -m.vy * 0.3, life: 0.4, max: 0.4, col: Math.random() < 0.5 ? '#ff9a3c' : '#ffe08a', size: 2.5 + Math.random() * 2, grav: 0 });
+      let boom = isSolid(tileAt(Math.floor(m.x / T), Math.floor((m.y + m.r * 0.6) / T))) || m.y > L.H * T + 40;
+      if (!boom && !p.dead && !p.win && Math.abs(m.x - (p.x + p.w / 2)) < m.r * 0.8 + p.w / 2 && Math.abs(m.y - (p.y + p.h / 2)) < m.r * 0.8 + p.h / 2) { if (!CHEAT.ghost && p.tStar <= 0) { hurt(); boom = true; } else if (p.tStar > 0) { boom = true; addScore(50, m.x, m.y); } }
+      if (!boom) for (const s2 of shots) if (s2.mine && Math.hypot(s2.x - m.x, s2.y - m.y) < m.r + 12) { s2.life = 0; boom = true; addScore(50, m.x, m.y - 10); break; }
+      if (boom) { m.dead = true; if (m.y < L.H * T) { burst(m.x, m.y, 18, '#ff9a3c', 220, 0.5, 300, 3.5); burst(m.x, m.y, 8, '#6b4a3a', 160, 0.6, 600, 4); if (m.x > cam.x - 50 && m.x < cam.x + VW + 50) { noise(0.3, 0.16, 800); shake = Math.max(shake, 0.1); } } }
+    }
+    L.mets = L.mets.filter(m => !m.dead);
   }
   const rs = L.rise;
   if (rs) {
@@ -842,6 +884,21 @@ function drawStageFront() {         // por delante: láseres, muro, plasma
     if (on) { const w = 5 + Math.random() * 3; const g2 = ctx.createLinearGradient(l.x - 22, 0, l.x + 22, 0); g2.addColorStop(0, 'rgba(255,40,70,0)'); g2.addColorStop(0.5, 'rgba(255,40,70,.55)'); g2.addColorStop(1, 'rgba(255,40,70,0)'); ctx.fillStyle = g2; ctx.fillRect(l.x - 22, l.y0 + 6, 44, l.y1 - l.y0 - 12); ctx.fillStyle = '#ff5a7a'; ctx.fillRect(l.x - w / 2, l.y0 + 6, w, l.y1 - l.y0 - 12); ctx.fillStyle = '#fff'; ctx.fillRect(l.x - 1, l.y0 + 6, 2, l.y1 - l.y0 - 12); }
     else if (warn && Math.floor(time * 16) % 2) { ctx.fillStyle = 'rgba(255,90,110,.7)'; ctx.fillRect(l.x - 1, l.y0 + 6, 2, l.y1 - l.y0 - 12); }
     ctx.globalCompositeOperation = 'source-over';
+  }
+  for (const m of L.mets) {
+    if (m.x < cam.x - 80 || m.x > cam.x + VW + 80) continue;
+    const sp = Math.hypot(m.vx, m.vy), ux = m.vx / sp, uy = m.vy / sp, tl = m.r * 5;
+    ctx.globalCompositeOperation = 'lighter';
+    const tg = ctx.createLinearGradient(m.x, m.y, m.x - ux * tl, m.y - uy * tl); tg.addColorStop(0, 'rgba(255,170,60,.85)'); tg.addColorStop(1, 'rgba(255,60,20,0)');
+    ctx.strokeStyle = tg; ctx.lineCap = 'round'; ctx.lineWidth = m.r * 1.5; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x - ux * tl, m.y - uy * tl); ctx.stroke();
+    const gg = ctx.createRadialGradient(m.x, m.y, m.r * 0.4, m.x, m.y, m.r * 2.2); gg.addColorStop(0, 'rgba(255,150,50,.6)'); gg.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * 2.2, 0, 6.283); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'butt';
+    ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.rot);
+    const rg = ctx.createRadialGradient(-m.r * 0.3, -m.r * 0.3, 1, 0, 0, m.r); rg.addColorStop(0, '#a77d62'); rg.addColorStop(0.7, '#5d3f33'); rg.addColorStop(1, '#2e1d18'); ctx.fillStyle = rg;
+    ctx.beginPath(); for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283, rr = m.r * (0.82 + 0.18 * Math.sin(k * 2.7 + m.r)); k ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(30,18,14,.55)'; ctx.beginPath(); ctx.arc(m.r * 0.25, m.r * 0.1, m.r * 0.22, 0, 6.283); ctx.arc(-m.r * 0.3, m.r * 0.35, m.r * 0.15, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,190,90,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, m.r * 0.9, -0.3 + Math.atan2(uy, ux) - m.rot - 1, Math.atan2(uy, ux) - m.rot + 1); ctx.stroke();
+    ctx.restore();
   }
   const ch = L.chase;
   if (ch && ch.on) { const x = ch.x, top = cam.y - 20, hh = VHv + 40;
@@ -976,6 +1033,16 @@ function drawBackground() {
     pg.addColorStop(0, '#7fe9ff'); pg.addColorStop(0.5, '#3d6bff'); pg.addColorStop(1, '#2a1670');
     ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, r, 0, 6.283); ctx.fill();
     ctx.strokeStyle = 'rgba(198,60,255,.55)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(px, py, r * 1.55, r * 0.34, -0.35, 0, 6.283); ctx.stroke();
+  }
+  if (L.space) {           // fase en el espacio abierto: un planeta enorme abajo y estrellas fugaces, sin ciudad
+    const r = VHv * 1.05, ex = VW * 0.35 - cam.x * 0.015, ey = VHv * 1.62 + (L.H * T - VHv - cam.y) * 0.05;
+    ctx.globalCompositeOperation = 'lighter'; const at = ctx.createRadialGradient(ex, ey, r * 0.95, ex, ey, r * 1.18); at.addColorStop(0, 'rgba(80,200,255,.55)'); at.addColorStop(1, 'rgba(80,200,255,0)'); ctx.fillStyle = at; ctx.beginPath(); ctx.arc(ex, ey, r * 1.18, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+    const pg = ctx.createRadialGradient(ex - r * 0.3, ey - r * 0.6, r * 0.1, ex, ey, r); pg.addColorStop(0, '#5fd6ff'); pg.addColorStop(0.45, '#2a6fd6'); pg.addColorStop(0.85, '#14306e'); pg.addColorStop(1, '#0a1640'); ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(ex, ey, r, 0, 6.283); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(ex, ey, r, 0, 6.283); ctx.clip(); ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff';
+    for (let k = 0; k < 7; k++) { const yy = ey - r + 40 + k * 46, xx = ex - r + ((k * 173 + time * 6) % (r * 2)); ctx.beginPath(); ctx.ellipse(xx, yy, 120 + k * 14, 9, 0, 0, 6.283); ctx.fill(); ctx.beginPath(); ctx.ellipse(xx - r * 1.1, yy + 18, 90, 7, 0, 0, 6.283); ctx.fill(); }
+    ctx.restore(); ctx.globalAlpha = 1;
+    const sh = (time * 0.35) % 1, sx = VW * (1.1 - sh * 1.3), sy = VHv * (0.05 + sh * 0.35); if (sh < 0.5) { ctx.globalCompositeOperation = 'lighter'; const sg = ctx.createLinearGradient(sx, sy, sx + 140, sy - 50); sg.addColorStop(0, 'rgba(255,255,255,.9)'); sg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.strokeStyle = sg; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 140, sy - 50); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+    return;
   }
   // ciudad espacial: dos capas dibujadas, repetidas en espejo para que no se note la unión
   const up = (L.H * T - VHv - cam.y) * 0.12;
@@ -1244,7 +1311,7 @@ addEventListener('keydown', e => { if (CON.on) return; if (e.code === 'F11' || (
 if (!TOUCH) { $('btnFull').style.display = ''; $('btnFull').onclick = toggleFull; }
 function startGame() {
   audio(); startMusic();
-  resetLevel(true); state = 'play'; paused = false;
+  resetLevel(true); state = 'play'; paused = false; if (L.intro) { const t0 = L.intro; setTimeout(() => { if (state === 'play') { pop(P.x + P.w / 2, P.y - 40, t0, '#7fe9ff'); SFX.portal(); } }, 600); }
   show('title', false); show('panel', false); show('mapUI', false); show('top', true); show('touch', TOUCH && !padUsed); checkRot();
 }
 function togglePause() {
@@ -1285,7 +1352,7 @@ const MAP = [
   { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.4996, y: 0.499, rx: 0.033, built: true, way: [[0.39, 0.675], [0.42, 0.635], [0.45, 0.60], [0.47, 0.57]] },
   { id: '1-4', n: '4', name: 'TORRE DE ANTENAS', x: 0.6515, y: 0.357, rx: 0.03, gold: true, built: true, way: [[0.53, 0.46], [0.56, 0.42], [0.59, 0.385], [0.62, 0.37]] },
   { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.871, y: 0.393, rx: 0.05, boss: true, way: [[0.685, 0.335], [0.71, 0.305], [0.74, 0.295], [0.78, 0.31], [0.81, 0.335], [0.84, 0.37]] },
-  { id: '1-B', n: '★', name: 'FASE SECRETA', x: 0.6177, y: 0.186, rx: 0.021, bonus: true, prev: 3, way: [[0.625, 0.33], [0.603, 0.29], [0.598, 0.24], [0.595, 0.21]] }
+  { id: '1-B', n: '★', name: 'FASE SECRETA · PASEO ESPACIAL', x: 0.6177, y: 0.186, rx: 0.021, bonus: true, built: true, prev: 3, way: [[0.625, 0.33], [0.603, 0.29], [0.598, 0.24], [0.595, 0.21]] }
 ];
 let PROG = {}, curId = '1-1', mapSel = 0, mapAt = 0, mapL = { x: MAP[0].x, y: MAP[0].y }, mapRoute = [], mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 }, mapUnl = null, mapParts = [], justOpened = -1;
 try { PROG = JSON.parse(localStorage.getItem('tl_prog') || '{}') || {}; const os = +localStorage.getItem('tl_stars_1_1') || 0; if (os && !PROG['1-1']) PROG['1-1'] = { stars: os, best: +localStorage.getItem('tl_best_1_1') || 0 }; } catch (e) { PROG = {}; }
@@ -1477,8 +1544,9 @@ function updCheck() {
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.v && j.v !== VERSION) { updPending = j.v; updApply(); } }).catch(() => {});
 }
 function updApply() {
-  if (!updPending || (state !== 'title' && state !== 'map')) return;
+  if (!updPending || (state !== 'title' && state !== 'map') || (state === 'map' && (mapUnl || mapRoute.length))) return;
   try { const k = 'tl_upd_' + updPending, last = +sessionStorage.getItem(k) || 0; if (Date.now() - last < 300000) return; sessionStorage.setItem(k, Date.now()); } catch (e) {}
+  try { if (state === 'map') sessionStorage.setItem('tl_back', JSON.stringify({ sel: mapSel, unl: mapUnl ? mapUnl.i : -1 })); } catch (e) {}
   location.replace(location.pathname + '?u=' + encodeURIComponent(updPending));
 }
 setInterval(updCheck, 60000); setTimeout(updCheck, 4000);
@@ -1488,6 +1556,10 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) updC
 setSnd(sndOn); resize();
 L = buildLevel(); P = newPlayer(L.spawn.x, L.spawn.y); spawnEnemies(); cam.y = L.H * T - VHv;
 requestAnimationFrame(frame);
-loadImages(() => { state = 'title'; });
+loadImages(() => {
+  state = 'title';
+  let back = null; try { back = JSON.parse(sessionStorage.getItem('tl_back') || 'null'); sessionStorage.removeItem('tl_back'); } catch (e) {}
+  if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
+});
 window.__TL = { get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, MAP, die, get DEV() { return DEV; }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; } };
 })();
