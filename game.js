@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.65';
+const VERSION = '0.66';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -202,10 +202,11 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { if ((e.target && e.target.tagName === 'INPUT') || CON.on || $('adm').classList.contains('on')) return; const k = KEYMAP[e.code]; if (k) { press(k, false); e.preventDefault(); } });
 addEventListener('blur', () => { for (const k in K) K[k] = false; });
+let touchCrouchT = 0;          // en pantalla táctil, Lucas sigue agachado 1 s después de soltar ▼ (da tiempo a pulsar ▶ y meterse por un hueco bajo)
 [['bL', 'left'], ['bR', 'right'], ['bD', 'down'], ['bA', 'jump'], ['bB', 'act']].forEach(([id, k]) => {
   const el = $(id);
-  const on = e => { e.preventDefault(); press(k, true); el.classList.add('dn'); try { el.setPointerCapture(e.pointerId); } catch (x) {} };
-  const off = e => { e.preventDefault(); press(k, false); el.classList.remove('dn'); };
+  const on = e => { e.preventDefault(); if (k === 'jump') touchCrouchT = 0; press(k, true); el.classList.add('dn'); try { el.setPointerCapture(e.pointerId); } catch (x) {} };
+  const off = e => { e.preventDefault(); if (k === 'down' && K.down) touchCrouchT = performance.now() + 1000; if (k === 'jump') touchCrouchT = 0; press(k, false); el.classList.remove('dn'); };
   el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
@@ -1622,7 +1623,7 @@ function updatePlayer(dt) {
   p.inv = Math.max(0, p.inv - dt); p.tTurbo = Math.max(0, p.tTurbo - dt); p.tMagnet = Math.max(0, p.tMagnet - dt); p.tStar = Math.max(0, p.tStar - dt);
   p.tele = Math.max(0, p.tele - dt); p.cool = Math.max(0, p.cool - dt); p.sq = Math.max(0, p.sq - dt * 4);
   // agacharse
-  const wantCrouch = K.down && p.onGround && p.power !== 'mini';
+  const wantCrouch = (K.down || performance.now() < touchCrouchT) && p.onGround && p.power !== 'mini';
   if (wantCrouch && !p.crouch) { p.crouch = true; setSize(p); }
   else if (!wantCrouch && p.crouch && canStand(p)) { p.crouch = false; setSize(p); }
   // horizontal
