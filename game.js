@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.60';
+const VERSION = '0.61';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -1632,7 +1632,7 @@ function updatePlayer(dt) {
   if (p.onGround && dir && Math.sign(p.vx) !== dir && Math.abs(p.vx) > 120 && Math.random() < 0.5) parts.push({ x: p.x + p.w / 2, y: p.y + p.h, vx: -dir * 60, vy: -40 - Math.random() * 60, life: 0.3, max: 0.3, col: '#9fb4ff', size: 3, grav: 0 });
   // salto
   p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
-  if (p.onGround || p.climb) p.dj = true; p.flip = Math.max(0, (p.flip || 0) - dt);
+  if (p.onGround || p.climb) { p.dj = true; p.jy0 = p.y + p.h; } p.flip = Math.max(0, (p.flip || 0) - dt);
   p.jbuf = jumpPressed ? 0.12 : Math.max(0, p.jbuf - dt);
   p.drop = false;
   const wet = !!(L.water && p.y + p.h * 0.4 > L.water.y); if (wet !== !!p.wet) { if (Math.abs(p.vy) > 60) { burst(p.x + p.w / 2, L.water.y, 14, '#dff8ff', 200, 0.5, 600, 3); noise(0.25, 0.12, 1200); } p.wet = wet; }
@@ -1648,7 +1648,7 @@ function updatePlayer(dt) {
     }
   }
   else if (jumpPressed && p.dj && !p.onGround && !p.climb && !p.dead && !(p.tTurbo > 0 || CHEAT.fly || p.fly)) {   // doble salto en el aire
-    p.dj = false; p.vy = p.power === 'mini' ? -430 : -470; p.boost = 1; p.jbuf = 0; p.sq = 1; p.flip = 0.42;
+    p.dj = false; { const H = (p.power === 'mini' ? 3.6 : 4.25) * T, h = Math.max(0, (p.jy0 || p.y + p.h) - (p.y + p.h)), rem = Math.max(T * 0.9, H - h); p.vy = -Math.sqrt(2 * 2000 * L.gk * rem); } p.boost = 1;   // siempre llega a la misma altura (unos 4 bloques), le des cuando le des p.jbuf = 0; p.sq = 1; p.flip = 0.42;
     const fx = p.x + p.w / 2, fy = p.y + p.h; (L.djr = L.djr || []).push({ x: fx, y: fy, t0: time });
     tone(520, 1560, 0.18, 'triangle', 0.08); tone(780, 2340, 0.16, 'sine', 0.05, 0.04);
     for (let i = 0; i < 26; i++) { const a = Math.PI * (0.15 + 0.7 * Math.random()), v = 160 + Math.random() * 260; parts.push({ x: fx + (Math.random() - 0.5) * 20, y: fy, vx: Math.cos(a) * v * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * v * 0.6, life: 0.45, max: 0.45, col: ['#7ff6ff', '#ffffff', '#35ff8a', '#bff9ff'][i % 4], size: 2 + Math.random() * 2.5, grav: 200 }); }
@@ -3832,9 +3832,11 @@ function adminAsk(pad) { if (CON.on) return; openConsole(pad); setTimeout(() => 
 .sep{display:flex;align-items:center;gap:10px;color:#8ea3e6;font-size:12px;margin:10px 0 4px}.sep::before,.sep::after{content:"";flex:1;height:1px;background:rgba(142,163,230,.35)}
 .amsg2{min-height:1.3em;font-size:13px;color:#ffd23c;margin-top:6px}.amsg2.err{color:#ff6a7a}.lnk{background:none;border:0;color:#7fe9ff;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;margin-top:4px}
 #gBtn{display:flex;justify-content:center;min-height:44px;margin-top:6px}
-#accChip{position:fixed;top:calc(8px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:10;font-size:12px;padding:7px 12px;border-radius:999px;display:none}
+#accChip{position:fixed;top:calc(18px + env(safe-area-inset-top));touch-action:manipulation;-webkit-user-select:none;right:calc(10px + env(safe-area-inset-right));z-index:10;font-size:12px;padding:7px 12px;border-radius:999px;display:none}
 #title.on ~ #accChip{display:block}`; document.head.appendChild(st);
-  const ch = document.createElement('button'); ch.id = 'accChip'; ch.className = 'btn'; $('title').after(ch); ch.onclick = () => { SFX.chip(); ACC ? showAccount() : showLogin(); }; })();
+  const ch = document.createElement('button'); ch.id = 'accChip'; ch.className = 'btn'; $('title').after(ch); let lastOpen = 0; const open = e => { if (e) { e.preventDefault(); e.stopPropagation(); } const n = Date.now(); if (n - lastOpen < 600) return; lastOpen = n; audio(); SFX.chip(); ACC ? showAccount() : showLogin(); };
+  // en iPhone el "click" a veces no llega (Safari se lo come cerca del borde de arriba): se abre también al levantar el dedo
+  ch.addEventListener('touchend', open, { passive: false }); ch.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') open(e); }); ch.addEventListener('click', open); })();
 function accChip() { const c = $('accChip'); if (!c) return; c.textContent = ACC ? '👤 ' + ACC.nombre : GUEST ? '👤 SIN CUENTA · ENTRAR' : '👤 ENTRAR'; }
 function accCard(html) { const c = $('card'); c.classList.remove('tips'); c.classList.add('acc'); c.innerHTML = html; show('panel', true); }
 function accClose() { show('panel', false); $('card').classList.remove('acc'); }
@@ -3887,9 +3889,10 @@ function accDone(r) {
   mergeProg(r.progreso); cloudSave(true); accChip(); SFX.win(); accClose(); openMap(); mapMsg = { txt: '¡HOLA, ' + String(ACC.nombre).toUpperCase() + '! PROGRESO GUARDADO EN LA NUBE', t: 3.2, ok: true };
 }
 function showAccount() {
-  accCard('<h2>👤 ' + esc(ACC.nombre) + '</h2><div style="color:#cfe0ff;font-size:14px;margin:4px 0 10px">' + esc(ACC.email) + '<br>Tu progreso se guarda solo en la nube ☁️</div><div class="amsg2" id="amsg2"></div><div class="row"><button class="btn" id="aSync">SINCRONIZAR AHORA</button><button class="btn" id="aOut2" style="border-color:#ff4a6a">CERRAR SESIÓN</button><button class="btn" id="aX2">VOLVER</button></div>');
+  accCard('<h2>👤 ' + esc(ACC.nombre) + '</h2><div style="color:#cfe0ff;font-size:14px;margin:4px 0 10px">' + esc(ACC.email) + '<br>Tu progreso se guarda solo en la nube ☁️</div><div class="amsg2" id="amsg2"></div><div class="row"><button class="btn" id="aSync">SINCRONIZAR AHORA</button><button class="btn" id="aOut2" style="border-color:#ff4a6a">CERRAR SESIÓN</button><button class="btn" id="aSw2">CAMBIAR DE USUARIO</button><button class="btn" id="aX2">VOLVER</button></div>');
   $('aSync').onclick = async () => { accMsg('Sincronizando…'); const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); cloudSave(true); accMsg('✔ Todo al día'); } else accMsg(r.error === 'SESION' ? 'La sesión ha caducado: vuelve a entrar' : r.error, 1); };
   $('aOut2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); accClose(); };
+  $('aSw2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); showLogin(); };
   $('aX2').onclick = accClose;
 }
 let cloudT = 0;
