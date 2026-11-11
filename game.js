@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.76';
+const VERSION = '0.77';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -2120,7 +2120,7 @@ function drawStageBack() {          // por detrás de los personajes
     for (let x = st.x0 + off - 28; x < st.x1 - 10; x += 28) { if (x < st.x0 + 2) continue; ctx.beginPath(); ctx.moveTo(x, st.y); ctx.lineTo(x + 7, st.y + 4); ctx.lineTo(x, st.y + 8); ctx.stroke(); }
     ctx.globalCompositeOperation = 'source-over'; }
   for (const lf of L.lifts) { if (lf.x1 < cam.x - 20 || lf.x0 > cam.x + VW + 20 || lf.y1 < cam.y - 20 || lf.y0 > cam.y + VHv + 20) continue;     // ascensores antigravedad
-    const w = lf.x1 - lf.x0, h = lf.y1 - lf.y0, LC = L.theme === 'lava' ? ['255,140,40', '#ffb060'] : L.theme === 'ice' ? ['200,245,255', '#e8fbff'] : ['41,230,255', LC[1]]; ctx.globalCompositeOperation = 'lighter';
+    const w = lf.x1 - lf.x0, h = lf.y1 - lf.y0, LC = L.theme === 'lava' ? ['255,140,40', '#ffb060'] : L.theme === 'ice' ? ['200,245,255', '#e8fbff'] : ['41,230,255', '#bff8ff']; ctx.globalCompositeOperation = 'lighter';
     const g2 = ctx.createLinearGradient(lf.x0, 0, lf.x1, 0); g2.addColorStop(0, 'rgba(' + LC[0] + ',0)'); g2.addColorStop(0.5, 'rgba(' + LC[0] + ',' + (0.16 + 0.05 * Math.sin(time * 5)) + ')'); g2.addColorStop(1, 'rgba(' + LC[0] + ',0)'); ctx.fillStyle = g2; ctx.fillRect(lf.x0, lf.y0, w, h);
     ctx.strokeStyle = 'rgba(' + LC[0] + ',.55)'; ctx.lineWidth = 3; const off = (time * 140) % 44;
     for (let y = lf.y1 - off; y > lf.y0 + 6; y -= 44) { ctx.globalAlpha = Math.min(1, (y - lf.y0) / 120) * 0.8; ctx.beginPath(); ctx.moveTo(lf.x0 + w * 0.3, y); ctx.lineTo(lf.x0 + w / 2, y - 12); ctx.lineTo(lf.x0 + w * 0.7, y); ctx.stroke(); }
@@ -3415,7 +3415,7 @@ async function nfcRead(onSerial, onErr) {        // solo se usa el número de se
     r.onreading = async ev => { if (busy) return; busy = true; try { navigator.vibrate && navigator.vibrate(80); } catch (e) {} const s2 = String(ev.serialNumber || '').replace(/:/g, '').toUpperCase(); try { await onSerial(s2); nfcStop(); } catch (e) { onErr(e.message || String(e)); busy = false; } };
     r.onreadingerror = () => { if (!busy) onErr('No pude leer la llave. Vuelve a acercarla.'); };
     return true;
-  } catch (e) { nfcStop(); onErr('Activa el NFC del móvil y vuelve a intentarlo.'); return false; }
+  } catch (e) { nfcStop(); if (e && e.name === 'NotAllowedError' && onErr.gesture) { onErr.gesture(); return false; } onErr('Activa el NFC del móvil y vuelve a intentarlo.'); return false; }
 }
 const NFC_HTML = '<div class="nfcw"><svg viewBox="0 0 64 64" width="54" height="54"><rect x="14" y="6" width="36" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><path d="M27 24a9 9 0 0 1 0 16M33 19a16 16 0 0 1 0 26M39 14a23 23 0 0 1 0 36" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><i></i><i></i></div>';
 (() => { const st = document.createElement('style'); st.textContent = `
@@ -3553,7 +3553,7 @@ async function admOp(op, d) {
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
-  const tabs = ['PAGOS', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
+  const tabs = ['PAGOS', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
   $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · COSMOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
@@ -3598,6 +3598,9 @@ function admPaint() {
       $('tL').querySelectorAll('[data-td]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } try { const r = await admOp('tmpDel', { id: b.dataset.td }); paint(r.tmp); tmpLoad(); admMsg('✔ Eliminado: ya no le sirve a nadie'); } catch (e) { admMsg(e.message, 1); } }); };
     admOp('tmpList').then(r => paint(r.tmp)).catch(e => admMsg(e.message, 1));
     $('tAdd').onclick = async () => { const u = +$('tU').value; try { const r = await admOp('tmpAdd', { truco: $('tT').value, mins: u ? Math.max(1, +$('tN').value || 1) * u : 0, teclas: $('tK').value, pad: pad.join('+'), toques: +$('tQ').value || 0, nota: $('tNo').value }); paint(r.tmp); tmpLoad(); admMsg('✔ Truco temporal creado'); SFX.life(); } catch (e) { admMsg(e.message, 1); } };
+  } else if (admTab === 'NIVELES') {
+    B.innerHTML = '<div style="color:#8ea3e6">Código secreto de cada fase. Si un jugador lo escribe en TALLER › CARGAR UN NIVEL, se le abren todos los candados hasta esa fase (incluida). Las que no se haya pasado quedan con 0 estrellas; las que ya tenía conservan las suyas.</div><div class="amsg" id="amsg">Cargando…</div><div id="nvC"></div>';
+    admOp('nivLlaves', { ids: ALLN().map(n => n.id) }).then(r => { const c = r.cods || {}; admMsg(''); $('nvC').innerHTML = WORLDS.map(w => '<h3>PLANETA ' + w.n + ' · ' + esc(w.name) + '</h3><div class="arow">' + w.nodes.map(n => '<div class="akey" style="min-width:150px;text-align:center"><span style="color:#8ea3e6">' + lvlName(n) + '</span><br><b style="color:#ffd23c;font:900 20px monospace;letter-spacing:.15em;user-select:all">' + esc(c[n.id] || '—') + '</b></div>').join('') + '</div>').join(''); }).catch(e => admMsg(e.message, 1));
   } else if (admTab === 'PAGOS') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="pgA"></div><div id="pgT"></div>'; admLicTexts($('pgT'));
     const fd = t => t ? new Date(t).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -3664,10 +3667,13 @@ function conAdmin() {
   const q = new URLSearchParams(location.search).get('admq'); if (!q) return;
   history.replaceState(null, '', location.pathname);
   const a = $('adm'); a.classList.add('on');
-  a.innerHTML = '<div class="abody" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><h3 style="font-size:1.4em">AUTORIZAR ACCESO</h3>' + NFC_HTML + '<div class="amsg" id="amsg">' + (HAY_NFC ? 'Pulsa el botón y acerca tu llave a la parte de atrás del móvil' : 'Este móvil no lee NFC. Usa un Android con Chrome.') + '</div>' +
-    (HAY_NFC ? '<div class="arow"><button class="btn on" id="qScan">ACTIVAR LECTOR</button></div>' : '') + '<div class="arow"><button class="btn" id="qX">CERRAR</button></div></div>';
+  a.innerHTML = '<div class="abody" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><h3 style="font-size:1.4em">AUTORIZAR ACCESO</h3>' + NFC_HTML + '<div class="amsg" id="amsg">' + (HAY_NFC ? '📡 Acerca tu llave a la parte de atrás del móvil…' : 'Este móvil no lee NFC. Usa un Android con Chrome.') + '</div>' + '<div class="arow"><button class="btn" id="qX">CERRAR</button></div></div>';
   $('qX').onclick = closeAdmin;
-  if (HAY_NFC) $('qScan').onclick = () => { admMsg('📡 Esperando la llave…'); nfcRead(async k => { const r = await api({ a: 'qrOk', q, k }); if (!r.ok) throw new Error(r.error); admMsg('✔ Acceso autorizado. Ya puedes cerrar esto.'); SFX && SFX.win(); }, t => admMsg(t, 1)); };
+  if (HAY_NFC) {     // el lector se activa solo al abrir la pantalla (si Chrome aún no tiene el permiso, basta con tocar en cualquier sitio una única vez)
+    const err = t => admMsg(t, 1), go = () => nfcRead(async k => { const r = await api({ a: 'qrOk', q, k }); if (!r.ok) throw new Error(r.error); admMsg('✔ Acceso autorizado. Ya puedes cerrar esto.'); SFX && SFX.win(); }, err);
+    err.gesture = () => { admMsg('📡 Acerca tu llave a la parte de atrás del móvil…'); const once = e => { if (e.target && e.target.id === 'qX') return; a.removeEventListener('pointerdown', once); go(); }; a.addEventListener('pointerdown', once); };
+    go();
+  }
 })();
 
 
@@ -3761,6 +3767,7 @@ function tlAskCode() {
   c.innerHTML = '<h2>CARGAR UN NIVEL</h2><div style="color:#cfe0ff;margin:6px 0">Escribe el código de 6 letras y números que te han pasado:</div><input id="tlC" maxlength="6" style="font:900 26px system-ui;letter-spacing:.3em;text-transform:uppercase;width:220px;text-align:center;padding:8px;border-radius:10px;border:2px solid #29e6ff;background:#020a1e;color:#fff"><div id="tlM" style="min-height:1.4em;color:#ffd23c;margin-top:6px"></div><div class="row"><button class="btn" id="tlG">CARGAR</button><button class="btn" id="tlB2">VOLVER</button></div>';
   show('panel', true); $('tlB2').onclick = () => openTaller(); setTimeout(() => $('tlC').focus(), 100);
   $('tlG').onclick = async () => { const code = $('tlC').value.trim().toUpperCase(); if (code.length !== 6) { $('tlM').textContent = 'El código tiene 6 caracteres'; return; } $('tlM').textContent = 'Buscando…';
+    const lk = await api({ a: 'nivLlave', c: code, ids: ALLN().map(n => n.id) }); if (lk.ok && lk.id && unlockTo(lk.id)) return;
     if (ACC) { const r = await api({ a: 'nivCopiar', ses: ACC.ses, c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en tu taller con el código ' + r.c); }
     else { const r = await api({ a: 'nivGet', c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } const l = tlLocal(); l.unshift({ lid: 'L' + Date.now(), n: r.n, t: r.t, datos: r.datos, f: Date.now() }); tlLocalSave(l); SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en este dispositivo'); } };
 }
@@ -3961,10 +3968,18 @@ function showLogin(tab) {
 let gsiOk = false;
 function gsiLoad(cb) { if (window.google && google.accounts) return cb(); if (gsiOk) return setTimeout(() => gsiLoad(cb), 300); gsiOk = true; const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = cb; document.head.appendChild(sc); }
 let PRV = 0; try { PRV = +(localStorage.getItem('tl_rv') || 0); } catch (e) {}          // versión de reinicio del progreso (LOCK): manda sobre las copias viejas de otros dispositivos
+function lvlName(n) { const w = WORLDS.find(w => w.nodes.includes(n)); return n.boss ? 'JEFE ' + w.n : n.bonus ? 'SECRETA ' + w.n : n.id; }
+function unlockTo(id) {     // código de nivel: abre todos los candados hasta esa fase (las no superadas quedan con 0 estrellas)
+  const all = ALLN().filter(n => typeof LEVELS[n.id] === 'function'), k = all.findIndex(n => n.id === id); if (k < 0) return false;
+  for (let i = 0; i <= k; i++) DEV[all[i].id] = 1; try { localStorage.setItem('tl_dev', JSON.stringify(DEV)); } catch (e) {} cloudSave(true);
+  const wi = WORLDS.findIndex(w => w.nodes.some(n => n.id === id)); setWorld(wi); mapSel = Math.max(0, MAP.findIndex(n => n.id === id)); openMap();
+  mapUnl = { i: mapSel, t: 0, snd: false }; SFX.life(); mapMsg = { txt: '🔓 CANDADOS ABIERTOS HASTA ' + lvlName(all[k]), t: 3.5, ok: true }; return true;
+}
 function mergeProg(cloud) {      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor (salvo que en la nube se haya reiniciado)
   const cp = (cloud && cloud.prog) || {}, cg = (cloud && cloud.got) || {};
   if (cloud && (+cloud.rv || 0) > PRV) { PRV = +cloud.rv; PROG = {}; GOT = {}; DEV = {}; try { localStorage.setItem('tl_rv', String(PRV)); localStorage.setItem('tl_dev', '{}'); } catch (e) {} if (typeof cloud.w === 'number' && WORLDS[cloud.w]) setWorld(cloud.w); else setWorld(0); }
   for (const id in cp) { const a = PROG[id], b = cp[id]; PROG[id] = !a ? b : { stars: Math.max(a.stars || 0, b.stars || 0), best: Math.max(a.best || 0, b.best || 0) }; }
+  const cdv = (cloud && cloud.dev) || {}; for (const id in cdv) if (cdv[id] === 1) DEV[id] = 1; try { localStorage.setItem('tl_dev', JSON.stringify(DEV)); } catch (e) {}
   for (const id in cg) { const o = gotOf(id), c = cg[id]; ['c', 'b', 'g'].forEach(k => (c[k] || []).forEach(v => { if (!o[k].includes(v)) o[k].push(v); })); if (c.r) o.r = 1; }
   try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {}
 }
@@ -3982,7 +3997,7 @@ function showAccount() {
 let cloudT = 0;
 function cloudSave(now) {
   if (!ACC) return; clearTimeout(cloudT);
-  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
+  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV, dev: DEV } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
 }
 /* ======================= VENTANAS DEL JUEGO (sustituyen a los avisos nativos del navegador) ======================= */
 (() => { const st = document.createElement('style'); st.textContent = `
