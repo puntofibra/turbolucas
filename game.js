@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.30';
+const VERSION = '0.31';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -776,6 +776,29 @@ LEVELS['2-2'] = function () {
   for (let i = 1; i <= 4; i++) B.block(189 + i, 189 + i, 14 - i, 13); B.row(190, 193, 8); B.crystal(203, 14, 2, 1.4); B.block(206, 209, 0, 15);
   return B.done({ name: 'CUEVAS DE CRISTAL', time: 230, theme: 'ice', cave: true, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 198 * T + T / 2, y: 14 * T } });
 };
+/* ---------- fase 2-3: BAJO EL HIELO (¡a nado! cada salto es una brazada: corrientes, anguilas eléctricas, géiseres de burbujas y una cámara de hielo sellada) ---------- */
+LEVELS['2-3'] = function () {
+  const B = LB(230, 16);
+  B.block(0, 229, 0, 1); B.ground(0, 229);
+  // A · zambullida
+  B.arc(5, 20, 8, 4); B.hid(12, 9, 'vida'); B.box(18, 11, 'escudo'); B.crystal(3, 14, 0, 1.3); B.crystal(24, 14, 2); B.en('alien', 26, 13);
+  // B · zigzag entre columnas de hielo
+  B.block(32, 33, 2, 9); B.row(30, 35, 12); B.en('erizo', 36, 13); B.block(40, 41, 6, 13); B.row(38, 43, 4); B.en('dron', 44, 4, { x0: 42, x1: 47 });
+  B.block(48, 49, 2, 9); B.row(46, 51, 12); B.en('dron', 52, 11, { x0: 50, x1: 55 }); B.block(56, 57, 6, 13); B.row(54, 59, 4); B.crystal(45, 14, 1);
+  // C · corrientes y anguilas eléctricas
+  B.cp(63, 14); B.wind(64, 98, 2, 7, 520, 0); B.wind(64, 98, 9, 13, -520, 0); B.laser(72, 2, 13, 0, 1.0, 1.7); B.laser(85, 2, 13, 0.9, 1.0, 1.7);
+  B.row(66, 70, 4); B.row(74, 83, 5); B.row(87, 90, 4); B.en('erizo', 78, 13); B.crystal(68, 14, 2, 1.2); B.crystal(80, 14, 0);
+  B.block(92, 99, 8, 13); B.fake(92, 98, 10, 12); B.gear(96, 11); B.row(93, 95, 11);                   // roca hueca: engranaje escondido
+  // D · gran caverna con géiser
+  B.box(104, 10, 'laser'); B.en('erizo', 108, 13); B.en('erizo', 115, 13); B.lift(117, 118, 3, 13); B.block(120, 122, 4, 13); B.row(117, 118, 6); B.gear(121, 2);
+  B.en('alien', 130, 13); B.en('dron', 135, 5, { x0: 126, x1: 144 }); B.arc(126, 146, 9, 4); B.crystal(126, 14, 1, 1.4); B.crystal(140, 14, 0, 1.1); B.box(143, 11, 'iman');
+  // E · la cámara sellada (rompe el techo de hielo desde abajo) y la salida
+  B.cp(150, 14); B.block(159, 159, 2, 9); B.block(171, 171, 2, 9); B.block(160, 170, 9, 9, 'B'); B.row(160, 170, 12);
+  for (let r = 3; r <= 7; r += 2) B.row(161, 169, r); B.gear(165, 5); B.crystal(165, 14, 2, 1.2);
+  B.en('dron', 180, 6, { x0: 175, x1: 190 }); B.en('erizo', 186, 13); B.laser(193, 2, 13, 0.4, 1.0, 1.4); B.row(196, 204, 8); B.box(198, 11, 'estrella'); B.en('alien', 202, 13);
+  B.crystal(212, 14, 1, 1.3); B.block(226, 229, 0, 15);
+  return B.done({ name: 'BAJO EL HIELO', time: 240, theme: 'ice', cave: true, water: { y: 2 * T }, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 216 * T + T / 2, y: 14 * T } });
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -931,7 +954,7 @@ function updatePlayer(dt) {
   // horizontal
   const dir = (K.right ? 1 : 0) - (K.left ? 1 : 0);
   const icy = L.ice && p.onGround && !p.inLift;
-  const max = (icy ? 1.12 : 1) * (p.crouch ? 110 : 270) * (p.tStar > 0 ? 1.2 : 1) * (p.tTurbo > 0 ? 1.15 : 1) * (p.fast > 0 ? 1.75 : 1);
+  const max = (L.water && p.wet ? 0.72 : 1) * (icy ? 1.12 : 1) * (p.crouch ? 110 : 270) * (p.tStar > 0 ? 1.2 : 1) * (p.tTurbo > 0 ? 1.15 : 1) * (p.fast > 0 ? 1.75 : 1);
   const acc = (icy ? 760 : p.onGround ? 2200 : 1500) * (p.fast > 0 ? 1.7 : 1);
   if (dir) { p.vx += dir * acc * dt; if (Math.abs(p.vx) > max) p.vx = Math.sign(p.vx) * Math.max(max, Math.abs(p.vx) - 3000 * dt); p.face = dir; p.idle = 0; }
   else { const f = (icy ? 240 : p.onGround ? 2400 : 600) * dt; p.vx = Math.abs(p.vx) <= f ? 0 : p.vx - Math.sign(p.vx) * f; p.idle += dt; }
@@ -942,7 +965,11 @@ function updatePlayer(dt) {
   p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
   p.jbuf = jumpPressed ? 0.12 : Math.max(0, p.jbuf - dt);
   p.drop = false;
-  if (p.jbuf > 0 && p.coyote > 0) {
+  const wet = L.water && p.y + p.h * 0.4 > L.water.y; if (wet !== !!p.wet) { if (Math.abs(p.vy) > 60) { burst(p.x + p.w / 2, L.water.y, 14, '#dff8ff', 200, 0.5, 600, 3); noise(0.25, 0.12, 1200); } p.wet = wet; }
+  if (wet && jumpPressed) {             // nadar: cada pulsación es una brazada (cerca de la superficie, salta fuera)
+    p.vy = p.y < L.water.y + 30 ? -680 : Math.min(p.vy, 0) - 380; if (p.vy < -420 && p.y >= L.water.y + 30) p.vy = -420; p.jbuf = 0; p.coyote = 0; p.onGround = false; p.sq = 0.6;
+    tone(260, 420, 0.14, 'sine', 0.07); for (let i = 0; i < 6; i++) parts.push({ x: p.x + p.w / 2 + (Math.random() - 0.5) * 30, y: p.y + p.h, vx: (Math.random() - 0.5) * 40, vy: 40 + Math.random() * 60, life: 0.6, max: 0.6, col: 'rgba(220,250,255,.9)', size: 2 + Math.random() * 3, grav: -260 }); }
+  else if (p.jbuf > 0 && p.coyote > 0) {
     if (K.down && onOneWay(p)) { p.drop = true; p.y += 4; p.jbuf = 0; p.coyote = 0; }
     else if (!p.crouch || canStand(p)) {
       if (p.crouch) { p.crouch = false; setSize(p); }
@@ -950,9 +977,9 @@ function updatePlayer(dt) {
       burst(p.x + p.w / 2, p.y + p.h, 8, '#ffb347', 120, 0.3, 0, 3);
     }
   }
-  if (!K.jump && p.vy < -260 && !p.boost) p.vy = -260;               // salto corto si sueltas
+  if (!wet && !K.jump && p.vy < -260 && !p.boost) p.vy = -260;               // salto corto si sueltas
   if ((p.tTurbo > 0 || CHEAT.fly) && K.jump) p.vy = Math.max(p.vy - 3600 * dt, -330);   // turbo: volar
-  p.vy = Math.min(p.vy + 2000 * L.gk * dt, L.gk < 1 ? 560 : 900);
+  if (wet) p.vy = Math.min(p.vy + 640 * dt, 170); else p.vy = Math.min(p.vy + 2000 * L.gk * dt, L.gk < 1 ? 560 : 900);
   const wasAir = !p.onGround, vyBefore = p.vy, feet0 = p.y + p.h;
   moveEnt(p, dt);
   if (p.vy < 0 && !p.dead) { const ty = Math.floor(p.y / T);           // bloque invisible: aparece al golpearlo desde abajo
@@ -1339,7 +1366,19 @@ function drawIceBg() {
     ctx.lineTo(VW, VHv); ctx.closePath(); const mg = ctx.createLinearGradient(0, base - hh, 0, VHv); mg.addColorStop(0, cols[1]); mg.addColorStop(0.3, cols[0]); mg.addColorStop(1, '#101f3e'); ctx.fillStyle = mg; ctx.fill(); ctx.strokeStyle = 'rgba(230,248,255,.5)'; ctx.lineWidth = 2; ctx.stroke(); });
   const fg = ctx.createLinearGradient(0, VHv * 0.6, 0, VHv); fg.addColorStop(0, 'rgba(160,220,255,0)'); fg.addColorStop(1, 'rgba(170,225,255,.25)'); ctx.fillStyle = fg; ctx.fillRect(0, VHv * 0.6, VW, VHv * 0.4);
 }
-function drawWater() {}
+function drawWater() {                // bajo el hielo: agua azul, rayos de luz, cáusticas y burbujas
+  const sy = L.water.y - cam.y; if (sy > VHv) return; const top = Math.max(0, sy);
+  ctx.save(); ctx.setTransform(SC, 0, 0, SC, 0, 0);
+  const g = ctx.createLinearGradient(0, top, 0, VHv); g.addColorStop(0, 'rgba(40,160,230,.26)'); g.addColorStop(1, 'rgba(4,30,90,.5)'); ctx.fillStyle = g; ctx.fillRect(0, top, VW, VHv - top);
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 6; i++) { const x = ((i * 260 - cam.x * 0.3 + time * 18) % (VW + 400) + VW + 400) % (VW + 400) - 200, w = 60 + (i % 3) * 30, a = 0.05 + 0.03 * Math.sin(time * 0.8 + i);
+    const rg = ctx.createLinearGradient(0, top, 0, VHv); rg.addColorStop(0, 'rgba(200,250,255,' + a + ')'); rg.addColorStop(1, 'rgba(200,250,255,0)'); ctx.fillStyle = rg; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + w, top); ctx.lineTo(x + w + 160, VHv); ctx.lineTo(x + 120, VHv); ctx.closePath(); ctx.fill(); }
+  ctx.strokeStyle = 'rgba(190,245,255,.07)'; ctx.lineWidth = 2;
+  for (let r = 0; r < 4; r++) { ctx.beginPath(); for (let x = 0; x <= VW; x += 20) { const y = top + 40 + r * 70 + Math.sin(x * 0.02 + time * 1.4 + r) * 8 + Math.sin(x * 0.007 - time + r * 2) * 10; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); }
+  if (sy > -10) { ctx.strokeStyle = 'rgba(230,252,255,.7)'; ctx.lineWidth = 3; ctx.beginPath(); for (let x = 0; x <= VW; x += 12) { const y = sy + Math.sin(x * 0.04 + time * 3) * 3; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.restore();
+  if (Math.random() < 0.5) parts.push({ x: cam.x + Math.random() * VW, y: cam.y + VHv + 10, vx: (Math.random() - 0.5) * 10, vy: -40 - Math.random() * 50, life: 6, max: 6, col: 'rgba(210,245,255,.55)', size: 1 + Math.random() * 3, grav: 0 });
+}
 function drawSnow() {               // copos por delante de todo, en pantalla
   if (L.theme !== 'ice' || L.water || L.cave) return; const storm = L.winds.length ? Math.max(0, ...L.winds.map(w => w.k || 0)) : 0, dir = L.winds.length ? Math.sign(L.winds[0].f) : 0;
   ctx.fillStyle = '#fff';
@@ -1519,10 +1558,11 @@ function drawPlayer() {
     ctx.globalAlpha = 0.5; }
   // llamas de los 3 propulsores
   if (!p.dead) {
-    const fl = p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
+    if (p.wet && Math.random() < 0.25) parts.push({ x: cx + (Math.random() - 0.5) * 20, y: p.y + p.h - 6, vx: (Math.random() - 0.5) * 20, vy: -30, life: 1.2, max: 1.2, col: 'rgba(220,250,255,.8)', size: 1.5 + Math.random() * 2.5, grav: -120 });
+    const fl = p.wet ? 0 : p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
     const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = CAN[pose].map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
     if (p.onGround) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,130,40,' + (0.2 + 0.08 * Math.sin(time * 40)) + ')'; ctx.beginPath(); ctx.ellipse(mouths[1][0], p.y + p.h + 1, 30 * mini, 5 * mini, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
-    mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 ? 1.1 : 1), 9 * mini, i + 1));
+    if (fl > 0) mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 ? 1.1 : 1), 9 * mini, i + 1));
     if (p.onGround && Math.abs(p.vx) > 150 && Math.random() < 0.35) parts.push({ x: cx - p.face * 14, y: p.y + p.h, vx: -p.face * (40 + Math.random() * 80), vy: -20 - Math.random() * 70, life: 0.28, max: 0.28, col: Math.random() < 0.5 ? '#ffb347' : '#fff2c0', size: 2.2, grav: 300 });
     if (!p.onGround && p.vy < -100 && Math.random() < 0.7) { const m = mouths[Math.floor(Math.random() * 3)]; parts.push({ x: m[0] + (Math.random() - 0.5) * 6, y: m[1] + 20 + Math.random() * 20, vx: (Math.random() - 0.5) * 50, vy: 140 + Math.random() * 140, life: 0.32, max: 0.32, col: Math.random() < 0.6 ? '#ff9a3c' : '#ffe08a', size: 2.6, grav: 0 }); }
   }
@@ -1836,7 +1876,7 @@ const MAP1 = [
 const MAP2 = [
   { id: '2-1', n: '1', name: 'LLANURA HELADA', x: 0.104, y: 0.4955, rx: 0.04, built: true },
   { id: '2-2', n: '2', name: 'CUEVAS DE CRISTAL', x: 0.3475, y: 0.657, rx: 0.04, built: true, way: [[0.165, 0.453], [0.22, 0.488], [0.25, 0.56], [0.29, 0.625]] },
-  { id: '2-3', n: '3', name: 'BAJO EL HIELO', x: 0.3635, y: 0.437, rx: 0.038, way: [[0.35, 0.59], [0.355, 0.52]] },
+  { id: '2-3', n: '3', name: 'BAJO EL HIELO', x: 0.3635, y: 0.437, rx: 0.038, built: true, way: [[0.35, 0.59], [0.355, 0.52]] },
   { id: '2-4', n: '4', name: 'TORMENTA DE NIEVE', x: 0.4985, y: 0.491, rx: 0.038, way: [[0.415, 0.448], [0.455, 0.475]] },
   { id: '2-5', n: '5', name: 'AVALANCHA', x: 0.648, y: 0.654, rx: 0.038, way: [[0.53, 0.555], [0.585, 0.627]] },
   { id: '2-6', n: '6', name: 'POZO DE LA MINA', x: 0.651, y: 0.351, rx: 0.036, gold: true, way: [[0.67, 0.555], [0.666, 0.45]] },
