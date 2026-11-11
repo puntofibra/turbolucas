@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.72';
+const VERSION = '0.73';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -273,7 +273,7 @@ function pollPad() {
 
 
 /* ---------- consola secreta de trucos (10 toques rápidos sobre PAUSA) ---------- */
-const CHEAT = { full: false, ghost: false, live: false, floor: false, stop: false, kill: false, unlock: false, laser: false, fly: false, time: false, floorT: 0 };
+const CHEAT = { test: false, full: false, ghost: false, live: false, floor: false, stop: false, kill: false, unlock: false, laser: false, fly: false, time: false, floorT: 0 };
 // los trucos se guardan en el dispositivo: siguen activos al cambiar de fase, al actualizarse el juego o al volver otro día
 try { const sv = JSON.parse(localStorage.getItem('tl_ch') || '{}'); for (const k in sv) if (k in CHEAT && k !== 'floorT') CHEAT[k] = !!sv[k]; } catch (e) {}
 function saveCheats() { try { const o = {}; for (const k in CHEAT) if (k !== 'floorT' && CHEAT[k]) o[k] = 1; localStorage.setItem('tl_ch', JSON.stringify(o)); } catch (e) {} }
@@ -455,7 +455,7 @@ function conRun(raw) {
     say('*** ACCESO CONCEDIDO ***', 'g big', 30);
     say('CÓDIGOS SECRETOS DISPONIBLES:', 'w', 16);
     CODES.forEach(c => { say(c[0] + '  -  ' + c[1], 'y', 26); say('   ' + c[2], '', 9); });
-    say('OPEN  -  ACTIVA TODOS LOS TRUCOS A LA VEZ', 'y', 20); say('CLOSE  -  DESACTIVA TODOS LOS TRUCOS', 'y', 20); say('LOCK  -  BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)', 'y', 20);
+    say('OPEN  -  ACTIVA TODOS LOS TRUCOS A LA VEZ', 'y', 20); say('CLOSE  -  DESACTIVA TODOS LOS TRUCOS', 'y', 20); say('LOCK  -  BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)', 'y', 20); say('TEST  -  MODO PRUEBAS: LOS TRUCOS COMO BOTONES EN LA PAUSA', 'y', 20);
     say('Escribe un código para activarlo o desactivarlo.', 'd', 10);
     SFX.power(); return;
   }
@@ -468,6 +468,9 @@ function conRun(raw) {
   }
   if (cmd === 'OPEN') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = true); CHEAT.floorT = 0; saveCheats(); say('>> TODOS LOS TRUCOS ACTIVADOS ✔', 'g big', 24); CODES.forEach(c => say('   ✔ ' + c[0] + ' · ' + c[1], 'g', 0, true)); SFX.power(); return; }
   if (cmd === 'CLOSE') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = false); saveCheats(); say('>> TODOS LOS TRUCOS DESACTIVADOS', 'r big', 22); tone(500, 120, 0.3, 'square', 0.06); say(activeTxt(), 'y', 0, true); return; }
+  if (cmd === 'TEST') { CHEAT.test = !CHEAT.test; if (CHEAT.test) CODES.forEach(c => CHEAT[c[0].toLowerCase()] = false); saveCheats();
+    if (CHEAT.test) { say('>> MODO PRUEBAS ACTIVADO 🧪', 'g big', 24); say('   Pulsa PAUSA en cualquier fase: saldrán todos los trucos como botones para activarlos o quitarlos al momento. Empiezan todos apagados.', '', 10); SFX.power(); }
+    else { say('>> MODO PRUEBAS DESACTIVADO', 'r', 22); tone(500, 120, 0.3, 'square', 0.06); } return; }
   if (cmd === 'FULLACCESS' || cmd === 'FULL ACCESS') { CHEAT.full = !CHEAT.full; saveCheats();
     if (CHEAT.full) { say('>> FULL ACCESS ACTIVADO ✔', 'g big', 26); say('   Licencia gratis en este dispositivo: todo el juego desbloqueado, sin cartel de pago.', '', 10); SFX.power(); }
     else { say('>> FULL ACCESS DESACTIVADO', 'r', 22); say('   Vuelve a hacer falta la licencia desde la fase 3-2.', '', 10); tone(500, 120, 0.3, 'square', 0.06); } return; }
@@ -2830,7 +2833,9 @@ function startGame() {
 function togglePause() {
   if (state !== 'play' || CON.on) return;
   paused = !paused;
-  if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
+  if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>' + (CHEAT.test ? '<div style="margin-top:12px;color:#ffd23c;font:800 12px system-ui;letter-spacing:.08em">🧪 MODO PRUEBAS · TOCA PARA ACTIVAR O QUITAR</div><div class="row" id="pTest" style="max-width:640px">' + CODES.map(c => '<button class="btn' + (CHEAT[c[0].toLowerCase()] ? ' tOn' : '') + '" data-ck="' + c[0].toLowerCase() + '" style="font-size:12px;padding:8px 11px">' + c[1] + '</button>').join('') + '</div>' : ''); show('panel', true);
+    if (CHEAT.test) { if (!$('tOnSt')) { const s = document.createElement('style'); s.id = 'tOnSt'; s.textContent = '#pTest .btn.tOn{border-color:#35ff8a;background:rgba(20,90,50,.9);box-shadow:0 0 14px rgba(53,255,138,.7)}'; document.head.appendChild(s); }
+      $('card').querySelectorAll('[data-ck]').forEach(b => b.onclick = () => { const k = b.dataset.ck; CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; saveCheats(); b.classList.toggle('tOn', CHEAT[k]); tone(CHEAT[k] ? 1200 : 500, CHEAT[k] ? 1600 : 300, 0.08, 'square', 0.05); }); } $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
   else show('panel', false);
 }
 function cheatsOff() { let any = false; for (const c of CODES) { const k = c[0].toLowerCase(); if (CHEAT[k]) any = true; CHEAT[k] = false; } if (any) saveCheats(); }
