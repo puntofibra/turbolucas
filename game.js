@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.37';
+const VERSION = '0.38';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -125,6 +125,7 @@ const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'ri
   ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump', KeyX: 'act', KeyK: 'act', ShiftLeft: 'act', ShiftRight: 'act', ControlLeft: 'act' };
 function press(k, v) { if (v && !K[k]) { if (k === 'jump') jumpPressed = true; if (k === 'act') actPressed = true; } K[k] = v; }
 addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
   if (CON.on) { if (e.code === 'Escape') closeConsole(); return; }
   if ($('adm').classList.contains('on')) return;
   const k = KEYMAP[e.code];
@@ -133,7 +134,7 @@ addEventListener('keydown', e => {
   if (state === 'map') { if (e.code === 'ArrowRight' || e.code === 'KeyD') mapMove(1); else if (e.code === 'ArrowLeft' || e.code === 'KeyA') mapMove(-1); else if (e.code === 'ArrowUp' || e.code === 'KeyW') mapMove(2); else if (e.code === 'ArrowDown' || e.code === 'KeyS') mapMove(-2); else if (e.code === 'Enter' || e.code === 'Space') mapPlay(); else if (e.code === 'Escape') toMenu(); return; }
   if (e.code === 'Enter') { if (state === 'title') openMap(); else if ($('panel').classList.contains('on')) { const b = $('card').querySelector('button'); if (b) b.click(); } }
 });
-addEventListener('keyup', e => { if (CON.on || $('adm').classList.contains('on')) return; const k = KEYMAP[e.code]; if (k) { press(k, false); e.preventDefault(); } });
+addEventListener('keyup', e => { if ((e.target && e.target.tagName === 'INPUT') || CON.on || $('adm').classList.contains('on')) return; const k = KEYMAP[e.code]; if (k) { press(k, false); e.preventDefault(); } });
 addEventListener('blur', () => { for (const k in K) K[k] = false; });
 [['bL', 'left'], ['bR', 'right'], ['bD', 'down'], ['bA', 'jump'], ['bB', 'act']].forEach(([id, k]) => {
   const el = $(id);
@@ -898,7 +899,7 @@ LEVELS['2-J'] = function () {
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
-let gotT = 0; function gotSave() { clearTimeout(gotT); gotT = setTimeout(() => { try { localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {} }, 400); }
+let gotT = 0; function gotSave() { clearTimeout(gotT); gotT = setTimeout(() => { try { localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {} cloudSave(); }, 400); }
 function gotMark(kind, v) { const o = gotOf(curId); if (kind === 'r') o.r = 1; else if (!o[kind].includes(v)) o[kind].push(v); gotSave(); }
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
@@ -1852,7 +1853,7 @@ function toggleFull() { if (document.fullscreenElement) { fsLeft = true; try { d
 document.addEventListener('fullscreenchange', () => { const b = $('btnFull'); if (b) b.textContent = document.fullscreenElement ? 'SALIR DE PANTALLA COMPLETA' : 'PANTALLA COMPLETA'; setTimeout(resize, 60); });
 // instalada en PC: pantalla completa de verdad (sin barra de Windows) al primer clic o tecla
 if (INSTALLED && !TOUCH) { const first = () => { if (!fsLeft) enterFull(); }; addEventListener('pointerdown', first); addEventListener('keydown', first); }
-addEventListener('keydown', e => { if (CON.on || $('adm').classList.contains('on')) return; if (e.code === 'F11' || (e.code === 'KeyF' && !e.repeat && state !== 'play')) { e.preventDefault(); toggleFull(); } });
+addEventListener('keydown', e => { if ((e.target && e.target.tagName === 'INPUT') || CON.on || $('adm').classList.contains('on')) return; if (e.code === 'F11' || (e.code === 'KeyF' && !e.repeat && state !== 'play')) { e.preventDefault(); toggleFull(); } });
 if (!TOUCH) { $('btnFull').style.display = ''; $('btnFull').onclick = toggleFull; }
 function startGame() {
   audio(); startMusic();
@@ -2009,7 +2010,7 @@ const worldOpen = w => w === 0 || CHEAT.unlock || !!PROG[bossOf(w - 1).id] || DE
 let bossBeatBefore = false, warp = null, mapHideLucas = false;
 let PROG = {}, curId = '1-1', mapSel = 0, mapAt = 0, mapL = { x: MAP[0].x, y: MAP[0].y }, mapRoute = [], mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 }, mapUnl = null, mapParts = [], justOpened = -1;
 try { PROG = JSON.parse(localStorage.getItem('tl_prog') || '{}') || {}; const os = +localStorage.getItem('tl_stars_1_1') || 0; if (os && !PROG['1-1']) PROG['1-1'] = { stars: os, best: +localStorage.getItem('tl_best_1_1') || 0 }; } catch (e) { PROG = {}; }
-function saveProg() { try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); } catch (e) {} }
+function saveProg() { try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); } catch (e) {} cloudSave(); }
 const mapPrev = i => MAP[i].prev !== undefined ? MAP[i].prev : i - 1;
 let DEV = {}; try { DEV = JSON.parse(localStorage.getItem('tl_dev') || '{}') || {}; } catch (e) { DEV = {}; }
 const isBuilt = n => n.built === true || (DEV[n.id] === 1 && typeof LEVELS[n.id] === 'function');
@@ -2186,7 +2187,7 @@ cv.addEventListener('pointerdown', e => {
   for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.w; if (((x - nx) / (rx * 1.75)) ** 2 + ((y - ny - rx * 0.2) / (rx * 1.2)) ** 2 < 1) { if (!devTapOn(i)) mapSelect(i); return; } }
 });
 $('mPlay').onclick = () => mapPlay(); $('mBack').onclick = toMenu;
-$('btnPlay').onclick = openMap;
+$('btnPlay').onclick = () => { if (ACC || GUEST) openMap(); else showAccess(); };
 $('btnPause').onclick = togglePause;
 $('btnMute').onclick = () => { audio(); setSnd(!sndOn); };
 $('btnSnd').onclick = () => { audio(); setSnd(!sndOn); if (sndOn) SFX.chip(); };
@@ -2440,6 +2441,90 @@ function conAdmin() {
   $('qX').onclick = closeAdmin;
   if (HAY_NFC) $('qScan').onclick = () => { admMsg('📡 Esperando la llave…'); nfcRead(async k => { const r = await api({ a: 'qrOk', q, k }); if (!r.ok) throw new Error(r.error); admMsg('✔ Acceso autorizado. Ya puedes cerrar esto.'); SFX && SFX.win(); }, t => admMsg(t, 1)); };
 })();
+
+
+/* ---------- cuentas: jugar con cuenta (progreso en la nube, en cualquier dispositivo) o sin cuenta (solo este dispositivo) ---------- */
+const GOOGLE_ID = '454055120059-nuhaop4r62urc3u036cc3grpqo71ulg7.apps.googleusercontent.com';
+let ACC = null, GUEST = false; try { ACC = JSON.parse(localStorage.getItem('tl_acc') || 'null'); GUEST = localStorage.getItem('tl_guest') === '1'; } catch (e) {}
+(() => { const st = document.createElement('style'); st.textContent = `
+.card.acc{width:min(94vw,520px);max-height:94vh;overflow-y:auto;text-align:center;padding:16px 20px}
+.opt{display:flex;gap:14px;align-items:center;text-align:left;width:100%;margin:8px 0;padding:14px 16px;border-radius:16px;border:2px solid var(--cy);background:rgba(12,20,52,.85);color:#fff;font:inherit;cursor:pointer;box-shadow:0 0 14px rgba(41,230,255,.35)}
+.opt.rec{border-color:var(--gr);box-shadow:0 0 20px rgba(53,255,138,.5)}.opt .oi{font-size:30px;flex:none}.opt b{font-size:16px;letter-spacing:.05em;display:block}.opt span{font-size:13px;color:#cfe0ff;line-height:1.35}
+.opt .bdg{display:inline-block;font-size:10px;font-weight:900;color:#010309;background:var(--gr);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:middle;letter-spacing:.08em}
+.opt.pf{outline:3px solid #fff;outline-offset:3px}
+.fin{width:100%;font:inherit;font-size:16px;color:#fff;background:rgba(2,10,30,.9);border:1.5px solid rgba(41,230,255,.6);border-radius:10px;padding:11px 12px;margin:5px 0;-webkit-user-select:text!important;user-select:text!important;touch-action:manipulation}
+.fin:focus{outline:none;border-color:var(--gr);box-shadow:0 0 12px rgba(53,255,138,.45)}
+.atab{display:flex;gap:6px;margin:10px 0 6px}.atab .btn{flex:1;font-size:13px;padding:8px}.atab .btn.on{border-color:var(--gr);box-shadow:0 0 14px rgba(53,255,138,.55)}
+.sep{display:flex;align-items:center;gap:10px;color:#8ea3e6;font-size:12px;margin:10px 0 4px}.sep::before,.sep::after{content:"";flex:1;height:1px;background:rgba(142,163,230,.35)}
+.amsg2{min-height:1.3em;font-size:13px;color:#ffd23c;margin-top:6px}.amsg2.err{color:#ff6a7a}.lnk{background:none;border:0;color:#7fe9ff;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;margin-top:4px}
+#gBtn{display:flex;justify-content:center;min-height:44px;margin-top:6px}
+#accChip{position:fixed;top:calc(8px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:10;font-size:12px;padding:7px 12px;border-radius:999px;display:none}
+#title.on ~ #accChip{display:block}`; document.head.appendChild(st);
+  const ch = document.createElement('button'); ch.id = 'accChip'; ch.className = 'btn'; $('title').after(ch); ch.onclick = () => { SFX.chip(); ACC ? showAccount() : showLogin(); }; })();
+function accChip() { const c = $('accChip'); if (!c) return; c.textContent = ACC ? '👤 ' + ACC.nombre : GUEST ? '👤 SIN CUENTA · ENTRAR' : '👤 ENTRAR'; }
+function accCard(html) { const c = $('card'); c.classList.remove('tips'); c.classList.add('acc'); c.innerHTML = html; show('panel', true); }
+function accClose() { show('panel', false); $('card').classList.remove('acc'); }
+const accMsg = (t, err) => { const m = $('amsg2'); if (m) { m.textContent = t; m.className = 'amsg2' + (err ? ' err' : ''); } };
+function showAccess() {
+  audio();
+  accCard('<h2>¿CÓMO QUIERES JUGAR?</h2>' +
+    '<button class="opt rec" id="oAcc"><span class="oi">☁️</span><span><b>CON MI CUENTA <i class="bdg">RECOMENDADO</i></b>Tu progreso se guarda en la nube: sigues donde lo dejaste en el móvil, la tablet, el PC o la tele. Con Google en un toque.</span></button>' +
+    '<button class="opt" id="oGst"><span class="oi">🎮</span><span><b>SIN CUENTA</b>Juega ya, sin registrarte. El progreso solo se queda en este dispositivo.</span></button>' +
+    '<div class="row"><button class="btn" id="oX">VOLVER</button></div>');
+  $('oAcc').onclick = () => { SFX.chip(); showLogin(); };
+  $('oGst').onclick = () => { SFX.chip(); showGuestWarn(); };
+  $('oX').onclick = accClose;
+}
+function showGuestWarn() {
+  accCard('<h2>⚠️ SIN CUENTA</h2><div style="color:#cfe0ff;line-height:1.5;font-size:15px;margin:6px 0 10px">Tus fases, estrellas y récords se guardarán <b>solo en este dispositivo</b>.<br>No podrás seguir tu partida en otro móvil, PC o tele, y si se borran los datos del navegador <b>lo perderás todo</b>.<br><br>Entrar con tu cuenta es <b>gratis</b> y con Google tardas <b>10 segundos</b>.</div>' +
+    '<div class="row"><button class="btn" id="gwAcc" style="border-color:var(--gr);box-shadow:0 0 16px rgba(53,255,138,.6)">ENTRAR CON CUENTA</button><button class="btn" id="gwGo">SEGUIR SIN CUENTA</button></div>');
+  $('gwAcc').onclick = () => { SFX.chip(); showLogin(); };
+  $('gwGo').onclick = () => { GUEST = true; try { localStorage.setItem('tl_guest', '1'); } catch (e) {} accChip(); accClose(); openMap(); };
+}
+let loginTab = 'entrar';
+function showLogin(tab) {
+  if (tab) loginTab = tab;
+  const f = loginTab === 'entrar' ? '<input class="fin" id="lE" type="email" autocomplete="username" placeholder="Tu correo" inputmode="email"><input class="fin" id="lP" type="password" autocomplete="current-password" placeholder="Contraseña"><button class="btn big" id="lGo" style="width:100%;margin-top:8px">ENTRAR</button><button class="lnk" id="lOlv">¿Olvidaste tu contraseña?</button>'
+    : loginTab === 'crear' ? '<input class="fin" id="lN" autocomplete="nickname" placeholder="Nombre de jugador" maxlength="24"><input class="fin" id="lE" type="email" autocomplete="username" placeholder="Tu correo" inputmode="email"><input class="fin" id="lP" type="password" autocomplete="new-password" placeholder="Contraseña (mínimo 6)"><button class="btn big" id="lGo" style="width:100%;margin-top:8px">CREAR CUENTA</button>'
+    : '<div style="color:#cfe0ff;font-size:14px">Te enviamos un código a tu correo para poner una contraseña nueva.</div><input class="fin" id="lE" type="email" autocomplete="username" placeholder="Tu correo" inputmode="email"><button class="btn" id="lCod" style="width:100%;margin:4px 0">ENVIARME EL CÓDIGO</button><input class="fin" id="lC" inputmode="numeric" placeholder="Código de 6 cifras" maxlength="6"><input class="fin" id="lP" type="password" autocomplete="new-password" placeholder="Contraseña nueva"><button class="btn big" id="lGo" style="width:100%;margin-top:8px">CAMBIAR Y ENTRAR</button>';
+  accCard('<h2>☁️ TU CUENTA</h2><div style="color:#cfe0ff;font-size:13px">Guarda tu progreso y juega en cualquier dispositivo</div><div id="gBtn"></div><div class="sep">o con tu correo</div>' +
+    '<div class="atab"><button class="btn' + (loginTab === 'entrar' ? ' on' : '') + '" id="tE">ENTRAR</button><button class="btn' + (loginTab === 'crear' ? ' on' : '') + '" id="tC">CREAR CUENTA</button></div>' + f +
+    '<div class="amsg2" id="amsg2"></div><div class="row"><button class="btn" id="lX">VOLVER</button></div>');
+  $('tE').onclick = () => showLogin('entrar'); $('tC').onclick = () => showLogin('crear'); $('lX').onclick = () => { accClose(); if (!ACC && !GUEST) showAccess(); };
+  if ($('lOlv')) $('lOlv').onclick = () => showLogin('recuperar');
+  if ($('lCod')) $('lCod').onclick = async () => { accMsg('Enviando…'); const r = await api({ a: 'recuperar', email: $('lE').value }); r.ok ? accMsg('📧 Código enviado. Mira tu correo (y el spam).') : accMsg(r.error, 1); };
+  const go = async () => { const b = $('lGo'); b.disabled = true; accMsg('Conectando…');
+    const d = loginTab === 'entrar' ? { a: 'entrar', email: $('lE').value, pass: $('lP').value } : loginTab === 'crear' ? { a: 'registro', nombre: $('lN').value, email: $('lE').value, pass: $('lP').value } : { a: 'restablecer', email: $('lE').value, codigo: $('lC').value, pass: $('lP').value };
+    const r = await api(d); if (r.ok) accDone(r); else { accMsg(r.error || 'No se pudo entrar', 1); b.disabled = false; } };
+  $('lGo').onclick = go; const lp = $('lP'); if (lp) lp.onkeydown = e => { if (e.key === 'Enter') go(); };
+  gsiLoad(() => { try { google.accounts.id.initialize({ client_id: GOOGLE_ID, ux_mode: 'popup', callback: async r => { accMsg('Comprobando tu cuenta de Google…'); const x = await api({ a: 'google', credential: r.credential }); x.ok ? accDone(x) : accMsg(x.error || 'No se pudo entrar con Google', 1); } });
+    const g = $('gBtn'); if (g) google.accounts.id.renderButton(g, { theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with', width: Math.min(340, g.offsetWidth || 300) }); } catch (e) {} });
+}
+let gsiOk = false;
+function gsiLoad(cb) { if (window.google && google.accounts) return cb(); if (gsiOk) return setTimeout(() => gsiLoad(cb), 300); gsiOk = true; const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = cb; document.head.appendChild(sc); }
+function mergeProg(cloud) {      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor
+  const cp = (cloud && cloud.prog) || {}, cg = (cloud && cloud.got) || {};
+  for (const id in cp) { const a = PROG[id], b = cp[id]; PROG[id] = !a ? b : { stars: Math.max(a.stars || 0, b.stars || 0), best: Math.max(a.best || 0, b.best || 0) }; }
+  for (const id in cg) { const o = gotOf(id), c = cg[id]; ['c', 'b', 'g'].forEach(k => (c[k] || []).forEach(v => { if (!o[k].includes(v)) o[k].push(v); })); if (c.r) o.r = 1; }
+  try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {}
+}
+function accDone(r) {
+  ACC = { ses: r.ses, email: r.email, nombre: r.nombre }; GUEST = false; try { localStorage.setItem('tl_acc', JSON.stringify(ACC)); localStorage.removeItem('tl_guest'); } catch (e) {}
+  mergeProg(r.progreso); cloudSave(true); accChip(); SFX.win(); accClose(); openMap(); mapMsg = { txt: '¡HOLA, ' + String(ACC.nombre).toUpperCase() + '! PROGRESO GUARDADO EN LA NUBE', t: 3.2, ok: true };
+}
+function showAccount() {
+  accCard('<h2>👤 ' + esc(ACC.nombre) + '</h2><div style="color:#cfe0ff;font-size:14px;margin:4px 0 10px">' + esc(ACC.email) + '<br>Tu progreso se guarda solo en la nube ☁️</div><div class="amsg2" id="amsg2"></div><div class="row"><button class="btn" id="aSync">SINCRONIZAR AHORA</button><button class="btn" id="aOut2" style="border-color:#ff4a6a">CERRAR SESIÓN</button><button class="btn" id="aX2">VOLVER</button></div>');
+  $('aSync').onclick = async () => { accMsg('Sincronizando…'); const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); cloudSave(true); accMsg('✔ Todo al día'); } else accMsg(r.error === 'SESION' ? 'La sesión ha caducado: vuelve a entrar' : r.error, 1); };
+  $('aOut2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); accClose(); };
+  $('aX2').onclick = accClose;
+}
+let cloudT = 0;
+function cloudSave(now) {
+  if (!ACC) return; clearTimeout(cloudT);
+  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW } }); if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
+}
+accChip();
+if (ACC) setTimeout(async () => { const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); cloudSave(); } else if (r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, 2500);
 
 /* ---------- actualización automática ---------- */
 // Mira cada minuto si hay versión nueva. Nunca recarga en mitad de una partida: espera a que el jugador vuelva al menú.
