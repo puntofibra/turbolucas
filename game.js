@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.75';
+const VERSION = '0.76';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -478,7 +478,7 @@ function conRun(raw) {
   if (cmd === 'FULLACCESS' || cmd === 'FULL ACCESS') { CHEAT.full = !CHEAT.full; saveCheats();
     if (CHEAT.full) { say('>> FULL ACCESS ACTIVADO ✔', 'g big', 26); say('   Licencia gratis en este dispositivo: todo el juego desbloqueado, sin cartel de pago.', '', 10); SFX.power(); }
     else { say('>> FULL ACCESS DESACTIVADO', 'r', 22); say('   Vuelve a hacer falta la licencia desde la fase 3-2.', '', 10); tone(500, 120, 0.3, 'square', 0.06); } return; }
-  if (cmd === 'LOCK') { PROG = {}; DEV = {}; GOT = {}; CHEAT.unlock = false; saveCheats(); try { localStorage.setItem('tl_prog', '{}'); localStorage.setItem('tl_dev', '{}'); localStorage.setItem('tl_got', '{}'); } catch (e) {} setWorld(0); mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; cloudSave(true);
+  if (cmd === 'LOCK') { PROG = {}; DEV = {}; GOT = {}; PRV = Date.now(); try { localStorage.setItem('tl_rv', String(PRV)); } catch (e) {} CHEAT.unlock = false; saveCheats(); try { localStorage.setItem('tl_prog', '{}'); localStorage.setItem('tl_dev', '{}'); localStorage.setItem('tl_got', '{}'); } catch (e) {} setWorld(0); mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; cloudSave(true);
     say('>> TODOS LOS CANDADOS BLOQUEADOS 🔒', 'r big', 24); say('   El juego vuelve a empezar desde la fase 1-1, como si nunca hubieras jugado.', '', 10); tone(400, 90, 0.5, 'sawtooth', 0.06); return; }
   if (cmd === 'ADMIN') { conAdmin(); return; }
   if (cmd === 'CLS' || cmd === 'LIMPIAR') { conOut.innerHTML = ''; say('', '', 0, true); return; }
@@ -3960,8 +3960,10 @@ function showLogin(tab) {
 }
 let gsiOk = false;
 function gsiLoad(cb) { if (window.google && google.accounts) return cb(); if (gsiOk) return setTimeout(() => gsiLoad(cb), 300); gsiOk = true; const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = cb; document.head.appendChild(sc); }
-function mergeProg(cloud) {      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor
+let PRV = 0; try { PRV = +(localStorage.getItem('tl_rv') || 0); } catch (e) {}          // versión de reinicio del progreso (LOCK): manda sobre las copias viejas de otros dispositivos
+function mergeProg(cloud) {      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor (salvo que en la nube se haya reiniciado)
   const cp = (cloud && cloud.prog) || {}, cg = (cloud && cloud.got) || {};
+  if (cloud && (+cloud.rv || 0) > PRV) { PRV = +cloud.rv; PROG = {}; GOT = {}; DEV = {}; try { localStorage.setItem('tl_rv', String(PRV)); localStorage.setItem('tl_dev', '{}'); } catch (e) {} if (typeof cloud.w === 'number' && WORLDS[cloud.w]) setWorld(cloud.w); else setWorld(0); }
   for (const id in cp) { const a = PROG[id], b = cp[id]; PROG[id] = !a ? b : { stars: Math.max(a.stars || 0, b.stars || 0), best: Math.max(a.best || 0, b.best || 0) }; }
   for (const id in cg) { const o = gotOf(id), c = cg[id]; ['c', 'b', 'g'].forEach(k => (c[k] || []).forEach(v => { if (!o[k].includes(v)) o[k].push(v); })); if (c.r) o.r = 1; }
   try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {}
@@ -3980,7 +3982,7 @@ function showAccount() {
 let cloudT = 0;
 function cloudSave(now) {
   if (!ACC) return; clearTimeout(cloudT);
-  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW } }); if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
+  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
 }
 /* ======================= VENTANAS DEL JUEGO (sustituyen a los avisos nativos del navegador) ======================= */
 (() => { const st = document.createElement('style'); st.textContent = `
