@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.56';
+const VERSION = '0.57';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -260,6 +260,10 @@ function pollPad() {
     if (navPrev) { navPrev.forEach(e => e.classList.remove('pf')); navPrev = null; }
     if (b(0) && !padPrev.a && state === 'map') mapPlay();
     if (b(1) && !padPrev.o && state === 'map') toMenu();
+  }
+  if (state === 'map' && !nav.length && mapCam) {        // L1/L2 izquierda, R1/R2 derecha y joystick derecho: mirar el mapa sin mover a Lucas
+    const rx = Math.abs(gp.axes[2] || 0) > 0.25 ? gp.axes[2] : 0, ry = Math.abs(gp.axes[3] || 0) > 0.25 ? gp.axes[3] : 0, px = (b(5) || b(7) ? 1 : 0) - (b(4) || b(6) ? 1 : 0) + rx;
+    if (px || ry) mapPanBy(-px * 18, -ry * 18);
   }
   if (state === 'map' && !nav.length) { if (now.right && !padPrev.mr) mapMove(1); if (now.left && !padPrev.ml) mapMove(-1); if (up && !padPrev.mu) mapMove(2); if (now.down && !padPrev.md) mapMove(-2); }
   padPrev.a = b(0); padPrev.o = b(1); padPrev.mr = now.right; padPrev.ml = now.left; padPrev.mu = up; padPrev.md = now.down;
@@ -2994,13 +2998,16 @@ function devTapOn(i) {            // 10 toques rápidos sobre una fase aún no p
   devTap = { i: -1, n: 0, t: 0 }; SFX.life(); mapMsg = { txt: 'MODO PRUEBAS · FASE ' + n.id + ' ABIERTA', t: 2.6 }; mapGo(i); return true;
 }
 // el mapa llena la pantalla; si no cabe entero (pantallas cuadradas o mapas panorámicos) la cámara sigue a Lucas
-let mapCam = null, mapCamT = 0;
+let mapCam = null, mapCamT = 0, mapFreeT = 0, mapDrag = null;
+// mover el mapa a mano (ratón, dedo o L1/L2/R1/R2 y joystick derecho); a los 2 s sin tocar nada vuelve a enfocar a Lucas
+function mapPanBy(dx, dy) { if (!mapCam) return; mapCam.x = Math.min(0, Math.max(VW - mapCam.w, mapCam.x + dx)); mapCam.y = Math.min(0, Math.max(VHv - mapCam.h, mapCam.y + dy)); mapFreeT = performance.now(); }
 function mapTarget(w, h) { const fo = mapUnl && MAP[mapUnl.i].bonus && mapUnl.t > 0.25 ? MAP[mapUnl.i] : mapL, fx = fo.x * w, fy = fo.y * h;
   return [w > VW + 1 ? Math.min(0, Math.max(VW - w, VW * 0.5 - fx)) : (VW - w) / 2, h > VHv + 1 ? Math.min(0, Math.max(VHv - h, VHv * 0.55 - fy)) : (VHv - h) / 2]; }
 function mapT() { const im = mapImg(curW), iw = im && im.naturalWidth || 16, ih = im && im.naturalHeight || 9, sc = Math.max(VW / iw, VHv / ih), w = iw * sc, h = ih * sc;
   const tg = mapTarget(w, h); if (!mapCam || mapCam.w !== w || mapCam.h !== h) mapCam = { x: tg[0], y: tg[1], w, h };
   return { sc, w, h, u: Math.min(w, h * 1.8), ox: Math.min(0, Math.max(VW - w, mapCam.x)), oy: Math.min(0, Math.max(VHv - h, mapCam.y)) }; }
 function mapCamStep() { const t = mapT(), tg = mapTarget(t.w, t.h), now = performance.now(), dt = Math.min(0.05, (now - (mapCamT || now)) / 1000); mapCamT = now;
+  if (now - mapFreeT < 2000 && !mapRoute.length && !mapUnl) return;
   const k = Math.min(1, dt * 3.5); mapCam.x += (tg[0] - mapCam.x) * k; mapCam.y += (tg[1] - mapCam.y) * k; }
 const mapPt = (t, fx, fy) => [t.ox + fx * t.w, t.oy + fy * t.h];
 function mapPath(a, b) {            // puntos (en fracciones) para ir de la fase a a la fase b siguiendo el tubo
@@ -3010,7 +3017,7 @@ function mapPath(a, b) {            // puntos (en fracciones) para ir de la fase
   for (const d of ub.slice(0, ub.indexOf(lca)).reverse()) { pts.push(...MAP[d].way); pts.push([MAP[d].x, MAP[d].y]); }
   return pts;
 }
-function mapGo(i) { mapRoute = mapPath(mapAt, i); mapSel = i; mapInfo(); }
+function mapGo(i) { mapFreeT = 0; mapRoute = mapPath(mapAt, i); mapSel = i; mapInfo(); }
 function openMap() {
   audio(); startMusic(); goFull();
   state = 'map'; paused = false; mapRoute = []; mapAt = mapSel; mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null;
@@ -3200,6 +3207,17 @@ cv.addEventListener('pointerdown', e => {
   if (state === 'play') tapCount();
   if (state === 'warp') { if (warp && warp.t > 1.8 && warp.t < 3.9) warp.t = 3.9; return; }
   if (state !== 'map') return;
+  mapDrag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, id: e.pointerId };
+});
+cv.addEventListener('pointermove', e => {
+  if (state !== 'map' || !mapDrag || e.pointerId !== mapDrag.id) return;
+  if (!mapDrag.moved && Math.hypot(e.clientX - mapDrag.sx, e.clientY - mapDrag.sy) > 10) mapDrag.moved = true;
+  if (mapDrag.moved) { mapPanBy((e.clientX - mapDrag.x) * DPR / SC, (e.clientY - mapDrag.y) * DPR / SC); cv.style.cursor = 'grabbing'; }
+  mapDrag.x = e.clientX; mapDrag.y = e.clientY;
+});
+addEventListener('pointerup', e => {
+  if (!mapDrag || e.pointerId !== mapDrag.id) return; const d = mapDrag; mapDrag = null; cv.style.cursor = '';
+  if (state !== 'map' || d.moved || e.target !== cv) return;
   const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC, t = mapT();
   for (let i = MAP.length - 1; i >= 0; i--) { const [nx, ny] = mapPt(t, MAP[i].x, MAP[i].y), rx = MAP[i].rx * t.u; if (((x - nx) / (rx * 1.75)) ** 2 + ((y - ny - rx * 0.2) / (rx * 1.2)) ** 2 < 1) { if (!devTapOn(i)) mapSelect(i); return; } }
   mapEmptyTap();
