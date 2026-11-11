@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.69';
+const VERSION = '0.70';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -1604,7 +1604,10 @@ function die() {
 }
 function respawn() {
   const cp = L.lastCp || L.spawn;
-  P = newPlayer(cp.x, cp.y); P.inv = 1.5; if (L.hadLaser && L.g.some(r => r.includes('C'))) P.power = 'laser'; G.tleft = L.time; for (const m of L.movers) if (m.raft) { m.x = Math.max(m.bx, cp.x - m.w / 2); m.go = false; } if (L.auto) L.auto.x = Math.max(0, cp.x - 3 * T); L.bl = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; });
+  P = newPlayer(cp.x, cp.y); P.inv = 1.5; if (L.hadLaser && L.g.some(r => r.includes('C'))) P.power = 'laser';
+  { // tiempo al reaparecer: lo que queda de recorrido desde ese punto de control (con margen), nunca menos de lo que tenías
+    const d = o => L.vert ? Math.abs(o.y - L.goal.y) : Math.abs(L.goal.x - o.x), tot = Math.max(1, d(L.spawn)), fr = Math.min(1, d(cp) / tot);
+    G.tleft = cp === L.spawn ? L.time : Math.max(G.tleft || 0, Math.min(L.time, Math.round(L.time * fr * 1.3 + 25))); } for (const m of L.movers) if (m.raft) { m.x = Math.max(m.bx, cp.x - m.w / 2); m.go = false; } if (L.auto) L.auto.x = Math.max(0, cp.x - 3 * T); L.bl = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; });
   spawnEnemies(); shots = [];
   if (L.chase && L.chase.on) L.chase.x = P.x - 560;
   if (L.rise && L.rise.on) L.rise.y = P.y + P.h + 460;
