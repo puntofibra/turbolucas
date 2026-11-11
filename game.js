@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.6';
+const VERSION = '0.7';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -24,7 +24,7 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 /* ---------- imagenes ---------- */
 const NAMES = ['lucas-quieto', 'lucas-avanzando', 'lucas-saltando', 'lucas-cayendo', 'lucas-golpeado', 'lucas-celebrando', 'lucas-agachado',
   'enemigo-patrulla', 'enemigo-dron', 'enemigo-erizo', 'enemigo-torreta', 'enemigo-alien',
-  'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
+  'suelo', 'plataforma', 'caja-x', 'caja-usada', 'fondo-cerca', 'fondo-lejos', 'jefe1', 'obj-chip', 'obj-engranaje', 'obj-caja', 'obj-checkpoint', 'obj-antena5g', 'portal',
   'poder-laser', 'poder-escudo', 'poder-turbo', 'poder-iman', 'poder-mini', 'poder-estrella5g'];
 const IMG = {};
 let loaded = 0;
@@ -125,7 +125,8 @@ addEventListener('keydown', e => {
   const k = KEYMAP[e.code];
   if (k) { press(k, true); e.preventDefault(); }
   if ((e.code === 'KeyP' || e.code === 'Escape') && state === 'play') togglePause();
-  if (e.code === 'Enter') { if (state === 'title') startGame(); else if ($('panel').classList.contains('on')) { const b = $('card').querySelector('button'); if (b) b.click(); } }
+  if (state === 'map') { if (e.code === 'ArrowRight' || e.code === 'KeyD') mapMove(1); else if (e.code === 'ArrowLeft' || e.code === 'KeyA') mapMove(-1); else if (e.code === 'ArrowUp' || e.code === 'KeyW') mapMove(2); else if (e.code === 'ArrowDown' || e.code === 'KeyS') mapMove(-2); else if (e.code === 'Enter' || e.code === 'Space') mapPlay(); else if (e.code === 'Escape') toMenu(); return; }
+  if (e.code === 'Enter') { if (state === 'title') openMap(); else if ($('panel').classList.contains('on')) { const b = $('card').querySelector('button'); if (b) b.click(); } }
 });
 addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) { press(k, false); e.preventDefault(); } });
 addEventListener('blur', () => { for (const k in K) K[k] = false; });
@@ -151,7 +152,9 @@ function pollPad() {
   const now = { left: ax < -0.4 || b(14), right: ax > 0.4 || b(15), down: ay > 0.55 || b(13), jump: b(0) || b(3), act: b(2) || b(1) || b(5) };
   for (const k in now) { if (now[k] !== padPrev[k]) { padUsed = true; press(k, now[k]); padPrev[k] = now[k]; } }
   if (b(9) && !padPrev.start && state === 'play') togglePause();
-  if (b(0) && state === 'title') startGame();
+  if (b(0) && !padPrev.a) { if (state === 'title') openMap(); else if (state === 'map') mapPlay(); }
+  if (state === 'map') { if (now.right && !padPrev.mr) mapMove(1); if (now.left && !padPrev.ml) mapMove(-1); }
+  padPrev.a = b(0); padPrev.mr = now.right; padPrev.ml = now.left;
   padPrev.start = b(9);
 }
 
@@ -473,7 +476,8 @@ function updateEnemies(dt) {
 /* ---------- bucle ---------- */
 function update(dt) {
   time += dt;
-  if (state === 'title') { cam.x = (Math.sin(time * 0.07) * 0.5 + 0.5) * Math.max(0, L.W * T - VW); cam.y = L.H * T - VHv; }
+  if (state === 'map') mapUpdate(dt);
+  if (state === 'title' || state === 'map') { cam.x = (Math.sin(time * 0.07) * 0.5 + 0.5) * Math.max(0, L.W * T - VW); cam.y = L.H * T - VHv; }
   if (state === 'play') {
     G.clock += dt;
     updatePlayer(dt);
@@ -733,7 +737,7 @@ function render() {
   ctx.setTransform(SC, 0, 0, SC, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!L) { ctx.fillStyle = '#070a1e'; ctx.fillRect(0, 0, VW, VHv); return; }
-  drawBackground(); drawWorld();
+  drawBackground(); if (state === 'map') drawMap(); else drawWorld();
   if (state === 'play' || state === 'done' || state === 'over') drawHUD();
   const vg = ctx.createRadialGradient(VW / 2, VHv / 2, VHv * 0.45, VW / 2, VHv / 2, Math.max(VW, VHv) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,10,.45)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VHv);
@@ -787,41 +791,150 @@ $('rotBtn').onclick = () => {
   try { document.documentElement.requestFullscreen().then(() => screen.orientation.lock('landscape')).catch(() => rotHint('time')); } catch (e) { rotHint('time'); }
 };
 function show(id, on) { $(id).classList.toggle('on', on); }
+function goFull() {
+  if (!TOUCH) return;
+  try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {}); } catch (e) {}
+}
 function startGame() {
   audio(); startMusic();
-  if (TOUCH) { try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {}); } catch (e) {} }
   resetLevel(true); state = 'play'; paused = false;
-  show('title', false); show('panel', false); show('top', true); show('touch', TOUCH); checkRot();
+  show('title', false); show('panel', false); show('mapUI', false); show('top', true); show('touch', TOUCH); checkRot();
 }
 function togglePause() {
   if (state !== 'play') return;
   paused = !paused;
-  if (paused) { $('card').innerHTML = '<h2>PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MENÚ</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = toMenu; }
+  if (paused) { $('card').innerHTML = '<h2>PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); }
   else show('panel', false);
 }
-function toMenu() { setTimeout(updApply, 300); paused = false; state = 'title'; resetLevel(true); show('panel', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
+function toMenu() { setTimeout(updApply, 300); paused = false; state = 'title'; show('panel', false); show('mapUI', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
 function levelDone() {
   state = 'done'; show('touch', false);
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
   const secs = Math.floor(G.clock), bonus = Math.max(0, 300 - secs) * 10; G.score += bonus;
-  let best = 0, bestStars = 0;
-  try { best = +localStorage.getItem('tl_best_1_1') || 0; bestStars = +localStorage.getItem('tl_stars_1_1') || 0;
-    if (G.score > best) localStorage.setItem('tl_best_1_1', G.score); if (stars > bestStars) localStorage.setItem('tl_stars_1_1', stars); } catch (e) {}
-  $('card').innerHTML = '<h2>¡NIVEL SUPERADO!</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
+  const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId];
+  PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score) }; saveProg();
+  $('card').innerHTML = '<h2>¡FASE SUPERADA!</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
     '<div class="stat"><span>Chips</span><b>' + G.chips + '</b></div><div class="stat"><span>Engranajes</span><b>' + G.gears + ' / 3</b></div>' +
     '<div class="stat"><span>Tiempo</span><b>' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + '</b></div>' +
-    '<div class="stat"><span>Puntos</span><b>' + G.score + (G.score > best ? ' · ¡RÉCORD!' : '') + '</b></div>' +
+    '<div class="stat"><span>Puntos</span><b>' + G.score + (G.score > old.best ? ' · ¡RÉCORD!' : '') + '</b></div>' +
     '<div class="small">★ terminar · ★ los 3 engranajes · ★ sin perder vidas</div>' +
-    '<div class="row"><button class="btn" id="pr">REPETIR</button><button class="btn" id="pm">MENÚ</button></div><div class="small">Próximamente: más niveles y el mapa de mundos</div>';
-  show('panel', true); $('pr').onclick = startGame; $('pm').onclick = toMenu;
+    '<div class="row"><button class="btn" id="pm">CONTINUAR</button><button class="btn" id="pr">REPETIR</button></div>';
+  show('panel', true); $('pr').onclick = startGame; $('pm').onclick = () => toMap(true);
   for (let i = 0; i < stars; i++) setTimeout(() => { const e = $('st' + i); if (e) { e.classList.add('on'); tone(784 + i * 196, 784 + i * 196, 0.2, 'triangle', 0.14); } }, 400 + i * 380);
 }
 function gameOver() {
   state = 'over'; show('touch', false); SFX.over();
-  $('card').innerHTML = '<h2>FIN DE LA PARTIDA</h2><div class="stat"><span>Puntos</span><b>' + G.score + '</b></div><div class="row"><button class="btn" id="pr">REINTENTAR</button><button class="btn" id="pm">MENÚ</button></div>';
-  show('panel', true); $('pr').onclick = startGame; $('pm').onclick = toMenu;
+  $('card').innerHTML = '<h2>FIN DE LA PARTIDA</h2><div class="stat"><span>Puntos</span><b>' + G.score + '</b></div><div class="row"><button class="btn" id="pr">REINTENTAR</button><button class="btn" id="pm">MAPA</button></div>';
+  show('panel', true); $('pr').onclick = startGame; $('pm').onclick = () => toMap(false);
 }
-$('btnPlay').onclick = startGame;
+
+/* ---------- mapa del mundo 1 ---------- */
+const MAP = [
+  { id: '1-1', n: '1', name: 'MUELLE DE CARGA', x: 0.09, y: 0.60, built: true },
+  { id: '1-2', n: '2', name: 'PASILLOS DE SERVICIO', x: 0.22, y: 0.42 },
+  { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.35, y: 0.60 },
+  { id: '1-4', n: '4', name: 'INVERNADERO ORBITAL', x: 0.48, y: 0.42 },
+  { id: '1-5', n: '5', name: 'TORRE DE ANTENAS', x: 0.61, y: 0.60 },
+  { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.80, y: 0.56, boss: true, prev: 4 },
+  { id: '1-B', n: '★', name: 'FASE SECRETA', x: 0.48, y: 0.20, bonus: true, prev: 3 }
+];
+let PROG = {}, curId = '1-1', mapSel = 0, mapLx = 0, mapLy = 0, mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 };
+try { PROG = JSON.parse(localStorage.getItem('tl_prog') || '{}') || {}; const os = +localStorage.getItem('tl_stars_1_1') || 0; if (os && !PROG['1-1']) PROG['1-1'] = { stars: os, best: +localStorage.getItem('tl_best_1_1') || 0 }; } catch (e) { PROG = {}; }
+function saveProg() { try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); } catch (e) {} }
+const mapPrev = i => MAP[i].prev !== undefined ? MAP[i].prev : i - 1;
+const mapOpen = i => i === 0 || !!PROG[MAP[mapPrev(i)].id];
+const mapR = n => n.boss ? 34 : 26;
+const mapXY = i => [MAP[i].x * VW, MAP[i].y * VHv];
+function openMap() {
+  audio(); startMusic(); goFull();
+  state = 'map'; paused = false;
+  const [x, y] = mapXY(mapSel); mapLx = x; mapLy = y - mapR(MAP[mapSel]) - 8;
+  show('title', false); show('panel', false); show('top', false); show('touch', false); show('mapUI', true); mapInfo(); checkRot();
+}
+function toMap(advance) {
+  paused = false; state = 'map';
+  show('panel', false); show('top', false); show('touch', false); show('mapUI', true);
+  if (advance) { const i = MAP.findIndex(n => n.id === curId); if (i >= 0 && i + 1 < MAP.length && !MAP[i + 1].bonus && mapOpen(i + 1)) { mapSel = i + 1; SFX.check(); } }
+  mapInfo(); checkRot(); setTimeout(updApply, 1500);
+}
+function mapInfo() {
+  const n = MAP[mapSel], pr = PROG[n.id];
+  $('mTitle').textContent = (n.boss || n.bonus ? '' : 'FASE 1-' + n.n + ' · ') + n.name;
+  $('mSub').innerHTML = !n.built ? 'PRÓXIMAMENTE' : pr ? 'Mejor: ' + pr.best + ' puntos · <span class="mst">' + '★'.repeat(pr.stars) + '</span><span class="mso">' + '★'.repeat(3 - pr.stars) + '</span>' : '¡Fase nueva! Consigue las 3 estrellas';
+  $('mPlay').disabled = !n.built;
+}
+function mapSelect(i) {
+  if (i < 0 || i >= MAP.length) return;
+  if (!mapOpen(i)) { mapShake = { i, t: 0.4 }; mapMsg = { txt: 'BLOQUEADA · supera antes la fase anterior', t: 2.2 }; SFX.bump(); return; }
+  if (i === mapSel) { mapPlay(); return; }
+  mapSel = i; SFX.chip(); mapInfo();
+}
+function mapMove(d) {
+  let i = mapSel;
+  if (d === 2) i = MAP[mapSel].id === '1-4' ? 6 : mapSel; else if (d === -2) i = MAP[mapSel].bonus ? 3 : mapSel;
+  else { if (MAP[i].bonus) i = 3; i += d; if (i > 5) i = 5; }
+  if (i === mapSel || i < 0) return;
+  if (!mapOpen(i)) { mapShake = { i, t: 0.4 }; mapMsg = { txt: 'BLOQUEADA · supera antes la fase anterior', t: 2.2 }; SFX.bump(); return; }
+  mapSel = i; SFX.chip(); mapInfo();
+}
+function mapPlay() { const n = MAP[mapSel]; if (!n.built) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; } curId = n.id; startGame(); }
+function mapUpdate(dt) {
+  const [x, y] = mapXY(mapSel), ty = y - mapR(MAP[mapSel]) - 8, dx = x - mapLx, dy = ty - mapLy, d = Math.hypot(dx, dy);
+  if (d > 1) { const v = Math.min(d, Math.max(240, d * 5) * dt); mapLx += dx / d * v; mapLy += dy / d * v; if (Math.abs(dx) > 2) mapFace = dx > 0 ? 1 : -1; }
+  mapShake.t = Math.max(0, mapShake.t - dt); mapMsg.t = Math.max(0, mapMsg.t - dt);
+}
+function drawMap() {
+  ctx.fillStyle = 'rgba(4,6,22,.5)'; ctx.fillRect(0, 0, VW, VHv);
+  // cabecera
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = '800 14px system-ui,sans-serif'; ctx.fillStyle = '#7fe9ff'; ctx.fillText('MUNDO 1', 22, 34);
+  ctx.font = '800 26px system-ui,sans-serif'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 14; ctx.fillStyle = '#fff'; ctx.fillText('ESTACIÓN ORBITAL', 22, 62); ctx.shadowBlur = 0;
+  const done = MAP.filter(n => PROG[n.id]).length, stars = MAP.reduce((a, n) => a + (PROG[n.id] ? PROG[n.id].stars : 0), 0);
+  ctx.font = '700 13px system-ui,sans-serif'; ctx.fillStyle = '#9fb4ff'; ctx.fillText(done + ' / ' + MAP.length + ' fases', 22, 84); ctx.fillStyle = '#ffd23c'; ctx.fillText('★ ' + stars + ' / ' + MAP.length * 3, 110, 84);
+  // caminos
+  ctx.lineCap = 'round';
+  for (let i = 1; i < MAP.length; i++) {
+    const [x0, y0] = mapXY(mapPrev(i)), [x1, y1] = mapXY(i), open = mapOpen(i), mx = (x0 + x1) / 2, my = (y0 + y1) / 2 - (MAP[i].bonus ? 0 : 18);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(mx, my, x1, y1);
+    ctx.setLineDash([2, 13]); ctx.lineWidth = 6;
+    if (open) { ctx.lineDashOffset = -time * 22; ctx.strokeStyle = '#29e6ff'; ctx.shadowColor = '#29e6ff'; ctx.shadowBlur = 12; }
+    else { ctx.lineDashOffset = 0; ctx.strokeStyle = 'rgba(130,145,200,.38)'; ctx.shadowBlur = 0; }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.shadowBlur = 0;
+  // fases
+  for (let i = 0; i < MAP.length; i++) {
+    const n = MAP[i], r = mapR(n), open = mapOpen(i), dn = PROG[n.id], sel = i === mapSel, pu = 0.5 + 0.5 * Math.sin(time * 4 + i);
+    let [x, y] = mapXY(i); if (mapShake.i === i && mapShake.t > 0) x += Math.sin(mapShake.t * 60) * 5;
+    const col = dn ? '53,255,138' : n.boss ? '255,80,90' : n.bonus ? '255,210,60' : '41,230,255';
+    if (open) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, r * 0.6, x, y, r * 2.3); g.addColorStop(0, 'rgba(' + col + ',' + (0.3 + 0.18 * pu) + ')'); g.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = g; ctx.fillRect(x - r * 2.3, y - r * 2.3, r * 4.6, r * 4.6); ctx.globalCompositeOperation = 'source-over'; }
+    const dg = ctx.createRadialGradient(x - r * 0.3, y - r * 0.4, 2, x, y, r); dg.addColorStop(0, open ? '#2a3d8f' : '#34384f'); dg.addColorStop(1, open ? '#0a0f2e' : '#15172a');
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
+    ctx.lineWidth = 4; ctx.strokeStyle = open ? 'rgb(' + col + ')' : '#59607f'; ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = open ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(x, y, r - 6, 0, 6.283); ctx.stroke();
+    if (sel) { ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,' + (0.55 + 0.4 * pu) + ')'; ctx.beginPath(); ctx.arc(x, y, r + 7 + pu * 3, 0, 6.283); ctx.stroke(); }
+    if (n.boss) { ctx.globalAlpha = open ? 1 : 0.4; spr(IMG.jefe1, x, y + 2, r * 1.25, 0.5, 0.5); ctx.globalAlpha = 1; }
+    if (!open) { const ly = n.boss ? y + r - 6 : y, s = n.boss ? 0.8 : 1; // candado
+      ctx.fillStyle = '#9aa2c4'; ctx.fillRect(x - 9 * s, ly - 2 * s, 18 * s, 14 * s); ctx.lineWidth = 3.4 * s; ctx.strokeStyle = '#9aa2c4'; ctx.beginPath(); ctx.arc(x, ly - 3 * s, 6 * s, Math.PI, 0); ctx.stroke(); ctx.fillStyle = '#1a1d33'; ctx.beginPath(); ctx.arc(x, ly + 5 * s, 2.4 * s, 0, 6.283); ctx.fill(); }
+    else if (!n.boss) { ctx.font = '800 ' + (n.bonus ? 26 : 24) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = n.bonus ? '#ffd23c' : '#fff'; ctx.fillText(n.n, x, y + 1); }
+    if (dn) { ctx.font = '700 14px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let k = 0; k < 3; k++) { ctx.fillStyle = k < dn.stars ? '#ffd23c' : '#3a4270'; ctx.fillText('★', x - 15 + k * 15, y + r + 15); } }
+    else if (open && !n.built) { ctx.font = '700 9px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#9fb4ff'; ctx.fillText('PRONTO', x, y + r + 13); }
+  }
+  // Lucas sobre la fase elegida
+  const [tx, ty] = mapXY(mapSel), moving = Math.hypot(tx - mapLx, ty - mapR(MAP[mapSel]) - 8 - mapLy) > 3, pose = moving ? 'lucas-avanzando' : 'lucas-quieto', im = IMG[pose];
+  const k = 74 / 480, by = mapLy + Math.sin(time * 3) * 3, fs = mapFace;
+  CAN[pose].forEach((o, i) => flame(mapLx + fs * o[0] * k, by - o[1] * k - 2, (moving ? 22 : 11) * (i === 1 ? 1.1 : 1), 7, i + 1));
+  spr(im, mapLx, by, (im.naturalHeight || 240) * KS * k, ANCH[pose], 1, fs < 0, moving ? 0.06 * fs : 0);
+  if (mapMsg.t > 0) { ctx.globalAlpha = Math.min(1, mapMsg.t * 2); ctx.font = '800 15px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(mapMsg.txt).width + 28; ctx.fillStyle = 'rgba(40,10,20,.85)'; ctx.fillRect(VW / 2 - w / 2, VHv * 0.31 - 16, w, 32); ctx.strokeStyle = '#ff5a6a'; ctx.lineWidth = 2; ctx.strokeRect(VW / 2 - w / 2, VHv * 0.31 - 16, w, 32); ctx.fillStyle = '#ffd0d6'; ctx.fillText(mapMsg.txt, VW / 2, VHv * 0.31); ctx.globalAlpha = 1; }
+  ctx.textBaseline = 'alphabetic';
+}
+cv.addEventListener('pointerdown', e => {
+  if (state !== 'map') return;
+  const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC;
+  for (let i = 0; i < MAP.length; i++) { const [nx, ny] = mapXY(i); if (Math.hypot(x - nx, y - ny) < mapR(MAP[i]) + 16) { mapSelect(i); return; } }
+});
+$('mPlay').onclick = mapPlay; $('mBack').onclick = toMenu;
+$('btnPlay').onclick = openMap;
 $('btnPause').onclick = togglePause;
 $('btnMute').onclick = () => { audio(); setSnd(!sndOn); };
 $('btnSnd').onclick = () => { audio(); setSnd(!sndOn); if (sndOn) SFX.chip(); };
@@ -853,7 +966,7 @@ function updCheck() {
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.v && j.v !== VERSION) { updPending = j.v; updApply(); } }).catch(() => {});
 }
 function updApply() {
-  if (!updPending || state !== 'title') return;
+  if (!updPending || (state !== 'title' && state !== 'map')) return;
   try { const k = 'tl_upd_' + updPending, last = +sessionStorage.getItem(k) || 0; if (Date.now() - last < 300000) return; sessionStorage.setItem(k, Date.now()); } catch (e) {}
   location.replace(location.pathname + '?u=' + encodeURIComponent(updPending));
 }
@@ -865,5 +978,5 @@ setSnd(sndOn); resize();
 L = buildLevel(); P = newPlayer(L.spawn.x, L.spawn.y); spawnEnemies(); cam.y = L.H * T - VHv;
 requestAnimationFrame(frame);
 loadImages(() => { state = 'title'; });
-window.__TL = { get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press };
+window.__TL = { get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, MAP, get PROG() { return PROG; } };
 })();

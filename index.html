@@ -58,6 +58,15 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 #rot p b{color:var(--gr)}
 #rot .ph{width:38px;height:66px;border:3px solid var(--cy);border-radius:9px;margin-top:20px;animation:rot 2.4s ease-in-out infinite;box-shadow:0 0 14px rgba(41,230,255,.5)}
 @keyframes rot{0%,15%{transform:rotate(0)}45%,70%{transform:rotate(90deg)}85%,100%{transform:rotate(0)}}
+#mapUI{position:fixed;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom));z-index:8;display:none;flex-direction:column;align-items:center;text-align:center;pointer-events:none;padding:0 12px}
+#mapUI.on{display:flex}
+#mapUI>*{pointer-events:auto}
+#mTitle{font-weight:800;font-size:clamp(15px,3.6vh,22px);letter-spacing:.05em;text-shadow:0 0 12px rgba(41,230,255,.8),0 2px 4px #000}
+#mSub{font-size:clamp(12px,2.6vh,15px);color:#cfe0ff;margin-top:2px;text-shadow:0 2px 4px #000;font-weight:600}
+#mSub .mst{color:#ffd23c}#mSub .mso{color:#4a5488}
+#mapUI .row{margin-top:8px;align-items:center}
+#mapUI .btn.big{font-size:clamp(17px,3.6vh,24px);padding:10px 44px}
+#mPlay:disabled{opacity:.45;animation:none;border-color:#6b739a;box-shadow:none;cursor:default}
 #rotBtn{display:none;margin-top:18px;font-size:16px;border-color:var(--gr);box-shadow:0 0 16px rgba(53,255,138,.55),inset 0 0 12px rgba(53,255,138,.2)}
 #rotBtn.on{display:inline-block}
 #rotHint{display:none;margin-top:16px;padding:12px 16px 14px;border:2px solid #ffb400;border-radius:16px;background:rgba(58,36,0,.6);box-shadow:0 0 20px rgba(255,180,0,.5);animation:aviso 1.3s ease-in-out infinite}
@@ -100,6 +109,11 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
   <div class="ver" id="ver"></div>
 </div>
 
+<div id="mapUI">
+  <div id="mTitle"></div><div id="mSub"></div>
+  <div class="row"><button class="btn" id="mBack">VOLVER</button><button class="btn big" id="mPlay">JUGAR</button></div>
+</div>
+
 <div id="top">
   <button class="btn" id="btnMute" aria-label="Sonido">♪</button>
   <button class="btn" id="btnPause" aria-label="Pausa">II</button>
@@ -130,7 +144,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
   <button class="btn" id="iosOk">ENTENDIDO</button>
 </div></div>
 
-<script src="game.js?v=6"></script>
+<script src="game.js?v=7"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 </script>
