@@ -84,11 +84,11 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 #touch.on{display:block}
 .tb{position:absolute;pointer-events:auto;border-radius:50%;border:2px solid rgba(41,230,255,.75);background:rgba(12,20,52,.42);color:#dff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 12px rgba(41,230,255,.35)}
 .tb.dn{background:rgba(41,230,255,.42);transform:scale(.94)}
-#bL{left:calc(14px + env(safe-area-inset-left));bottom:22px;width:76px;height:76px}
-#bR{left:calc(102px + env(safe-area-inset-left));bottom:22px;width:76px;height:76px}
-#bD{left:calc(58px + env(safe-area-inset-left));bottom:106px;width:56px;height:56px;font-size:18px}
-#bA{right:calc(14px + env(safe-area-inset-right));bottom:22px;width:92px;height:92px;border-color:rgba(53,255,138,.85);font-size:15px}
-#bB{right:calc(116px + env(safe-area-inset-right));bottom:22px;width:68px;height:68px;border-color:rgba(198,60,255,.85);font-size:13px}
+#bL{left:calc(14px + env(safe-area-inset-left));bottom:calc(22px + var(--tpl,0vh));width:76px;height:76px}
+#bR{left:calc(102px + env(safe-area-inset-left));bottom:calc(22px + var(--tpl,0vh));width:76px;height:76px}
+#bD{left:calc(58px + env(safe-area-inset-left));bottom:calc(106px + var(--tpl,0vh));width:56px;height:56px;font-size:18px}
+#bA{right:calc(14px + env(safe-area-inset-right));bottom:calc(22px + var(--tpr,0vh));width:92px;height:92px;border-color:rgba(53,255,138,.85);font-size:15px}
+#bB{right:calc(116px + env(safe-area-inset-right));bottom:calc(22px + var(--tpr,0vh));width:68px;height:68px;border-color:rgba(198,60,255,.85);font-size:13px}
 #top{position:fixed;top:calc(14px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;display:none;gap:8px}
 #top.on{display:flex}
 #top .btn{padding:8px 13px;font-size:15px;border-radius:10px;touch-action:manipulation}
@@ -153,7 +153,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 </div></div>
 
 <script src="js/qrcode.min.js"></script>
-<script src="game.js?v=66"></script>
+<script src="game.js?v=67"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 </script>

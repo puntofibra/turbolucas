@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.66';
+const VERSION = '0.67';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3265,6 +3265,20 @@ $('btnPlay').onclick = () => { if (ACC || GUEST) openMap(); else showAccess(); }
 function tapBind(el, fn) { if (!el) return; let last = 0; const go = e => { if (e) { e.preventDefault(); e.stopPropagation(); } const n = Date.now(); if (n - last < 450) return; last = n; fn(); };
   el.addEventListener('touchend', go, { passive: false }); el.addEventListener('click', go); }
 tapBind($('btnPause'), togglePause);
+// posición de los botones táctiles (rueda ⚙ arriba): izquierda y derecha, bajos / medios / altos, se guarda en el dispositivo
+const TP_LV = [0, 13, 26];       // cuánto se suben (en % de la altura de la pantalla)
+let TPOS = { l: 0, r: 0 }; try { TPOS = Object.assign(TPOS, JSON.parse(localStorage.getItem('tl_tpos') || '{}')); } catch (e) {}
+function tpApply() { const r = document.documentElement.style; r.setProperty('--tpl', TP_LV[TPOS.l] + 'vh'); r.setProperty('--tpr', TP_LV[TPOS.r] + 'vh'); }
+tpApply();
+(() => { const b = document.createElement('button'); b.className = 'btn'; b.id = 'btnTouch'; b.setAttribute('aria-label', 'Posición de los botones'); b.textContent = '⚙'; b.style.display = TOUCH ? '' : 'none'; $('top').prepend(b);
+  tapBind(b, async () => {
+    const wasP = paused; if (state === 'play' && !paused) togglePause(); show('panel', false);
+    const row = (side, t) => '<div class="tpr"><b>' + t + '</b>' + ['⬇ BAJOS', 'MEDIO', '⬆ ALTOS'].map((x, i) => '<button class="btn' + (TPOS[side] === i ? ' on' : '') + '" data-tp="' + side + i + '">' + x + '</button>').join('') + '</div>';
+    const p = uiDialog({ wrap: 'tp', title: '🎮 POSICIÓN DE LOS BOTONES', html: 'Elige a qué altura quieres los botones de cada lado. Se quedan guardados en este dispositivo.' + row('l', '◀ ▶ ▼ Izquierda') + row('r', 'SALTAR · LÁSER Derecha'), buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
+    $('uidlg').querySelectorAll('[data-tp]').forEach(x => x.onclick = () => { const sd = x.dataset.tp[0], i = +x.dataset.tp[1]; TPOS[sd] = i; tpApply(); try { localStorage.setItem('tl_tpos', JSON.stringify(TPOS)); } catch (e) {}
+      $('uidlg').querySelectorAll('[data-tp^="' + sd + '"]').forEach(y => y.classList.toggle('on', y === x)); tone(900, 900, 0.04, 'square', 0.05); });
+    show('touch', true); await p; show('touch', state === 'play' && !padUsed);
+    if (state === 'play' && paused && !wasP) togglePause(); }); })();
 tapBind($('btnMute'), () => { audio(); setSnd(!sndOn); });
 $('btnSnd').onclick = () => { audio(); setSnd(!sndOn); if (sndOn) SFX.chip(); };
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play' && !paused) togglePause(); });
@@ -3954,6 +3968,12 @@ function cloudSave(now) {
 .uiw .btn.pay{border-color:#ffd23c;background:linear-gradient(180deg,rgba(80,56,8,.9),rgba(40,26,4,.9));box-shadow:0 0 22px rgba(255,210,60,.6),inset 0 0 12px rgba(255,210,60,.25);font-size:18px!important;padding:13px 28px!important}
 #uidlg input{width:100%;font:inherit;font-size:17px;color:#fff;background:rgba(5,10,30,.9);border:2px solid rgba(41,230,255,.5);border-radius:12px;padding:10px 14px;margin:0 0 14px;outline:none;user-select:text;-webkit-user-select:text}
 .uiw .usmall{color:#8ea3e6;font-size:12px;margin-top:10px}
+#uidlg.tp{background:rgba(2,4,14,.18);backdrop-filter:none;align-items:flex-start;padding-top:calc(10px + env(safe-area-inset-top))}
+#uidlg.tp .ucard{max-width:min(520px,92vw);padding:14px 18px 12px}
+.uiw .tpr{display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.uiw .tpr b{min-width:150px;text-align:right;color:#cfe0ff;font-size:14px}
+.uiw .tpr .btn{font-size:13px;padding:8px 12px}
+.uiw .tpr .btn.on{border-color:var(--gr);background:rgba(20,80,50,.85);box-shadow:0 0 14px rgba(53,255,138,.6)}
 @keyframes uiFade{from{opacity:0}to{opacity:1}}
 @keyframes uiPop{from{transform:scale(.82) translateY(20px);opacity:0}to{transform:none;opacity:1}}`; document.head.appendChild(st);
   const d = document.createElement('div'); d.id = 'uidlg'; d.className = 'uiw'; document.body.appendChild(d); })();
@@ -3963,8 +3983,8 @@ function uiDialog(o) {
     d.innerHTML = '<div class="ucard ' + (o.tone || '') + '">' + (o.icon ? '<div class="uic">' + o.icon + '</div>' : '') + (o.title ? '<h2>' + o.title + '</h2>' : '') + (o.html ? '<div class="utx">' + o.html + '</div>' : '') +
       (o.input !== undefined ? '<input id="uiIn" maxlength="' + (o.max || 40) + '" value="' + esc(o.input) + '">' : '') +
       '<div class="urow">' + o.buttons.map((b, i) => '<button class="btn ' + (b.cls || '') + '" data-ui="' + i + '">' + b.t + '</button>').join('') + '</div>' + (o.foot ? '<div class="usmall">' + o.foot + '</div>' : '') + '</div>';
-    d.classList.add('on'); const inp = $('uiIn'); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
-    const done = v => { d.classList.remove('on'); d.innerHTML = ''; res(v); };
+    d.className = 'uiw on' + (o.wrap ? ' ' + o.wrap : ''); const inp = $('uiIn'); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
+    const done = v => { d.className = 'uiw'; d.innerHTML = ''; res(v); };
     d.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { const bt = o.buttons[+b.dataset.ui]; if (bt.fn) { bt.fn(); return; } done(inp ? (bt.v ? inp.value : null) : bt.v); });
     if (inp) inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
   });
