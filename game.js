@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.38';
+const VERSION = '0.39';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -383,6 +383,7 @@ function conRun(raw) {
     say('*** ACCESO CONCEDIDO ***', 'g big', 30);
     say('CÓDIGOS SECRETOS DISPONIBLES:', 'w', 16);
     CODES.forEach(c => { say(c[0] + '  -  ' + c[1], 'y', 26); say('   ' + c[2], '', 9); });
+    say('OPEN  -  ACTIVA TODOS LOS TRUCOS A LA VEZ', 'y', 20); say('CLOSE  -  DESACTIVA TODOS LOS TRUCOS', 'y', 20);
     say('Escribe un código para activarlo o desactivarlo.', 'd', 10);
     SFX.power(); return;
   }
@@ -393,6 +394,8 @@ function conRun(raw) {
     else { say('>> ' + code[1] + ' DESACTIVADO', 'r', 22); tone(500, 120, 0.3, 'square', 0.06); }
     say(activeTxt(), 'y', 0, true); return;
   }
+  if (cmd === 'OPEN') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = true); CHEAT.floorT = 0; saveCheats(); say('>> TODOS LOS TRUCOS ACTIVADOS ✔', 'g big', 24); CODES.forEach(c => say('   ✔ ' + c[0] + ' · ' + c[1], 'g', 0, true)); SFX.power(); return; }
+  if (cmd === 'CLOSE') { CODES.forEach(c => CHEAT[c[0].toLowerCase()] = false); saveCheats(); say('>> TODOS LOS TRUCOS DESACTIVADOS', 'r big', 22); tone(500, 120, 0.3, 'square', 0.06); say(activeTxt(), 'y', 0, true); return; }
   if (cmd === 'ADMIN') { conAdmin(); return; }
   if (cmd === 'CLS' || cmd === 'LIMPIAR') { conOut.innerHTML = ''; say('', '', 0, true); return; }
   if (cmd === 'SALIR' || cmd === 'EXIT') { closeConsole(); return; }
@@ -1866,7 +1869,9 @@ function togglePause() {
   if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button></div>'; show('panel', true); $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
   else show('panel', false);
 }
-function toMenu() { setTimeout(updApply, 300); paused = false; state = 'title'; show('panel', false); show('mapUI', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
+function cheatsOff() { let any = false; for (const c of CODES) { const k = c[0].toLowerCase(); if (CHEAT[k]) any = true; CHEAT[k] = false; } if (any) saveCheats(); }
+function toMenu() { cheatsOff(); setTimeout(updApply, 300);      // volver a la portada apaga los trucos (recargar o actualizarse no)
+  paused = false; state = 'title'; show('panel', false); show('mapUI', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
 function levelDone() {
   state = 'done'; show('touch', false); $('card').classList.remove('tips'); evt('superada', curId);
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
