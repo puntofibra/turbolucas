@@ -109,7 +109,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
     <button class="btn" id="btnTaller" style="border-color:#c63cff">🛠️ TALLER</button>
     <button class="btn" id="btnInstall">INSTALAR</button>
     <button class="btn" id="btnShare">COMPARTIR</button>
-    <button class="btn" id="btnSnd">SONIDO: SÍ</button>
+    <button class="btn" id="btnCfg">⚙️ AJUSTES</button><button class="btn" id="btnSnd">SONIDO: SÍ</button>
     <button class="btn" id="btnFull" style="display:none">PANTALLA COMPLETA</button>
     <button class="btn" id="btnWeb" style="border-color:#ffd23c;box-shadow:0 0 14px rgba(255,210,60,.45),inset 0 0 12px rgba(255,210,60,.18)">WEB DEL CREADOR</button>
   </div>
@@ -153,9 +153,9 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 </div></div>
 
 <script src="js/qrcode.min.js"></script>
-<script src="game.js?v=73"></script>
+<script src="game.js?v=74"></script>
 <script>
-if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function () {}); }); }
 </script>
 </body>
 </html>

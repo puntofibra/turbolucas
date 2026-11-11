@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.73';
+const VERSION = '0.74';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3280,6 +3280,24 @@ $('btnPlay').onclick = () => { if (ACC || GUEST) openMap(); else showAccess(); }
 function tapBind(el, fn) { if (!el) return; let last = 0; const go = e => { if (e) { e.preventDefault(); e.stopPropagation(); } const n = Date.now(); if (n - last < 450) return; last = n; fn(); };
   el.addEventListener('touchend', go, { passive: false }); el.addEventListener('click', go); }
 tapBind($('btnPause'), togglePause);
+// ajustes: buscar actualizaciones (fuerza la descarga de la última versión), sonido y botones táctiles
+async function forceUpdate(v) {
+  try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch (e) {}
+  try { if (navigator.serviceWorker) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.update().catch(() => {}))); } } catch (e) {}
+  location.replace(location.pathname + '?u=' + encodeURIComponent(v || VERSION) + '&t=' + Date.now());
+}
+async function checkUpdates() {
+  uiDialog({ icon: '🛰️', title: 'BUSCANDO ACTUALIZACIONES…', html: 'Conectando con la base de COSMOLUCAS…', buttons: [] });
+  let j = null; try { j = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null); } catch (e) {}
+  if (!j || !j.v) { uiDialog({ icon: '📡', title: 'SIN CONEXIÓN', html: 'No hemos podido comprobar si hay versión nueva. Revisa tu conexión a internet y vuelve a intentarlo.', buttons: [{ t: 'ENTENDIDO', cls: 'ok', v: 1 }] }); return; }
+  if (j.v !== VERSION) { await uiDialog({ icon: '🚀', tone: 'gold', title: '¡VERSIÓN NUEVA DISPONIBLE!', html: 'Tienes la <b>v' + VERSION + '</b> y ya está lista la <b>v' + esc(j.v) + '</b> con mejoras y novedades.<br><br>Vamos a instalarla ahora mismo: tu progreso no se pierde.', buttons: [{ t: '⬇ ACTUALIZAR AHORA', cls: 'ok', v: 1 }] }); forceUpdate(j.v); return; }
+  const v = await uiDialog({ icon: '✅', title: '¡ESTÁS AL DÍA!', html: 'Tienes la <b>última versión de COSMOLUCAS (v' + VERSION + ')</b>.<br>Lucas tiene los propulsores a punto y todo funciona con lo más nuevo. 🚀<br><br><span style="color:#8ea3e6;font-size:13px">Si notas algo raro, puedes reinstalar el juego desde aquí: no se pierde tu progreso.</span>', buttons: [{ t: 'REINSTALAR', v: 2 }, { t: 'GENIAL', cls: 'ok', v: 1 }] });
+  if (v === 2) forceUpdate(VERSION);
+}
+tapBind($('btnCfg'), async () => {
+  const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []).concat([{ t: 'CERRAR', v: 0 }]) });
+  if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
+});
 // posición de los botones táctiles (rueda ⚙ arriba): izquierda y derecha, bajos / medios / altos, se guarda en el dispositivo
 const TP_LV = [0, 13, 26];       // cuánto se suben (en % de la altura de la pantalla)
 let TPOS = { l: 0, r: 0 }; try { TPOS = Object.assign(TPOS, JSON.parse(localStorage.getItem('tl_tpos') || '{}')); } catch (e) {}
