@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.16';
+const VERSION = '0.17';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -228,7 +228,7 @@ function calcPlats(g, W, H) { const plats = []; for (let y = 0; y < H; y++) { le
 // ayudante para construir fases: todo en casillas (48 px); la fila H-2 es el suelo
 function LB(W, H) {
   const g = []; for (let y = 0; y < H; y++) g.push(new Array(W).fill(' '));
-  const B = { W, H, g, boxes: {}, chips: [], gears: [], ents: [], portals: [], cps: [], pads: [], lasers: [], movers: [] };
+  const B = { W, H, g, boxes: {}, chips: [], gears: [], ents: [], portals: [], cps: [], pads: [], lasers: [], movers: [], strips: [] };
   B.set = (x, y, c) => { if (x >= 0 && x < W && y >= 0 && y < H) g[y][x] = c; };
   B.block = (x0, x1, y0, y1, c = '#') => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) B.set(x, y, c); };
   B.ground = (a, b) => B.block(a, b, H - 2, H - 1);
@@ -243,6 +243,7 @@ function LB(W, H) {
   B.laser = (tx, r0, r1, ph = 0, on = 1.3, off = 1.6) => B.lasers.push({ x: tx * T + T / 2, y0: r0 * T, y1: (r1 + 1) * T, ph, on, off });
   B.mover = (x, ty, wt, ax, ay, sp, ph = 0) => B.movers.push({ bx: x * T, by: ty * T, w: wt * T, ax, ay, sp, ph, x: x * T, y: ty * T, dx: 0, dy: 0 });
   B.portal = (x, ty, tox, toty) => B.portals.push({ x: x * T + T / 2, y: ty * T - 46, tox: tox * T + T / 2, toy: toty * T });
+  B.strip = (a, b, ty = H - 2) => B.strips.push({ x0: a * T, x1: (b + 1) * T, y: ty * T });
   B.done = o => { B.plats = calcPlats(g, W, H); return Object.assign(B, o); };
   return B;
 }
@@ -281,9 +282,35 @@ LEVELS['1-2'] = function () {
   B.ground(302, 337); B.block(334, 337, 0, 15); B.portal(331, 14, 146, 14);
   return B.done({ name: 'PASILLOS DE SERVICIO', time: 270, dark: true, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 291 * T + T / 2, y: 14 * T }, rain: { x0: 304 * T, x1: 330 * T, dur: 13, t: 0, st: 0, acc: 0 } });
 };
+/* ---------- fase 1-3: SALA DE MÁQUINAS (persecución: un muro de energía te sigue; cintas turbo y saltos largos) ---------- */
+LEVELS['1-3'] = function () {
+  const B = LB(340, 16);
+  // A · arranque y primeros fosos
+  B.ground(0, 23); B.row(5, 9, 12); B.box(11, 10, 'escudo');
+  B.ground(27, 33); B.arc(23, 27, 11, 2); B.en('patrulla', 30, 13); B.ground(37, 78); B.arc(33, 37, 11, 2);
+  B.en('erizo', 43, 13); B.block(50, 52, 11, 13); B.block(49, 49, 13, 13); B.gear(51, 8); B.row(54, 58, 12); B.en('alien', 59, 13);
+  // B · cintas turbo con saltos largos
+  B.strip(63, 78); B.row(64, 77, 12); B.arc(79, 85, 10, 3); B.ground(86, 101); B.strip(87, 101); B.row(88, 100, 12); B.arc(102, 108, 10, 3); B.ground(109, 118);
+  B.cp(112, 14); B.box(115, 10, 'iman');
+  // C · plataformas flotantes sobre el vacío
+  B.mover(120, 13, 3, 0, 36, 2.0, 0); B.mover(125, 12, 3, 0, 36, 2.0, 1.5); B.mover(130, 12, 3, 0, 36, 2.0, 3); B.mover(135, 13, 3, 0, 36, 2.0, 4.5); B.row(120, 137, 9);
+  B.ground(140, 232); B.en('alien', 146, 13); B.block(152, 155, 12, 13); B.en('torreta', 154, 11); B.row(157, 161, 12); B.en('patrulla', 163, 13);
+  // D · dos rutas: por arriba con el saltador (chips y drones) o por abajo (láseres y engranaje)
+  B.pad(168, 14); B.block(170, 200, 8, 9); B.row(172, 180, 7); B.en('dron', 184, 5, { x0: 180, x1: 190 }); B.row(186, 198, 7); B.en('erizo', 194, 7);
+  B.laser(176, 10, 13, 0, 0.9, 1.3); B.laser(183, 10, 13, 0.7, 0.9, 1.3); B.gear(187, 13); B.laser(191, 10, 13, 1.4, 0.9, 1.3); B.row(193, 198, 13);
+  B.cp(205, 14); B.box(208, 10, 'estrella');
+  // E · sprint final con cintas turbo
+  B.strip(211, 232); B.row(212, 220, 12); B.en('patrulla', 222, 13); B.en('patrulla', 227, 13); B.arc(233, 239, 10, 3); B.gear(236, 9);
+  B.ground(240, 258); B.strip(241, 258); B.row(242, 257, 12); B.arc(259, 265, 10, 3); B.ground(266, 339);
+  // F · remate
+  B.en('alien', 272, 13); B.block(278, 280, 12, 13); B.block(283, 285, 10, 13); B.block(288, 290, 12, 13); B.row(278, 290, 7); B.en('dron', 296, 10, { x0: 293, x1: 302 }); B.en('erizo', 306, 13);
+  for (let i = 1; i <= 4; i++) B.block(311 + i, 311 + i, 14 - i, 13);
+  B.row(312, 315, 8); B.block(332, 339, 0, 15);
+  return B.done({ name: 'SALA DE MÁQUINAS', time: 200, spawn: { x: 3 * T, y: 14 * T }, goal: { x: 324 * T + T / 2, y: 14 * T }, chase: { x: -9999, speed: 192, startX: 15 * T, on: false } });
+};
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
-  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.lastCp = null;
+  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lastCp = null;
   return l;
 }
 const tileAt = (tx, ty) => (tx < 0 || tx >= L.W) ? '#' : (ty < 0 || ty >= L.H) ? ' ' : L.g[ty][tx];
@@ -422,8 +449,8 @@ function updatePlayer(dt) {
   else if (!wantCrouch && p.crouch && canStand(p)) { p.crouch = false; setSize(p); }
   // horizontal
   const dir = (K.right ? 1 : 0) - (K.left ? 1 : 0);
-  const max = (p.crouch ? 110 : 270) * (p.tStar > 0 ? 1.2 : 1) * (p.tTurbo > 0 ? 1.15 : 1);
-  const acc = p.onGround ? 2200 : 1500;
+  const max = (p.crouch ? 110 : 270) * (p.tStar > 0 ? 1.2 : 1) * (p.tTurbo > 0 ? 1.15 : 1) * (p.fast > 0 ? 1.75 : 1);
+  const acc = (p.onGround ? 2200 : 1500) * (p.fast > 0 ? 1.7 : 1);
   if (dir) { p.vx += dir * acc * dt; if (Math.abs(p.vx) > max) p.vx = Math.sign(p.vx) * Math.max(max, Math.abs(p.vx) - 3000 * dt); p.face = dir; p.idle = 0; }
   else { const f = (p.onGround ? 2400 : 600) * dt; p.vx = Math.abs(p.vx) <= f ? 0 : p.vx - Math.sign(p.vx) * f; p.idle += dt; }
   // derrape
@@ -555,6 +582,9 @@ const laserOn = l => laserPh(l) < l.on;
 function updateStage(dt) {
   const p = P;
   for (const pd of L.pads) pd.t += dt;
+  p.fast = Math.max(0, (p.fast || 0) - dt);
+  if (p.onGround && !p.dead) { const c = p.x + p.w / 2; for (const st of L.strips) if (c > st.x0 && c < st.x1 && Math.abs(p.y + p.h - st.y) < 6) { if (p.fast <= 0) { tone(300, 1200, 0.3, 'sawtooth', 0.06); } p.fast = 0.75; break; } }
+  if (p.fast > 0 && Math.abs(p.vx) > 300 && Math.random() < 0.8) parts.push({ x: p.x + p.w / 2 - p.face * 16, y: p.y + 10 + Math.random() * (p.h - 14), vx: -p.face * (120 + Math.random() * 160), vy: 0, life: 0.3, max: 0.3, col: Math.random() < 0.5 ? '#7fe9ff' : '#fff', size: 2.2, grav: 0 });
   if (!p.dead && !p.win) for (const l of L.lasers) if (laserOn(l) && p.x < l.x + 6 && p.x + p.w > l.x - 6 && p.y < l.y1 && p.y + p.h > l.y0) { if (p.tStar <= 0) hurt(); break; }
   for (const c of L.chips) if (c.fall && !c.got) { c.y += c.vy * dt; if (c.y > (L.H - 2) * T - 6) c.got = true; }
   const r = L.rain;
@@ -566,7 +596,7 @@ function updateStage(dt) {
   const ch = L.chase;
   if (ch) {
     if (!ch.on && p.x > ch.startX) { ch.on = true; ch.x = p.x - 620; pop(p.x + p.w / 2, p.y - 40, '¡CORRE!', '#ff5a6a'); [330, 440, 330, 440, 330, 440].forEach((f, i) => tone(f, f, 0.14, 'sawtooth', 0.1, i * 0.15)); shake = 0.3; }
-    if (ch.on && !p.win && !p.dead) { ch.x += ch.speed * dt; ch.x = Math.max(ch.x, p.x - VW * 0.72); if (p.x < ch.x + 4) die(); }
+    if (ch.on && !p.win && !p.dead) { ch.x += ch.speed * dt; ch.x = Math.max(ch.x, p.x - VW * 0.8); if (p.x < ch.x + 4) die(); }
   }
   const rs = L.rise;
   if (rs) {
@@ -575,6 +605,12 @@ function updateStage(dt) {
   }
 }
 function drawStageBack() {          // por detrás de los personajes
+  for (const st of L.strips) { if (st.x1 < cam.x - 20 || st.x0 > cam.x + VW + 20) continue;      // cintas turbo
+    ctx.fillStyle = '#0b1230'; ctx.fillRect(st.x0, st.y - 1, st.x1 - st.x0, 9);
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(41,230,255,.28)'; ctx.fillRect(st.x0, st.y - 14, st.x1 - st.x0, 14);
+    ctx.strokeStyle = '#7ff3ff'; ctx.lineWidth = 3; const off = (time * 150) % 28;
+    for (let x = st.x0 + off - 28; x < st.x1 - 10; x += 28) { if (x < st.x0 + 2) continue; ctx.beginPath(); ctx.moveTo(x, st.y); ctx.lineTo(x + 7, st.y + 4); ctx.lineTo(x, st.y + 8); ctx.stroke(); }
+    ctx.globalCompositeOperation = 'source-over'; }
   const PI = IMG.plataforma;
   for (const m of L.movers) { const w = m.w + 10, x = m.x - 5, y = m.y - 2, h = PI && PI.naturalWidth ? w * PI.naturalHeight / PI.naturalWidth : 14;
     ctx.globalCompositeOperation = 'lighter'; for (const fx of [0.165, 0.835]) { const g2 = ctx.createRadialGradient(x + w * fx, y + h, 0, x + w * fx, y + h, w * 0.16); g2.addColorStop(0, 'rgba(255,190,60,.5)'); g2.addColorStop(1, 'rgba(255,190,60,0)'); ctx.fillStyle = g2; ctx.fillRect(x + w * fx - w * 0.16, y + h - 4, w * 0.32, w * 0.18); } ctx.globalCompositeOperation = 'source-over';
