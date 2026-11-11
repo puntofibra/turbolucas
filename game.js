@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.39';
+const VERSION = '0.40';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -122,7 +122,7 @@ function setSnd(on) {
 const K = { left: false, right: false, down: false, jump: false, act: false };
 let jumpPressed = false, actPressed = false;
 const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowDown: 'down', KeyS: 'down',
-  ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump', KeyX: 'act', KeyK: 'act', ShiftLeft: 'act', ShiftRight: 'act', ControlLeft: 'act' };
+  ArrowUp: 'jump', Space: 'jump', KeyZ: 'jump', KeyX: 'act', KeyK: 'act', ControlLeft: 'act', ControlRight: 'act' };      // sin Shift (Windows saca el aviso de teclas especiales) y sin W (Ctrl+W cerraría la pestaña)
 function press(k, v) { if (v && !K[k]) { if (k === 'jump') jumpPressed = true; if (k === 'act') actPressed = true; } K[k] = v; }
 addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') return;
@@ -2247,7 +2247,7 @@ const TIPS = {
     <div class="tit"><div class="ic">🕹️</div><p><b>Botones</b><br><b>Saltar:</b> <span class="k">✕</span> / <span class="k">A</span><br><b>Láser:</b> <span class="k">□</span> <span class="k">○</span> <span class="k">R1</span> / <span class="k">X</span> <span class="k">B</span> <span class="k">RB</span><br><b>Pausa:</b> <span class="k">OPTIONS</span> / <span class="k">MENU</span></p></div>
     <div class="tit"><div class="ic">🧭</div><p><b>Menús con el mando</b><br>Cruceta o joystick para elegir, <span class="k">✕</span>/<span class="k">A</span> para aceptar y <span class="k">○</span>/<span class="k">B</span> para volver. Al usar el mando desaparecen los botones táctiles.</p></div></div>`,
   'CONTROLES': `<div class="tgrid">
-    <div class="tit"><div class="ic">⌨️</div><p><b>Teclado</b><br><span class="k">←</span><span class="k">→</span> o <span class="k">A</span><span class="k">D</span> moverse<br><span class="k">↑</span> <span class="k">W</span> <span class="k">ESPACIO</span> saltar<br><span class="k">↓</span> <span class="k">S</span> agacharse<br><span class="k">X</span> <span class="k">SHIFT</span> láser · <span class="k">P</span> <span class="k">ESC</span> pausa</p></div>
+    <div class="tit"><div class="ic">⌨️</div><p><b>Teclado</b><br><span class="k">←</span><span class="k">→</span> o <span class="k">A</span><span class="k">D</span> moverse<br><span class="k">↑</span> <span class="k">ESPACIO</span> <span class="k">Z</span> saltar<br><span class="k">↓</span> <span class="k">S</span> agacharse<br><span class="k">CTRL</span> <span class="k">X</span> láser · <span class="k">P</span> <span class="k">ESC</span> pausa</p></div>
     <div class="tit"><div class="ic">👆</div><p><b>Pantalla táctil</b><br><b>◀ ▶</b> moverse, <b>▼</b> agacharse, <b>SALTAR</b> y <b>LÁSER</b>. Puedes pulsar varios a la vez.</p></div>
     <div class="tit"><div class="ic">🚀</div><p><b>Salto con propulsores</b><br>Mantén pulsado saltar para llegar más alto; suéltalo antes para un salto corto y preciso.</p></div>
     <div class="tit"><div class="ic">⬇️</div><p><b>Bajar de plataformas</b><br>Sobre una plataforma flotante, abajo + saltar para dejarte caer.</p></div></div>`,
