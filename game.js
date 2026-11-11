@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.74';
+const VERSION = '0.75';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -276,7 +276,11 @@ function pollPad() {
 const CHEAT = { test: false, full: false, ghost: false, live: false, floor: false, stop: false, kill: false, unlock: false, laser: false, fly: false, time: false, floorT: 0 };
 // los trucos se guardan en el dispositivo: siguen activos al cambiar de fase, al actualizarse el juego o al volver otro día
 try { const sv = JSON.parse(localStorage.getItem('tl_ch') || '{}'); for (const k in sv) if (k in CHEAT && k !== 'floorT') CHEAT[k] = !!sv[k]; } catch (e) {}
-function saveCheats() { try { const o = {}; for (const k in CHEAT) if (k !== 'floorT' && CHEAT[k]) o[k] = 1; localStorage.setItem('tl_ch', JSON.stringify(o)); } catch (e) {} }
+let CHT = {}; try { CHT = JSON.parse(localStorage.getItem('tl_cht') || '{}') || {}; } catch (e) {}          // cuándo se activó cada truco (duran 1 hora como máximo)
+function saveCheats() { try { const o = {}, now = Date.now(); for (const k in CHEAT) { if (k === 'floorT') continue; if (CHEAT[k]) { o[k] = 1; if (!CHT[k]) CHT[k] = now; } else delete CHT[k]; }
+  localStorage.setItem('tl_ch', JSON.stringify(o)); localStorage.setItem('tl_cht', JSON.stringify(CHT)); } catch (e) {} }
+function cheatExpire() { const now = Date.now(); let ch = false; for (const k in CHEAT) { if (k === 'floorT' || !CHEAT[k]) continue; if (!CHT[k]) { CHT[k] = now; ch = true; } else if (now - CHT[k] > 3600e3) { CHEAT[k] = false; delete CHT[k]; ch = true; } } if (ch) saveCheats(); }
+cheatExpire(); setInterval(cheatExpire, 20000);
 const CON = { on: false, q: [], typing: false, busy: false, pend: [] };
 const CODES = [
   ['GHOST', 'MODO FANTASMA', 'Lucas se vuelve espectral, con aura de neón. Los bichos, sus disparos y los láseres le atraviesan.'],
