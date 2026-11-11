@@ -1,7 +1,7 @@
 /* TURBOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.19';
+const VERSION = '0.20';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -102,7 +102,7 @@ const BASS = [110, 110, 131, 131, 98, 98, 123, 123], ARP = [0, 3, 7, 12, 7, 3, 7
 function musicTick() {
   if (!AC || !sndOn || state !== 'play' || paused) { mNext = 0; return; }
   if (!mNext || mNext < AC.currentTime) mNext = AC.currentTime + 0.05;
-  const stepDur = 0.17 * (P && P.tStar > 0 ? 0.72 : 1) * (G.tleft <= 10 ? 0.6 : G.tleft <= 30 ? 0.74 : 1);
+  const stepDur = 0.17 * (L && L.boss && L.boss.fight && !L.boss.gone ? 0.82 : 1) * (P && P.tStar > 0 ? 0.72 : 1) * (G.tleft <= 10 ? 0.6 : G.tleft <= 30 ? 0.74 : 1);
   while (mNext < AC.currentTime + 0.25) {
     const bar = Math.floor(mStep / 8) % 8, root = BASS[bar], dl = mNext - AC.currentTime;
     if (mStep % 4 === 0) tone(root / 2, root / 2, stepDur * 3.2, 'triangle', 0.11, dl);
@@ -521,9 +521,113 @@ LEVELS['1-B'] = function () {
   return B.done({ name: 'PASEO ESPACIAL', time: 170, space: true, gk: 0.5, intro: '¡GRAVEDAD LUNAR!', spawn: { x: 3 * T, y: 20 * T }, goal: { x: 158 * T + T / 2, y: 20 * T },
     meteors: { zones: [[34 * T, 118 * T]], every: 1.15, acc: 0 }, rain: { x0: 122 * T, x1: 148 * T, dur: 9, t: 0, st: 0, acc: 0 } });
 };
+/* ---------- jefe 1-J: EL GUARDIÁN (arena cerrada: dispara ráfagas, aplasta el suelo con ondas, y queda aturdido: ¡salta sobre él o dispárale al núcleo!) ---------- */
+LEVELS['1-J'] = function () {
+  const B = LB(80, 16);
+  B.ground(0, 79); B.row(5, 8, 12);
+  B.set(10, 10, 'B'); B.box(11, 10, 'escudo'); B.set(12, 10, 'B'); B.box(15, 10, 'laser');
+  B.block(18, 20, 9, 9, '='); B.gear(19, 7); B.en('patrulla', 23, 13); B.en('dron', 28, 10, { x0: 25, x1: 33 }); B.row(25, 31, 12);
+  B.cp(35, 14); B.box(38, 10, 'chip');
+  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15);                                  // puerta de la arena y pared del fondo
+  B.gear(46, 12); B.gear(76, 12); B.row(55, 67, 13);
+  return B.done({ name: 'EL GUARDIÁN', time: 240, spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true });
+};
+function bossInit(l) { l.boss = { x: (l.arena.x0 + l.arena.x1) / 2, y: 9.8 * T, hover0: 9.8 * T, hp: 6, max: 6, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, shotT: 1, vy: 0, dieT: 0, boomT: 0, gone: false }; l.waves = []; }
+function bossGate(close) { for (let y = 11; y <= 13; y++) for (let x = 42; x <= 43; x++) L.g[y][x] = close ? '#' : ' '; }
+function bossReset() { const b = L.boss; if (!b || b.gone) return; bossGate(false); Object.assign(b, { x: (L.arena.x0 + L.arena.x1) / 2, y: b.hover0, hp: b.max, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, vy: 0 }); L.waves = []; }
+const BOSS_H = 200, bossRect = b => ({ x: b.x - 68, y: b.y - 172, w: 136, h: 166 });
+function bossHit() {
+  const b = L.boss; if (b.inv > 0) return;
+  b.hp--; b.flash = 0.3; b.inv = 0.7; shake = 0.4; addScore(1000, b.x, b.y - 210);
+  [880, 660, 440, 220].forEach((f, i) => tone(f, f * 0.7, 0.12, 'sawtooth', 0.12, i * 0.06)); noise(0.4, 0.2, 1200);
+  burst(b.x, b.y - 110, 30, '#ffd23c', 320, 0.7, 400, 4); burst(b.x, b.y - 110, 16, '#fff', 260, 0.4, 0, 3);
+  if (b.hp <= 0) { b.st = 'die'; b.dieT = 0; L.waves = []; enemies.forEach(e => killEnemy(e, 'fly')); shots = shots.filter(s2 => s2.mine); return; }
+  if (b.hp === b.max / 2) { pop(b.x, b.y - 230, '¡SE HA ENFADADO!', '#ff4a5a'); tone(80, 40, 1.2, 'sawtooth', 0.12); }
+  b.st = 'rise'; b.t = 0;
+}
+function bossUpdate(dt) {
+  const b = L.boss, p = P; if (!b || b.gone) return;
+  b.t += dt; b.flash = Math.max(0, b.flash - dt); b.inv = Math.max(0, b.inv - dt);
+  const a = L.arena, mid = (a.x0 + a.x1) / 2, ph2 = b.hp <= b.max / 2, gy = 14 * T;
+  if (b.st === 'wait') { b.y = b.hover0 + Math.sin(time * 2) * 10;
+    if (!p.dead && p.x > a.x0 + 3 * T) { bossGate(true); b.fight = true; b.st = 'intro'; b.t = 0; shake = 0.6; pop(mid, b.y - 260, '¡EL GUARDIÁN!', '#ff4a5a'); tone(90, 45, 1.4, 'sawtooth', 0.14); noise(0.8, 0.2, 400); }
+    return; }
+  if (b.st === 'intro') { b.y = b.hover0 + Math.sin(time * 9) * 4; if (b.t > 1.7) { b.st = 'hover'; b.t = 0; b.shotT = 0.6; } }
+  else if (b.st === 'hover') {
+    const tx = mid + Math.sin(b.t * (ph2 ? 1.25 : 0.9)) * ((a.x1 - a.x0) / 2 - 190);
+    b.x += (tx - b.x) * Math.min(1, dt * 1.6); b.y = b.hover0 + Math.sin(time * 2.5) * 14;
+    b.shotT -= dt;
+    if (b.shotT <= 0 && !p.dead) { const n = ph2 ? 5 : 3, sp = ph2 ? 330 : 270, cx0 = b.x, cy0 = b.y - 130, an = Math.atan2(p.y + p.h / 2 - cy0, p.x + p.w / 2 - cx0);
+      for (let k = 0; k < n; k++) { const aa = an + (k - (n - 1) / 2) * 0.24; shots.push({ mine: false, x: cx0, y: cy0, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, w: 16, h: 16, life: 4 }); }
+      b.shotT = ph2 ? 1.05 : 1.45; tone(300, 120, 0.25, 'sawtooth', 0.09); burst(cx0, cy0, 12, '#ff9a3c', 160, 0.35, 0, 3); }
+    if (b.t > (ph2 ? 4.2 : 5.5)) { b.st = 'aim'; b.t = 0; tone(200, 1400, 0.8, 'square', 0.05); }
+  } else if (b.st === 'aim') {
+    b.x += (Math.max(a.x0 + 110, Math.min(a.x1 - 110, p.x + p.w / 2)) - b.x) * Math.min(1, dt * 5); b.y = b.hover0 - 30 * Math.min(1, b.t * 2);
+    if (b.t > (ph2 ? 0.7 : 0.95)) { b.st = 'slam'; b.vy = 200; b.t = 0; }
+  } else if (b.st === 'slam') {
+    b.vy += 3800 * dt; b.y += b.vy * dt;
+    if (b.y >= gy) { b.y = gy; b.st = 'stun'; b.t = 0; shake = 0.7; noise(0.6, 0.3, 500); tone(70, 35, 0.6, 'sawtooth', 0.15);
+      const ws = ph2 ? 520 : 420; L.waves.push({ x: b.x - 70, dir: -1, sp: ws }, { x: b.x + 70, dir: 1, sp: ws });
+      burst(b.x - 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4); burst(b.x + 60, gy, 18, '#9fb4ff', 260, 0.6, 600, 4);
+      if (ph2 && enemies.filter(e => !e.dead).length < 3) { const tx = b.x < mid ? a.x1 - 2 * T : a.x0 + T, d = ENEMY.patrulla; enemies.push({ type: 'patrulla', d, w: d.w, h: d.bh, x: tx, y: 4 * T, vx: 0, vy: 0, dir: b.x < mid ? -1 : 1, dead: 0, t: 0, timer: 1 }); } }
+  } else if (b.st === 'stun') { if (b.t > (ph2 ? 2.1 : 2.9)) { b.st = 'rise'; b.t = 0; } }
+  else if (b.st === 'rise') { b.y -= 420 * dt; if (b.y <= b.hover0) { b.y = b.hover0; b.st = 'hover'; b.t = 0; b.shotT = 0.9; } }
+  else if (b.st === 'die') {
+    b.dieT += dt; b.boomT -= dt; shake = Math.max(shake, 0.2);
+    if (b.boomT <= 0) { b.boomT = 0.11; const ex = b.x + (Math.random() - 0.5) * 180, ey = b.y - 20 - Math.random() * 200; burst(ex, ey, 16, Math.random() < 0.5 ? '#ff9a3c' : '#ffd23c', 240, 0.5, 200, 4); noise(0.25, 0.18, 900); }
+    if (b.y < gy) b.y = Math.min(gy, b.y + 120 * dt);
+    if (b.dieT > 2.8) { b.gone = true; shake = 1; for (let k = 0; k < 6; k++) burst(b.x, b.y - 110, 30, ['#fff', '#ffd23c', '#ff9a3c', '#29e6ff', '#35ff8a', '#c63cff'][k], 420, 1.2, 250, 5);
+      SFX.win(); L.goal = { x: mid, y: gy }; pop(mid, b.y - 260, '¡GUARDIÁN DERROTADO!', '#35ff8a'); bossGate(false); }
+    return;
+  }
+  // golpes
+  const r = bossRect(b);
+  if (!p.dead && !p.win && overlap(p, r)) {
+    if ((b.st === 'stun' || p.tStar > 0 && b.st === 'stun') && p.vy > 0 && p.y + p.h - p.vy * dt * 1.5 <= r.y + 40) { bossHit(); p.vy = -760; p.y = r.y - p.h - 1; p.sq = 1; }
+    else if (b.st !== 'stun') hurt();
+  }
+  for (const s2 of shots) if (s2.mine && s2.life > 0 && overlap({ x: s2.x - s2.w / 2, y: s2.y - s2.h / 2, w: s2.w, h: s2.h }, r)) {
+    s2.life = 0; if (b.st === 'stun') bossHit(); else { burst(s2.x, s2.y, 8, '#cfe0ff', 140, 0.25, 0, 2.5); tone(2400, 1800, 0.05, 'square', 0.05); } }
+  for (const w of L.waves) { w.x += w.dir * w.sp * dt; if (w.x < a.x0 - 20 || w.x > a.x1 + 20) w.dead = true;
+    if (!p.dead && !p.win && p.y + p.h > gy - 38 && Math.abs(p.x + p.w / 2 - w.x) < 30) hurt(); }
+  L.waves = L.waves.filter(w => !w.dead);
+}
+const TINT = {};
+function tintOf(im, col) { const k = col; if (TINT[k] || !im.naturalWidth) return TINT[k]; const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height); return (TINT[k] = c); }
+function drawBoss() {
+  const b = L.boss; if (!b || b.gone) return;
+  const im = IMG.jefe1; if (!im || !im.naturalWidth) return;
+  const h = BOSS_H, w = h * im.naturalWidth / im.naturalHeight, flip = P.x + P.w / 2 > b.x, fs = flip ? -1 : 1, ph2 = b.hp <= b.max / 2, gy = 14 * T;
+  let x = b.x, y = b.y; if (b.st === 'aim' || b.st === 'die' || b.st === 'intro') { x += (Math.random() - 0.5) * 8; y += (Math.random() - 0.5) * 6; }
+  const air = Math.max(0, gy - y);
+  ctx.fillStyle = 'rgba(0,0,10,' + Math.max(0.12, 0.45 - air / 900) + ')'; ctx.beginPath(); ctx.ellipse(b.x, gy + 2, 110 - Math.min(60, air / 8), 14, 0, 0, 6.283); ctx.fill();
+  if (b.st === 'aim') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,40,60,' + (0.25 + 0.25 * Math.sin(time * 30)) + ')'; ctx.fillRect(b.x - 90, gy - 6, 180, 8); ctx.globalCompositeOperation = 'source-over'; }
+  if (b.st !== 'stun' && b.st !== 'die') flame(x + fs * -0.04 * w, y - 22, b.st === 'slam' ? 26 : 78 + (ph2 ? 20 : 0), 46, 9);
+  const rot = b.st === 'stun' ? 0.1 * Math.sin(time * 3) : b.st === 'die' ? (Math.random() - 0.5) * 0.12 : Math.sin(time * 2) * 0.03;
+  const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(fs, 1); ctx.drawImage(src, -w / 2, -h, w, h); ctx.restore(); };
+  draw(im, 1);
+  if (ph2 || b.st === 'die') { const t2 = tintOf(im, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(time * 8))); if (Math.random() < 0.3) parts.push({ x: x + (Math.random() - 0.5) * 140, y: y - Math.random() * 200, vx: (Math.random() - 0.5) * 60, vy: -60 - Math.random() * 60, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#ffd23c' : '#8a8fa8', size: 2.5, grav: 0 }); }
+  if (b.flash > 0) { const t3 = tintOf(im, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); }
+  // núcleo (el punto débil) y ojo
+  const cx = x + fs * (0.457 - 0.5) * w, cy = y - h * (1 - 0.453), stun = b.st === 'stun';
+  ctx.globalCompositeOperation = 'lighter';
+  const R = stun ? 60 + 14 * Math.sin(time * 14) : 26, cg = ctx.createRadialGradient(cx, cy, 2, cx, cy, R); cg.addColorStop(0, stun ? 'rgba(255,255,200,1)' : 'rgba(255,120,60,.6)'); cg.addColorStop(0.35, stun ? 'rgba(255,200,60,.8)' : 'rgba(255,60,40,.35)'); cg.addColorStop(1, 'rgba(255,60,40,0)');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fill();
+  const ex = x + fs * (0.495 - 0.5) * w, ey = y - h * (1 - 0.19), eg = ctx.createRadialGradient(ex, ey, 1, ex, ey, stun ? 10 : 22); eg.addColorStop(0, 'rgba(255,80,80,.9)'); eg.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 22, 0, 6.283); ctx.fill();
+  if (b.st === 'aim') { ctx.strokeStyle = 'rgba(255,40,60,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(b.x, gy); ctx.stroke(); }
+  ctx.globalCompositeOperation = 'source-over';
+  if (stun) { ctx.font = '900 26px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let k = 0; k < 3; k++) { const aa = time * 4 + k * 2.094; ctx.fillStyle = '#ffd23c'; ctx.fillText('★', b.x + Math.cos(aa) * 60, y - h - 6 + Math.sin(aa) * 12); }
+    ctx.font = '800 13px system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! SALTA ENCIMA', b.x, y - h - 34); ctx.textBaseline = 'alphabetic'; }
+}
+function drawWaves() {
+  if (!L.waves) return; const gy = 14 * T; ctx.globalCompositeOperation = 'lighter';
+  for (const w of L.waves) { const g2 = ctx.createRadialGradient(w.x, gy, 2, w.x, gy, 46); g2.addColorStop(0, 'rgba(255,255,255,.95)'); g2.addColorStop(0.4, 'rgba(255,120,60,.7)'); g2.addColorStop(1, 'rgba(255,60,40,0)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.ellipse(w.x, gy, 30, 42, 0, Math.PI, 0); ctx.fill();
+    if (Math.random() < 0.8) parts.push({ x: w.x, y: gy - Math.random() * 20, vx: -w.dir * 60, vy: -80 - Math.random() * 120, life: 0.4, max: 0.4, col: Math.random() < 0.5 ? '#ff9a3c' : '#fff', size: 2.5, grav: 600 }); }
+  ctx.globalCompositeOperation = 'source-over';
+}
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
-  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.lastCp = null;
+  l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.lastCp = null; if (l.bossLvl) bossInit(l);
   return l;
 }
 const tileAt = (tx, ty) => (tx < 0 || tx >= L.W) ? '#' : (ty < 0 || ty >= L.H) ? ' ' : L.g[ty][tx];
@@ -645,6 +749,7 @@ function respawn() {
   spawnEnemies(); shots = [];
   if (L.chase && L.chase.on) L.chase.x = P.x - 560;
   if (L.rise && L.rise.on) L.rise.y = P.y + P.h + 460;
+  if (L.boss) bossReset();
 }
 function updatePlayer(dt) {
   const p = P;
@@ -955,12 +1060,15 @@ function update(dt) {
     if (state !== 'play') return;
     updateEnemies(dt);
     updateStage(dt);
+    if (L.boss) bossUpdate(dt);
     for (const it of items) { it.t += dt; if (it.rise < 1) { it.rise = Math.min(1, it.rise + dt * 2.5); it.y -= 46 * dt * 2.5; }
       else if (it.t > 0.8 && !P.dead) { const dx = P.x + P.w / 2 - (it.x + 20), dy = P.y + P.h / 2 - (it.y + 20), d = Math.hypot(dx, dy) || 1, v = Math.min(760, 220 + (it.t - 0.8) * 1100); it.x += dx / d * v * dt; it.y += dy / d * v * dt; } }
     const p = P;
     const tx = p.x + p.w / 2 - VW * 0.4 + p.face * 50, ty = p.y + p.h - VHv * (L.vert ? 0.62 : 0.7);
     cam.x += (tx - cam.x) * Math.min(1, dt * 5); cam.y += (ty - cam.y) * Math.min(1, dt * 4);
-    cam.x = Math.max(0, Math.min(L.W * T - VW, cam.x)); cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, cam.y));
+    cam.x = Math.max(0, Math.min(L.W * T - VW, cam.x));
+    if (L.boss && L.boss.fight) { const a = L.arena, lo = a.x0 - 2 * T, hi = a.x1 + 2 * T - VW; cam.x = hi < lo ? (a.x0 + a.x1) / 2 - VW / 2 : Math.max(lo, Math.min(hi, cam.x)); }
+    cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, cam.y));
   }
   for (const q of parts) { q.life -= dt; q.vy += (q.grav || 0) * dt; q.x += q.vx * dt; q.y += q.vy * dt; }
   parts = parts.filter(q => q.life > 0);
@@ -1182,8 +1290,10 @@ function drawWorld() {
     const wob = e.d.fly || e.type === 'torreta' ? 0 : Math.sin(e.t * 9) * 0.04;
     spr(IMG[e.d.img], cx, by + (e.type === 'alien' ? 4 : 2), e.d.h, eax, 1, efl, wob, 1, e.type === 'alien' ? 1 + Math.sin(e.t * 5) * 0.05 : 1);
   }
+  if (L.boss) drawBoss();
   drawPlayer();
   drawStageFront();
+  drawWaves();
   // disparos
   ctx.globalCompositeOperation = 'lighter';
   for (const s of shots) {
@@ -1225,6 +1335,10 @@ function drawHUD() {
     if (low) { ctx.shadowColor = '#ff2a3a'; ctx.shadowBlur = 14; } ctx.fillStyle = col; ctx.fillText(Math.floor(tl / 60) + ':' + String(tl % 60).padStart(2, '0'), -26, 1);
     ctx.restore(); ctx.textAlign = 'center';
   }
+  if (L.boss && L.boss.fight && !L.boss.gone) { const b = L.boss, bw = Math.min(320, w * 0.4), bx = w / 2 - bw / 2, by2 = 62;
+    ctx.font = '800 11px system-ui,sans-serif'; ctx.textAlign = 'center'; txt('EL GUARDIÁN', w / 2, by2, '#ff8a9a');
+    ctx.fillStyle = 'rgba(5,7,26,.8)'; ctx.fillRect(bx - 2, by2 + 8, bw + 4, 14); for (let k = 0; k < b.max; k++) { const on = k < b.hp; ctx.fillStyle = on ? (b.hp <= b.max / 2 ? '#ff3a4a' : '#ff6a3a') : '#2a1a2a'; ctx.fillRect(bx + k * bw / b.max + 1, by2 + 10, bw / b.max - 2, 10); }
+    if (b.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + b.flash * 2 + ')'; ctx.fillRect(bx, by2 + 10, bw, 10); } }
   // poderes activos
   const p = P, act = [];
   if (p.power === 'laser') act.push(['poder-laser', 0]); if (p.power === 'mini') act.push(['poder-mini', 0]); if (p.shield) act.push(['poder-escudo', 0]);
@@ -1329,7 +1443,7 @@ function levelDone() {
   const old = PROG[curId] || { stars: 0, best: 0 }, first = !PROG[curId];
   PROG[curId] = { stars: Math.max(old.stars, stars), best: Math.max(old.best, G.score) }; saveProg();
   { const ci = MAP.findIndex(n => n.id === curId); justOpened = first ? MAP.findIndex((n, k) => k > 0 && !n.bonus && mapPrev(k) === ci) : -1; }
-  $('card').innerHTML = '<h2>¡FASE SUPERADA!</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
+  $('card').innerHTML = '<h2>' + (curId === '1-J' ? '¡MUNDO 1 COMPLETADO!' : '¡FASE SUPERADA!') + '</h2><div class="stars">' + [0, 1, 2].map(i => '<span id="st' + i + '">★</span>').join('') + '</div>' +
     '<div class="stat"><span>Chips</span><b>' + G.chips + '</b></div><div class="stat"><span>Engranajes</span><b>' + G.gears + ' / 3</b></div>' +
     '<div class="stat"><span>Tiempo</span><b>' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + '</b></div><div class="stat"><span>Bonus por tiempo sobrante</span><b>+' + bonus + '</b></div>' +
     '<div class="stat"><span>Puntos</span><b>' + G.score + (G.score > old.best ? ' · ¡RÉCORD!' : '') + '</b></div>' +
@@ -1351,7 +1465,7 @@ const MAP = [
   { id: '1-2', n: '2', name: 'PASILLOS DE SERVICIO', x: 0.3479, y: 0.659, rx: 0.033, built: true, way: [[0.16, 0.47], [0.20, 0.477], [0.23, 0.52], [0.26, 0.60], [0.29, 0.655]] },
   { id: '1-3', n: '3', name: 'SALA DE MÁQUINAS', x: 0.4996, y: 0.499, rx: 0.033, built: true, way: [[0.39, 0.675], [0.42, 0.635], [0.45, 0.60], [0.47, 0.57]] },
   { id: '1-4', n: '4', name: 'TORRE DE ANTENAS', x: 0.6515, y: 0.357, rx: 0.03, gold: true, built: true, way: [[0.53, 0.46], [0.56, 0.42], [0.59, 0.385], [0.62, 0.37]] },
-  { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.871, y: 0.393, rx: 0.05, boss: true, way: [[0.685, 0.335], [0.71, 0.305], [0.74, 0.295], [0.78, 0.31], [0.81, 0.335], [0.84, 0.37]] },
+  { id: '1-J', n: '', name: 'JEFE · EL GUARDIÁN', x: 0.871, y: 0.393, rx: 0.05, boss: true, built: true, way: [[0.685, 0.335], [0.71, 0.305], [0.74, 0.295], [0.78, 0.31], [0.81, 0.335], [0.84, 0.37]] },
   { id: '1-B', n: '★', name: 'FASE SECRETA · PASEO ESPACIAL', x: 0.6177, y: 0.186, rx: 0.021, bonus: true, built: true, prev: 3, way: [[0.625, 0.33], [0.603, 0.29], [0.598, 0.24], [0.595, 0.21]] }
 ];
 let PROG = {}, curId = '1-1', mapSel = 0, mapAt = 0, mapL = { x: MAP[0].x, y: MAP[0].y }, mapRoute = [], mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 }, mapUnl = null, mapParts = [], justOpened = -1;
