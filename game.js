@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.10';
+const VERSION = '1.11';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6404,7 +6404,7 @@ window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { 
   setInterval(vis, 200);
   let busy = false;
   tapBind(b, async () => { if (busy) return; busy = true;
-    const ok = await uiConfirm('¿SALIR DEL JUEGO?', 'Se cerrará COSMOLUCAS. Tu progreso queda guardado.', 'SALIR', 'CANCELAR', '🚪'); busy = false; if (!ok) return;
+    const ok = await uiConfirm('¿SALIR DEL JUEGO?', 'Se cerrará COSMOLUCAS. Tu progreso queda guardado.', 'SALIR', 'CANCELAR', '<img src="img/puerta-salir.webp" alt="" style="height:clamp(70px,16vh,120px);filter:drop-shadow(0 0 14px rgba(53,255,138,.45))">'); busy = false; if (!ok) return;
     try { cloudSave(true); } catch (e) {} try { if (AC) AC.suspend(); } catch (e) {}
     try { window.close(); } catch (e) {}
     setTimeout(() => { bye.classList.add('on'); b.classList.remove('on'); }, 350);      // si el navegador no deja cerrar (pestaña normal, iPhone), se queda la pantalla de despedida
