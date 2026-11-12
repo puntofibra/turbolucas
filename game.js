@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.93';
+const VERSION = '0.94';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -159,6 +159,7 @@ const SONGS = {
   jungle: { bass: [98, 98, 110, 131, 98, 98, 147, 131], arp: [0, 7, 12, 14, 7, 12, 19, 14], step: 0.155, lead: 'triangle', bw: 'triangle', lv: 0.055, drum: 3, bell: false },
   menu: { bass: [131, 131, 175, 175, 147, 147, 196, 196], arp: [0, 4, 7, 12, 16, 12, 7, 4], step: 0.19, lead: 'triangle', bw: 'triangle', lv: 0.045, drum: 2, bell: true },     // portada: épica y alegre
   map: { bass: [110, 110, 147, 147, 165, 165, 131, 131], arp: [12, 7, 4, 0, 7, 12, 16, 12], step: 0.24, lead: 'sine', bw: 'sine', lv: 0.05, drum: 0, bell: true },           // mapas: tranquila, de aventura
+  junk: { bass: [87, 87, 98, 87, 78, 78, 92, 104], arp: [0, 3, 7, 10, 12, 10, 7, 3], step: 0.16, lead: 'sawtooth', bw: 'square', lv: 0.02, drum: 1, heavy: true },
   toy: { bass: [131, 165, 196, 165, 147, 175, 220, 175], arp: [0, 7, 12, 7, 4, 7, 16, 12], step: 0.15, lead: 'square', bw: 'triangle', lv: 0.03, drum: 2, bell: true },
   sky: { bass: [131, 131, 147, 147, 175, 175, 165, 165], arp: [0, 4, 7, 11, 12, 11, 7, 4], step: 0.17, lead: 'triangle', bw: 'triangle', lv: 0.05, drum: 2, bell: true },
   desert: { bass: [110, 110, 117, 110, 98, 98, 104, 117], arp: [0, 1, 4, 5, 7, 8, 11, 12], step: 0.16, lead: 'triangle', bw: 'sawtooth', lv: 0.04, drum: 3 },
@@ -448,6 +449,13 @@ function openConsole(fromPad) {
     say(activeTxt(), 'y', 0, true);
   }, 650);
 }
+function conStatus(arg) {      // STATUS 1-4: deja la partida abierta hasta esa fase y con candados desde ahí
+  const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/);
+  const id = m ? m[1] + '-' + m[2] : '';
+  if (!id || typeof LEVELS[id] !== 'function' || !ALLN().some(n => n.id === id)) { say('ERROR · LA FASE "' + String(arg).slice(0, 10) + '" NO EXISTE. Prueba con algo como 1-4 o 5-J.', 'r', 12); tone(140, 90, 0.3, 'square', 0.08); CON.ask = 'status'; return; }
+  say('>> PARTIDA AJUSTADA HASTA LA FASE ' + id + ' 🔓', 'g big', 24); say('   Hasta la ' + id + ' todo abierto; desde ahí en adelante, candados hasta que te la pases.', '', 10); SFX.power();
+  setTimeout(() => { closeConsole(); unlockTo(id); }, 1600);
+}
 function closeConsole() {
   if (!CON.on) return; CON.on = false; CON.q = []; clearTimeout(conTimer); try { conIn.blur(); } catch (e) {}
   vkbShow(false); { const qb = $('conQr'); if (qb) qb.remove(); } const c = $('con'); c.classList.add('off'); tone(900, 50, 0.35, 'sawtooth', 0.06);
@@ -461,11 +469,14 @@ function conRun(raw) {
   conIn.value = ''; CON.busy = true;
   conScroll(true);
   if (!cmd) { say('', '', 0, true); return; }
+  if (CON.ask === 'status') { CON.ask = null; if (/^\d/.test(cmd)) { conStatus(cmd); return; } }
+  if (/^STATUS/.test(cmd)) { const arg = cmd.replace(/^STATUS\s*/, ''); if (arg) { conStatus(arg); return; }
+    CON.ask = 'status'; say('>> STATUS · ¿HASTA QUÉ NIVEL QUIERES TENER ABIERTO?', 'g big', 22); say('   Escribe la fase, por ejemplo 1-4: podrás jugar la 1-4 y todo lo que viene después quedará con candado hasta que te la pases.', '', 10); SFX.chip(); return; }
   if (cmd === 'LIST' || cmd === 'LISTA') {          // lista rápida de todos los trucos y comandos, con su estado
     say('>> LISTA DE TRUCOS', 'g big', 20);
     CODES.forEach(c => say((CHEAT[c[0].toLowerCase()] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], CHEAT[c[0].toLowerCase()] ? 'g' : 'y', 0, true));
     say('>> COMANDOS', 'w', 14);
-    [['TEST', 'MODO PRUEBAS: TRUCOS, EDITOR Y PLANETAS EN LA PAUSA', CHEAT.test], ['FULLACCESS', 'LICENCIA GRATIS EN ESTE DISPOSITIVO', CHEAT.full], ['OPEN', 'ACTIVA TODOS LOS TRUCOS'], ['CLOSE', 'DESACTIVA TODOS LOS TRUCOS'], ['LOCK', 'BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)'], ['HACK', 'LISTA CON LA ANIMACIÓN DE HACKEO'], ['ADMIN', 'PANEL SECRETO (PIDE LA LLAVE)'], ['LIST', 'ESTA LISTA'], ['CLS', 'LIMPIA LA PANTALLA'], ['EXIT', 'CIERRA LA CONSOLA']]
+    [['TEST', 'MODO PRUEBAS: TRUCOS, EDITOR Y PLANETAS EN LA PAUSA', CHEAT.test], ['FULLACCESS', 'LICENCIA GRATIS EN ESTE DISPOSITIVO', CHEAT.full], ['OPEN', 'ACTIVA TODOS LOS TRUCOS'], ['CLOSE', 'DESACTIVA TODOS LOS TRUCOS'], ['LOCK', 'BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)'], ['STATUS', 'ABRE HASTA UNA FASE (EJ: STATUS 1-4) Y CANDADOS DESDE AHÍ'], ['HACK', 'LISTA CON LA ANIMACIÓN DE HACKEO'], ['ADMIN', 'PANEL SECRETO (PIDE LA LLAVE)'], ['LIST', 'ESTA LISTA'], ['CLS', 'LIMPIA LA PANTALLA'], ['EXIT', 'CIERRA LA CONSOLA']]
       .forEach(c => say((c[2] === undefined ? '    ' : c[2] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], c[2] ? 'g' : 'y', 0, true));
     say('Los trucos duran 1 hora como máximo.', 'd', 0, true); SFX.chip(); return;
   }
@@ -477,7 +488,7 @@ function conRun(raw) {
     say('*** ACCESO CONCEDIDO ***', 'g big', 30);
     say('CÓDIGOS SECRETOS DISPONIBLES:', 'w', 16);
     CODES.forEach(c => { say(c[0] + '  -  ' + c[1], 'y', 26); say('   ' + c[2], '', 9); });
-    say('OPEN  -  ACTIVA TODOS LOS TRUCOS A LA VEZ', 'y', 20); say('CLOSE  -  DESACTIVA TODOS LOS TRUCOS', 'y', 20); say('LOCK  -  BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)', 'y', 20); say('TEST  -  MODO PRUEBAS: LOS TRUCOS COMO BOTONES EN LA PAUSA', 'y', 20);
+    say('OPEN  -  ACTIVA TODOS LOS TRUCOS A LA VEZ', 'y', 20); say('CLOSE  -  DESACTIVA TODOS LOS TRUCOS', 'y', 20); say('LOCK  -  BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)', 'y', 20); say('STATUS  -  ABRE LA PARTIDA HASTA UNA FASE (EJ: STATUS 1-4)', 'y', 20); say('TEST  -  MODO PRUEBAS: LOS TRUCOS COMO BOTONES EN LA PAUSA', 'y', 20);
     say('Escribe un código para activarlo o desactivarlo.', 'd', 10);
     SFX.power(); return;
   }
@@ -759,7 +770,7 @@ LEVELS['1-J'] = function () {
 // regla para todos: si lo tocas cuando NO está atacando (no brilla en rojo) le quitas vida; si lo tocas mientras ataca, te hace daño a ti
 function bossInit(l) { const hp = l.bossHp || 6; l.boss = { style: l.bossStyle || 'guard', x: (l.arena.x0 + l.arena.x1) / 2, y: 9.8 * T, hover0: 9.8 * T, hp, max: hp, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, shotT: 1, vy: 0, vx: 0, dieT: 0, boomT: 0, gone: false, cyc: 0, fireT: 0, side: 1 }; if (l.boss.style !== 'guard') l.boss.y = 14 * T; if (l.boss.style === 'magma') { l.boss.y = 9.2 * T; l.boss.hover0 = 9.2 * T; } l.waves = []; }
 function bossGate(close) { for (let y = 11; y <= 13; y++) for (let x = 42; x <= 43; x++) L.g[y][x] = close ? '#' : ' '; }
-function bossReset() { const b = L.boss; if (!b || b.gone) return; bossGate(false); Object.assign(b, { x: (L.arena.x0 + L.arena.x1) / 2, y: b.style === 'ice' || b.style === 'jungle' || b.style === 'worm' || b.style === 'jack' ? 14 * T : b.hover0, hp: b.max, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, vy: 0, vx: 0, cyc: 0, fireT: 0 }); L.waves = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; }); }
+function bossReset() { const b = L.boss; if (!b || b.gone) return; bossGate(false); Object.assign(b, { x: (L.arena.x0 + L.arena.x1) / 2, y: b.style === 'ice' || b.style === 'jungle' || b.style === 'worm' || b.style === 'jack' || b.style === 'mecha' ? 14 * T : b.hover0, hp: b.max, st: 'wait', t: 0, fight: false, flash: 0, inv: 0, vy: 0, vx: 0, cyc: 0, fireT: 0 }); L.waves = []; if (L.kitP) L.kitP.forEach(k => { k.st = 0; k.t = 0; }); }
 const BOSS_H = 200, bossRect = b => ({ x: b.x - 64, y: b.y - 168, w: 128, h: 160 });
 const bossDanger = b => ((b.style === 'kraken' || b.style === 'dragon') && b.st !== 'cool' && b.st !== 'die' && b.st !== 'wait') || b.fireT > 0 || ['aim', 'slam', 'wind', 'charge', 'erupt', 'leap'].includes(b.st);
 function bossHit() {
@@ -770,7 +781,7 @@ function bossHit() {
   if (b.hp <= 0) { b.st = 'die'; b.dieT = 0; L.waves = []; enemies.forEach(e => killEnemy(e, 'fly')); shots = shots.filter(s2 => s2.mine); return; }
   if (b.hp === Math.ceil(b.max / 2)) { pop(b.x, b.y - 230, '¡SE HA ENFADADO!', '#ff4a5a'); tone(80, 40, 1.2, 'sawtooth', 0.12); }
   if (b.style === 'guard' || b.style === 'dragon') { b.st = 'rise'; b.t = 0; }
-  else if (b.style === 'ice' || b.style === 'worm') { b.st = 'walk'; b.t = 0; b.vx = 0; }
+  else if (b.style === 'ice' || b.style === 'worm' || b.style === 'mecha') { b.st = 'walk'; b.t = 0; b.vx = 0; }
   else { b.st = 'rise'; b.t = 0; }
 }
 function bossUpdate(dt) {
@@ -782,7 +793,7 @@ function bossUpdate(dt) {
       if (b.style === 'ice') for (let k = 0; k < 40; k++) parts.push({ x: a.x0 + Math.random() * (a.x1 - a.x0), y: cam.y + Math.random() * 60, vx: (Math.random() - 0.5) * 60, vy: 80 + Math.random() * 120, life: 2, max: 2, col: '#ffffff', size: 2 + Math.random() * 2, grav: 0 });
       if (b.style === 'magma') for (let k = 0; k < 8; k++) L.waves.push({ x: a.x0 + (k + 0.5) * (a.x1 - a.x0) / 8, dir: 0, sp: 0, life: 0.6 + k * 0.08, lava: true }); }
     return; }
-  if (b.st === 'intro') { if (b.style !== 'ice' && b.style !== 'jungle' && b.style !== 'worm' && b.style !== 'jack') b.y = b.hover0 + Math.sin(time * 9) * 4; if (b.t > 1.7) { b.st = b.style === 'ice' || b.style === 'jungle' || b.style === 'worm' || b.style === 'jack' ? 'walk' : 'hover'; b.t = 0; b.shotT = 1.2; } }
+  if (b.st === 'intro') { if (b.style !== 'ice' && b.style !== 'jungle' && b.style !== 'worm' && b.style !== 'jack' && b.style !== 'mecha') b.y = b.hover0 + Math.sin(time * 9) * 4; if (b.t > 1.7) { b.st = b.style === 'ice' || b.style === 'jungle' || b.style === 'worm' || b.style === 'jack' || b.style === 'mecha' ? 'walk' : 'hover'; b.t = 0; b.shotT = 1.2; } }
   else if (b.st === 'die') {
     b.dieT += dt; b.boomT -= dt; shake = Math.max(shake, 0.2);
     if (b.boomT <= 0) { b.boomT = 0.11; const ex = b.x + (Math.random() - 0.5) * 180, ey = b.y - 20 - Math.random() * 200; burst(ex, ey, 16, b.style === 'ice' ? (Math.random() < 0.5 ? '#bff4ff' : '#ffffff') : Math.random() < 0.5 ? '#ff9a3c' : '#ffd23c', 240, 0.5, 200, 4); noise(0.25, 0.18, 900); }
@@ -792,7 +803,7 @@ function bossUpdate(dt) {
     return;
   }
   else if (b.style === 'guard' || b.style === 'dragon') bossGuard(dt, b, p, a, mid, ph2, gy, px);
-  else if (b.style === 'ice' || b.style === 'worm') bossIce(dt, b, p, a, mid, ph2, gy, px);
+  else if (b.style === 'ice' || b.style === 'worm' || b.style === 'mecha') bossIce(dt, b, p, a, mid, ph2, gy, px);
   else if (b.style === 'jungle' || b.style === 'jack') bossJungle(dt, b, p, a, mid, ph2, gy, px);
   else bossMagma(dt, b, p, a, mid, ph2, gy, px);
   // golpes: tocarlo cuando no ataca le quita vida; si está atacando, te la quita a ti
@@ -875,6 +886,7 @@ function drawBoss() {
   if (b.style === 'worm') return drawWorm(b);
   if (b.style === 'dragon') return drawDragon(b);
   if (b.style === 'jack') return drawJack(b);
+  if (b.style === 'mecha') return drawMecha(b);
   const j4 = selI('jefe4'), j3 = lavaI('jefe3') || j4, j2 = iceI('jefe2') || j3, im = j4 ? (b.hp <= b.max / 2 && selI('jefe4-roto')) || j4 : j3 ? (b.hp <= b.max / 2 && lavaI('jefe3-roto')) || j3 : j2 ? (b.hp <= b.max / 2 && iceI('jefe2-roto')) || j2 : IMG.jefe1; if (!im || !im.naturalWidth) return;
   const h = BOSS_H, w = h * im.naturalWidth / im.naturalHeight, flip = P.x + P.w / 2 > b.x, fs = flip ? -1 : 1, ph2 = b.hp <= b.max / 2, gy = 14 * T;
   let x = b.x, y = b.y; if (b.st === 'aim' || b.st === 'die' || b.st === 'intro') { x += (Math.random() - 0.5) * 8; y += (Math.random() - 0.5) * 6; }
@@ -2641,6 +2653,313 @@ LEVELS['8-D'] = function () {
   B.gear(28, 4); B.gear(70, 4); B.gear(105, 4); B.en('alien', 60, 13);
   return B.done(LT({ name: 'DENTRO DEL REGALO', factory: true, intro: '¡UN REGALO LLENO DE CHIPS!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 124 * T + T / 2, y: 14 * T } }));
 };
+/* ======================= PLANETA 9 · CEMENTERIO DE NAVES: sistemas, dibujo y jefe ======================= */
+const LK = o => Object.assign({ theme: 'junk', time: 240, noLava: true }, o);
+const JKC = ['#8a5a3a', '#6a6a78', '#7a4a30', '#5a6a70', '#94603a'];
+function JB(W, H) {
+  const B = LB(W, H || 16);
+  B.belt = (a, b, ty, dir) => (B.belts = B.belts || []).push({ x0: a * T, x1: (b + 1) * T, y: ty * T, dir });
+  // imán gigante: mientras está encendido te levanta hacia él (se apaga de vez en cuando si per > 0)
+  B.magnet = (a, b, r0, r1, per = 0, ph = 0) => (B.mags = B.mags || []).push({ x0: a * T, x1: (b + 1) * T, y0: r0 * T, y1: (r1 + 1) * T, per, ph, on: true, warn: false });
+  // prensa: baja de golpe hasta el suelo cada cierto tiempo
+  B.press = (x, w, ty, gy = 14, per = 2.6, ph = 0) => (B.presses = B.presses || []).push({ x: x * T, w: w * T, top: ty * T, gy: gy * T, per, ph, hy: ty * T + 50, warn: false, down: false });
+  B.scrap = (x, ty, big) => B.icicle(x, ty, big);
+  B.lamp = (x, ty) => (B.lamps = B.lamps || []).push({ x: x * T + T / 2, y: ty * T });   // baliza naranja (alumbra en las fases oscuras)
+  return B;
+}
+function updJunk(dt, p) {
+  const pc = p.x + p.w / 2, feet = p.y + p.h, near = x => Math.abs(x - cam.x - VW / 2) < VW;
+  for (const b of (L.belts || [])) {
+    if (!p.dead && p.onGround && Math.abs(feet - b.y) < 6 && pc > b.x0 && pc < b.x1) { const ox = p.x; p.x += b.dir * 150 * dt; if (collide(p)) p.x = ox; }
+    for (const e of enemies) if (!e.dead && Math.abs(e.y + e.h - b.y) < 6 && e.x + e.w / 2 > b.x0 && e.x + e.w / 2 < b.x1) e.x += b.dir * 60 * dt;
+  }
+  for (const m of (L.mags || [])) {
+    if (m.per > 0) { const k = ((time + m.ph) % m.per) / m.per; m.on = k < 0.68; m.warn = k > 0.52 && k < 0.68; } else { m.on = true; m.warn = false; }
+    if (m.on && !p.dead && pc > m.x0 && pc < m.x1 && feet > m.y0 && p.y < m.y1) { p.vy = Math.max(p.vy - 3400 * dt, -470); p.onGround = false; if (!m.snd || time - m.snd > 1.2) { m.snd = time; tone(90, 110, 0.5, 'sawtooth', 0.03); } }
+    if (m.on && near(m.x0) && Math.random() < 0.4) parts.push({ x: m.x0 + Math.random() * (m.x1 - m.x0), y: m.y1, vx: 0, vy: -240 - Math.random() * 100, life: (m.y1 - m.y0) / 320, max: (m.y1 - m.y0) / 320, col: Math.random() < 0.5 ? '#9affc0' : '#c8c8d8', size: 2, grav: 0, sqr: true });
+  }
+  for (const s of (L.presses || [])) {
+    const k = ((time + s.ph) % s.per) / s.per, up = s.top + 50, was = s.down;
+    s.warn = k > 0.5 && k < 0.66;
+    if (k < 0.66) s.hy = up + (s.warn ? Math.sin(time * 60) * 2 : 0);
+    else if (k < 0.72) s.hy = up + (s.gy - up) * ((k - 0.66) / 0.06);
+    else if (k < 0.82) s.hy = s.gy;
+    else s.hy = s.gy - (s.gy - up) * ((k - 0.82) / 0.18);
+    s.down = k >= 0.7 && k < 0.84;
+    if (s.down && !was && near(s.x)) { shake = Math.max(shake, 0.22); noise(0.3, 0.2, 500); tone(70, 40, 0.3, 'square', 0.1); burst(s.x + s.w / 2, s.gy, 12, '#c8a070', 200, 0.4, 500, 3); }
+    if (!p.dead && !p.win && k >= 0.66 && k < 0.86 && p.x + p.w > s.x + 4 && p.x < s.x + s.w - 4 && p.y < s.hy && feet > s.hy - 44 && p.tStar <= 0 && !CHEAT.ghost) hurt();
+  }
+}
+function junkLights(light) {
+  for (const m of (L.mags || [])) if (m.on) light((m.x0 + m.x1) / 2, m.y0 + 20, 170, 0.8);
+  for (const s of (L.presses || [])) light(s.x + s.w / 2, s.hy - 20, s.warn ? 150 : 80, 0.8);
+  for (const e of enemies) if (!e.dead) light(e.x + e.w / 2, e.y + 10, 70, 0.7);
+  for (const t of (L.lamps || [])) light(t.x, t.y - 60, 210, 0.95);
+}
+function drawJunkBg() {
+  const up = (L.H * T - VHv - cam.y), g = ctx.createLinearGradient(0, 0, 0, VHv);
+  g.addColorStop(0, '#05060f'); g.addColorStop(0.55, '#121530'); g.addColorStop(1, L.dark ? '#140c1a' : '#2a1a34'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VHv);
+  for (let i = 0; i < 70; i++) { const x = ((i * 97 - cam.x * 0.02) % VW + VW) % VW, y = (i * 53) % (VHv * 0.7); ctx.fillStyle = 'rgba(220,255,240,' + (0.3 + 0.5 * Math.abs(Math.sin(time + i))) + ')'; ctx.fillRect(x, y, 2, 2); }
+  // aurora verde
+  ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 3; k++) { ctx.strokeStyle = 'rgba(' + (k === 1 ? '170,80,255' : '60,255,150') + ',' + (0.07 + k * 0.02) + ')'; ctx.lineWidth = 40 - k * 10; ctx.beginPath();
+    for (let x = -40; x <= VW + 40; x += 40) ctx.lineTo(x, VHv * (0.14 + k * 0.06) + Math.sin(x * 0.006 + time * 0.4 + k - cam.x * 0.0004) * 40); ctx.stroke(); }
+  ctx.globalCompositeOperation = 'source-over';
+  if (L.hole) { // el agujero negro al fondo
+    const hx = VW * 0.72 - cam.x * 0.015, hy = VHv * 0.32;
+    for (let r = 220; r > 40; r -= 12) { ctx.strokeStyle = 'rgba(' + (r > 140 ? '160,60,220' : '255,150,80') + ',' + (0.06 + (220 - r) / 900) + ')'; ctx.lineWidth = 10; ctx.beginPath(); ctx.ellipse(hx, hy, r, r * 0.42, -0.25, time * 0.3 + r, time * 0.3 + r + 4.5); ctx.stroke(); }
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(hx, hy, 52, 30, -0.25, 0, 6.283); ctx.fill();
+    for (let i = 0; i < 8; i++) { const a = time * 0.5 + i * 0.8, rr = 140 - ((time * 20 + i * 30) % 120); ctx.fillStyle = '#5a5060'; ctx.save(); ctx.translate(hx + Math.cos(a) * rr, hy + Math.sin(a) * rr * 0.42); ctx.rotate(a * 3); ctx.fillRect(-6, -4, 12, 8); ctx.restore(); }
+  }
+  // montañas de chatarra y grúas
+  for (let i = 0; i < 9; i++) { const x = ((i * 300 - cam.x * 0.1) % 2700 + 2700) % 2700 - 300, by = VHv * 0.82 + up * 0.04; ctx.fillStyle = '#1c1a2c';
+    ctx.beginPath(); ctx.moveTo(x - 60, by); for (let k = 0; k <= 8; k++) ctx.lineTo(x - 60 + k * 45, by - 60 - Math.abs(Math.sin(i * 3 + k * 1.7)) * 120 * (1 - Math.abs(k - 4) / 5)); ctx.lineTo(x + 300, by); ctx.fill();
+    if (i % 3 === 0) { ctx.strokeStyle = '#2a2638'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x + 120, by - 120); ctx.lineTo(x + 120, by - 300); ctx.lineTo(x + 240, by - 280); ctx.stroke(); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 230, by - 282); ctx.lineTo(x + 230, by - 220 + Math.sin(time + i) * 10); ctx.stroke(); }
+    if (i % 2) { ctx.fillStyle = 'rgba(255,150,40,' + (0.5 + 0.5 * Math.sin(time * 5 + i)) + ')'; ctx.beginPath(); ctx.arc(x + 60, by - 140, 4, 0, 6.283); ctx.fill(); } }
+  for (let i = 0; i < 7; i++) { const x = ((i * 420 + 150 - cam.x * 0.22) % 2940 + 2940) % 2940 - 300, by = VHv * 0.92 + up * 0.09; ctx.save(); ctx.translate(x, by); ctx.rotate(-0.2 + (i % 3) * 0.15); ctx.fillStyle = '#2a2a3c';
+    ctx.beginPath(); ctx.ellipse(0, -40, 120, 34, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#3a3a50'; ctx.fillRect(-80, -52, 160, 8); ctx.fillStyle = 'rgba(80,255,170,.35)'; for (let k = 0; k < 4; k++) ctx.fillRect(-50 + k * 26, -48, 10, 6); ctx.restore(); }
+}
+function drawJunkFx() { ctx.save(); ctx.setTransform(SC, 0, 0, SC, 0, 0); for (let i = 0; i < 26; i++) { const x = ((i * 157 + time * (L.hole ? 60 : 12)) % (VW + 40)) - 20, y = ((i * 89 + time * 8 * (i % 3 + 1)) % VHv); ctx.fillStyle = i % 4 ? 'rgba(200,190,170,.25)' : 'rgba(120,255,180,.4)'; ctx.fillRect(x, y, 3, 3); } ctx.restore(); }
+function jkTile(tx, ty, d) {
+  const x = tx * T, y = ty * T, h = tyH(tx, ty), c = JKC[Math.floor(tyH(Math.floor(tx / 3), Math.floor(ty / 2)) * JKC.length)];
+  ctx.fillStyle = c; ctx.fillRect(x, y, T + 0.5, T + 0.5); ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(x, y + T - 5, T + 0.5, 5); ctx.fillRect(x + T - 3, y, 3, T);
+  ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x, y, T, 3);
+  if (h < 0.35) { ctx.fillStyle = 'rgba(160,80,30,.5)'; ctx.beginPath(); ctx.ellipse(x + 10 + h * 60, y + 30, 9, 6, h * 5, 0, 6.283); ctx.fill(); }
+  ctx.fillStyle = '#c8c8d0'; for (const [rx, ry] of [[6, 6], [T - 8, 6], [6, T - 10], [T - 8, T - 10]]) { ctx.beginPath(); ctx.arc(x + rx, y + ry, 2, 0, 6.283); ctx.fill(); }
+  const L1 = ty > 0 ? L.g[ty - 1][tx] : '#';
+  if (d === 0 && !isSolid(L1)) { ctx.fillStyle = '#4a4a5a'; ctx.fillRect(x, y - 3, T + 0.5, 7); ctx.fillStyle = 'rgba(80,255,160,.55)'; if (tx % 3 === 0) ctx.fillRect(x + 10, y - 1, 12, 3); ctx.fillStyle = '#ffd040'; if (tx % 5 === 1) for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(x + k * 16, y + 4); ctx.lineTo(x + k * 16 + 8, y + 4); ctx.lineTo(x + k * 16 + 4, y - 3); ctx.fill(); } }
+}
+function jkPlat(x, y, w) { ctx.fillStyle = '#5a5a6a'; ctx.fillRect(x + 2, y, w - 4, 12); ctx.strokeStyle = '#2a2a38'; ctx.lineWidth = 2; ctx.strokeRect(x + 2, y, w - 4, 12); ctx.strokeStyle = '#8a8a9a'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let xx = x + 4; xx < x + w - 10; xx += 12) { ctx.moveTo(xx, y + 11); ctx.lineTo(xx + 6, y + 1); ctx.lineTo(xx + 12, y + 11); } ctx.stroke(); ctx.fillStyle = 'rgba(80,255,160,.6)'; ctx.fillRect(x + 4, y + 13, w - 8, 2); }
+function jkMover(m) {
+  if (m.st === 3) return; const w = m.w, x = m.x, y = m.y;
+  if (m.fall) { const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0; ctx.fillStyle = '#7a4a30'; ctx.fillRect(x + jx, y, w, 20); ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 2; ctx.strokeRect(x + jx, y, w, 20); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.moveTo(x + jx + 6, y + 4); ctx.lineTo(x + jx + w - 6, y + 16); ctx.stroke(); if (m.st === 1 && Math.random() < 0.3) parts.push({ x: x + Math.random() * w, y: y + 20, vx: 0, vy: 40, life: 0.5, max: 0.5, col: '#8a5a3a', size: 2, grav: 600, sqr: true }); return; }
+  ctx.fillStyle = '#6a6a80'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - 10, y + 20); ctx.lineTo(x + 10, y + 20); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#22222e'; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(80,255,170,.8)'; ctx.fillRect(x + 8, y + 5, w - 16, 3);
+  ctx.globalCompositeOperation = 'lighter'; for (const fx of [x + 18, x + w - 18]) { const fl = 14 + Math.random() * 10, fg = ctx.createLinearGradient(0, y + 20, 0, y + 20 + fl); fg.addColorStop(0, 'rgba(120,255,200,.9)'); fg.addColorStop(1, 'rgba(60,120,255,0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(fx - 6, y + 20); ctx.lineTo(fx + 6, y + 20); ctx.lineTo(fx, y + 20 + fl); ctx.fill(); } ctx.globalCompositeOperation = 'source-over';
+}
+function drawJunkWorld() {
+  const vis = x => x > cam.x - 300 && x < cam.x + VW + 300;
+  for (const b of (L.belts || [])) { if (!vis(b.x0) && !vis(b.x1)) continue; ctx.fillStyle = '#2a2a34'; ctx.fillRect(b.x0, b.y - 10, b.x1 - b.x0, 14); ctx.strokeStyle = '#ff9a30'; ctx.lineWidth = 2; const off = (time * 150 * b.dir) % 24;
+    for (let x = b.x0 + ((off % 24) + 24) % 24; x < b.x1; x += 24) { ctx.beginPath(); ctx.moveTo(x, b.y - 8); ctx.lineTo(x + 8 * b.dir, b.y - 3); ctx.lineTo(x, b.y + 2); ctx.stroke(); }
+    for (const ex of [b.x0, b.x1]) { ctx.fillStyle = '#5a5a6a'; ctx.beginPath(); ctx.arc(ex, b.y - 3, 9, 0, 6.283); ctx.fill(); } }
+  for (const m of (L.mags || [])) { if (!vis(m.x0) && !vis(m.x1)) continue; const cx = (m.x0 + m.x1) / 2, top = m.y0 - 100, R = Math.min(64, Math.max(40, (m.x1 - m.x0) * 0.22));
+    ctx.strokeStyle = '#3a3a48'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(cx, top - 600); ctx.lineTo(cx, top - R - 10); ctx.stroke(); ctx.fillStyle = '#4a4a58'; ctx.fillRect(cx - 14, top - R - 18, 28, 14);
+    ctx.lineWidth = R * 0.75; ctx.lineCap = 'butt'; ctx.strokeStyle = m.warn && Math.floor(time * 12) % 2 ? '#ff8a6a' : m.on ? '#d0302a' : '#6a2a2a'; ctx.beginPath(); ctx.arc(cx, top, R, Math.PI, 0); ctx.stroke();
+    ctx.strokeStyle = '#1a0a0a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, top, R * 1.375, Math.PI, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, top, R * 0.625, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = '#d8d8e0'; ctx.fillRect(cx - R * 1.375, top, R * 0.75, R * 0.5); ctx.fillRect(cx + R * 0.625, top, R * 0.75, R * 0.5); ctx.strokeRect(cx - R * 1.375, top, R * 0.75, R * 0.5); ctx.strokeRect(cx + R * 0.625, top, R * 0.75, R * 0.5);
+    if (m.on) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(120,255,190,' + (0.18 + 0.1 * Math.sin(time * 8)) + ')'; ctx.lineWidth = 2;
+      for (let k = 0; k < 5; k++) { const yy = m.y1 - ((time * 110 + k * 70) % Math.max(60, m.y1 - top - R * 0.5)), ww = (m.x1 - m.x0) * (0.3 + 0.7 * (yy - top) / (m.y1 - top)); ctx.beginPath(); ctx.ellipse(cx, yy, ww / 2, 6, 0, 0, 6.283); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over'; } }
+  for (const l of (L.lamps || [])) { if (!vis(l.x)) continue; ctx.fillStyle = '#3a3a48'; ctx.fillRect(l.x - 3, l.y - 56, 6, 56); ctx.fillStyle = '#2a2a34'; ctx.fillRect(l.x - 10, l.y - 6, 20, 6);
+    ctx.fillStyle = '#ff9a2a'; ctx.beginPath(); ctx.arc(l.x, l.y - 62, 8, Math.PI, 0); ctx.fill(); ctx.fillRect(l.x - 8, l.y - 62, 16, 5);
+    ctx.globalCompositeOperation = 'lighter'; const a = time * 4 + l.x; ctx.fillStyle = 'rgba(255,170,60,.22)'; ctx.beginPath(); ctx.moveTo(l.x, l.y - 62); ctx.arc(l.x, l.y - 62, 90, a, a + 0.5); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+  for (const s of (L.presses || [])) { if (!vis(s.x)) continue; const x = s.x, w = s.w, top = s.top, hy = s.hy;
+    ctx.fillStyle = '#34343f'; ctx.fillRect(x + w / 2 - 14, top - 700, 8, 670); ctx.fillRect(x + w / 2 + 6, top - 700, 8, 670); ctx.strokeStyle = '#34343f'; ctx.lineWidth = 3; ctx.beginPath(); for (let yy = top - 700; yy < top - 30; yy += 30) { ctx.moveTo(x + w / 2 - 10, yy); ctx.lineTo(x + w / 2 + 10, yy + 30); } ctx.stroke(); ctx.fillStyle = '#2a2a36'; ctx.fillRect(x - 6, top - 30, w + 12, 30); ctx.fillStyle = '#ffd040'; for (let k = 0; k < w + 12; k += 16) ctx.fillRect(x - 6 + k, top - 30, 8, 6);
+    ctx.fillStyle = '#9a9aaa'; ctx.fillRect(x + w / 2 - 9, top, 18, hy - 44 - top); ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(x + w / 2 - 7, top, 4, hy - 44 - top);
+    ctx.fillStyle = s.warn ? (Math.floor(time * 16) % 2 ? '#ff5a3a' : '#7a3a30') : '#5a5a6a'; ctx.fillRect(x, hy - 44, w, 44); ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 3; ctx.strokeRect(x, hy - 44, w, 44);
+    ctx.fillStyle = '#2a2a34'; for (let k = 6; k < w - 6; k += 12) { ctx.beginPath(); ctx.moveTo(x + k, hy); ctx.lineTo(x + k + 6, hy + 8); ctx.lineTo(x + k + 12, hy); ctx.fill(); }
+    if (s.warn) { ctx.fillStyle = 'rgba(255,60,40,.25)'; ctx.fillRect(x, s.gy - 6, w, 6); } }
+}
+function jkEnemy(e) {
+  const cx = e.x + e.w / 2, by = e.y + e.h, f = e.dir < 0 ? -1 : 1, sq = e.dead && e.how !== 'fly' ? Math.max(0.15, 1 - e.dead * 3) : 1, t = time * 6 + e.x * 0.01;
+  ctx.save(); ctx.translate(cx, by); if (e.dead && e.how === 'fly') ctx.rotate(e.dead * 8); ctx.scale(1, sq); ctx.globalAlpha = e.dead ? Math.max(0, 1 - e.dead) : 1; ctx.lineJoin = 'round';
+  const ol = () => { ctx.strokeStyle = '#141018'; ctx.lineWidth = 2.5; ctx.stroke(); };
+  const eye = (x, y, r) => { ctx.fillStyle = '#3aff9a'; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.fillStyle = 'rgba(60,255,150,.3)'; ctx.beginPath(); ctx.arc(x, y, r * 2, 0, 6.283); ctx.fill(); };
+  if (e.type === 'patrulla') {             // robot oxidado que camina
+    const st = Math.sin(t * 2) * 4; ctx.fillStyle = '#5a4a40'; ctx.fillRect(-10, -16, 7, 16 + st * 0.3); ctx.fillRect(3, -16, 7, 16 - st * 0.3);
+    ctx.fillStyle = '#9a5a34'; ctx.beginPath(); ctx.rect(-15, -40, 30, 26); ctx.fill(); ol(); ctx.fillStyle = '#6a3a20'; ctx.fillRect(-9, -34, 18, 6);
+    ctx.fillStyle = '#a86a40'; ctx.beginPath(); ctx.rect(-12, -60, 24, 20); ctx.fill(); ol(); eye(-5 + f * 2, -51, 3.2); eye(5 + f * 2, -51, 3.2);
+    ctx.strokeStyle = '#3a3a48'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -60); ctx.lineTo(4, -70); ctx.stroke(); ctx.fillStyle = Math.floor(time * 4) % 2 ? '#ff4a3a' : '#5a1a1a'; ctx.beginPath(); ctx.arc(4, -71, 3, 0, 6.283); ctx.fill();
+  } else if (e.type === 'alien') {         // cangrejo de chatarra
+    for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { ctx.strokeStyle = '#5a5a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(s * 10, -12); ctx.lineTo(s * (18 + k * 4), -18 + Math.sin(t * 2 + k) * 3); ctx.lineTo(s * (22 + k * 4), 0); ctx.stroke(); }
+    ctx.fillStyle = '#7a8090'; ctx.beginPath(); ctx.ellipse(0, -16, 20, 12, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ol(); ctx.fillStyle = '#9a5a34'; ctx.fillRect(-14, -18, 28, 4); eye(-6, -22, 2.6); eye(6, -22, 2.6);
+    for (const s of [-1, 1]) { ctx.fillStyle = '#c0402a'; ctx.beginPath(); ctx.arc(s * 24, -26, 7, s > 0 ? 3.6 : -0.5, s > 0 ? 8.5 : 4.4); ctx.fill(); ol(); }
+  } else if (e.type === 'erizo') {         // sierra circular rodante: no se puede pisar
+    ctx.save(); ctx.translate(0, -20); ctx.rotate(e.x / 12); ctx.fillStyle = '#c8c8d4'; ctx.beginPath(); for (let a = 0; a < 16; a++) { const aa = a / 16 * 6.283; ctx.lineTo(Math.cos(aa) * 22, Math.sin(aa) * 22); ctx.lineTo(Math.cos(aa + 0.2) * 16, Math.sin(aa + 0.2) * 16); } ctx.closePath(); ctx.fill(); ol();
+    ctx.fillStyle = '#7a3a2a'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, 6.283); ctx.fill(); ol(); ctx.restore();
+    if (Math.random() < 0.3) parts.push({ x: cx, y: by - 2, vx: -f * 120 * Math.random(), vy: -80 - Math.random() * 80, life: 0.3, max: 0.3, col: '#ffd040', size: 2, grav: 500, sqr: true });
+  } else if (e.type === 'dron') {          // robot fantasma: flota y se transparenta
+    ctx.globalAlpha *= 0.55 + 0.35 * Math.sin(time * 3 + e.x); ctx.fillStyle = '#9ab8c8'; ctx.beginPath(); ctx.arc(0, -30, 16, Math.PI, 0); ctx.lineTo(16, -12); for (let k = 0; k < 4; k++) ctx.lineTo(16 - (k + 0.5) * 8, -12 + (k % 2 ? -6 : 4) + Math.sin(t + k) * 2); ctx.lineTo(-16, -12); ctx.closePath(); ctx.fill(); ol();
+    eye(-6 + f * 2, -32, 3.5); eye(6 + f * 2, -32, 3.5); ctx.strokeStyle = '#5a6a78'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, -22); ctx.lineTo(8, -22); ctx.stroke();
+  } else if (e.type === 'torreta') {       // cañón de nave estrellada
+    ctx.fillStyle = '#4a4a5a'; ctx.beginPath(); ctx.rect(-18, -14, 36, 14); ctx.fill(); ol(); ctx.save(); ctx.translate(0, -18); ctx.rotate(f > 0 ? -0.15 : 3.29); ctx.fillStyle = '#8a8a9a'; ctx.fillRect(0, -6, 30, 12); ctx.strokeStyle = '#141018'; ctx.lineWidth = 2.5; ctx.strokeRect(0, -6, 30, 12); ctx.fillStyle = '#3aff9a'; ctx.fillRect(26, -4, 4, 8); ctx.restore();
+    ctx.fillStyle = '#9a5a34'; ctx.beginPath(); ctx.arc(0, -18, 11, 0, 6.283); ctx.fill(); ol(); eye(0, -18, 3);
+  } else { ctx.restore(); return false; }
+  ctx.restore(); return true;
+}
+function drawJunkScrap(ic) { ctx.save(); ctx.translate(ic.x, ic.y + 18); ctx.rotate(ic.st === 2 ? time * 6 : 0); const r = ic.big ? 24 : 16; ctx.fillStyle = '#7a7a8a'; ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283, rr = k % 2 ? r : r * 0.75; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#9a5a34'; ctx.beginPath(); ctx.arc(0, 0, r * 0.35, 0, 6.283); ctx.fill(); ctx.restore(); }
+function drawJunkShell(s) { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const g = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); g.addColorStop(0, '#d8d8e0'); g.addColorStop(1, '#4a4a58'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = '#ff5a3a'; ctx.fillRect(-18, -3, 36, 6); ctx.restore(); }
+// el jefe: EL TITÁN DE CHATARRA (camina, dispara obuses, carga y se estrella contra las paredes)
+function drawMecha(b) {
+  const ph2 = b.hp <= b.max / 2, st = b.st, stun = st === 'stun', dang = bossDanger(b), gy = 14 * T, f = b.side || 1;
+  let x = b.x, y = b.y; if (st === 'intro' || st === 'die' || st === 'wind') x += (Math.random() - 0.5) * 6;
+  const walk = st === 'walk' || st === 'charge' ? Math.sin(time * (st === 'charge' ? 18 : 7)) : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(x, gy + 2, 120, 14, 0, 0, 6.283); ctx.fill();
+  if (dang && st !== 'die') { ctx.globalCompositeOperation = 'lighter'; const ag = ctx.createRadialGradient(x, y - 130, 40, x, y - 130, 210); ag.addColorStop(0, 'rgba(60,255,150,0)'); ag.addColorStop(0.7, 'rgba(60,255,150,' + (0.16 + 0.1 * Math.sin(time * 18)) + ')'); ag.addColorStop(1, 'rgba(60,255,150,0)'); ctx.fillStyle = ag; ctx.fillRect(x - 220, y - 340, 440, 420); ctx.globalCompositeOperation = 'source-over'; }
+  const met = stun ? '#6a5a50' : '#8a5a3a', dk = '#3a2a24', ol = (w = 3.5) => { ctx.strokeStyle = '#140c0a'; ctx.lineWidth = w; ctx.stroke(); };
+  // piernas
+  for (const s of [-1, 1]) { const lift = Math.max(0, walk * s) * 14; ctx.fillStyle = '#5a5a6a'; ctx.beginPath(); ctx.rect(x + s * 40 - 16, y - 80 - lift, 32, 70); ctx.fill(); ol(); ctx.fillStyle = met; ctx.beginPath(); ctx.rect(x + s * 40 - 26, y - 16 - lift, 52, 16); ctx.fill(); ol(); }
+  // cuerpo
+  ctx.fillStyle = met; ctx.beginPath(); ctx.rect(x - 70, y - 190, 140, 110); ctx.fill(); ol(4); ctx.fillStyle = dk; ctx.fillRect(x - 54, y - 170, 108, 14);
+  for (let k = 0; k < 5; k++) { ctx.fillStyle = (k + Math.floor(time * 4)) % 3 ? '#3aff9a' : '#ff4a3a'; ctx.fillRect(x - 48 + k * 21, y - 166, 12, 6); }
+  ctx.fillStyle = 'rgba(160,80,30,.6)'; ctx.beginPath(); ctx.ellipse(x - 30, y - 120, 16, 10, 0.4, 0, 6.283); ctx.ellipse(x + 40, y - 100, 12, 8, -0.3, 0, 6.283); ctx.fill();
+  // brazos cañón
+  for (const s of [-1, 1]) { const front = s === f, aim = front && (st === 'throw') ? -0.15 : 0.5 + walk * 0.1 * s; ctx.save(); ctx.translate(x + s * 78, y - 170); ctx.rotate(s > 0 ? aim : Math.PI - aim);
+    ctx.fillStyle = '#6a6a7a'; ctx.beginPath(); ctx.rect(0, -18, 70, 36); ctx.fill(); ol(); ctx.fillStyle = '#4a4a58'; ctx.beginPath(); ctx.rect(64, -14, 34, 12); ctx.rect(64, 3, 34, 12); ctx.fill(); ol(2.5);
+    if (front && b.fireT > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,120,60,' + (0.5 + 0.5 * Math.sin(time * 30)) + ')'; ctx.beginPath(); ctx.arc(100, 0, 16, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; } ctx.restore();
+    ctx.fillStyle = '#5a5a6a'; ctx.beginPath(); ctx.arc(x + s * 74, y - 172, 20, 0, 6.283); ctx.fill(); ol(); }
+  // cabeza con el gran ojo
+  ctx.fillStyle = met; ctx.beginPath(); ctx.rect(x - 46, y - 260, 92, 70); ctx.fill(); ol(4); ctx.strokeStyle = '#3a3a48'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 30, y - 260); ctx.lineTo(x - 40, y - 290); ctx.moveTo(x + 30, y - 260); ctx.lineTo(x + 46, y - 284); ctx.stroke();
+  if (stun) { ctx.strokeStyle = '#ff4a3a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x - 16, y - 240); ctx.lineTo(x + 16, y - 212); ctx.moveTo(x + 16, y - 240); ctx.lineTo(x - 16, y - 212); ctx.stroke(); }
+  else { ctx.fillStyle = '#f0f0f0'; ctx.beginPath(); ctx.arc(x, y - 226, 24, 0, 6.283); ctx.fill(); ol(); const eg = ctx.createRadialGradient(x, y - 226, 2, x, y - 226, 18); eg.addColorStop(0, '#ffd0c0'); eg.addColorStop(0.5, ph2 ? '#ff2020' : '#e02a2a'); eg.addColorStop(1, '#6a0a0a'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(x + Math.max(-6, Math.min(6, (P.x - x) / 60)), y - 226, 16, 0, 6.283); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(x + Math.max(-6, Math.min(6, (P.x - x) / 60)), y - 226, 4, 11, 0, 0, 6.283); ctx.fill(); }
+  // rayos verdes
+  if (!stun && Math.random() < (ph2 ? 0.5 : 0.25)) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(120,255,170,.9)'; ctx.lineWidth = 2.5; ctx.beginPath(); let zx = x + (Math.random() - 0.5) * 160, zy = y - 280; ctx.moveTo(zx, zy); for (let k = 0; k < 6; k++) { zx += (Math.random() - 0.5) * 50; zy += 30; ctx.lineTo(zx, zy); } ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+  if (b.flash > 0) { ctx.globalAlpha = Math.min(1, b.flash / 0.15) * 0.7; ctx.fillStyle = '#fff'; ctx.fillRect(x - 74, y - 264, 148, 260); ctx.globalAlpha = 1; }
+  if (st === 'charge' && Math.random() < 0.6) parts.push({ x: x - f * 60, y: gy - 4, vx: -f * 160, vy: -90 * Math.random(), life: 0.3, max: 0.3, col: '#ffd040', size: 2.5, grav: 500, sqr: true });
+  if (stun) { ctx.font = '900 26px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let k = 0; k < 3; k++) { const aa = time * 4 + k * 2.094; ctx.fillStyle = '#ffd23c'; ctx.fillText('★', x + Math.cos(aa) * 70, y - 290 + Math.sin(aa) * 12); }
+    ctx.font = '800 13px system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! ¡GOLPÉALE!', x, y - 320); ctx.textBaseline = 'alphabetic'; }
+}
+/* ---------- planeta 9 · CEMENTERIO DE NAVES: las fases ---------- */
+const JP = (B, a, b, ty) => B.block(a, b, ty, ty, '=');
+const jPit = (B, a, b, chips = 11) => { B.block(a, b, 14, 15, ' '); if (chips) B.row(a, b, chips); };
+// 9-1 · el desguace
+LEVELS['9-1'] = function () {
+  const B = JB(176);
+  B.ground(0, 175); B.block(175, 175, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13);
+  B.belt(20, 32, 14, 1); B.row(22, 30, 11); B.press(38, 2, 6); jPit(B, 46, 48); B.en('alien', 52, 13); B.cp(56, 14);
+  B.scrap(62, 3); B.scrap(66, 3, true); JP(B, 70, 74, 10); B.gear(72, 8); B.en('erizo', 80, 13);
+  B.block(86, 87, 12, 13); B.block(88, 89, 10, 13); B.row(88, 89, 9); jPit(B, 92, 95); B.en('dron', 102, 8, { x0: 94, x1: 112 }); B.cp(106, 14);
+  B.press(112, 2, 6, 14, 2.8, 1); JP(B, 116, 120, 12); B.gear(118, 10); B.belt(124, 138, 14, -1); B.en('patrulla', 130, 13); B.box(128, 10, 'escudo'); B.hid(140, 10, 'vida');
+  jPit(B, 144, 147, 0); B.gear(146, 10); B.cp(150, 14); B.en('torreta', 160, 13); B.row(162, 168, 12);
+  return B.done(LK({ name: 'EL DESGUACE', intro: '¡BIENVENIDO AL CEMENTERIO DE NAVES!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 169 * T + T / 2, y: 14 * T } }));
+};
+// 9-2 · los imanes gigantes
+LEVELS['9-2'] = function () {
+  const B = JB(180);
+  B.ground(0, 179); B.block(179, 179, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13);
+  B.magnet(18, 23, 4, 13); B.block(22, 23, 6, 13); B.row(19, 21, 6); B.en('alien', 30, 13);
+  jPit(B, 36, 44, 0); B.magnet(34, 46, 5, 13, 4.4, 0); B.row(37, 43, 6); B.gear(40, 5); B.cp(48, 14); B.en('dron', 56, 7, { x0: 48, x1: 64 });
+  B.magnet(62, 67, 2, 13); B.block(66, 67, 5, 13); B.gear(66, 3); B.en('erizo', 74, 13); B.press(80, 2, 6); B.cp(86, 14);
+  jPit(B, 92, 100, 0); B.magnet(90, 102, 4, 13, 4.4, 1.5); B.row(93, 99, 5); B.gear(96, 5); B.en('torreta', 108, 13); B.box(112, 10, 'iman'); B.cp(116, 14);
+  B.magnet(122, 127, 4, 13); B.block(126, 127, 6, 13); B.en('patrulla', 134, 13); B.belt(140, 152, 14, 1); B.en('alien', 148, 13); B.hid(156, 10, 'vida'); B.row(160, 168, 12);
+  return B.done(LK({ name: 'LOS IMANES GIGANTES', intro: '¡LOS IMANES TE LEVANTAN!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 172 * T + T / 2, y: 14 * T } }));
+};
+// 9-3 · la nave estrellada (oscura, por dentro)
+LEVELS['9-3'] = function () {
+  const B = JB(170);
+  B.ground(0, 169); B.block(0, 169, 0, 5); B.block(169, 169, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13); B.lamp(8, 14);
+  B.laser(20, 6, 13, 0); B.lamp(24, 14); B.block(28, 30, 12, 13); B.row(28, 30, 11); B.en('alien', 34, 13); B.laser(40, 6, 13, 1); B.laser(44, 6, 13, 0.4); B.gear(42, 11);
+  jPit(B, 50, 53); B.cp(56, 14); B.lamp(57, 14); B.en('dron', 66, 9, { x0: 58, x1: 76 }); JP(B, 62, 65, 10); B.gear(63, 8);
+  B.laser(72, 6, 13, 0.8); B.press(80, 2, 6, 14, 2.6, 0); B.lamp(86, 14); B.cp(92, 14); B.belt(96, 110, 14, -1); B.en('patrulla', 104, 13); B.laser(108, 6, 13, 0.2);
+  jPit(B, 114, 117, 0); B.gear(116, 10); B.en('erizo', 124, 13); B.lamp(126, 14); B.laser(130, 6, 13, 1.2); B.laser(134, 6, 13, 0.6); B.hid(138, 10, 'vida');
+  B.cp(142, 14); B.lamp(150, 14); B.en('torreta', 152, 13); B.row(156, 162, 12);
+  return B.done(LK({ name: 'LA NAVE ESTRELLADA', dark: true, intro: '¡A OSCURAS DENTRO DE LA NAVE!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 164 * T + T / 2, y: 14 * T } }));
+};
+// 9-4 · la cinta trituradora
+LEVELS['9-4'] = function () {
+  const B = JB(182);
+  B.ground(0, 181); B.block(181, 181, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13);
+  B.belt(18, 34, 14, 1); B.press(28, 2, 6, 14, 2.4, 0); jPit(B, 38, 45, 0); B.fall(39, 12, 2); B.fall(43, 11, 2); B.row(39, 44, 9); B.gear(41, 8);
+  B.cp(48, 14); B.belt(52, 72, 14, 1); B.press(58, 2, 6, 14, 2.6, 0.5); B.press(66, 2, 6, 14, 2.6, 1.6); B.en('alien', 62, 13); B.box(70, 10, 'escudo');
+  jPit(B, 76, 84, 0); B.fall(77, 12, 2); B.fall(80, 11, 2); B.fall(83, 12, 2); B.row(77, 84, 9); B.cp(88, 14); B.en('erizo', 94, 13);
+  B.block(98, 99, 12, 13); B.block(100, 101, 10, 13); B.row(100, 101, 9); JP(B, 103, 106, 9); B.gear(104, 7);
+  B.belt(110, 130, 14, -1); B.press(116, 2, 6, 14, 2.2, 0); B.press(124, 2, 6, 14, 2.2, 1.1); B.en('patrulla', 120, 13);
+  B.cp(134, 14); jPit(B, 138, 146, 0); B.fall(139, 12, 2); B.fall(142, 11, 2); B.fall(145, 12, 2); B.hid(142, 8, 'vida'); B.block(149, 151, 12, 13); B.gear(150, 10);
+  B.en('dron', 158, 8, { x0: 150, x1: 168 }); B.en('torreta', 166, 13); B.row(168, 174, 12);
+  return B.done(LK({ name: 'LA CINTA TRITURADORA', intro: '¡QUE NO TE PILLE LA PRENSA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 176 * T + T / 2, y: 14 * T } }));
+};
+// 9-5 · el cementerio de robots
+LEVELS['9-5'] = function () {
+  const B = JB(180);
+  B.ground(0, 179); B.block(179, 179, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13); B.en('alien', 22, 13); B.en('patrulla', 30, 13); B.scrap(26, 3); B.scrap(34, 3, true);
+  B.block(38, 40, 12, 13); B.gear(39, 10); jPit(B, 44, 47); B.cp(50, 14); B.en('dron', 58, 8, { x0: 50, x1: 70 }); B.en('dron', 66, 6, { x0: 56, x1: 76 }); B.box(60, 10, 'laser'); B.en('erizo', 74, 13);
+  JP(B, 78, 82, 10); JP(B, 84, 88, 8); B.gear(86, 6); B.en('alien', 92, 13); B.en('patrulla', 98, 13); B.scrap(96, 3); B.scrap(102, 3); B.cp(106, 14);
+  B.en('torreta', 116, 13); jPit(B, 120, 123); B.en('erizo', 128, 13); B.hid(130, 10, 'vida'); B.en('alien', 134, 13);
+  B.block(138, 139, 12, 13); B.block(140, 141, 10, 13); B.block(142, 143, 8, 13); B.gear(142, 6); B.cp(148, 14); B.en('patrulla', 156, 13); B.en('dron', 162, 8, { x0: 150, x1: 172 }); B.row(166, 172, 12);
+  return B.done(LK({ name: 'EL CEMENTERIO DE ROBOTS', intro: '¡LOS ROBOTS DESPIERTAN!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 174 * T + T / 2, y: 14 * T } }));
+};
+// 9-6 · la grúa magnética
+LEVELS['9-6'] = function () {
+  const B = JB(184);
+  B.ground(0, 16); B.row(4, 10, 12); B.en('patrulla', 12, 13);
+  B.mover(18, 12, 3, 3 * T, 0, 1.0, 0); B.mover(26, 11, 3, 0, 2 * T, 1.1, 1); B.gear(24, 8); B.row(18, 28, 9);
+  B.ground(31, 52); B.cp(33, 14); B.en('alien', 40, 13); B.magnet(44, 49, 3, 13, 4, 0); B.block(48, 49, 6, 13);
+  B.magnet(51, 66, 4, 13, 5, 0.8); B.row(54, 63, 6); B.gear(58, 5); B.ground(65, 90); B.cp(67, 14); B.en('erizo', 74, 13); B.press(80, 2, 6); B.en('dron', 86, 8, { x0: 76, x1: 96 });
+  B.mover(92, 12, 3, 3 * T, 0, 1.2, 0); B.mover(100, 10, 3, 0, 2 * T, 1, 0.5); B.ground(105, 183); B.block(183, 183, 0, 15); B.cp(107, 14); B.en('patrulla', 114, 13); B.box(118, 10, 'turbo');
+  B.magnet(122, 127, 3, 13); B.block(126, 127, 5, 13); B.gear(126, 3); B.hid(134, 10, 'vida'); B.en('alien', 140, 13); B.cp(146, 14); B.en('torreta', 156, 13); B.row(160, 168, 12);
+  return B.done(LK({ name: 'LA GRÚA MAGNÉTICA', intro: '¡CUIDADO, EL IMÁN SE APAGA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 176 * T + T / 2, y: 14 * T } }));
+};
+// 9-7 · la sala de prensas
+LEVELS['9-7'] = function () {
+  const B = JB(176);
+  B.ground(0, 175); B.block(175, 175, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13);
+  B.press(20, 2, 6, 14, 2.4, 0); B.press(24, 2, 6, 14, 2.4, 0.3); B.press(28, 2, 6, 14, 2.4, 0.6); B.gear(26, 11); B.cp(36, 14);
+  B.block(40, 42, 12, 13); B.row(40, 42, 11); jPit(B, 46, 49); B.press(54, 3, 6, 14, 2.8, 0); B.press(58, 3, 6, 14, 2.8, 1.4); B.en('alien', 64, 13); B.cp(70, 14);
+  B.belt(74, 96, 14, 1); B.press(80, 2, 6, 14, 2.2, 0); B.press(88, 2, 6, 14, 2.2, 1.1); B.gear(84, 11); B.en('erizo', 100, 13); jPit(B, 104, 107); B.en('dron', 112, 7, { x0: 104, x1: 122 }); B.cp(120, 14);
+  for (let k = 0; k < 4; k++) B.press(126 + k * 4, 2, 6, 14, 3, k * 0.4); B.hid(132, 9, 'vida'); B.block(139, 141, 12, 13); B.gear(140, 10); B.cp(146, 14);
+  B.belt(150, 160, 14, -1); B.en('torreta', 156, 13); B.row(162, 168, 12);
+  return B.done(LK({ name: 'LA SALA DE PRENSAS', intro: '¡ESPERA TU MOMENTO!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 170 * T + T / 2, y: 14 * T } }));
+};
+// 9-8 · tormenta de chatarra
+LEVELS['9-8'] = function () {
+  const B = JB(180);
+  B.ground(0, 179); B.block(179, 179, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13);
+  B.scrap(20, 3); B.scrap(24, 3, true); B.scrap(28, 3); B.wind(30, 60, 0, 15, -850, 0); jPit(B, 36, 39); B.gear(38, 9); B.cp(46, 14);
+  B.scrap(50, 3); B.scrap(54, 3, true); B.scrap(58, 3); B.block(62, 63, 12, 13); B.block(64, 65, 10, 13); B.row(64, 65, 9); B.en('alien', 70, 13); B.cp(76, 14);
+  B.wind(80, 120, 0, 15, 900, 2); jPit(B, 84, 88); jPit(B, 96, 100); B.en('dron', 92, 8, { x0: 84, x1: 104 }); B.gear(98, 8); B.scrap(106, 3, true); B.scrap(110, 3); B.cp(116, 14);
+  B.en('erizo', 122, 13); B.press(128, 2, 6); B.box(132, 10, 'escudo'); B.wind(136, 170, 0, 15, -850, 1); jPit(B, 140, 143); B.block(145, 147, 12, 13); B.gear(146, 10);
+  B.scrap(150, 3); B.scrap(154, 3, true); B.hid(156, 10, 'vida'); B.en('torreta', 162, 13); B.row(164, 170, 12);
+  return B.done(LK({ name: 'TORMENTA DE CHATARRA', intro: '¡LLUEVE CHATARRA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 174 * T + T / 2, y: 14 * T } }));
+};
+// 9-9 · el borde del agujero negro
+LEVELS['9-9'] = function () {
+  const B = JB(184);
+  B.ground(0, 16); B.row(4, 10, 12); B.en('patrulla', 12, 13);
+  B.fall(18, 12, 2); B.fall(21, 11, 2); B.fall(24, 12, 2); B.gear(21, 8); B.ground(27, 44); B.wind(27, 80, 0, 15, 1000, 0); B.cp(29, 14); B.en('alien', 36, 13);
+  B.mover(46, 12, 3, 2 * T, 0, 1.2, 0); B.ground(53, 70); B.en('erizo', 60, 13); B.box(66, 10, 'iman');
+  B.fall(72, 12, 2); B.fall(75, 11, 2); B.fall(78, 12, 2); B.gear(75, 8); B.ground(81, 110); B.cp(83, 14); B.wind(81, 140, 0, 15, -1000, 1.5); B.en('dron', 92, 8, { x0: 84, x1: 104 });
+  B.magnet(98, 103, 3, 13, 4, 0); B.block(102, 103, 6, 13); B.en('patrulla', 108, 13);
+  B.mover(112, 12, 3, 3 * T, 0, 1, 0); B.mover(119, 11, 3, 0, 2 * T, 1.1, 0.5); B.ground(123, 183); B.block(183, 183, 0, 15); B.cp(125, 14); B.block(129, 131, 12, 13); B.gear(130, 10);
+  B.en('torreta', 140, 13); B.scrap(146, 3, true); B.scrap(150, 3); B.en('alien', 156, 13); B.hid(160, 10, 'vida'); B.row(166, 174, 12);
+  return B.done(LK({ name: 'EL BORDE DEL AGUJERO NEGRO', hole: true, intro: '¡EL AGUJERO NEGRO TE ARRASTRA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 178 * T + T / 2, y: 14 * T } }));
+};
+// 9-10 · dentro del agujero negro (gravedad baja)
+LEVELS['9-10'] = function () {
+  const B = JB(176);
+  B.ground(0, 14); B.row(4, 10, 12);
+  JP(B, 18, 22, 12); JP(B, 27, 31, 10); JP(B, 36, 40, 12); B.gear(29, 7); B.arc(18, 40, 8, 2);
+  B.ground(45, 60); B.cp(47, 14); B.en('alien', 54, 13); JP(B, 65, 68, 11); JP(B, 73, 76, 9); JP(B, 81, 84, 11); B.en('dron', 75, 5, { x0: 66, x1: 86 }); B.gear(75, 6);
+  B.ground(89, 108); B.cp(91, 14); B.en('erizo', 98, 13); B.box(102, 10, 'escudo'); B.mover(112, 12, 3, 2 * T, 0, 1, 0); B.mover(120, 10, 3, 0, 2 * T, 1, 0.5); JP(B, 127, 131, 11); B.gear(129, 8);
+  B.ground(136, 175); B.block(175, 175, 0, 15); B.cp(138, 14); B.scrap(144, 3); B.en('patrulla', 146, 13); B.hid(150, 10, 'vida'); B.row(156, 166, 12);
+  return B.done(LK({ name: 'DENTRO DEL AGUJERO NEGRO', hole: true, gk: 0.6, intro: '¡GRAVEDAD BAJA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 170 * T + T / 2, y: 14 * T } }));
+};
+// 9-11 · la forja del titán (todo junto)
+LEVELS['9-11'] = function () {
+  const B = JB(192);
+  B.ground(0, 191); B.block(191, 191, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13);
+  B.belt(18, 34, 14, 1); B.press(24, 2, 6); B.press(30, 2, 6, 14, 2.6, 1.3); B.gear(27, 11);
+  jPit(B, 38, 46, 0); B.magnet(36, 48, 4, 13, 4.4, 0); B.row(39, 45, 6); B.gear(42, 5); B.cp(50, 14); B.laser(56, 6, 13, 0); B.laser(60, 6, 13, 0.7); B.en('alien', 64, 13);
+  B.block(68, 69, 12, 13); B.block(70, 71, 10, 13); B.block(72, 73, 8, 13); B.row(72, 73, 7); jPit(B, 76, 86, 0); B.fall(77, 12, 2); B.fall(80, 11, 2); B.fall(83, 12, 2); B.row(77, 85, 9);
+  B.cp(90, 14); B.en('erizo', 96, 13); B.scrap(100, 3); B.scrap(104, 3, true); B.scrap(108, 3); B.press(112, 3, 6, 14, 2.4, 0); B.press(118, 3, 6, 14, 2.4, 1.2); B.block(123, 125, 12, 13); B.gear(124, 10);
+  B.cp(130, 14); B.magnet(134, 139, 3, 13); B.block(138, 139, 5, 13); B.en('dron', 146, 8, { x0: 140, x1: 160 }); jPit(B, 150, 160, 0); B.mover(151, 12, 3, 3 * T, 0, 1.1, 0); B.row(150, 160, 9);
+  B.box(164, 10, 'escudo'); B.cp(166, 14); B.hid(170, 10, 'vida'); B.en('torreta', 176, 13); B.row(178, 184, 12);
+  return B.done(LK({ name: 'LA FORJA DEL TITÁN', intro: '¡LA ÚLTIMA PRUEBA DEL CEMENTERIO!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 186 * T + T / 2, y: 14 * T } }));
+};
+// 9-J · el jefe: EL TITÁN DE CHATARRA
+LEVELS['9-J'] = function () {
+  const B = JB(80);
+  B.ground(0, 79); B.row(8, 30, 11); B.box(18, 10, 'escudo'); B.hid(26, 10, 'vida'); B.cp(36, 14);
+  B.block(42, 43, 0, 10); B.block(78, 79, 0, 15); B.gear(60, 6);
+  return B.done(LK({ name: 'EL TITÁN DE CHATARRA', hole: true, bossName: 'EL TITÁN DE CHATARRA', bossHp: 8, bossStyle: 'mecha', time: 300, intro: '¡QUE SE ESTRELLE Y GOLPÉALE!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: -99999, y: 14 * T }, arena: { x0: 44 * T, x1: 78 * T }, bossLvl: true }));
+};
+// 9-B · el robot dormido (secreta): imanes llenos de chips
+LEVELS['9-B'] = function () {
+  const B = JB(130);
+  B.ground(0, 129); B.block(129, 129, 0, 15);
+  for (let i = 0; i < 6; i++) { const x = 14 + i * 17; B.magnet(x, x + 5, 2, 13, i % 2 ? 3.4 : 0, i); B.row(x, x + 5, 4); B.arc(x + 7, x + 15, 9, 2); if (i % 2) B.block(x + 4, x + 5, 6, 13); }
+  B.gear(31, 3); B.gear(65, 3); B.gear(99, 3); B.en('dron', 60, 8, { x0: 50, x1: 80 });
+  return B.done(LK({ name: 'EL ROBOT DORMIDO', intro: '¡FLOTA Y RECOGE CHIPS!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 124 * T + T / 2, y: 14 * T } }));
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -3050,7 +3369,7 @@ function updateStage(dt) {
     }
     L.mets = L.mets.filter(m => !m.dead);
   }
-  updExtras(dt, p); updJungle(dt, p); if (L.theme === 'ocean') updOcean(dt, p); else if (L.theme === 'desert') updDesert(dt, p); else if (L.theme === 'sky') updSky(dt, p); else if (L.theme === 'toy') updToy(dt, p);
+  updExtras(dt, p); updJungle(dt, p); if (L.theme === 'ocean') updOcean(dt, p); else if (L.theme === 'desert') updDesert(dt, p); else if (L.theme === 'sky') updSky(dt, p); else if (L.theme === 'toy') updToy(dt, p); else if (L.theme === 'junk') updJunk(dt, p);
   for (const gz of L.geysers) {          // géiseres de fuego: avisan burbujeando y luego escupen
     const k = ((time + gz.ph) % gz.per), on = k > 0.9 && k < 2.0; gz.warn = k > 0.15 && k <= 0.9; if (on && !gz.on && Math.abs(gz.x - (p.x + p.w / 2)) < VW) { noise(0.9, 0.1, 300); tone(90, 60, 0.6, 'sawtooth', 0.04); } gz.on = on;
     if (on && !p.dead && !p.win && !CHEAT.ghost && Math.abs(p.x + p.w / 2 - gz.x) < 16 + p.w / 2 && p.y + p.h > gz.y - gz.h && p.y < gz.y) { if (p.tStar > 0) {} else hurt(); }
@@ -3297,7 +3616,7 @@ function drawCogs() {
     for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * 1.5708); ctx.fillRect(-c.r * 0.08, 0, c.r * 0.16, c.r * 0.6); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, c.r * 0.16, 0, 6.283); ctx.fillStyle = '#ff7a24'; ctx.fill(); ctx.restore(); }
 }
 function drawStageBack() {          // por detrás de los personajes
-  drawLavaPits(); drawGeysers(); drawExtras(); if (L.theme === 'jungle') drawJungleWorld(); if (L.theme === 'ocean') drawOceanWorld(); else if (L.theme === 'desert') drawDesertWorld(); else if (L.theme === 'sky') drawSkyWorld(); else if (L.theme === 'toy') drawToyWorld();
+  drawLavaPits(); drawGeysers(); drawExtras(); if (L.theme === 'jungle') drawJungleWorld(); if (L.theme === 'ocean') drawOceanWorld(); else if (L.theme === 'desert') drawDesertWorld(); else if (L.theme === 'sky') drawSkyWorld(); else if (L.theme === 'toy') drawToyWorld(); else if (L.theme === 'junk') drawJunkWorld();
   if (CHEAT.floor) {                 // puentes láser sobre los huecos
     CHEAT.floorT += 1 / 60; const gy = (L.H - 2) * T, x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1);
     const hole = x => !isSolid(L.g[L.H - 2][x]) && L.g[L.H - 2][x] !== '=' && !isSolid(L.g[L.H - 1][x]);
@@ -3330,6 +3649,7 @@ function drawStageBack() {          // por detrás de los personajes
     if (L.theme === 'desert') { dsMover(m); continue; }
     if (L.theme === 'sky') { skMover(m); continue; }
     if (L.theme === 'toy') { tyMover(m); continue; }
+    if (L.theme === 'junk') { jkMover(m); continue; }
     ctx.globalCompositeOperation = 'lighter'; for (const fx of PFX) { const g2 = ctx.createRadialGradient(x + w * fx, y + h, 0, x + w * fx, y + h, w * 0.16); g2.addColorStop(0, 'rgba(255,190,60,.5)'); g2.addColorStop(1, 'rgba(255,190,60,0)'); ctx.fillStyle = g2; ctx.fillRect(x + w * fx - w * 0.16, y + h - 4, w * 0.32, w * 0.18); } ctx.globalCompositeOperation = 'source-over';
     if ((L.theme === 'jungle' && m.fall && L.planks) || m.plank) { if (m.st === 3) continue; const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0; for (let xx = x + 4; xx < x + w - 4; xx += 16) { ctx.fillStyle = m.st === 1 ? '#a86a32' : '#7a4a22'; ctx.fillRect(xx + jx, y + 2, 14, 12); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.strokeRect(xx + jx, y + 2, 14, 12); } continue; }
     if (L.theme === 'jungle' && m.fall) { drawLily(m, x, y, w); continue; }
@@ -3370,6 +3690,7 @@ function drawStageFront() {         // por delante: láseres, muro, plasma
     ctx.globalCompositeOperation = 'source-over';
   }
   for (const ic of L.icicles) { if (ic.st === 3 || ic.x < cam.x - 60 || ic.x > cam.x + VW + 60) continue;
+    if (L.theme === 'junk') { drawJunkScrap(ic); continue; }
     if (L.theme === 'toy') { const sz = ic.big ? 40 : 28, c = TOYC[Math.floor(ic.x) % 6]; ctx.fillStyle = c; ctx.fillRect(ic.x - sz / 2, ic.y, sz, sz); ctx.strokeStyle = 'rgba(40,20,40,.6)'; ctx.lineWidth = 2; ctx.strokeRect(ic.x - sz / 2, ic.y, sz, sz); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(ic.x - sz / 2, ic.y, sz, 5); continue; }
     if (L.theme === 'desert') { const r = ic.big ? 26 : 18, rg = ctx.createRadialGradient(ic.x - 6, ic.y + 10, 3, ic.x, ic.y + 16, r); rg.addColorStop(0, '#e8b880'); rg.addColorStop(1, '#8a5a30'); ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(ic.x, ic.y + 16, r, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#3a1a08'; ctx.lineWidth = 2.5; ctx.stroke(); continue; }
     const L2 = ic.big ? 66 : 44, w2 = ic.big ? 15 : 10, jx = ic.st === 1 ? Math.sin(time * 70) * 2.5 : 0, x = ic.x + jx, y = ic.y;
@@ -3457,7 +3778,7 @@ function drawDark() {
   if (L.theme === 'lava') { for (const gz of L.geysers) light(gz.x, gz.y - (gz.on ? gz.h / 2 : 10), gz.on ? gz.h * 0.8 : 50, gz.on ? 0.9 : 0.5);
     if (!L.vert && !L.noLava) for (let x = Math.floor(cam.x / T); x < (cam.x + VW) / T + 1; x += 2) if (x >= 0 && x < L.W && !isWallT(L.g[L.H - 1][x])) light(x * T + T / 2, (L.H - 1) * T, 120, 0.7);
     if (L.rise && L.rise.on) for (let x = cam.x; x < cam.x + VW + 100; x += 160) light(x, L.rise.y, 220, 0.9); }
-  if (L.theme === 'ocean') oceanLights(light); else if (L.theme === 'desert') desertLights(light); else if (L.theme === 'sky') skyLights(light);
+  if (L.theme === 'ocean') oceanLights(light); else if (L.theme === 'desert') desertLights(light); else if (L.theme === 'sky') skyLights(light); else if (L.theme === 'junk') junkLights(light);
   for (const pd of L.pads) if (pd.crystal) light(pd.x + 24, pd.y - 20, 90, 0.8);
   for (const po of L.portals) light(po.x, po.y, 135, 0.9);
   light(L.goal.x, L.goal.y - 130, 230);
@@ -3633,6 +3954,7 @@ function drawBackground() {
   if (L.theme === 'desert') { drawDesertBg(); return; }
   if (L.theme === 'sky') { drawSkyBg(); return; }
   if (L.theme === 'toy') { drawToyBg(); return; }
+  if (L.theme === 'junk') { drawJunkBg(); return; }
   const g = ctx.createLinearGradient(0, 0, 0, VHv);
   g.addColorStop(0, '#05071a'); g.addColorStop(0.6, '#0d1036'); g.addColorStop(1, '#241046');
   ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VHv);
@@ -3699,6 +4021,7 @@ function drawTiles() {
     if (L.theme === 'desert') { dsPlat(x, pl.ty * T, w); continue; }
     if (L.theme === 'sky') { skPlat(x, pl.ty * T, w); continue; }
     if (L.theme === 'toy') { tyPlat(x, pl.ty * T, w); continue; }
+    if (L.theme === 'junk') { jkPlat(x, pl.ty * T, w); continue; }
     if (L.theme === 'jungle') { const yy = pl.ty * T;          // puente de tablas y cuerdas
       ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, yy - 18); ctx.quadraticCurveTo(x + w / 2, yy - 6, x + w, yy - 18); ctx.stroke();
       for (let xx = x + 2; xx < x + w - 4; xx += 16) { ctx.fillStyle = (xx / 16 | 0) % 2 ? '#8a5a2a' : '#7a4a22'; ctx.fillRect(xx, yy, 14, 12); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.strokeRect(xx, yy, 14, 12); ctx.strokeStyle = '#6a4a2a'; ctx.beginPath(); ctx.moveTo(xx + 7, yy); ctx.lineTo(xx + 7, yy - 14); ctx.stroke(); }
@@ -3732,6 +4055,7 @@ function solidTile(tx, ty, G, gOk, gw, gh) {
     if (L.theme === 'desert') { dsTile(tx, ty, d); return; }
     if (L.theme === 'sky') { skTile(tx, ty, d); return; }
     if (L.theme === 'toy') { tyTile(tx, ty, d); return; }
+    if (L.theme === 'junk') { jkTile(tx, ty, d); return; }
     if (gOk && (G === IMG['suelo-hielo'] || G === IMG['suelo-lava'] || G === IMG['suelo-selva'])) { const sx = ((tx * 7 + ty * 3) % 6) * 256;
       if (d === 0) ctx.drawImage(G, sx, 0, 256, 347, x - 0.5, y - T * 0.336, T + 1, T * 1.336 + 0.5); else ctx.drawImage(G, sx, 347, 256, 256, x, y, T + 0.5, T + 0.5);
     } else if (gOk) {
@@ -3905,6 +4229,7 @@ function drawWorld() {
     if (L.theme === 'desert' && dsEnemy(e)) continue;
     if (L.theme === 'sky' && skEnemy(e)) continue;
     if (L.theme === 'toy' && tyEnemy(e)) continue;
+    if (L.theme === 'junk' && jkEnemy(e)) continue;
     const cx = e.x + e.w / 2, by = e.y + e.h, TV = L.theme === 'lava' ? LAVN : L.theme === 'jungle' ? SELN : ICEN, iv = TV[e.type] && (iceI(TV[e.type][0]) || lavaI(TV[e.type][0]) || selI(TV[e.type][0])), eim = iv || IMG[e.d.img], eax = iv ? 0.5 : e.d.ax || 0.5, efl = iv || e.d.faceR ? e.dir < 0 : e.dir > 0, eh = iv ? e.d.h * TV[e.type][2] : e.d.h;
     if (eim._n) eim._f = e.dead ? 0 : e.type === 'torreta' ? (e.shotT > 0 ? 2 : e.near && e.timer < 0.6 ? 1 : 0) : Math.floor(e.t * (e.d.fps || 22));
     if (e.dead) { if (e.how === 'squish') spr(eim, cx, by, eh, eax, 1, efl, 0, 1.25, 0.25); else spr(eim, cx, by - eh / 2, eh, 0.5, 0.5, efl, e.dead * 9); continue; }
@@ -3926,6 +4251,7 @@ function drawWorld() {
     else if (s.ball && L.theme === 'jungle') { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const sg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); sg.addColorStop(0, '#b8b8a0'); sg.addColorStop(1, '#4a4a3a'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, 0, 19, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1a1a10'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = '#5aff6a'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 4); ctx.stroke(); ctx.restore(); }
     else if (s.seed && L.theme === 'toy') { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(time * 6); ctx.fillStyle = TOYC[Math.floor(s.x) % 6]; ctx.beginPath(); ctx.arc(0, 0, 13, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 4); ctx.stroke(); ctx.fillStyle = '#ffe0f0'; ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(-22, -7); ctx.lineTo(-22, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(22, -7); ctx.lineTo(22, 7); ctx.fill(); ctx.restore(); }
     else if (s.seed) { ctx.globalCompositeOperation = 'lighter'; const sg = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, 22); sg.addColorStop(0, 'rgba(200,255,120,.9)'); sg.addColorStop(1, 'rgba(80,255,60,0)'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(s.x, s.y, 22, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#6a4a1a'; ctx.beginPath(); ctx.ellipse(s.x, s.y, 9, 12, Math.atan2(s.vy, s.vx), 0, 6.283); ctx.fill(); ctx.fillStyle = '#9aff6a'; ctx.beginPath(); ctx.arc(s.x, s.y - 3, 3, 0, 6.283); ctx.fill(); }
+    else if (s.ball && L.theme === 'junk') drawJunkShell(s);
     else if (s.ball && L.theme === 'desert') { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const dg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); dg.addColorStop(0, '#f0c890'); dg.addColorStop(1, '#8a5a30'); ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#3a1a08'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.strokeStyle = 'rgba(70,255,230,.6)'; ctx.beginPath(); ctx.arc(0, 0, 9, 0, 4); ctx.stroke(); ctx.restore(); }
     else if (s.ball) { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const bg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.7, '#d8f2ff'); bg.addColorStop(1, '#8cc8ec'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, 19, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#5a9cc8'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = 'rgba(120,180,220,.7)'; ctx.beginPath(); ctx.arc(0, 0, 11, 0.3, 2.2); ctx.stroke(); ctx.restore(); }
     else if (L.theme === 'sky' && !s.magma && !s.ball) { ctx.globalCompositeOperation = 'lighter'; const eg = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, 20); eg.addColorStop(0, 'rgba(255,255,220,1)'); eg.addColorStop(0.4, 'rgba(120,220,255,.8)'); eg.addColorStop(1, 'rgba(80,140,255,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(s.x, s.y, 20, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
@@ -3986,7 +4312,7 @@ function render() {
   ctx.setTransform(SC, 0, 0, SC, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!L) { ctx.fillStyle = '#070a1e'; ctx.fillRect(0, 0, VW, VHv); return; }
-  if (state === 'warp') drawWarp(); else if (state === 'map') drawMap(); else if (state === 'edit') { cam.x = edCam = Math.max(0, Math.min(edCam, L.W * T - VW)); const yb = L.H * T - (VHv - 92); if (edCamY === null) edCamY = yb; cam.y = edCamY = Math.max(Math.min(-50, yb), Math.min(yb, edCamY)); drawBackground(); drawWorld(); drawEditorOverlay(); const sc = $('edScr'); if (sc && document.activeElement !== sc) sc.value = Math.round(edCam / Math.max(1, L.W * T - VW) * 1000); } else { drawBackground(); drawWorld(); if (L.theme === 'ocean') drawOceanFx(); else if (L.water) drawWater(); if (L.theme === 'desert') drawDesertFx(); else if (L.theme === 'sky') drawSkyFx(); else if (L.theme === 'toy') drawToyFx(); if (L.dark && state !== 'title') drawDark(); drawSnow(); drawJungleFx(); }
+  if (state === 'warp') drawWarp(); else if (state === 'map') drawMap(); else if (state === 'edit') { cam.x = edCam = Math.max(0, Math.min(edCam, L.W * T - VW)); const yb = L.H * T - (VHv - 92); if (edCamY === null) edCamY = yb; cam.y = edCamY = Math.max(Math.min(-50, yb), Math.min(yb, edCamY)); drawBackground(); drawWorld(); drawEditorOverlay(); const sc = $('edScr'); if (sc && document.activeElement !== sc) sc.value = Math.round(edCam / Math.max(1, L.W * T - VW) * 1000); } else { drawBackground(); drawWorld(); if (L.theme === 'ocean') drawOceanFx(); else if (L.water) drawWater(); if (L.theme === 'desert') drawDesertFx(); else if (L.theme === 'sky') drawSkyFx(); else if (L.theme === 'toy') drawToyFx(); else if (L.theme === 'junk') drawJunkFx(); if (L.dark && state !== 'title') drawDark(); drawSnow(); drawJungleFx(); }
   if (state === 'play' || state === 'done' || state === 'over') drawHUD();
   const vg = ctx.createRadialGradient(VW / 2, VHv / 2, VHv * 0.45, VW / 2, VHv / 2, Math.max(VW, VHv) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,10,.45)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VHv);
@@ -4320,6 +4646,21 @@ const MAP8 = [
   { id: '8-C', n: '★', name: 'FASE SECRETA · LLUVIA DE CARAMELOS', x: 0.633, y: 0.058, rx: 0.028, bonus: true, built: true, prev: 7 },
   { id: '8-D', n: '★', name: 'FASE SECRETA · DENTRO DEL REGALO', x: 0.687, y: 0.432, rx: 0.026, bonus: true, built: true, prev: 8 }
 ];
+const MAP9 = [
+  { id: '9-1', n: '1', name: 'EL DESGUACE', x: 0.177, y: 0.810, rx: 0.019, built: true },
+  { id: '9-2', n: '2', name: 'LOS IMANES GIGANTES', x: 0.236, y: 0.645, rx: 0.019, built: true },
+  { id: '9-3', n: '3', name: 'LA NAVE ESTRELLADA', x: 0.258, y: 0.463, rx: 0.019, built: true },
+  { id: '9-4', n: '4', name: 'LA CINTA TRITURADORA', x: 0.315, y: 0.342, rx: 0.019, built: true },
+  { id: '9-5', n: '5', name: 'EL CEMENTERIO DE ROBOTS', x: 0.375, y: 0.268, rx: 0.019, built: true },
+  { id: '9-6', n: '6', name: 'LA GRÚA MAGNÉTICA', x: 0.433, y: 0.190, rx: 0.019, built: true },
+  { id: '9-7', n: '7', name: 'LA SALA DE PRENSAS', x: 0.502, y: 0.310, rx: 0.019, built: true },
+  { id: '9-8', n: '8', name: 'TORMENTA DE CHATARRA', x: 0.571, y: 0.414, rx: 0.019, built: true },
+  { id: '9-9', n: '9', name: 'EL BORDE DEL AGUJERO NEGRO', x: 0.635, y: 0.620, rx: 0.019, built: true },
+  { id: '9-10', n: '10', name: 'DENTRO DEL AGUJERO NEGRO', x: 0.684, y: 0.870, rx: 0.019, built: true },
+  { id: '9-11', n: '11', name: 'LA FORJA DEL TITÁN', x: 0.780, y: 0.800, rx: 0.019, built: true, gold: true },
+  { id: '9-J', n: '', name: 'JEFE · EL TITÁN DE CHATARRA', x: 0.908, y: 0.720, rx: 0.04, boss: true, built: true },
+  { id: '9-B', n: '★', name: 'FASE SECRETA · EL ROBOT DORMIDO', x: 0.425, y: 0.850, rx: 0.019, bonus: true, built: true, prev: 2 }
+];
 const WORLDS = [
   { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff', fog: 'nebula' },
   { n: 2, name: 'PLANETA DE CRISTAL', img: 'mapa2', nodes: MAP2, col: '#9ff0ff', fog: 'snow' },
@@ -4328,7 +4669,8 @@ const WORLDS = [
   { n: 5, name: 'OCÉANO ABISAL', img: 'mapa5', nodes: MAP5, col: '#3cf0ff', fog: 'mist', bossIco: '🐙' },
   { n: 6, name: 'DESIERTO DE LOS ANILLOS', img: 'mapa6', nodes: MAP6, col: '#ffc860', fog: 'smoke', bossIco: '🪱', ar: 3.0 },
   { n: 7, name: 'ISLAS DE LA TORMENTA', img: 'mapa7', nodes: MAP7, col: '#9fd8ff', fog: 'mist', bossIco: '🐉', ar: 3.0 },
-  { n: 8, name: 'JUGUETERÍA', img: 'mapa8', nodes: MAP8, col: '#ff8ad8', fog: 'mist', bossIco: '🤡', ar: 3.0 }
+  { n: 8, name: 'JUGUETERÍA', img: 'mapa8', nodes: MAP8, col: '#ff8ad8', fog: 'mist', bossIco: '🤡', ar: 3.0 },
+  { n: 9, name: 'CEMENTERIO DE NAVES', img: 'mapa9', nodes: MAP9, col: '#6aff9a', fog: 'smoke', bossIco: '🤖' }
 ];
 // tramos sin camino dibujado: arco suave entre plataformas (la proporción del mapa se tiene en cuenta para que se vea redondo)
 WORLDS.forEach(W => { const ar = W.ar || (W.img === 'mapa3' ? 3.03 : W.img === 'mapa1' || W.img === 'mapa2' ? 1.79 : 4.03); W.nodes.forEach((n, i) => { if (!i) return; const p = W.nodes[n.prev !== undefined ? n.prev : i - 1], dx = (n.x - p.x) * ar, dy = n.y - p.y, d = Math.hypot(dx, dy), lift = Math.min(0.05, d * 0.1); n.way = [];
@@ -5561,7 +5903,7 @@ loadImages(() => {
 });
 window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
     return { id, W: l.W, H: l.H, g: l.g.map(r => Array.isArray(r) ? r.join('') : r), gk: l.gk || 1, vert: !!l.vert, water: l.water || null, spawn: l.spawn, goal: l.goal, sw: !!l.sw,
-      pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick(l.lifts, ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
+      pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick((l.lifts || []).concat(l.mags || []), ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
       pipes: pick(l.pipes, ['x', 'y', 'tox', 'toy', 'hid']), portals: pick(l.portals, ['x', 'y', 'tox', 'toy']), keys: pick(l.keys, ['x', 'y']), winds: pick(l.winds, ['x0', 'x1', 'y0', 'y1', 'f']), cps: pick(l.cps, ['x', 'y']), strips: pick(l.strips, ['x0', 'x1', 'y']), rise: !!l.rise, chase: !!l.chase, auto: !!l.auto, sky: !!l.sky }; },
   playC(n, t, datos) { ED = tlUnpack(null, n, t, datos); tlPlay(false); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
 /* ---------- botón ✕ para salir del juego (portada y mapas) ---------- */
