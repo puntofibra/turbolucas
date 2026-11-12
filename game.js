@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.83';
+const VERSION = '0.84';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3880,16 +3880,42 @@ function openEditOff() {
   $('edP').onclick = () => offLeave(true);
   $('edX').onclick = async () => { if (EDO.dirty && !(await uiConfirm('¿SALIR SIN GUARDAR?', 'Los cambios que no has guardado de esta fase se pierden.', 'SALIR', 'SEGUIR EDITANDO'))) return; delete EDRAFT[EDO.id]; offLeave(false); };
   $('edS').onclick = async () => {
-    if (!ACC) return msg('✖ Entra con tu cuenta de dueño para guardar los cambios');
-    msg('Guardando…'); const p = ptIsEmpty(EDO.p) ? null : EDO.p, r = await api({ a: 'parcheGuardar', ses: ACC.ses, id: EDO.id, p });
-    if (!r.ok) return msg('✖ ' + r.error);
+    msg('Guardando…'); const p = ptIsEmpty(EDO.p) ? null : EDO.p, r = await ptSend(EDO.id, p);
+    if (!r.ok) return msg(r.error === 'CANCEL' ? 'No se ha guardado' : '✖ ' + r.error);
     if (p) PATCH[EDO.id] = JSON.parse(JSON.stringify(p)); else delete PATCH[EDO.id]; try { localStorage.setItem('tl_pt', JSON.stringify(PATCH)); } catch (e) {}
     delete EDRAFT[EDO.id]; EDO.dirty = false; SFX.life(); msg('✔ Guardado: ya les sale así a todos los jugadores'); };
   $('edR').onclick = async () => {
     if (!(await uiConfirm('¿VOLVER A LA ORIGINAL?', 'Se quitan todos los retoques de esta fase y vuelve a quedar como venía en el juego, también para todos los jugadores.', 'VOLVER A LA ORIGINAL', 'CANCELAR'))) return;
-    if (PATCH[EDO.id]) { if (!ACC) return msg('✖ Entra con tu cuenta de dueño para quitar los retoques'); const r = await api({ a: 'parcheGuardar', ses: ACC.ses, id: EDO.id, p: null }); if (!r.ok) return msg('✖ ' + r.error); delete PATCH[EDO.id]; try { localStorage.setItem('tl_pt', JSON.stringify(PATCH)); } catch (e) {} }
+    if (PATCH[EDO.id]) { const r = await ptSend(EDO.id, null); if (!r.ok) return msg(r.error === 'CANCEL' ? 'No se ha cambiado nada' : '✖ ' + r.error); delete PATCH[EDO.id]; try { localStorage.setItem('tl_pt', JSON.stringify(PATCH)); } catch (e) {} }
     EDO.undo.push(JSON.stringify(EDO.p)); EDO.p = ptEmpty(); delete EDRAFT[EDO.id]; offRebuild(); delete EDRAFT[EDO.id]; EDO.dirty = false; SFX.chip(); msg('✔ La fase ha vuelto a ser la original'); };
   preTheme(L.theme);
+}
+let edAdmT = null;          // llave NFC ya pasada en esta sesión (vale 6 horas)
+async function ptSend(id, p) {            // guarda con tu cuenta de dueño; si no, pide tu llave NFC (o el QR en dispositivos sin NFC)
+  const send = () => api({ a: 'parcheGuardar', ses: ACC ? ACC.ses : '', t: edAdmT || '', id, p });
+  let r = await send(); if (r.ok || r.error !== 'DUENO') return r;
+  edAdmT = await keyAuth(); if (!edAdmT) return { ok: false, error: 'CANCEL' };
+  return send();
+}
+function keyAuth() {
+  return new Promise(res => {
+    const d = $('uidlg'); let done = false, qrT = 0;
+    const fin = t => { if (done) return; done = true; nfcStop(); clearInterval(qrT); d.classList.remove('on'); d.innerHTML = ''; res(t); };
+    d.innerHTML = '<div class="ucard"><div class="uic">🔐</div><h2>IDENTIFÍCATE</h2><div class="utx" id="kaT">' + (HAY_NFC ? 'Para cambiar las pantallas reales, acerca tu llave NFC a la parte de atrás del móvil…' : 'Este dispositivo no lee NFC. Escanea el código con tu móvil Android y acerca la llave:') + '</div>' +
+      (HAY_NFC ? '<div style="display:flex;justify-content:center">' + NFC_HTML + '</div>' : '<div id="kaQ" style="background:#fff;color:#0a1640;padding:10px;border-radius:12px;display:inline-block;margin:8px auto;font:700 12px system-ui">Cargando…</div>') +
+      '<div class="urow"><button class="btn" id="kaX">CANCELAR</button></div></div>';
+    d.classList.add('on'); $('kaX').onclick = () => fin(null);
+    const msg = t => { const m = $('kaT'); if (m) m.textContent = t; };
+    if (HAY_NFC) {
+      const err = t => msg('✖ ' + t + ' Vuelve a acercarla.');
+      const go = () => nfcRead(async k => { msg('Comprobando llave…'); const r = await api({ a: 'llave', k }); if (!r.ok) throw new Error(r.error); try { SFX.win(); } catch (e) {} msg('✔ Llave reconocida'); setTimeout(() => fin(r.adm), 500); }, err);
+      err.gesture = () => { msg('Toca la pantalla una vez y acerca tu llave NFC…'); const once = e => { if (e.target && e.target.id === 'kaX') return; d.removeEventListener('pointerdown', once); go(); }; d.addEventListener('pointerdown', once); };
+      go();
+    } else api({ a: 'qr' }).then(r => { if (done) return; const box = $('kaQ'); if (!r.ok) { msg('✖ ' + r.error); return; }
+      const url = location.origin + location.pathname + '?admq=' + r.q;
+      try { const q = qrcode(0, 'M'); q.addData(url); q.make(); box.innerHTML = '<img src="' + q.createDataURL(6, 3) + '" alt="QR" style="display:block;width:min(40vh,240px);height:auto;image-rendering:pixelated"><div style="margin-top:4px">ESCANÉALO CON TU MÓVIL ANDROID</div>'; } catch (e) { box.textContent = url; }
+      qrT = setInterval(async () => { if (done) return; const s2 = await api({ a: 'qrEst', q: r.q }); if (s2.estado === 'ok') { try { SFX.win(); } catch (e) {} fin(s2.adm); } else if (s2.estado === 'caducado') { clearInterval(qrT); msg('El código ha caducado. Cancela y vuelve a darle a guardar.'); } }, 2000); });
+  });
 }
 function offLeave(test) {          // vuelve a jugar desde donde estaba Lucas (PROBAR conserva los cambios sin guardar)
   const px = EDO.px, py = EDO.py; if (!test) delete EDRAFT[EDO.id]; else if (EDO.dirty) EDRAFT[EDO.id] = EDO.p; else delete EDRAFT[EDO.id];
