@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.09';
+const VERSION = '1.10';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6085,17 +6085,22 @@ const TUTO = [
   { t: 'DÓNDE SE PUEDE JUGAR', dev: 1, h: '<div class="tudev">' +
       '<div><img src="' + TU + 'iphone.webp" alt=""><b>iPhone</b><span>Safari, en horizontal</span></div>' +
       '<div><img src="' + TU + 'android.webp" alt=""><b>Android</b><span>Chrome, en horizontal</span></div>' +
-      '<div><em>📲</em><b>Tablet</b><span>iPad o Android</span></div>' +
-      '<div><em>💻</em><b>PC y portátil</b><span>Chrome, Edge, Firefox o Safari</span></div>' +
-      '<div><em>📺</em><b>Smart TV</b><span>Desde el navegador de la tele</span></div>' +
-      '<div><em>🚗</em><b>Tesla</b><span>Navegador de la pantalla, con el coche aparcado</span></div></div>' +
+      '<div><img class="w" src="' + TU + 'tablet.webp" alt=""><b>Tablet</b><span>iPad o Android</span></div>' +
+      '<div><img class="w" src="' + TU + 'portatil.webp" alt=""><b>PC y portátil</b><span>Chrome, Edge, Firefox o Safari</span></div>' +
+      '<div><img class="w" src="' + TU + 'tv.webp" alt=""><b>Smart TV</b><span>Desde el navegador de la tele</span></div>' +
+      '<div><img class="w" src="' + TU + 'tesla.webp" alt=""><b>Tesla</b><span>Navegador de la pantalla, con el coche aparcado</span></div></div>' +
       '<div class="tunote">Entra en <b>puntofibra.github.io/turbolucas</b>. En móvil y tablet pulsa <b>INSTALAR</b> para tenerlo como una app más, a pantalla completa.</div>' },
   { t: 'JUEGA CON MANDO', img: TU + 'mando.webp', dev: 1, h: 'Puedes jugar con el mando de la <b>PlayStation 5</b> o <b>PlayStation 4</b>, de <b>Xbox</b> (One y Series) o el <b>mando Pro de Nintendo Switch</b>, y con la mayoría de mandos Bluetooth o USB.<br><br>' +
       '<b>Cómo conectarlo:</b> PS5 → mantén <b>PS + Create</b> · PS4 → <b>PS + Share</b> · Xbox → botón de emparejar · Switch Pro → botón de sincronizar. Cuando parpadee la luz, búscalo en <b>Ajustes › Bluetooth</b> del móvil, PC o tele.<br><br>Con el mando también se manejan todos los menús y, al usarlo, desaparecen los botones de la pantalla.' },
-  { t: 'EN LA TELE CON UN CABLE', img: TU + 'cable-hdmi.webp', dev: 1, h: '¿Tu tele no tiene memoria suficiente o su navegador va lento? Juega desde el <b>móvil o el PC</b> y míralo en la tele en grande:<br><br>' +
+  { t: 'EN LA TELE CON UN CABLE', diag: 1, dev: 1, h: '¿Tu tele no tiene memoria suficiente o su navegador va lento? Juega desde el <b>móvil o el PC</b> y míralo en la tele en grande:<br><br>' +
       '<b>1.</b> Consigue un adaptador <b>USB tipo C a HDMI</b>.<br><b>2.</b> Enchúfalo al móvil o al PC y conecta un cable HDMI hasta la tele.<br><b>3.</b> Pon la tele en esa entrada HDMI.<br><b>4.</b> Conecta tu mando por <b>Bluetooth</b> al móvil o al PC, abre COSMOLUCAS ¡y a jugar en la pantalla grande!<br><br>' +
       '<span class="tusm">El móvil tiene que tener salida de vídeo por USB-C: por ejemplo iPhone 15 o posterior, Samsung Galaxy S, Note y Fold, o Google Pixel 8 o posterior.</span>' }
 ];
+function tuDiag() {      // dibujo: móvil con el juego + adaptador USB-C a HDMI + tele con el juego + mando por Bluetooth
+  return '<div class="tuimg"><div class="tudg"><img class="dg-tv" src="' + TU + 'tv-juego.webp" alt=""><img class="dg-ph" src="' + TU + 'movil-juego.webp" alt=""><img class="dg-cb" src="' + TU + 'cable-hdmi.webp" alt=""><img class="dg-pd" src="' + TU + 'mando.webp" alt="">' +
+    '<svg class="dg-ln" viewBox="0 0 100 70" preserveAspectRatio="none"><path d="M60 56 Q 40 60 26 36" stroke="#29e6ff" stroke-dasharray="2.4 2"/></svg>' +
+    '<span class="dg-l l1">USB-C ➜ HDMI</span><span class="dg-l l2">ᛒ BLUETOOTH</span></div></div>';
+}
 let tuI = 0;
 function showTuto(i) {
   tuI = Math.max(0, Math.min(TUTO.length - 1, i || 0)); let ov = $('tuto');
@@ -6109,7 +6114,7 @@ function tuClose() { const ov = $('tuto'); if (ov) ov.classList.remove('on'); }
 function tuPaint() {
   const s = TUTO[tuI], last = tuI === TUTO.length - 1, ov = $('tuto');
   ov.innerHTML = '<div class="tucard"><div class="tuhead"><b>📖 CÓMO SE JUEGA</b><span>' + (tuI + 1) + ' / ' + TUTO.length + '</span><button class="btn" id="tuX">✕</button></div>' +
-    '<div class="tubody' + (s.dev ? ' dev' : '') + (s.big ? ' big' : '') + '">' + (s.img ? '<div class="tuimg"><img src="' + s.img + '" alt=""></div>' : '') + '<div class="tutxt"><h2>' + s.t + '</h2><div>' + s.h + '</div></div></div>' +
+    '<div class="tubody' + (s.dev ? ' dev' : '') + (s.big ? ' big' : '') + '">' + (s.img ? '<div class="tuimg"><img src="' + s.img + '" alt=""></div>' : s.diag ? tuDiag() : '') + '<div class="tutxt"><h2>' + s.t + '</h2><div>' + s.h + '</div></div></div>' +
     '<div class="tufoot"><button class="btn" id="tuP"' + (tuI ? '' : ' disabled') + '>◀ ANTERIOR</button><div class="tudots">' + TUTO.map((_, i) => '<i class="' + (i === tuI ? 'on' : '') + '" data-tu="' + i + '"></i>').join('') + '</div><button class="btn ok" id="tuN">' + (last ? '✔ ¡A JUGAR!' : 'SIGUIENTE ▶') + '</button></div></div>';
   $('tuX').onclick = tuClose; $('tuP').onclick = () => tuGo(-1); $('tuN').onclick = () => tuGo(1);
   ov.querySelectorAll('[data-tu]').forEach(d => d.onclick = () => { tuI = +d.dataset.tu; tuPaint(); });
@@ -6126,9 +6131,15 @@ function tuPaint() {
 .tubody.dev:not(:has(.tuimg)) .tutxt{flex:1}
 .tk{display:inline-block;min-width:22px;padding:1px 7px;margin:1px 2px;border:1px solid #29e6ff;border-radius:7px;background:rgba(41,230,255,.14);color:#fff;font-weight:800;font-size:.88em;text-align:center}
 .tuctl{display:grid;gap:6px;margin-top:12px}.tuctl div{background:rgba(41,230,255,.07);border:1px solid rgba(41,230,255,.25);border-radius:10px;padding:6px 10px}.tuctl i{font-style:normal;margin-right:8px}
-.tudev{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0}.tudev div{display:flex;flex-direction:column;align-items:center;text-align:center;background:rgba(41,230,255,.07);border:1px solid rgba(41,230,255,.25);border-radius:12px;padding:8px 6px}.tudev img{height:clamp(46px,12vh,92px);object-fit:contain}.tudev em{font-style:normal;font-size:clamp(34px,8vh,58px);line-height:1.2}.tudev b{margin-top:4px}.tudev span{font-size:.82em;color:#8ea3e6}
+.tudev{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0}.tudev div{display:flex;flex-direction:column;align-items:center;text-align:center;background:rgba(41,230,255,.07);border:1px solid rgba(41,230,255,.25);border-radius:12px;padding:8px 6px}.tudev img{height:clamp(46px,12vh,92px);object-fit:contain}.tudev img.w{width:92%;max-width:150px;height:clamp(46px,12vh,92px)}.tudev em{font-style:normal;font-size:clamp(34px,8vh,58px);line-height:1.2}.tudev b{margin-top:4px}.tudev span{font-size:.82em;color:#8ea3e6}
 .tunote{margin-top:6px;font-size:.92em}.tusm{font-size:.85em;color:#8ea3e6}
 .tufoot{display:flex;align-items:center;gap:10px}.tufoot .btn{white-space:nowrap}.tufoot .btn[disabled]{opacity:.35}.tudots{flex:1;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.tudots i{width:9px;height:9px;border-radius:50%;background:#24336a;cursor:pointer}.tudots i.on{background:#35ff8a;box-shadow:0 0 8px #35ff8a}
+.tudg{position:relative;width:100%;max-width:min(600px,calc((96vh - 150px) * 1.43));aspect-ratio:100/70}
+.tuimg .tudg img{position:absolute;max-height:none;border:none;box-shadow:none;border-radius:0;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))}
+.tuimg .tudg .dg-tv{left:36%;top:0;width:64%}.tuimg .tudg .dg-ph{left:0;top:10%;width:34%}.tuimg .tudg .dg-cb{left:8%;top:47%;width:33%}.tuimg .tudg .dg-pd{left:56%;top:58%;width:30%}
+.dg-ln{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:none;stroke-width:.8}
+.dg-l{position:absolute;font:800 clamp(9px,1.6vh,12px) system-ui;color:#fff;background:rgba(41,230,255,.18);border:1px solid #29e6ff;border-radius:8px;padding:2px 7px;white-space:nowrap}.dg-l.l1{left:4%;top:80%;border-color:#ffd23c;background:rgba(255,210,60,.15)}.dg-l.l2{left:30%;top:64%}
+
 @media (max-height:520px){.tucard{padding:8px 12px}.tubody{gap:12px;margin:4px 0}.tuimg img{max-height:58vh}.tuctl{margin-top:6px;gap:4px}.tuctl div{padding:3px 8px}.tudev{gap:6px}.tudev div{padding:4px}}
 @media (max-width:700px) and (orientation:portrait){.tubody{flex-direction:column}}`; document.head.appendChild(st); })();
 /* ======================= SKIN · AVATAR PERSONALIZADO (4,95 € con myPOS) ======================= */
