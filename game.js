@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.07';
+const VERSION = '1.08';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -112,8 +112,8 @@ let AC = null, master = null, sndOn = true, musicT = null, mStep = 0, mNext = 0;
 try { sndOn = localStorage.getItem('tl_snd') !== '0'; } catch (e) {}
 function audio() {
   if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.connect(AC.destination); } catch (e) { return null; } }
-  if (AC.state === 'suspended') AC.resume();
-  master.gain.value = sndOn ? 0.55 : 0;
+  if (AC.state === 'suspended' && !document.hidden) AC.resume();
+  master.gain.value = sndOn && !document.hidden ? 0.55 : 0;
   return AC;
 }
 function tone(f0, f1, d, type = 'square', v = 0.12, delay = 0) {
@@ -214,6 +214,11 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { if ((e.target && e.target.tagName === 'INPUT') || CON.on || $('adm').classList.contains('on')) return; const k = KEYMAP[e.code]; if (k) { press(k, false); e.preventDefault(); } });
 addEventListener('blur', () => { for (const k in K) K[k] = false; });
+// en segundo plano o con la pantalla apagada no se oye nada: se silencia y se para el audio; al volver, sigue sonando
+function bgMute(off) { try { if (!AC) return; if (off) { master.gain.value = 0; if (AC.state === 'running') AC.suspend(); } else { master.gain.value = sndOn ? 0.55 : 0; if (AC.state === 'suspended') AC.resume(); } } catch (e) {} }
+document.addEventListener('visibilitychange', () => bgMute(document.hidden));
+addEventListener('pagehide', () => bgMute(true)); addEventListener('pageshow', () => { if (!document.hidden) bgMute(false); });
+document.addEventListener('freeze', () => bgMute(true));
 let touchCrouchT = 0;          // en pantalla táctil, Lucas sigue agachado 1 s después de soltar ▼ (da tiempo a pulsar ▶ y meterse por un hueco bajo)
 [['bL', 'left'], ['bR', 'right'], ['bD', 'down'], ['bA', 'jump'], ['bB', 'act']].forEach(([id, k]) => {
   const el = $(id);
@@ -5202,8 +5207,8 @@ async function checkUpdates() {
   if (v === 2) forceUpdate(VERSION);
 }
 tapBind($('btnCfg'), async () => {
-  const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '🧑‍🚀 SKIN · AVATAR', cls: 'ok', v: 'skin' }, { t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []).concat([{ t: 'CERRAR', v: 0 }]) });
-  if (v === 'skin') avPicker(); else if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
+  const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '📖 CÓMO SE JUEGA', cls: 'ok', v: 'tuto' }, { t: '🧑‍🚀 SKIN · AVATAR', cls: 'ok', v: 'skin' }, { t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []).concat([{ t: 'CERRAR', v: 0 }]) });
+  if (v === 'tuto') showTuto(); else if (v === 'skin') avPicker(); else if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
 });
 // posición de los botones táctiles (rueda ⚙ arriba): izquierda y derecha, bajos / medios / altos, se guarda en el dispositivo
 const TP_LV = [0, 13, 26];       // cuánto se suben (en % de la altura de la pantalla)
@@ -6057,6 +6062,72 @@ function showTheEnd() {
 }
 
 
+
+/* ======================= CÓMO SE JUEGA: tutorial con fotos de la fase 1-1 ======================= */
+const TU = 'img/tuto-';
+const kk = t => '<span class="tk">' + t + '</span>';
+const tuCtl = (kb, tc, pad) => '<div class="tuctl"><div><i>⌨️</i>' + kb + '</div><div><i>👆</i>' + tc + '</div><div><i>🎮</i>' + pad + '</div></div>';
+const TUTO = [
+  { t: '¡BIENVENIDO A COSMOLUCAS!', img: 'img/' + TIER + '/lucas-celebrando.webp', big: 1, h: 'Ayuda a <b>Lucas</b> a recorrer <b>10 planetas</b> llenos de bichos, trampas y secretos.<br><br>En cada fase tienes que llegar hasta la <b>antena de meta</b> antes de que se acabe el tiempo. Por el camino recoge chips, engranajes y poderes.<br><br>Pasa las páginas con las flechas o deslizando el dedo.' },
+  { t: 'MOVERSE', img: TU + 'mover.webp', h: 'Lucas avanza a ras de suelo con sus propulsores. ¡Corre hacia la derecha para empezar la aventura!' + tuCtl(kk('←') + kk('→') + ' o ' + kk('A') + kk('D'), kk('◀') + kk('▶'), 'Cruceta o joystick') },
+  { t: 'SALTAR', img: TU + 'saltar.webp', h: 'Los propulsores le impulsan hacia arriba. <b>Mantén pulsado</b> para saltar más alto o suéltalo antes para un salto corto y preciso.' + tuCtl(kk('↑') + kk('ESPACIO') + kk('Z'), kk('SALTAR'), kk('✕') + ' PlayStation · ' + kk('A') + ' Xbox / Switch') },
+  { t: 'DOBLE SALTO', img: TU + 'doble.webp', h: 'Estando en el aire, <b>vuelve a pulsar saltar</b>: Lucas da una voltereta con una onda de energía y sube todavía más. Perfecto para llegar a plataformas altas o salvarte de un hueco.' + tuCtl('Saltar dos veces', kk('SALTAR') + ' dos veces', kk('✕') + kk('✕') + ' / ' + kk('A') + kk('A')) },
+  { t: 'AGACHARSE', img: TU + 'agachar.webp', h: 'Agáchate para <b>esquivar disparos</b> y pasar por sitios bajos. Encima de una plataforma flotante, <b>abajo + saltar</b> te deja caer a la de abajo.' + tuCtl(kk('↓') + ' o ' + kk('S'), kk('▼'), 'Cruceta abajo') },
+  { t: 'CAJAS SORPRESA', img: TU + 'caja.webp', h: 'Golpea las cajas <b>saltando desde abajo</b>. Las de interrogación <b>?</b> esconden chips o poderes; las otras se rompen. ¡Y hay bloques invisibles con vidas extra!' },
+  { t: 'APLASTA A LOS BICHOS', img: TU + 'aplastar.webp', h: '<b>Cae encima</b> de los enemigos para eliminarlos y ganar puntos. Si te tocan de lado, pierdes una vida… y ojo con el <b>erizo</b>: tiene pinchos y no se puede pisar.' },
+  { t: 'PODER LÁSER', img: TU + 'laser.webp', h: 'Algunas cajas dan el <b>poder láser</b>: dispara rayos que fulminan a los bichos (también al erizo). Hay más poderes: escudo, turbo, imán, mini Lucas y la estrella 5G.' + tuCtl(kk('CTRL') + ' o ' + kk('X'), kk('LÁSER'), kk('□') + kk('○') + kk('R1') + ' / ' + kk('X') + kk('B') + kk('RB')) },
+  { t: 'CHIPS Y ENGRANAJES', img: TU + 'engranaje.webp', h: 'Cada <b>100 chips</b> ganas una vida extra.<br><br>En cada fase hay <b>3 engranajes</b> azules, algunos muy escondidos: encuéntralos todos para conseguir su estrella.' },
+  { t: 'PUNTOS DE CONTROL', img: TU + 'control.webp', h: 'Las <b>antenas pequeñas</b> guardan tu avance. Si pierdes una vida, vuelves desde la última antena que hayas tocado, no desde el principio.' },
+  { t: '¡META Y 3 ESTRELLAS!', img: TU + 'meta.webp', h: 'Toca la <b>antena grande</b> del final para pasar la fase. Puedes ganar <b>3 estrellas</b>:<br>⭐ por terminar la fase<br>⭐ por coger los 3 engranajes<br>⭐ por no perder ninguna vida<br><br>El tiempo que te sobre se convierte en puntos.' },
+  { t: 'DÓNDE SE PUEDE JUGAR', dev: 1, h: '<div class="tudev">' +
+      '<div><img src="' + TU + 'iphone.webp" alt=""><b>iPhone</b><span>Safari, en horizontal</span></div>' +
+      '<div><img src="' + TU + 'android.webp" alt=""><b>Android</b><span>Chrome, en horizontal</span></div>' +
+      '<div><em>📲</em><b>Tablet</b><span>iPad o Android</span></div>' +
+      '<div><em>💻</em><b>PC y portátil</b><span>Chrome, Edge, Firefox o Safari</span></div>' +
+      '<div><em>📺</em><b>Smart TV</b><span>Desde el navegador de la tele</span></div>' +
+      '<div><em>🚗</em><b>Tesla</b><span>Navegador de la pantalla, con el coche aparcado</span></div></div>' +
+      '<div class="tunote">Entra en <b>puntofibra.github.io/turbolucas</b>. En móvil y tablet pulsa <b>INSTALAR</b> para tenerlo como una app más, a pantalla completa.</div>' },
+  { t: 'JUEGA CON MANDO', img: TU + 'mando.webp', dev: 1, h: 'Puedes jugar con el mando de la <b>PlayStation 5</b> o <b>PlayStation 4</b>, de <b>Xbox</b> (One y Series) o el <b>mando Pro de Nintendo Switch</b>, y con la mayoría de mandos Bluetooth o USB.<br><br>' +
+      '<b>Cómo conectarlo:</b> PS5 → mantén <b>PS + Create</b> · PS4 → <b>PS + Share</b> · Xbox → botón de emparejar · Switch Pro → botón de sincronizar. Cuando parpadee la luz, búscalo en <b>Ajustes › Bluetooth</b> del móvil, PC o tele.<br><br>Con el mando también se manejan todos los menús y, al usarlo, desaparecen los botones de la pantalla.' },
+  { t: 'EN LA TELE CON UN CABLE', img: TU + 'cable-hdmi.webp', dev: 1, h: '¿Tu tele no tiene memoria suficiente o su navegador va lento? Juega desde el <b>móvil o el PC</b> y míralo en la tele en grande:<br><br>' +
+      '<b>1.</b> Consigue un adaptador <b>USB tipo C a HDMI</b>.<br><b>2.</b> Enchúfalo al móvil o al PC y conecta un cable HDMI hasta la tele.<br><b>3.</b> Pon la tele en esa entrada HDMI.<br><b>4.</b> Conecta tu mando por <b>Bluetooth</b> al móvil o al PC, abre COSMOLUCAS ¡y a jugar en la pantalla grande!<br><br>' +
+      '<span class="tusm">El móvil tiene que tener salida de vídeo por USB-C: por ejemplo iPhone 15 o posterior, Samsung Galaxy S, Note y Fold, o Google Pixel 8 o posterior.</span>' }
+];
+let tuI = 0;
+function showTuto(i) {
+  tuI = Math.max(0, Math.min(TUTO.length - 1, i || 0)); let ov = $('tuto');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'tuto'; document.body.appendChild(ov);
+    let sx = null; ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true }); ov.addEventListener('touchend', e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 50) tuGo(dx < 0 ? 1 : -1); });
+    addEventListener('keydown', e => { if (!$('tuto') || !$('tuto').classList.contains('on')) return; if (e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); tuGo(1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); tuGo(-1); } else if (e.key === 'Escape') { e.stopPropagation(); tuClose(); } }, true); }
+  tuPaint(); ov.classList.add('on');
+}
+function tuGo(d) { const n = tuI + d; if (n < 0) return; if (n >= TUTO.length) return tuClose(); tuI = n; try { tone(900 + tuI * 30, 1200, 0.05, 'square', 0.04); } catch (e) {} tuPaint(); }
+function tuClose() { const ov = $('tuto'); if (ov) ov.classList.remove('on'); }
+function tuPaint() {
+  const s = TUTO[tuI], last = tuI === TUTO.length - 1, ov = $('tuto');
+  ov.innerHTML = '<div class="tucard"><div class="tuhead"><b>📖 CÓMO SE JUEGA</b><span>' + (tuI + 1) + ' / ' + TUTO.length + '</span><button class="btn" id="tuX">✕</button></div>' +
+    '<div class="tubody' + (s.dev ? ' dev' : '') + (s.big ? ' big' : '') + '">' + (s.img ? '<div class="tuimg"><img src="' + s.img + '" alt=""></div>' : '') + '<div class="tutxt"><h2>' + s.t + '</h2><div>' + s.h + '</div></div></div>' +
+    '<div class="tufoot"><button class="btn" id="tuP"' + (tuI ? '' : ' disabled') + '>◀ ANTERIOR</button><div class="tudots">' + TUTO.map((_, i) => '<i class="' + (i === tuI ? 'on' : '') + '" data-tu="' + i + '"></i>').join('') + '</div><button class="btn ok" id="tuN">' + (last ? '✔ ¡A JUGAR!' : 'SIGUIENTE ▶') + '</button></div></div>';
+  $('tuX').onclick = tuClose; $('tuP').onclick = () => tuGo(-1); $('tuN').onclick = () => tuGo(1);
+  ov.querySelectorAll('[data-tu]').forEach(d => d.onclick = () => { tuI = +d.dataset.tu; tuPaint(); });
+}
+(() => { const st = document.createElement('style'); st.textContent = `
+#tuto{position:fixed;inset:0;z-index:58;display:none;align-items:center;justify-content:center;padding:10px;background:radial-gradient(ellipse at 50% 30%,rgba(10,30,80,.92),rgba(1,3,12,.97));backdrop-filter:blur(4px);font-family:system-ui,sans-serif}
+#tuto.on{display:flex}
+.tucard{width:min(98vw,1060px);max-height:96vh;display:flex;flex-direction:column;border:2px solid #29e6ff;border-radius:20px;background:linear-gradient(160deg,#0b1640,#050a22);box-shadow:0 0 40px rgba(41,230,255,.35),inset 0 0 30px rgba(41,230,255,.08);padding:12px 16px;color:#cfe0ff}
+.tuhead{display:flex;align-items:center;gap:12px}.tuhead b{color:#29e6ff;letter-spacing:.12em;font-size:14px;text-shadow:0 0 10px rgba(41,230,255,.7)}.tuhead span{margin-left:auto;color:#8ea3e6;font:700 13px system-ui}.tuhead .btn{width:36px;height:36px;padding:0;border-radius:50%}
+.tubody{display:flex;gap:18px;align-items:stretch;flex:1;min-height:0;margin:8px 0;overflow:hidden}.tuimg{align-self:center}.tutxt{overflow-y:auto;max-height:calc(96vh - 120px);align-self:center;padding-right:4px;scrollbar-width:thin;touch-action:pan-y}
+.tuimg{flex:1.35;min-width:0;display:flex;justify-content:center}.tuimg img{width:100%;max-height:62vh;object-fit:contain;border-radius:14px;border:2px solid rgba(41,230,255,.5);box-shadow:0 0 22px rgba(41,230,255,.3)}
+.tubody.dev .tuimg img,.tubody.big .tuimg img{border:none;box-shadow:none;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6))}.tubody.big .tuimg img{max-height:52vh;width:auto}
+.tutxt{flex:1;min-width:0;font-size:clamp(13px,2.4vh,16px);line-height:1.5}.tutxt h2{margin:0 0 8px;color:#fff;font-size:clamp(18px,4vh,26px);letter-spacing:.06em;text-shadow:0 0 14px rgba(53,255,138,.6)}.tutxt b{color:#fff}
+.tubody.dev:not(:has(.tuimg)) .tutxt{flex:1}
+.tk{display:inline-block;min-width:22px;padding:1px 7px;margin:1px 2px;border:1px solid #29e6ff;border-radius:7px;background:rgba(41,230,255,.14);color:#fff;font-weight:800;font-size:.88em;text-align:center}
+.tuctl{display:grid;gap:6px;margin-top:12px}.tuctl div{background:rgba(41,230,255,.07);border:1px solid rgba(41,230,255,.25);border-radius:10px;padding:6px 10px}.tuctl i{font-style:normal;margin-right:8px}
+.tudev{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0}.tudev div{display:flex;flex-direction:column;align-items:center;text-align:center;background:rgba(41,230,255,.07);border:1px solid rgba(41,230,255,.25);border-radius:12px;padding:8px 6px}.tudev img{height:clamp(46px,12vh,92px);object-fit:contain}.tudev em{font-style:normal;font-size:clamp(34px,8vh,58px);line-height:1.2}.tudev b{margin-top:4px}.tudev span{font-size:.82em;color:#8ea3e6}
+.tunote{margin-top:6px;font-size:.92em}.tusm{font-size:.85em;color:#8ea3e6}
+.tufoot{display:flex;align-items:center;gap:10px}.tufoot .btn{white-space:nowrap}.tufoot .btn[disabled]{opacity:.35}.tudots{flex:1;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.tudots i{width:9px;height:9px;border-radius:50%;background:#24336a;cursor:pointer}.tudots i.on{background:#35ff8a;box-shadow:0 0 8px #35ff8a}
+@media (max-height:520px){.tucard{padding:8px 12px}.tubody{gap:12px;margin:4px 0}.tuimg img{max-height:58vh}.tuctl{margin-top:6px;gap:4px}.tuctl div{padding:3px 8px}.tudev{gap:6px}.tudev div{padding:4px}}
+@media (max-width:700px) and (orientation:portrait){.tubody{flex-direction:column}}`; document.head.appendChild(st); })();
 /* ======================= SKIN · AVATAR PERSONALIZADO (4,95 € con myPOS) ======================= */
 // el jugador paga, manda su foto por WhatsApp; el admin sube una imagen por posición y el panel le da un código; el jugador lo mete en el TALLER y juega con su avatar
 const AV_URL = 'https://mypos.com/@futurmovil/4.95', AV_PRECIO = '4,95 €', AV_WA = '34633200100';
@@ -6296,7 +6367,7 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { avBuy(); }, con(c) { if (!CON.on) openConsole(); setTimeout(() => conRun(c), 1500); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
+window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { avBuy(); }, tuto(i) { showTuto(i); }, con(c) { if (!CON.on) openConsole(); setTimeout(() => conRun(c), 1500); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
     return { id, W: l.W, H: l.H, g: l.g.map(r => Array.isArray(r) ? r.join('') : r), gk: l.gk || 1, vert: !!l.vert, water: l.water || null, spawn: l.spawn, goal: l.goal, sw: !!l.sw,
       pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick((l.lifts || []).concat(l.mags || []), ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
       pipes: pick(l.pipes, ['x', 'y', 'tox', 'toy', 'hid']), portals: pick(l.portals, ['x', 'y', 'tox', 'toy']), keys: pick(l.keys, ['x', 'y']), winds: pick(l.winds, ['x0', 'x1', 'y0', 'y1', 'f']), cps: pick(l.cps, ['x', 'y']), strips: pick(l.strips, ['x0', 'x1', 'y']), rise: !!l.rise, chase: !!l.chase, auto: !!l.auto, sky: !!l.sky }; },
