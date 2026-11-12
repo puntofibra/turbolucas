@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.80';
+const VERSION = '0.81';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3362,7 +3362,7 @@ $('btnInstall').onclick = () => {
 $('iosOk').onclick = () => show('ios', false);
 // compartir: solo texto + enlace, para que WhatsApp muestre la tarjeta con imagen
 $('btnShare').onclick = () => {
-  const url = 'https://puntofibra.github.io/turbolucas/?c=cosmo', text = '¡Juega a COSMOLUCAS! Viaja con Lucas por 4 planetas 🚀';
+  const url = 'https://puntofibra.github.io/turbolucas/?c=cosmo10', text = '¡Juega a COSMOLUCAS! Viaja con Lucas por 10 planetas 🚀';
   if (navigator.share) navigator.share({ title: 'COSMOLUCAS', text, url }).catch(() => {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank');
 };
