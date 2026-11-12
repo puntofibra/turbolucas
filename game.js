@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.82';
+const VERSION = '0.83';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3152,7 +3152,7 @@ function mapMove(d) {          // mando/teclado: va a la fase conectada que est�
 function mapPlay(force) {
   if (mapUnl || mapRoute.length || warp) return; const n = MAP[mapSel]; if (!isBuilt(n)) { mapMsg = { txt: 'PRÓXIMAMENTE', t: 1.6 }; SFX.bump(); return; }
   // en el jefe ya superado se puede viajar al mundo siguiente; en la primera fase de un mundo, volver al anterior
-  if (!force && n.boss && (PROG[n.id] || CHEAT.test) && curW + 1 < WORLDS.length) return askTravel('JUGAR EL JEFE', 'VIAJAR AL PLANETA ' + WORLDS[curW + 1].n, curW + 1);
+  if (!force && n.boss && curW + 1 < WORLDS.length && (PROG[n.id] || worldOpen(curW + 1) || CHEAT.test)) return askTravel('JUGAR EL JEFE', 'VIAJAR AL PLANETA ' + WORLDS[curW + 1].n, curW + 1);
   if (!force && mapSel === 0 && curW > 0) return askTravel('JUGAR FASE ' + n.id, 'VOLVER AL PLANETA ' + WORLDS[curW - 1].n, curW - 1);
   if (licGated(n.id) && !licOk()) { showPaywall(() => mapPlay(true)); return; }
   curId = n.id; evt('jugar', curId); startGame();
