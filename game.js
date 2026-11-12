@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.90';
+const VERSION = '0.91';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -461,6 +461,14 @@ function conRun(raw) {
   conIn.value = ''; CON.busy = true;
   conScroll(true);
   if (!cmd) { say('', '', 0, true); return; }
+  if (cmd === 'LIST' || cmd === 'LISTA') {          // lista rápida de todos los trucos y comandos, con su estado
+    say('>> LISTA DE TRUCOS', 'g big', 20);
+    CODES.forEach(c => say((CHEAT[c[0].toLowerCase()] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], CHEAT[c[0].toLowerCase()] ? 'g' : 'y', 0, true));
+    say('>> COMANDOS', 'w', 14);
+    [['TEST', 'MODO PRUEBAS: TRUCOS, EDITOR Y PLANETAS EN LA PAUSA', CHEAT.test], ['FULLACCESS', 'LICENCIA GRATIS EN ESTE DISPOSITIVO', CHEAT.full], ['OPEN', 'ACTIVA TODOS LOS TRUCOS'], ['CLOSE', 'DESACTIVA TODOS LOS TRUCOS'], ['LOCK', 'BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)'], ['HACK', 'LISTA CON LA ANIMACIÓN DE HACKEO'], ['ADMIN', 'PANEL SECRETO (PIDE LA LLAVE)'], ['LIST', 'ESTA LISTA'], ['CLS', 'LIMPIA LA PANTALLA'], ['EXIT', 'CIERRA LA CONSOLA']]
+      .forEach(c => say((c[2] === undefined ? '    ' : c[2] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], c[2] ? 'g' : 'y', 0, true));
+    say('Los trucos duran 1 hora como máximo.', 'd', 0, true); SFX.chip(); return;
+  }
   if (cmd === 'HACK') {
     const fake = ['> conectando con el núcleo de la estación…', 'mov eax, 0x' + rh(8) + '   ; propulsor_izq', 'jmp 0x' + rh(4) + ':LUCAS_CORE', 'call bypass_firewall(' + rh(6) + ')',
       'xor ebx, ebx ; borrando rastro', 'push 0x5G00' + rh(4), 'decrypt(sector_' + rh(2) + ') .......... OK', 'inject turbo.dll → 0x' + rh(8), 'while(lucas.alive) { energy++; }', 'sudo override --robot=LUCAS --mode=GOD'];
