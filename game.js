@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.91';
+const VERSION = '0.92';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4214,13 +4214,13 @@ const MAP3 = [
   { id: '3-7', n: '7', name: 'EL GRAN PUENTE', x: 0.329, y: 0.7318, rx: 0.03, built: true },
   { id: '3-8', n: '8', name: 'LA FUNDICIÓN', x: 0.5095, y: 0.5118, rx: 0.03, built: true },
   { id: '3-9', n: '9', name: 'LAS CHIMENEAS', x: 0.6145, y: 0.7293, rx: 0.03, built: true },
-  { id: '3-10', n: '10', name: 'ENGRANAJES GIGANTES', x: 0.7199, y: 0.3906, rx: 0.03, built: true },
-  { id: '3-11', n: '11', name: 'ROCAS FLOTANTES', x: 0.7503, y: 0.5477, rx: 0.03, built: true },
-  { id: '3-12', n: '12', name: 'MURALLAS DE LA FORTALEZA', x: 0.8237, y: 0.6655, rx: 0.03, gold: true, built: true },
+  { id: '3-10', n: '10', name: 'ENGRANAJES GIGANTES', x: 0.7134, y: 0.887, rx: 0.03, built: true },
+  { id: '3-11', n: '11', name: 'ROCAS FLOTANTES', x: 0.8237, y: 0.6655, rx: 0.03, built: true },
+  { id: '3-12', n: '12', name: 'MURALLAS DE LA FORTALEZA', x: 0.7503, y: 0.5477, rx: 0.03, built: true },
+  { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7199, y: 0.3906, rx: 0.03, built: true },
+  { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7732, y: 0.2766, rx: 0.03, gold: true, built: true },
   { id: '3-J', n: '', name: 'JEFE · SEÑOR DEL MAGMA', x: 0.8825, y: 0.511, rx: 0.04, boss: true, built: true },
-  { id: '3-B', n: '★', name: 'FASE SECRETA · TESORO DEL VOLCÁN', x: 0.5419, y: 0.845, rx: 0.03, bonus: true, built: true, prev: 7 },
-  { id: '3-13', n: '13', name: 'ISLA FLOTANTE', x: 0.7732, y: 0.2766, rx: 0.03, built: true, prev: 9 },
-  { id: '3-14', n: '14', name: 'MINA DE CRISTAL ROJO', x: 0.7134, y: 0.887, rx: 0.03, built: true, prev: 13 }
+  { id: '3-B', n: '★', name: 'FASE SECRETA · TESORO DEL VOLCÁN', x: 0.5419, y: 0.845, rx: 0.03, bonus: true, built: true, prev: 7 }
 ];
 /* ---------- mapa del planeta 4: SELVA LUMINOSA (4 pantallas de ancho; paint = plataforma dibujada por el juego) ---------- */
 const MAP4 = [
