@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.99';
+const VERSION = '1.00';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5498,7 +5498,7 @@ function admPaint() {
     admOp('tmpList').then(r => paint(r.tmp)).catch(e => admMsg(e.message, 1));
     $('tAdd').onclick = async () => { const u = +$('tU').value; try { const r = await admOp('tmpAdd', { truco: $('tT').value, mins: u ? Math.max(1, +$('tN').value || 1) * u : 0, teclas: $('tK').value, pad: pad.join('+'), toques: +$('tQ').value || 0, nota: $('tNo').value }); paint(r.tmp); tmpLoad(); admMsg('✔ Truco temporal creado'); SFX.life(); } catch (e) { admMsg(e.message, 1); } };
   } else if (admTab === 'NIVELES') {
-    B.innerHTML = '<div style="color:#8ea3e6">Código secreto de cada fase. Si un jugador lo escribe en TALLER › CARGAR UN NIVEL, se le abren todos los candados hasta esa fase (incluida). Las que no se haya pasado quedan con 0 estrellas; las que ya tenía conservan las suyas.</div><div class="amsg" id="amsg">Cargando…</div><div id="nvC"></div>';
+    B.innerHTML = '<div style="color:#8ea3e6">Código secreto de cada fase. Si un jugador lo escribe en TALLER › CANJEAR CÓDIGO, se le abren todos los candados hasta esa fase (incluida). Las que no se haya pasado quedan con 0 estrellas; las que ya tenía conservan las suyas.</div><div class="amsg" id="amsg">Cargando…</div><div id="nvC"></div>';
     admOp('nivLlaves', { ids: ALLN().map(n => n.id) }).then(r => { const c = r.cods || {}; admMsg(''); $('nvC').innerHTML = WORLDS.map(w => '<h3>PLANETA ' + w.n + ' · ' + esc(w.name) + '</h3><div class="arow">' + w.nodes.map(n => '<div class="akey" style="min-width:150px;text-align:center"><span style="color:#8ea3e6">' + lvlName(n) + '</span><br><b style="color:#ffd23c;font:900 20px monospace;letter-spacing:.15em;user-select:all">' + esc(c[n.id] || '—') + '</b>' + (c[n.id] ? '<br><button class="btn" style="margin-top:6px" data-cp="' + esc(c[n.id]) + '">📋 COPIAR</button>' : '') + '</div>').join('') + '</div>').join('');
       $('nvC').querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { const t = b.dataset.cp; let ok = false; try { await navigator.clipboard.writeText(t); ok = true; } catch (e) { try { const x = document.createElement('textarea'); x.value = t; x.style.position = 'fixed'; x.style.opacity = '0'; document.body.appendChild(x); x.select(); ok = document.execCommand('copy'); x.remove(); } catch (e2) {} }
         b.textContent = ok ? '✔ COPIADO' : '✖ NO SE PUDO'; tone(1200, 1500, 0.06, 'square', 0.05); setTimeout(() => { b.textContent = '📋 COPIAR'; }, 1500); }); }).catch(e => admMsg(e.message, 1));
@@ -5632,7 +5632,7 @@ async function tlSave() {
 async function openTaller(info) {
   closeEditor(true); state = 'title'; show('title', true);
   const c = $('card'); c.classList.add('tips');
-  c.innerHTML = '<h2>🛠️ TALLER ESPACIAL</h2><div class="tbody" id="tlB"><div style="text-align:center;color:#8ea3e6">Cargando…</div></div><div class="row"><button class="btn" id="tlNew">NUEVO NIVEL</button><button class="btn" id="tlCode">CARGAR CÓDIGO</button><button class="btn" id="tlPub" style="border-color:#ffd23c">🌍 PANTALLAS PÚBLICAS</button><button class="btn" id="tlX">VOLVER</button></div>';
+  c.innerHTML = '<h2>🛠️ TALLER ESPACIAL</h2><div class="tbody" id="tlB"><div style="text-align:center;color:#8ea3e6">Cargando…</div></div><div class="row"><button class="btn" id="tlNew">NUEVO NIVEL</button><button class="btn" id="tlCode">🔑 CANJEAR CÓDIGO</button><button class="btn" id="tlPub" style="border-color:#ffd23c">🌍 PANTALLAS PÚBLICAS</button><button class="btn" id="tlX">VOLVER</button></div>';
   show('panel', true); $('tlX').onclick = () => show('panel', false);
   $('tlNew').onclick = () => { ED = tlNew('Nivel ' + (new Date().toLocaleDateString('es-ES'))); openEditor(); };
   $('tlCode').onclick = () => tlAskCode();
@@ -5667,7 +5667,7 @@ async function tlPublic(tab) {
 }
 function tlAskCode() {
   const c = $('card'); c.classList.remove('tips');
-  c.innerHTML = '<h2>CARGAR UN NIVEL</h2><div style="color:#cfe0ff;margin:6px 0">Escribe el código de 6 letras y números que te han pasado:</div><input id="tlC" maxlength="6" style="font:900 26px system-ui;letter-spacing:.3em;text-transform:uppercase;width:220px;text-align:center;padding:8px;border-radius:10px;border:2px solid #29e6ff;background:#020a1e;color:#fff"><div id="tlM" style="min-height:1.4em;color:#ffd23c;margin-top:6px"></div><div class="row"><button class="btn" id="tlG">CARGAR</button><button class="btn" id="tlB2">VOLVER</button></div>';
+  c.innerHTML = '<h2>🔑 CANJEAR CÓDIGO</h2><div style="color:#cfe0ff;margin:6px 0">Escribe el código de 6 letras y números que te han pasado.<br><span style="color:#8ea3e6;font-size:13px">Sirve para pantallas de otros jugadores, códigos de fase y tu avatar personalizado.</span></div><input id="tlC" maxlength="6" style="font:900 26px system-ui;letter-spacing:.3em;text-transform:uppercase;width:220px;text-align:center;padding:8px;border-radius:10px;border:2px solid #29e6ff;background:#020a1e;color:#fff"><div id="tlM" style="min-height:1.4em;color:#ffd23c;margin-top:6px"></div><div class="row"><button class="btn" id="tlG">CANJEAR</button><button class="btn" id="tlB2">VOLVER</button></div>';
   show('panel', true); $('tlB2').onclick = () => openTaller(); setTimeout(() => $('tlC').focus(), 100);
   $('tlG').onclick = async () => { const code = $('tlC').value.trim().toUpperCase(); if (code.length !== 6) { $('tlM').textContent = 'El código tiene 6 caracteres'; return; } $('tlM').textContent = 'Buscando…';
     const lk = await api({ a: 'nivLlave', c: code, ids: ALLN().map(n => n.id) }); if (lk.ok && lk.id) { const nd = ALLN().find(n => n.id === lk.id); $('tlM').textContent = ''; if (nd && await uiConfirm('🔓 CÓDIGO DE NIVEL', 'Tu partida se ajustará a la fase <b>' + lvlName(nd) + '</b>:<br>todas las anteriores quedarán abiertas (conservas tus estrellas) y desde ahí en adelante, con candado.', 'AJUSTAR', 'CANCELAR')) unlockTo(lk.id); return; }
@@ -6093,7 +6093,7 @@ async function avBuy() {
   const v = await uiDialog({ icon: '✨', tone: 'gold', title: 'AVATAR PERSONALIZADO',
     html: '<div class="avpro"><div class="avhero"><img src="img/' + TIER + '/lucas-quieto.webp" alt=""><span>➜</span><b>TÚ</b></div>' +
       '<p><b>¡Juega a COSMOLUCAS siendo tú el protagonista!</b> Convertimos una foto tuya en tu propio personaje de dibujos animados, con todas sus posiciones: quieto, andando, saltando, cayendo, agachado, celebrando…</p>' +
-      '<ol><li>💳 Compra tu avatar por <b>' + AV_PRECIO + '</b> (pago único).</li><li>📸 Mándanos una foto tuya por <b>WhatsApp</b>: de cuerpo entero, de frente y con buena luz.</li><li>🎁 En las próximas horas te enviamos un <b>código</b>. Mételo en <b>TALLER › CARGAR</b> y tu avatar aparecerá aquí, listo para jugar.</li></ol>' +
+      '<ol><li>💳 Compra tu avatar por <b>' + AV_PRECIO + '</b> (pago único).</li><li>📸 Mándanos una foto tuya por <b>WhatsApp</b>: de cuerpo entero, de frente y con buena luz.</li><li>🎁 En las próximas horas te enviamos un <b>código</b>. Mételo en <b>TALLER › CANJEAR CÓDIGO</b> y tu avatar aparecerá aquí, listo para jugar.</li></ol>' +
       '<div class="avprice">' + AV_PRECIO + '<small>pago único · para siempre</small></div></div>',
     buttons: [{ t: 'AHORA NO', v: 0 }, { t: '💳 COMPRAR POR ' + AV_PRECIO, cls: 'ok', v: 'buy' }] });
   if (v !== 'buy') return;
@@ -6123,7 +6123,7 @@ function admAvatares(B) {
     $('avL').querySelectorAll('[data-avcp]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(b.dataset.avcp); } catch (e) {} b.textContent = '✔ COPIADO'; });
     $('avL').querySelectorAll('[data-avdel]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } try { paintL(await admOp('avDel', { c: b.dataset.avdel })); admMsg('Avatar borrado (quien ya lo tenía lo conserva en su dispositivo)'); } catch (e) { admMsg(e.message, 1); } }); };
   $('avGo').onclick = async () => { if (!P2['lucas-quieto']) return admMsg('Falta como mínimo la imagen de QUIETO', 1); const b = $('avGo'); b.disabled = true; admMsg('Subiendo el avatar…');
-    try { const r = await admOp('avNuevo', { nota: $('avN').value.trim(), datos: JSON.stringify(P2) }); paintL(r); admMsg('✔ Avatar creado. Pásale este código al cliente por WhatsApp: lo mete en TALLER › CARGAR.');
+    try { const r = await admOp('avNuevo', { nota: $('avN').value.trim(), datos: JSON.stringify(P2) }); paintL(r); admMsg('✔ Avatar creado. Pásale este código al cliente por WhatsApp: lo mete en TALLER › CANJEAR CÓDIGO.');
       $('avOut').innerHTML = '<div style="margin-top:12px;font:900 34px monospace;letter-spacing:.25em;color:#35ff8a">' + esc(r.c) + '</div><button class="btn" id="avCp">COPIAR CÓDIGO</button>';
       $('avCp').onclick = () => { try { navigator.clipboard.writeText(r.c); } catch (e) {} $('avCp').textContent = '✔ COPIADO'; }; } catch (e) { admMsg(e.message, 1); } b.disabled = false; };
   B.querySelectorAll('[data-avpr]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(avPrompt(b.dataset.avpr)); } catch (e) {} b.textContent = '✔ COPIADO'; setTimeout(() => b.textContent = 'COPIAR', 1500); });
