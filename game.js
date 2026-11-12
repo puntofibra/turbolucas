@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.81';
+const VERSION = '0.82';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -157,13 +157,17 @@ const SONGS = {
   ice: { bass: [147, 147, 117, 117, 131, 131, 98, 110], arp: [12, 7, 3, 0, 15, 12, 7, 3], step: 0.21, lead: 'sine', bw: 'sine', lv: 0.05, drum: 0, bell: true },
   lava: { bass: [82, 82, 87, 82, 98, 87, 82, 73], arp: [0, 1, 0, 7, 0, 1, 10, 7], step: 0.135, lead: 'sawtooth', bw: 'sawtooth', lv: 0.016, drum: 1, heavy: true },
   jungle: { bass: [98, 98, 110, 131, 98, 98, 147, 131], arp: [0, 7, 12, 14, 7, 12, 19, 14], step: 0.155, lead: 'triangle', bw: 'triangle', lv: 0.055, drum: 3, bell: false },
+  menu: { bass: [131, 131, 175, 175, 147, 147, 196, 196], arp: [0, 4, 7, 12, 16, 12, 7, 4], step: 0.19, lead: 'triangle', bw: 'triangle', lv: 0.045, drum: 2, bell: true },     // portada: épica y alegre
+  map: { bass: [110, 110, 147, 147, 165, 165, 131, 131], arp: [12, 7, 4, 0, 7, 12, 16, 12], step: 0.24, lead: 'sine', bw: 'sine', lv: 0.05, drum: 0, bell: true },           // mapas: tranquila, de aventura
   boss: { bass: [98, 104, 98, 92, 98, 104, 117, 110], arp: [0, 6, 12, 6, 0, 6, 13, 6], step: 0.14, lead: 'square', bw: 'sawtooth', lv: 0.02, drum: 1, heavy: true }
 };
 function musicTick() {
-  if (!AC || !sndOn || state !== 'play' || paused) { mNext = 0; return; }
+  const menuS = state === 'title' && $('title').classList.contains('on') ? SONGS.menu : state === 'map' && !warp ? SONGS.map : null;
+  if (!AC || !sndOn || (!menuS && (state !== 'play' || paused)) || AC.state !== 'running') { mNext = 0; return; }
+  if (mSong !== (menuS || 'juego')) { mSong = menuS || 'juego'; mStep = 0; mNext = 0; }
   if (!mNext || mNext < AC.currentTime) mNext = AC.currentTime + 0.05;
-  const S = L && L.boss && L.boss.fight && !L.boss.gone ? SONGS.boss : SONGS[L && L.theme] || SONGS.base;
-  const stepDur = S.step * (P && P.tStar > 0 ? 0.72 : 1) * (G.tleft <= 10 ? 0.6 : G.tleft <= 30 ? 0.74 : 1);
+  const S = menuS ? menuS : L && L.boss && L.boss.fight && !L.boss.gone ? SONGS.boss : SONGS[L && L.theme] || SONGS.base;
+  const stepDur = menuS ? S.step : S.step * (P && P.tStar > 0 ? 0.72 : 1) * (G.tleft <= 10 ? 0.6 : G.tleft <= 30 ? 0.74 : 1);
   while (mNext < AC.currentTime + 0.25) {
     const bar = Math.floor(mStep / 8) % 8, root = S.bass[bar], dl = mNext - AC.currentTime, nf = root * 2 * Math.pow(2, S.arp[mStep % 8] / 12);
     if (mStep % 4 === 0) tone(root / 2, root / 2, stepDur * 3.2, S.bw, S.heavy ? 0.07 : 0.11, dl);
@@ -177,7 +181,9 @@ function musicTick() {
     mStep++; mNext += stepDur;
   }
 }
+let mSong = null;
 function startMusic() { if (!musicT) musicT = setInterval(musicTick, 80); }
+startMusic(); addEventListener('pointerdown', () => { try { audio(); } catch (e) {} }, { once: true }); addEventListener('keydown', () => { try { audio(); } catch (e) {} }, { once: true });
 function setSnd(on) {
   sndOn = on; try { localStorage.setItem('tl_snd', on ? '1' : '0'); } catch (e) {}
   if (master) master.gain.value = on ? 0.55 : 0;
@@ -4010,7 +4016,7 @@ function adminAsk(pad) { if (CON.on) return; openConsole(pad); setTimeout(() => 
 .sep{display:flex;align-items:center;gap:10px;color:#8ea3e6;font-size:12px;margin:10px 0 4px}.sep::before,.sep::after{content:"";flex:1;height:1px;background:rgba(142,163,230,.35)}
 .amsg2{min-height:1.3em;font-size:13px;color:#ffd23c;margin-top:6px}.amsg2.err{color:#ff6a7a}.lnk{background:none;border:0;color:#7fe9ff;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;margin-top:4px}
 #gBtn{display:flex;justify-content:center;min-height:44px;margin-top:6px}
-#accChip{position:fixed;top:calc(18px + env(safe-area-inset-top));touch-action:manipulation;-webkit-user-select:none;right:calc(10px + env(safe-area-inset-right));z-index:10;font-size:12px;padding:7px 12px;border-radius:999px;display:none}
+#accChip{position:fixed;top:calc(18px + env(safe-area-inset-top));touch-action:manipulation;-webkit-user-select:none;right:calc(62px + env(safe-area-inset-right));z-index:10;font-size:12px;padding:7px 12px;border-radius:999px;display:none}
 #title.on ~ #accChip{display:block}`; document.head.appendChild(st);
   const ch = document.createElement('button'); ch.id = 'accChip'; ch.className = 'btn'; $('title').after(ch); let lastOpen = 0; const open = e => { if (e) { e.preventDefault(); e.stopPropagation(); } const n = Date.now(); if (n - lastOpen < 600) return; lastOpen = n; audio(); SFX.chip(); ACC ? showAccount() : showLogin(); };
   // en iPhone el "click" a veces no llega (Safari se lo come cerca del borde de arriba): se abre también al levantar el dedo
@@ -4258,4 +4264,29 @@ window.__TL = { noEnemies() { enemies = []; }, get E() { return enemies; }, get 
       pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick(l.lifts, ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
       pipes: pick(l.pipes, ['x', 'y', 'tox', 'toy', 'hid']), portals: pick(l.portals, ['x', 'y', 'tox', 'toy']), keys: pick(l.keys, ['x', 'y']), winds: pick(l.winds, ['x0', 'x1', 'y0', 'y1', 'f']), cps: pick(l.cps, ['x', 'y']), strips: pick(l.strips, ['x0', 'x1', 'y']), rise: !!l.rise, chase: !!l.chase, auto: !!l.auto, sky: !!l.sky }; },
   playC(n, t, datos) { ED = tlUnpack(null, n, t, datos); tlPlay(false); }, unl(i) { mapUnl = { i, t: 0, snd: false }; } };
+/* ---------- botón ✕ para salir del juego (portada y mapas) ---------- */
+(() => {
+  const st = document.createElement('style'); st.textContent = `
+#btnExit{position:fixed;top:calc(12px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:11;width:42px;height:42px;padding:0;border-radius:50%;font:900 20px system-ui;line-height:1;display:none;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 14px rgba(255,74,106,.55);color:#fff;touch-action:manipulation}
+#btnExit.on{display:flex}
+#byeOv{position:fixed;inset:0;z-index:90;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at 50% 40%,#0b1a4a,#010309 75%);color:#cfe0ff;text-align:center;font-family:system-ui,sans-serif;padding:20px}
+#byeOv.on{display:flex}
+#byeOv img{width:min(70vw,460px);filter:drop-shadow(0 0 16px rgba(53,255,138,.45))}
+#byeOv h2{margin:0;color:#35ff8a;letter-spacing:.12em;text-shadow:0 0 12px #35ff8a}`;
+  document.head.appendChild(st);
+  const b = document.createElement('button'); b.id = 'btnExit'; b.className = 'btn'; b.textContent = '✕'; b.title = 'Salir del juego'; document.body.appendChild(b);
+  const bye = document.createElement('div'); bye.id = 'byeOv';
+  const logo = document.querySelector('#title .logo'); bye.innerHTML = (logo ? '<img src="' + logo.getAttribute('src') + '" alt="">' : '') + '<h2>¡HASTA PRONTO!</h2><div>Tu progreso está guardado. Ya puedes cerrar la app o esta pestaña.</div><button class="btn" id="byeBack">VOLVER A JUGAR</button>';
+  document.body.appendChild(bye);
+  const vis = () => { const on = !CON.on && !$('adm').classList.contains('on') && !bye.classList.contains('on') && !$('uidlg').classList.contains('on') && ((state === 'title' && $('title').classList.contains('on') && !$('panel').classList.contains('on')) || (state === 'map' && !warp && !$('panel').classList.contains('on'))); b.classList.toggle('on', on); };
+  setInterval(vis, 200);
+  let busy = false;
+  tapBind(b, async () => { if (busy) return; busy = true;
+    const ok = await uiConfirm('¿SALIR DEL JUEGO?', 'Se cerrará COSMOLUCAS. Tu progreso queda guardado.', 'SALIR', 'CANCELAR', '🚪'); busy = false; if (!ok) return;
+    try { cloudSave(true); } catch (e) {} try { if (AC) AC.suspend(); } catch (e) {}
+    try { window.close(); } catch (e) {}
+    setTimeout(() => { bye.classList.add('on'); b.classList.remove('on'); }, 350);      // si el navegador no deja cerrar (pestaña normal, iPhone), se queda la pantalla de despedida
+  });
+  $('byeBack').onclick = () => { bye.classList.remove('on'); try { audio(); } catch (e) {} };
+})();
 })();
