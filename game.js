@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.06';
+const VERSION = '1.07';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4383,11 +4383,11 @@ function drawPlayer() {
   if (!p.dead) {
     if (p.wet && Math.random() < 0.25) parts.push({ x: cx + (Math.random() - 0.5) * 20, y: p.y + p.h - 6, vx: (Math.random() - 0.5) * 20, vy: -30, life: 1.2, max: 1.2, col: 'rgba(220,250,255,.8)', size: 1.5 + Math.random() * 2.5, grav: -120 });
     const fl = p.wet || p.flip > 0 ? 0 : p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly || p.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
-    const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = (avi ? AV_CAN : CAN[pose]).map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
-    if (p.onGround) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,130,40,' + (0.2 + 0.08 * Math.sin(time * 40)) + ')'; ctx.beginPath(); ctx.ellipse(mouths[1][0], p.y + p.h + 1, 30 * mini, 5 * mini, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
-    if (fl > 0) mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 ? 1.1 : 1), 9 * mini, i + 1));
+    const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = avi ? avMouths(pose, avi, cx, by, h, fs, sx) : CAN[pose].map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
+    if (p.onGround) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,130,40,' + (0.2 + 0.08 * Math.sin(time * 40)) + ')'; ctx.beginPath(); ctx.ellipse(avi ? (mouths[0][0] + mouths[1][0]) / 2 : mouths[1][0], p.y + p.h + 1, 30 * mini, 5 * mini, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+    if (fl > 0) mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 && !avi ? 1.1 : 1) * (avi ? 0.85 : 1), (avi ? 7.5 : 9) * mini, i + 1));
     if (p.onGround && Math.abs(p.vx) > 150 && Math.random() < 0.35) parts.push({ x: cx - p.face * 14, y: p.y + p.h, vx: -p.face * (40 + Math.random() * 80), vy: -20 - Math.random() * 70, life: 0.28, max: 0.28, col: Math.random() < 0.5 ? '#ffb347' : '#fff2c0', size: 2.2, grav: 300 });
-    if (!p.onGround && p.vy < -100 && Math.random() < 0.7) { const m = mouths[Math.floor(Math.random() * 3)]; parts.push({ x: m[0] + (Math.random() - 0.5) * 6, y: m[1] + 20 + Math.random() * 20, vx: (Math.random() - 0.5) * 50, vy: 140 + Math.random() * 140, life: 0.32, max: 0.32, col: Math.random() < 0.6 ? '#ff9a3c' : '#ffe08a', size: 2.6, grav: 0 }); }
+    if (!p.onGround && p.vy < -100 && Math.random() < 0.7) { const m = mouths[Math.floor(Math.random() * mouths.length)]; parts.push({ x: m[0] + (Math.random() - 0.5) * 6, y: m[1] + 20 + Math.random() * 20, vx: (Math.random() - 0.5) * 50, vy: 140 + Math.random() * 140, life: 0.32, max: 0.32, col: Math.random() < 0.6 ? '#ff9a3c' : '#ffe08a', size: 2.6, grav: 0 }); }
   }
   if (p.tStar > 0) { ctx.globalAlpha = 0.35; ctx.fillStyle = 'hsl(' + (time * 400 % 360) + ',100%,60%)'; ctx.beginPath(); ctx.ellipse(cx, p.y + p.h / 2, p.w * 1.05, p.h * 0.72, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     if (Math.random() < 0.6) parts.push({ x: cx + (Math.random() - 0.5) * 40, y: p.y + Math.random() * p.h, vx: 0, vy: -30, life: 0.5, max: 0.5, col: 'hsl(' + Math.random() * 360 + ',100%,65%)', size: 3.5, grav: 0 }); }
@@ -4673,9 +4673,9 @@ function warpUpdate(dt) {
   if (W.t > 5.7) { warp = null; state = 'map'; show('mapUI', true); mapInfo(); mapMsg = { txt: (W.dir > 0 ? '¡BIENVENIDO A ' : '¡DE VUELTA EN ') + WORLDS[curW].name + '!', t: 3, ok: true }; SFX.life(); setTimeout(updApply, 4000); }
 }
 function warpLucas(x, y, h, pose, fl, rot, face) {     // Lucas con sus 3 propulsores, a cualquier tamaño
-  const im = IMG[pose], k = h / 480, fs = face || 1;
-  CAN[pose].forEach((o, i) => flame(x + fs * o[0] * k, y - o[1] * k - 2, fl * h * (i === 1 ? 1.1 : 1), h * 0.09, i + 1));
-  spr(im, x, y, (im.naturalHeight || 240) * KS * k, ANCH[pose], 1, fs < 0, rot || 0);
+  const lim = IMG[pose], av = avImg(pose), im = av || lim, k = h / 480, fs = face || 1, hh = (lim.naturalHeight || 240) * KS * k;
+  (av ? avMouths(pose, av, x, y, hh, fs, 1) : CAN[pose].map(o => [x + fs * o[0] * k, y - o[1] * k - 2])).forEach((m, i) => flame(m[0], m[1], fl * h * (i === 1 && !av ? 1.1 : 1) * (av ? 0.85 : 1), h * (av ? 0.075 : 0.09), i + 1));
+  spr(im, x, y, hh, av ? 0.5 : ANCH[pose], 1, fs < 0, rot || 0);
 }
 function drawWarp() {
   const W = warp; if (!W) { drawMap(); return; } const t = W.t, toW = WORLDS[W.to];
@@ -5146,8 +5146,9 @@ function drawMap() {
   const hL = Math.max(58, 0.074 * u), k = hL / 480, by = ly0 + 0.004 * u - (moving ? 6 : 3) + Math.sin(time * 3) * 2.5, fs = mapFace;
   if (!mapHideLucas) {
   ctx.fillStyle = 'rgba(0,0,10,.3)'; ctx.beginPath(); ctx.ellipse(lx, ly0 + 0.004 * u, hL * 0.26, hL * 0.07, 0, 0, 6.283); ctx.fill();
-  (lav ? AV_CAN : CAN[pose]).forEach((o, i) => flame(lx + fs * o[0] * k, by - o[1] * k - 2, (moving ? 0.34 : 0.15) * hL * (i === 1 ? 1.1 : 1), hL * 0.09, i + 1));
-  spr(lim, lx, by, (lim.naturalHeight || 240) * KS * k, ANCH[pose], 1, fs < 0, moving ? 0.07 * fs : 0); }
+  const lh = ((lav ? IMG[pose] : lim).naturalHeight || 240) * KS * k;
+  (lav ? avMouths(pose, lav, lx, by, lh, fs, 1) : CAN[pose].map(o => [lx + fs * o[0] * k, by - o[1] * k - 2])).forEach((m, i) => flame(m[0], m[1], (moving ? 0.34 : 0.15) * hL * (i === 1 && !lav ? 1.1 : 1) * (lav ? 0.85 : 1), hL * (lav ? 0.075 : 0.09), i + 1));
+  spr(lim, lx, by, lh, lav ? 0.5 : ANCH[pose], 1, fs < 0, moving ? 0.07 * fs : 0); }
   post.forEach(f => f());          // banderas y estrellas por encima de Lucas
   // cabecera y zona de botones
   const hg = ctx.createLinearGradient(0, 0, 0, 110); hg.addColorStop(0, 'rgba(4,6,22,.7)'); hg.addColorStop(1, 'rgba(4,6,22,0)'); ctx.fillStyle = hg; ctx.fillRect(0, 0, VW, 110);
@@ -6079,7 +6080,17 @@ function avPrompt(ps) { return 'Te adjunto una foto de una persona. Quiero que c
 
 let AVS = { list: [], sel: '', del: [] }; try { AVS = Object.assign(AVS, JSON.parse(localStorage.getItem('tl_avs') || '{}')); } catch (e) {}
 const AVIM = {};
-function avLoadImgs() { for (const k in AVIM) delete AVIM[k]; const a = AVS.list.find(x => x.c === AVS.sel); if (!a) return; for (const [ps] of AV_POSES) { const src = a.p[ps] || a.p['lucas-quieto']; if (src) { const im = new Image(); im.src = src; AVIM[ps] = im; } } }
+const AVFEET = {};
+function avFeet(im) {      // busca dónde están los dos pies en la imagen del avatar (para poner un fuego en cada bota)
+  try { const H = Math.min(240, im.naturalHeight), W = Math.max(1, Math.round(im.naturalWidth * H / im.naturalHeight)), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, A = (i, j) => d[(j * W + i) * 4 + 3] > 40;
+    let yb = H - 1; while (yb > 0) { let any = false; for (let i = 0; i < W; i++) if (A(i, yb)) { any = true; break; } if (any) break; yb--; }
+    const band = Math.max(2, Math.round(H * 0.05)), col = []; for (let i = 0; i < W; i++) { let n = 0; for (let j = yb - band; j <= yb; j++) if (j >= 0 && A(i, j)) n++; col.push(n > 0); }
+    const cl = []; let st = -1; for (let i = 0; i <= W; i++) { const on = i < W && col[i]; if (on && st < 0) st = i; if (!on && st >= 0) { if (i - st >= 2) cl.push([st, i - 1]); st = -1; } }
+    let f; if (cl.length >= 2) { const a = cl[0], b = cl[cl.length - 1]; f = [(a[0] + a[1]) / 2, (b[0] + b[1]) / 2]; } else if (cl.length === 1) { const a = cl[0], w = a[1] - a[0]; f = [a[0] + w * 0.28, a[0] + w * 0.72]; } else f = [W * 0.38, W * 0.62];
+    return { f: f.map(v => v / W - 0.5), y: (H - 1 - yb) / H };
+  } catch (e) { return { f: [-0.14, 0.14], y: 0 }; } }
+function avLoadImgs() { for (const k in AVIM) delete AVIM[k]; const a = AVS.list.find(x => x.c === AVS.sel); if (!a) return; for (const [ps] of AV_POSES) { const src = a.p[ps] || a.p['lucas-quieto']; if (src) { const im = new Image(); im.onload = () => { AVFEET[ps] = avFeet(im); }; im.src = src; AVIM[ps] = im; } } }
+function avMouths(pose, im, cx, by, h, fs, sx) { const ft = AVFEET[pose] || { f: [-0.14, 0.14], y: 0 }, w = h * im.naturalWidth / im.naturalHeight; return ft.f.map(fx => [cx + fs * fx * w * sx, by - ft.y * h - 2]); }
 function avImg(pose) { const im = AVIM[pose]; return im && im.complete && im.naturalWidth ? im : null; }
 function avSave() { try { localStorage.setItem('tl_avs', JSON.stringify(AVS)); return true; } catch (e) { return false; } }
 avLoadImgs();
