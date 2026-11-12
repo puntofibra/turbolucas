@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.98';
+const VERSION = '0.99';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4367,8 +4367,8 @@ function drawPlayer() {
   if (p.dead) pose = 'lucas-golpeado'; else if (p.win) pose = 'lucas-celebrando'; else if (p.inv > 1.2) pose = 'lucas-golpeado';
   else if (p.crouch) pose = 'lucas-agachado'; else if (!p.onGround) pose = p.vy < 0 ? 'lucas-saltando' : 'lucas-cayendo';
   else if (Math.abs(p.vx) > 40) pose = 'lucas-avanzando';
-  const im = IMG[pose], mini = p.power === 'mini' ? 0.55 : 1;
-  const k = LUCAS_K * KS * mini, h = (im.naturalHeight || 240) * k;
+  const lim = IMG[pose], avi = avImg(pose), im = avi || lim, anc = avi ? 0.5 : ANCH[pose], mini = p.power === 'mini' ? 0.55 : 1;
+  const k = LUCAS_K * KS * mini, h = (lim.naturalHeight || 240) * k;
   const cx = p.x + p.w / 2, hover = p.dead ? 0 : (p.onGround ? 3 + Math.sin(time * 6) * 1.6 : 0), by = p.y + p.h - hover;
   const lean = p.dead ? p.deadT * 5 : (pose === 'lucas-avanzando' ? 0.06 * p.face : 0);
   const sx = (1 - p.sq * 0.12) * (p.crouch ? 0.9 : 1), sy = (1 + p.sq * 0.14) * (p.crouch ? 0.72 : 1);
@@ -4380,7 +4380,7 @@ function drawPlayer() {
   if (!p.dead) {
     if (p.wet && Math.random() < 0.25) parts.push({ x: cx + (Math.random() - 0.5) * 20, y: p.y + p.h - 6, vx: (Math.random() - 0.5) * 20, vy: -30, life: 1.2, max: 1.2, col: 'rgba(220,250,255,.8)', size: 1.5 + Math.random() * 2.5, grav: -120 });
     const fl = p.wet || p.flip > 0 ? 0 : p.win ? 14 : (p.tTurbo > 0 || CHEAT.fly || p.fly) && K.jump ? 64 : !p.onGround ? (p.vy < 0 ? 48 : 20) : (Math.abs(p.vx) > 40 ? 17 : 12);
-    const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = CAN[pose].map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
+    const fs = p.face < 0 ? -1 : 1, hk = LUCAS_K * mini, mouths = (avi ? AV_CAN : CAN[pose]).map(o => [cx + fs * o[0] * hk * sx, by - o[1] * hk * sy - 2.5 * mini]);
     if (p.onGround) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,130,40,' + (0.2 + 0.08 * Math.sin(time * 40)) + ')'; ctx.beginPath(); ctx.ellipse(mouths[1][0], p.y + p.h + 1, 30 * mini, 5 * mini, 0, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
     if (fl > 0) mouths.forEach((m, i) => flame(m[0], m[1], fl * mini * (i === 1 ? 1.1 : 1), 9 * mini, i + 1));
     if (p.onGround && Math.abs(p.vx) > 150 && Math.random() < 0.35) parts.push({ x: cx - p.face * 14, y: p.y + p.h, vx: -p.face * (40 + Math.random() * 80), vy: -20 - Math.random() * 70, life: 0.28, max: 0.28, col: Math.random() < 0.5 ? '#ffb347' : '#fff2c0', size: 2.2, grav: 300 });
@@ -4399,9 +4399,9 @@ function drawPlayer() {
   }
   if (p.flip > 0 && !p.dead) {          // voltereta del doble salto, con estela
     const pr = 1 - p.flip / 0.42, ang = pr * 6.283 * (p.face < 0 ? -1 : 1), my = p.y + p.h / 2;
-    for (let g2 = 2; g2 >= 1; g2--) { const a2 = ang - g2 * 0.5 * (p.face < 0 ? -1 : 1); ctx.save(); ctx.globalAlpha = 0.18 / g2; ctx.translate(cx, my); ctx.rotate(a2); ctx.translate(-cx, -my); spr(im, cx, by, h, ANCH[pose], 1, p.face < 0, 0, sx, sy); ctx.restore(); }
-    ctx.save(); ctx.translate(cx, my); ctx.rotate(ang); ctx.translate(-cx, -my); spr(im, cx, by, h, ANCH[pose], 1, p.face < 0, 0, sx, sy); ctx.restore();
-  } else spr(im, cx, by, h, ANCH[pose], 1, p.face < 0, lean, sx, sy);
+    for (let g2 = 2; g2 >= 1; g2--) { const a2 = ang - g2 * 0.5 * (p.face < 0 ? -1 : 1); ctx.save(); ctx.globalAlpha = 0.18 / g2; ctx.translate(cx, my); ctx.rotate(a2); ctx.translate(-cx, -my); spr(im, cx, by, h, anc, 1, p.face < 0, 0, sx, sy); ctx.restore(); }
+    ctx.save(); ctx.translate(cx, my); ctx.rotate(ang); ctx.translate(-cx, -my); spr(im, cx, by, h, anc, 1, p.face < 0, 0, sx, sy); ctx.restore();
+  } else spr(im, cx, by, h, anc, 1, p.face < 0, lean, sx, sy);
   if (ghost) { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.globalAlpha = 1; }
   if (p.shield) { ctx.strokeStyle = 'rgba(60,180,255,' + (0.6 + Math.sin(time * 8) * 0.2) + ')'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(60,160,255,.14)'; ctx.beginPath(); ctx.ellipse(cx, p.y + p.h / 2 - 4, p.w * 1.15, p.h * 0.7, 0, 0, 6.283); ctx.fill(); ctx.stroke(); }
   if (p.tMagnet > 0) { ctx.strokeStyle = 'rgba(198,60,255,' + (0.25 + 0.2 * Math.sin(time * 10)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, p.y + p.h / 2, 60 + (time * 80 % 40), 0, 6.283); ctx.stroke(); }
@@ -4507,7 +4507,7 @@ function drawHUD() {
   const w = VW / s;
   ctx.font = '800 20px system-ui,sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
   const txt = (t, x, y, col = '#fff') => { ctx.fillStyle = 'rgba(5,7,26,.85)'; ctx.fillText(t, x + 1.5, y + 1.5); ctx.fillStyle = col; ctx.fillText(t, x, y); };
-  spr(IMG['lucas-quieto'], pad + 14, 44, 38, 0.5, 1); txt('× ' + (CHEAT.live ? '∞' : Math.max(0, G.lives)), pad + 34, 26, CHEAT.live ? '#7fe9ff' : '#fff');
+  spr(avImg('lucas-quieto') || IMG['lucas-quieto'], pad + 14, 44, 38, 0.5, 1); txt('× ' + (CHEAT.live ? '∞' : Math.max(0, G.lives)), pad + 34, 26, CHEAT.live ? '#7fe9ff' : '#fff');
   spr(IMG['obj-chip'], pad + 112, 26, 24, 0.5, 0.5); txt(String(G.chips), pad + 130, 26, '#ffe27a');
   for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < G.gears ? 1 : 0.28; spr(IMG['obj-engranaje'], pad + 196 + i * 28, 26, 24, 0.5, 0.5); } ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; txt(String(G.score).padStart(6, '0'), w / 2, 26);
@@ -5139,11 +5139,11 @@ function drawMap() {
   ctx.globalCompositeOperation = 'lighter';
   for (const q of mapParts) { ctx.globalAlpha = Math.max(0, q.life / q.max); ctx.fillStyle = q.col; ctx.beginPath(); ctx.arc(q.x, q.y, q.size, 0, 6.283); ctx.fill(); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  const moving = mapRoute.length > 0, pose = moving ? 'lucas-avanzando' : 'lucas-quieto', lim = IMG[pose], [lx, ly0] = mapPt(t, mapL.x, mapL.y);
+  const moving = mapRoute.length > 0, pose = moving ? 'lucas-avanzando' : 'lucas-quieto', lav = avImg(pose), lim = lav || IMG[pose], [lx, ly0] = mapPt(t, mapL.x, mapL.y);
   const hL = Math.max(58, 0.074 * u), k = hL / 480, by = ly0 + 0.004 * u - (moving ? 6 : 3) + Math.sin(time * 3) * 2.5, fs = mapFace;
   if (!mapHideLucas) {
   ctx.fillStyle = 'rgba(0,0,10,.3)'; ctx.beginPath(); ctx.ellipse(lx, ly0 + 0.004 * u, hL * 0.26, hL * 0.07, 0, 0, 6.283); ctx.fill();
-  CAN[pose].forEach((o, i) => flame(lx + fs * o[0] * k, by - o[1] * k - 2, (moving ? 0.34 : 0.15) * hL * (i === 1 ? 1.1 : 1), hL * 0.09, i + 1));
+  (lav ? AV_CAN : CAN[pose]).forEach((o, i) => flame(lx + fs * o[0] * k, by - o[1] * k - 2, (moving ? 0.34 : 0.15) * hL * (i === 1 ? 1.1 : 1), hL * 0.09, i + 1));
   spr(lim, lx, by, (lim.naturalHeight || 240) * KS * k, ANCH[pose], 1, fs < 0, moving ? 0.07 * fs : 0); }
   post.forEach(f => f());          // banderas y estrellas por encima de Lucas
   // cabecera y zona de botones
@@ -5198,8 +5198,8 @@ async function checkUpdates() {
   if (v === 2) forceUpdate(VERSION);
 }
 tapBind($('btnCfg'), async () => {
-  const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []).concat([{ t: 'CERRAR', v: 0 }]) });
-  if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
+  const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '🧑‍🚀 SKIN · AVATAR', cls: 'ok', v: 'skin' }, { t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []).concat([{ t: 'CERRAR', v: 0 }]) });
+  if (v === 'skin') avPicker(); else if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
 });
 // posición de los botones táctiles (rueda ⚙ arriba): izquierda y derecha, bajos / medios / altos, se guarda en el dispositivo
 const TP_LV = [0, 13, 26];       // cuánto se suben (en % de la altura de la pantalla)
@@ -5452,7 +5452,7 @@ async function admOp(op, d) {
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
-  const tabs = ['PAGOS', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
+  const tabs = ['PAGOS', 'AVATARES', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
   $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · COSMOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
@@ -5512,6 +5512,7 @@ function admPaint() {
       $('pgA').querySelectorAll('[data-pok],[data-pno]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } const x = l[+(b.dataset.pok || b.dataset.pno)], ok = b.dataset.pok !== undefined;
         try { paint(await admOp(ok ? 'licOk' : 'licNo', { email: x.email })); admMsg(ok ? '✔ Licencia de ' + x.nombre + ' activada' : '✖ Pago de ' + x.nombre + ' rechazado: se le bloquean las fases desde la 3-2'); } catch (e) { admMsg(e.message, 1); } }); };
     admOp('licList').then(paint).catch(e => admMsg(e.message, 1));
+  } else if (admTab === 'AVATARES') { admAvatares(B);
   } else if (admTab === 'RANKING') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="rkA"></div>';
     api(Object.assign({ a: 'ranking' }, who())).then(r => { if (!r.ok) return admMsg(r.error, 1); admMsg(r.total + ' jugador(es) en el ranking. Se guarda en el Sheet, pestaña "ranking".');
@@ -5670,6 +5671,7 @@ function tlAskCode() {
   show('panel', true); $('tlB2').onclick = () => openTaller(); setTimeout(() => $('tlC').focus(), 100);
   $('tlG').onclick = async () => { const code = $('tlC').value.trim().toUpperCase(); if (code.length !== 6) { $('tlM').textContent = 'El código tiene 6 caracteres'; return; } $('tlM').textContent = 'Buscando…';
     const lk = await api({ a: 'nivLlave', c: code, ids: ALLN().map(n => n.id) }); if (lk.ok && lk.id) { const nd = ALLN().find(n => n.id === lk.id); $('tlM').textContent = ''; if (nd && await uiConfirm('🔓 CÓDIGO DE NIVEL', 'Tu partida se ajustará a la fase <b>' + lvlName(nd) + '</b>:<br>todas las anteriores quedarán abiertas (conservas tus estrellas) y desde ahí en adelante, con candado.', 'AJUSTAR', 'CANCELAR')) unlockTo(lk.id); return; }
+    const av = await api({ a: 'avGet', c: code }); if (av.ok && av.av) { $('tlM').textContent = ''; if (avInstall(av.av)) { SFX.win(); uiDialog({ icon: '🧑‍🚀', tone: 'gold', title: '¡TU AVATAR YA ESTÁ AQUÍ!', html: 'Tu personaje <b>' + esc(av.av.n || '') + '</b> ya está activado. 🚀<br><br>A partir de ahora juegas con tu propio avatar. Puedes volver a Lucas cuando quieras desde <b>⚙️ AJUSTES › SKIN · AVATAR</b>.', buttons: [{ t: '¡A JUGAR!', cls: 'ok', v: 1 }] }); } else $('tlM').textContent = '✖ No se ha podido guardar el avatar en este dispositivo'; return; }
     if (ACC) { const r = await api({ a: 'nivCopiar', ses: ACC.ses, c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en tu taller con el código ' + r.c); }
     else { const r = await api({ a: 'nivGet', c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } const l = tlLocal(); l.unshift({ lid: 'L' + Date.now(), n: r.n, t: r.t, datos: r.datos, f: Date.now() }); tlLocalSave(l); SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en este dispositivo'); } };
 }
@@ -5963,7 +5965,8 @@ function unlockTo(id) {     // código de nivel: ajusta la partida a esa fase. H
   const wi = WORLDS.findIndex(w => w.nodes.some(n => n.id === id)); setWorld(wi); mapSel = Math.max(0, MAP.findIndex(n => n.id === id)); openMap();
   mapUnl = { i: mapSel, t: 0, snd: false }; SFX.life(); mapMsg = { txt: '🔓 PARTIDA AJUSTADA A ' + lvlName(all[k]), t: 3.5, ok: true }; return true;
 }
-function mergeProg(cloud) {      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor (salvo que en la nube se haya reiniciado)
+function mergeProg(cloud) {
+  try { avCloud(cloud); } catch (e) {}      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor (salvo que en la nube se haya reiniciado)
   const cp = (cloud && cloud.prog) || {}, cg = (cloud && cloud.got) || {};
   if (cloud && (+cloud.rv || 0) > PRV) { PRV = +cloud.rv; PROG = {}; GOT = {}; DEV = {}; try { localStorage.setItem('tl_rv', String(PRV)); localStorage.setItem('tl_dev', '{}'); } catch (e) {} if (typeof cloud.w === 'number' && WORLDS[cloud.w]) setWorld(cloud.w); else setWorld(0); }
   for (const id in cp) { const a = PROG[id], b = cp[id]; PROG[id] = !a ? b : { stars: Math.max(a.stars || 0, b.stars || 0), best: Math.max(a.best || 0, b.best || 0) }; }
@@ -5985,7 +5988,7 @@ function showAccount() {
 let cloudT = 0;
 function cloudSave(now) {
   if (!ACC) return; clearTimeout(cloudT);
-  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV, dev: DEV } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
+  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV, dev: DEV, avc: AVS.list.map(x => x.c), avs: AVS.sel } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
 }
 /* ======================= VENTANAS DEL JUEGO (sustituyen a los avisos nativos del navegador) ======================= */
 (() => { const st = document.createElement('style'); st.textContent = `
@@ -6043,6 +6046,90 @@ function showTheEnd() {
   uiDialog({ icon: '🏆', tone: 'gold', title: '¡HAS COMPLETADO COSMOLUCAS!', html: '¡Increíble! Has superado los <b>' + nw + ' planetas</b> y has derrotado a todos los jefes. Eres de los primeros en llegar hasta aquí. 🚀<br><br>Lucas ya está calentando los propulsores para viajar a <b>nuevos planetas</b>: muy pronto llegarán más niveles, nuevos jefes y más secretos por descubrir.<br><br>¡Vuelve pronto, la aventura continúa!', buttons: [{ t: '¡ALLÍ ESTARÉ!', cls: 'ok', v: 1 }], foot: 'PRÓXIMAMENTE · PLANETA ' + (nw + 1) });
 }
 
+
+/* ======================= SKIN · AVATAR PERSONALIZADO (4,95 € con myPOS) ======================= */
+// el jugador paga, manda su foto por WhatsApp; el admin sube una imagen por posición y el panel le da un código; el jugador lo mete en el TALLER y juega con su avatar
+const AV_URL = 'https://mypos.com/@futurmovil/4.95', AV_PRECIO = '4,95 €', AV_WA = '34633200100';
+const AV_POSES = [['lucas-quieto', 'QUIETO'], ['lucas-avanzando', 'ANDANDO'], ['lucas-saltando', 'SALTANDO'], ['lucas-cayendo', 'CAYENDO'], ['lucas-golpeado', 'GOLPEADO'], ['lucas-agachado', 'AGACHADO'], ['lucas-celebrando', 'CELEBRANDO']];
+const AV_CAN = [[-34, 6], [0, 0], [34, 6]];
+const AV_PROMPT_POSE = {
+  'lucas-quieto': 'POSICIÓN: QUIETO. De pie, cuerpo entero, en vista tres cuartos girado hacia la DERECHA de la imagen, brazos relajados a los lados, piernas un poco separadas, sonrisa simpática y mirada segura, como el protagonista esperando para empezar la aventura.',
+  'lucas-avanzando': 'POSICIÓN: ANDANDO. Caminando con energía hacia la DERECHA de la imagen, en vista tres cuartos casi de perfil, una pierna adelantada y la otra atrás, brazos balanceándose de forma natural y opuesta a las piernas, cuerpo ligeramente inclinado hacia delante, expresión decidida.',
+  'lucas-saltando': 'POSICIÓN: SALTANDO. En pleno salto hacia arriba mirando a la DERECHA de la imagen, rodillas recogidas, un brazo levantado hacia el cielo y el otro hacia atrás, cuerpo estirado hacia arriba, expresión de emoción con la boca abierta. Las botas propulsoras soltando un pequeño chorro de fuego hacia abajo.',
+  'lucas-cayendo': 'POSICIÓN: CAYENDO. Bajando de un salto mirando a la DERECHA de la imagen, piernas estiradas hacia abajo preparándose para aterrizar, brazos abiertos hacia los lados y un poco hacia arriba para mantener el equilibrio, expresión de sorpresa graciosa con los ojos muy abiertos.',
+  'lucas-golpeado': 'POSICIÓN: GOLPEADO. Acaba de recibir un golpe: cuerpo echado hacia atrás y hacia la IZQUIERDA (mirando a la derecha), brazos sueltos hacia arriba, una pierna levantada, cara de dolor cómico de dibujos animados con los ojos apretados y la boca torcida, pelo despeinado. Sin sangre ni heridas: gracioso, apto para niños.',
+  'lucas-agachado': 'POSICIÓN: AGACHADO. En cuclillas, agachado del todo con las rodillas muy dobladas y la cabeza baja, mirando a la DERECHA de la imagen, brazos recogidos delante del cuerpo como protegiéndose, expresión concentrada y atenta. Que ocupe poca altura, compacto.',
+  'lucas-celebrando': 'POSICIÓN: CELEBRANDO. Saltito de victoria mirando hacia la DERECHA de la imagen, un puño levantado bien alto, el otro brazo flexionado celebrando, sonrisa enorme de felicidad con los ojos brillando, pies separados del suelo un poquito. Pequeñas chispas o estrellitas de celebración alrededor.'
+};
+function avPrompt(ps) { return 'Te adjunto una foto de una persona. Quiero que conviertas a ESA persona en un personaje de dibujos animados para un videojuego de plataformas espacial llamado COSMOLUCAS.\n\n' +
+  'PARECIDO: el personaje tiene que parecerse muchísimo a la persona de la foto, que se la reconozca al instante: misma forma de cara, mismos ojos y color de ojos, misma nariz, misma sonrisa, mismo peinado y color de pelo, mismo tono de piel, barba, gafas, pecas o lunares si los tiene. Exagera un poco las proporciones al estilo dibujo animado (cabeza algo más grande y expresiva) pero manteniendo un parecido súper realista.\n\n' +
+  'ESTILO: dibujo animado moderno de videojuego, contornos negros marcados, colores vivos y brillantes, sombreado suave tipo cel-shading con brillos, acabado limpio y profesional, del mismo estilo que el robot Lucas de la imagen de referencia (si la adjunto).\n\n' +
+  'ROPA: traje espacial futurista ajustado en blanco y gris plata con detalles y líneas de luz verde neón, guantes y botas propulsoras plateadas con una pequeña tobera en la suela. La ropa debe ser exactamente igual en todas las posiciones.\n\n' +
+  AV_PROMPT_POSE[ps] + '\n\n' +
+  'ENCUADRE: un solo personaje, cuerpo entero de la cabeza a los pies, sin cortar nada, centrado, con los pies abajo del todo de la imagen. Formato vertical. Fondo blanco liso y uniforme, sin sombras en el suelo, sin escenario, sin texto, sin marcas de agua, para poder recortarlo fácilmente.'; }
+
+let AVS = { list: [], sel: '' }; try { AVS = Object.assign(AVS, JSON.parse(localStorage.getItem('tl_avs') || '{}')); } catch (e) {}
+const AVIM = {};
+function avLoadImgs() { for (const k in AVIM) delete AVIM[k]; const a = AVS.list.find(x => x.c === AVS.sel); if (!a) return; for (const [ps] of AV_POSES) { const src = a.p[ps] || a.p['lucas-quieto']; if (src) { const im = new Image(); im.src = src; AVIM[ps] = im; } } }
+function avImg(pose) { const im = AVIM[pose]; return im && im.complete && im.naturalWidth ? im : null; }
+function avSave() { try { localStorage.setItem('tl_avs', JSON.stringify(AVS)); return true; } catch (e) { return false; } }
+avLoadImgs();
+function avInstall(av, keepSel) { let p; try { p = JSON.parse(av.datos); } catch (e) { return false; } if (!p || !p['lucas-quieto']) return false;
+  const old = JSON.stringify(AVS); AVS.list = AVS.list.filter(x => x.c !== av.c); AVS.list.push({ c: av.c, n: av.n || 'MI AVATAR', p }); if (!keepSel) AVS.sel = av.c;
+  if (!avSave()) { AVS = JSON.parse(old); return false; } avLoadImgs(); if (ACC && !keepSel) cloudSave(true); return true; }
+async function avCloud(cloud) { if (!cloud || !Array.isArray(cloud.avc)) return; for (const c of cloud.avc) if (!AVS.list.some(x => x.c === c)) { const r = await api({ a: 'avGet', c }); if (r.ok && r.av) avInstall(r.av, true); }
+  if (cloud.avs !== undefined && (cloud.avs === '' || AVS.list.some(x => x.c === cloud.avs)) && cloud.avs !== AVS.sel) { AVS.sel = cloud.avs; avSave(); avLoadImgs(); } }
+function avOpenLink(u) { try { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = u; } }
+async function avPicker() {
+  const card = (id, img, name, on) => '<button class="avc' + (on ? ' on' : '') + '" data-av="' + id + '">' + (img ? '<img src="' + img + '" alt="">' : '<span class="avplus">+</span>') + '<b>' + esc(name) + '</b>' + (on ? '<i>✔ EN USO</i>' : '') + '</button>';
+  const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', 'LUCAS', !AVS.sel) + AVS.list.map(a => card(a.c, a.p['lucas-quieto'], a.n, AVS.sel === a.c)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
+  const dlg = uiDialog({ icon: '🧑‍🚀', title: 'SKIN · AVATAR', html: html(), buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
+  const bind = () => $('uidlg').querySelectorAll('[data-av]').forEach(b => b.onclick = () => { const id = b.dataset.av; tone(900, 900, 0.04, 'square', 0.05);
+    if (id === '+') { $('uidlg').querySelector('.ok') && $('uidlg').querySelector('.ok').click(); setTimeout(avBuy, 150); return; }
+    AVS.sel = id; avSave(); avLoadImgs(); if (ACC) cloudSave(true); const box = $('uidlg').querySelector('.avg'); if (box) { box.outerHTML = html().replace(/^.*?(<div class="avg">)/, '$1'); bind(); } });
+  setTimeout(bind, 30); await dlg;
+}
+async function avBuy() {
+  const v = await uiDialog({ icon: '✨', tone: 'gold', title: 'AVATAR PERSONALIZADO',
+    html: '<div class="avpro"><div class="avhero"><img src="img/' + TIER + '/lucas-quieto.webp" alt=""><span>➜</span><b>TÚ</b></div>' +
+      '<p><b>¡Juega a COSMOLUCAS siendo tú el protagonista!</b> Convertimos una foto tuya en tu propio personaje de dibujos animados, con todas sus posiciones: quieto, andando, saltando, cayendo, agachado, celebrando…</p>' +
+      '<ol><li>💳 Compra tu avatar por <b>' + AV_PRECIO + '</b> (pago único).</li><li>📸 Mándanos una foto tuya por <b>WhatsApp</b>: de cuerpo entero, de frente y con buena luz.</li><li>🎁 En las próximas horas te enviamos un <b>código</b>. Mételo en <b>TALLER › CARGAR</b> y tu avatar aparecerá aquí, listo para jugar.</li></ol>' +
+      '<div class="avprice">' + AV_PRECIO + '<small>pago único · para siempre</small></div></div>',
+    buttons: [{ t: 'AHORA NO', v: 0 }, { t: '💳 COMPRAR POR ' + AV_PRECIO, cls: 'ok', v: 'buy' }] });
+  if (v !== 'buy') return;
+  avOpenLink(AV_URL);
+  const w = await uiDialog({ icon: '📸', tone: 'gold', title: '¡YA CASI ESTÁ!', html: 'Cuando termines el pago, <b>mándanos tu foto por WhatsApp</b> pulsando el botón.<br><br>En las próximas horas te enviaremos tu <b>código</b> para meterlo en el <b>TALLER</b> y jugar con tu avatar.', buttons: [{ t: 'LUEGO', v: 0 }, { t: '📲 ENVIAR MI FOTO POR WHATSAPP', cls: 'ok', v: 'wa' }] });
+  if (w === 'wa') avWa();
+}
+function avWa() { avOpenLink('https://wa.me/' + AV_WA + '?text=' + encodeURIComponent('¡Hola! He comprado mi AVATAR PERSONALIZADO de COSMOLUCAS (' + AV_PRECIO + '). Te envío mi foto 📸' + (ACC ? ' · Mi cuenta: ' + ACC.email : ''))); }
+// panel de admin › AVATARES: una imagen por posición y se genera el código para el cliente
+function avResize(file) { return new Promise((res, rej) => { const fr = new FileReader(); fr.onerror = rej; fr.onload = () => { const im = new Image(); im.onerror = rej; im.onload = () => {
+  const t0 = document.createElement('canvas'); t0.width = im.naturalWidth; t0.height = im.naturalHeight; const tx = t0.getContext('2d'); tx.drawImage(im, 0, 0);
+  let x0 = 0, y0 = 0, x1 = t0.width, y1 = t0.height; try { const d = tx.getImageData(0, 0, t0.width, t0.height).data; let a = t0.width, b = t0.height, c2 = -1, e = -1;      // recorta los bordes transparentes: así el muñeco mide justo lo mismo que Lucas
+    for (let y = 0; y < t0.height; y++) for (let x = 0; x < t0.width; x++) if (d[(y * t0.width + x) * 4 + 3] > 12) { if (x < a) a = x; if (x > c2) c2 = x; if (y < b) b = y; if (y > e) e = y; }
+    if (c2 >= a && e >= b) { x0 = a; y0 = b; x1 = c2 + 1; y1 = e + 1; } } catch (er) {}
+  const sw = x1 - x0, sh = y1 - y0, H = Math.min(420, sh), W = Math.round(sw * H / sh), c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').drawImage(t0, x0, y0, sw, sh, 0, 0, W, H);
+  let u = c.toDataURL('image/webp', 0.86); if (u.indexOf('data:image/webp') !== 0) u = c.toDataURL('image/png'); res(u); }; im.src = fr.result; }; fr.readAsDataURL(file); }); }
+function admAvatares(B) {
+  const P2 = {};
+  B.innerHTML = '<div class="amsg" id="amsg">Sube una imagen para cada posición (PNG sin fondo). Si dejas alguna vacía, usa la de QUIETO.</div>' +
+    '<div class="akey"><b style="color:#ffd23c">NUEVO AVATAR</b><br><input id="avN" placeholder="Nombre del cliente (ej. Pablo)" maxlength="40" style="margin:8px 0;padding:8px;border-radius:8px;border:2px solid #29e6ff;background:#020a1e;color:#fff;font:700 15px system-ui;width:260px">' +
+    '<div class="avup">' + AV_POSES.map(([ps, n]) => '<label class="avslot" data-ps="' + ps + '"><span>' + n + (ps === 'lucas-quieto' ? ' *' : '') + '</span><img alt=""><input type="file" accept="image/*" data-pf="' + ps + '"></label>').join('') + '</div>' +
+    '<button class="btn" id="avGo" style="border-color:#35ff8a;margin-top:10px">✔ GENERAR CÓDIGO</button><div id="avOut"></div></div><h3>AVATARES CREADOS</h3><div id="avL">Cargando…</div>' +
+    '<h3>PROMPTS PARA GEMINI (UNO POR POSICIÓN)</h3><div class="akey" style="color:#8ea3e6">Adjunta a Gemini la foto del cliente (y si quieres, la imagen de Lucas como referencia de estilo) y pega el prompt de cada posición. Haz las 7 en la misma conversación para que salga siempre igual. No hace falta que midan lo mismo que Lucas: al subirlas, el panel recorta los bordes y el juego las pone a la altura de Lucas.</div>' +
+    AV_POSES.map(([ps, n]) => '<div class="akey"><b style="color:#ffd23c">' + n + '</b> <button class="btn" data-avpr="' + ps + '" style="float:right">COPIAR</button><div style="white-space:pre-wrap;color:#cfe0ff;font:13px/1.4 system-ui;margin-top:8px;clear:both">' + esc(avPrompt(ps)) + '</div></div>').join('');
+  B.querySelectorAll('[data-pf]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const u = await avResize(f); P2[inp.dataset.pf] = u; const img = inp.parentNode.querySelector('img'); img.src = u; inp.parentNode.classList.add('ok'); } catch (e) { admMsg('No se ha podido leer esa imagen', 1); } });
+  const paintL = r => { const l = r.list || []; $('avL').innerHTML = l.map(x => '<div class="akey arow"><b style="color:#35ff8a;font:900 20px monospace;letter-spacing:.15em;width:120px">' + esc(x.c) + '</b><span style="flex:1">' + esc(x.n || '—') + '<br><span style="color:#8ea3e6;font-size:12px">' + (x.f ? new Date(x.f).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') + ' · canjeado ' + x.k + ' vez/veces</span></span><button class="btn" data-avcp="' + esc(x.c) + '">COPIAR</button><button class="btn red" data-avdel="' + esc(x.c) + '">BORRAR</button></div>').join('') || '<div class="akey">Todavía no has creado ningún avatar.</div>';
+    $('avL').querySelectorAll('[data-avcp]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(b.dataset.avcp); } catch (e) {} b.textContent = '✔ COPIADO'; });
+    $('avL').querySelectorAll('[data-avdel]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } try { paintL(await admOp('avDel', { c: b.dataset.avdel })); admMsg('Avatar borrado (quien ya lo tenía lo conserva en su dispositivo)'); } catch (e) { admMsg(e.message, 1); } }); };
+  $('avGo').onclick = async () => { if (!P2['lucas-quieto']) return admMsg('Falta como mínimo la imagen de QUIETO', 1); const b = $('avGo'); b.disabled = true; admMsg('Subiendo el avatar…');
+    try { const r = await admOp('avNuevo', { nota: $('avN').value.trim(), datos: JSON.stringify(P2) }); paintL(r); admMsg('✔ Avatar creado. Pásale este código al cliente por WhatsApp: lo mete en TALLER › CARGAR.');
+      $('avOut').innerHTML = '<div style="margin-top:12px;font:900 34px monospace;letter-spacing:.25em;color:#35ff8a">' + esc(r.c) + '</div><button class="btn" id="avCp">COPIAR CÓDIGO</button>';
+      $('avCp').onclick = () => { try { navigator.clipboard.writeText(r.c); } catch (e) {} $('avCp').textContent = '✔ COPIADO'; }; } catch (e) { admMsg(e.message, 1); } b.disabled = false; };
+  B.querySelectorAll('[data-avpr]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(avPrompt(b.dataset.avpr)); } catch (e) {} b.textContent = '✔ COPIADO'; setTimeout(() => b.textContent = 'COPIAR', 1500); });
+  admOp('avList').then(paintL).catch(e => admMsg(e.message, 1));
+}
+(() => { const st = document.createElement('style'); st.textContent = '.avg{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}.avc{width:112px;min-height:150px;border-radius:14px;border:2px solid #2a3a7a;background:linear-gradient(#0c1640,#060b24);color:#fff;font:800 12px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;cursor:pointer;position:relative}.avc img{height:92px;max-width:96px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}.avc.on{border-color:#35ff8a;box-shadow:0 0 18px rgba(53,255,138,.45)}.avc i{font-style:normal;color:#35ff8a;font-size:10px}.avplus{width:70px;height:70px;border-radius:50%;border:3px dashed #ffd23c;color:#ffd23c;font:900 44px/62px system-ui;text-align:center;animation:avp 1.6s ease-in-out infinite}@keyframes avp{50%{transform:scale(1.08);box-shadow:0 0 22px rgba(255,210,60,.5)}}.avpro{text-align:left;color:#dfe8ff;font-size:14px;line-height:1.45}.avpro ol{padding-left:20px;margin:10px 0}.avpro li{margin:6px 0}.avhero{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}.avhero img{height:80px}.avhero span{font:900 30px system-ui;color:#ffd23c}.avhero b{width:80px;height:80px;border-radius:50%;background:radial-gradient(#ffd23c,#ff8a3c);color:#1a0a00;font:900 22px/80px system-ui;text-align:center;box-shadow:0 0 24px rgba(255,190,60,.6)}.avprice{text-align:center;font:900 40px system-ui;color:#ffd23c;text-shadow:0 0 18px rgba(255,210,60,.5)}.avprice small{display:block;font:700 12px system-ui;color:#8ea3e6;text-shadow:none}.avup{display:flex;flex-wrap:wrap;gap:8px}.avslot{width:104px;height:140px;border:2px dashed #2a3a7a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px;cursor:pointer;font:800 11px system-ui;color:#8ea3e6}.avslot.ok{border-color:#35ff8a;border-style:solid}.avslot img{height:96px;max-width:92px;object-fit:contain}.avslot img:not([src]){visibility:hidden}.avslot input{width:92px;font-size:9px}'; document.head.appendChild(st); })();
 /* ======================= LICENCIA: pago único de 1,49 € con myPOS ======================= */
 // a partir de la fase 2 del planeta 3 hace falta la licencia; el pago lo valida a mano el administrador desde el panel (pestaña PAGOS)
 const LIC_URL = 'https://mypos.com/@futurmovil/1.49', LIC_PRECIO = '1,49 €';
@@ -6150,7 +6237,7 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { finale() { showTheEnd(); }, con(c) { if (!CON.on) openConsole(); setTimeout(() => conRun(c), 1500); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
+window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { avBuy(); }, con(c) { if (!CON.on) openConsole(); setTimeout(() => conRun(c), 1500); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
     return { id, W: l.W, H: l.H, g: l.g.map(r => Array.isArray(r) ? r.join('') : r), gk: l.gk || 1, vert: !!l.vert, water: l.water || null, spawn: l.spawn, goal: l.goal, sw: !!l.sw,
       pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick((l.lifts || []).concat(l.mags || []), ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
       pipes: pick(l.pipes, ['x', 'y', 'tox', 'toy', 'hid']), portals: pick(l.portals, ['x', 'y', 'tox', 'toy']), keys: pick(l.keys, ['x', 'y']), winds: pick(l.winds, ['x0', 'x1', 'y0', 'y1', 'f']), cps: pick(l.cps, ['x', 'y']), strips: pick(l.strips, ['x0', 'x1', 'y']), rise: !!l.rise, chase: !!l.chase, auto: !!l.auto, sky: !!l.sky }; },
