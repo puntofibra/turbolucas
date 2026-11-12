@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.02';
+const VERSION = '1.03';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5892,7 +5892,8 @@ let l1r1 = { n: 0, t: 0, prev: false };
 function padNames(gp) {
   for (let i = 0; i < 16; i++) { const on = !!(gp.buttons[i] && gp.buttons[i].pressed); if (on && !PPREV[i]) { PBUF.push(PNAMES[i]); if (PBUF.length > 10) PBUF.shift(); tmpCheck('p', PBUF.slice()); } PPREV[i] = on; }
   const both = !!(gp.buttons[4] && gp.buttons[4].pressed && gp.buttons[5] && gp.buttons[5].pressed);          // L1+R1 tres veces en el mapa: panel de admin
-  if (both && !l1r1.prev && state === 'map') { const now = performance.now(); l1r1.n = now - l1r1.t < 1500 ? l1r1.n + 1 : 1; l1r1.t = now; if (l1r1.n >= 3) { l1r1.n = 0; adminAsk(true); } } l1r1.prev = both;
+  if (both && !l1r1.prev && !CON.on && !$('adm').classList.contains('on')) { const now = performance.now(); l1r1.n = now - l1r1.t < 1500 ? l1r1.n + 1 : 1; l1r1.t = now; if (l1r1.n === 1) l1r1.sel0 = AVS.sel;
+    if (state === 'map' && l1r1.n >= 3) { l1r1.n = 0; if (AVS.sel !== l1r1.sel0) { AVS.sel = l1r1.sel0; avSave(); avLoadImgs(); } adminAsk(true); } else avNext(); } l1r1.prev = both;          // L1+R1: siguiente avatar en bucle (y 3 veces seguidas en el mapa, panel de admin)
 }
 let taps = { n: 0, t: 0, to: null };
 function tapCount() { const now = performance.now(); taps.n = now - taps.t < 450 ? taps.n + 1 : 1; taps.t = now; clearTimeout(taps.to); taps.to = setTimeout(() => { if (taps.n >= 4) tmpCheck('n', String(taps.n)); taps.n = 0; }, 500); }
@@ -5911,7 +5912,7 @@ function adminAsk(pad) { if (CON.on) return; openConsole(pad); setTimeout(() => 
 .sep{display:flex;align-items:center;gap:10px;color:#8ea3e6;font-size:12px;margin:10px 0 4px}.sep::before,.sep::after{content:"";flex:1;height:1px;background:rgba(142,163,230,.35)}
 .amsg2{min-height:1.3em;font-size:13px;color:#ffd23c;margin-top:6px}.amsg2.err{color:#ff6a7a}.lnk{background:none;border:0;color:#7fe9ff;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;margin-top:4px}
 #gBtn{display:flex;justify-content:center;min-height:44px;margin-top:6px}
-#accChip{position:fixed;top:calc(18px + env(safe-area-inset-top));touch-action:manipulation;-webkit-user-select:none;right:calc(62px + env(safe-area-inset-right));z-index:10;font-size:12px;padding:7px 12px;border-radius:999px;display:none}
+#accChip{position:fixed;top:18px;right:62px;top:calc(18px + env(safe-area-inset-top, 0px));touch-action:manipulation;-webkit-user-select:none;right:calc(62px + env(safe-area-inset-right, 0px));z-index:10;font-size:12px;padding:7px 12px;border-radius:999px;display:none}
 #title.on ~ #accChip{display:block}`; document.head.appendChild(st);
   const ch = document.createElement('button'); ch.id = 'accChip'; ch.className = 'btn'; $('title').after(ch); let lastOpen = 0; const open = e => { if (e) { e.preventDefault(); e.stopPropagation(); } const n = Date.now(); if (n - lastOpen < 600) return; lastOpen = n; audio(); SFX.chip(); ACC ? showAccount() : showLogin(); };
   // en iPhone el "click" a veces no llega (Safari se lo come cerca del borde de arriba): se abre también al levantar el dedo
@@ -6088,6 +6089,7 @@ function avSwitch(n) {        // escribir AVATAR 1, AVATAR 2… en cualquier par
   const sel = a ? a.c : ''; if (AVS.sel !== sel) { AVS.sel = sel; avSave(); avLoadImgs(); if (ACC) cloudSave(true); try { tone(700, 1400, 0.15, 'square', 0.05); } catch (e) {} }
   avToast('🧑‍🚀 ' + (a ? String(a.n || 'AVATAR ' + n).toUpperCase() : 'LUCAS')); return true;
 }
+function avNext() { const n = AVS.list.length + 1, cur = AVS.sel ? AVS.list.findIndex(a => a.c === AVS.sel) + 2 : 1; avSwitch(cur >= n ? 1 : cur + 1); }
 function avToast(t, err) { let el = document.getElementById('avToast'); if (!el) { el = document.createElement('div'); el.id = 'avToast'; el.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:99998;padding:10px 22px;border-radius:14px;font:900 16px system-ui;letter-spacing:.06em;pointer-events:none;transition:opacity .4s;background:rgba(6,12,40,.92);box-shadow:0 0 22px rgba(41,230,255,.4)'; document.body.appendChild(el); }
   el.textContent = t; el.style.color = err ? '#ff6a7a' : '#35ff8a'; el.style.border = '2px solid ' + (err ? '#ff6a7a' : '#29e6ff'); el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = '0', 1800); }
 async function avPicker() {
@@ -6273,7 +6275,7 @@ window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { 
 /* ---------- botón ✕ para salir del juego (portada y mapas) ---------- */
 (() => {
   const st = document.createElement('style'); st.textContent = `
-#btnExit{position:fixed;top:calc(12px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:11;width:42px;height:42px;padding:0;border-radius:50%;font:900 20px system-ui;line-height:1;display:none;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 14px rgba(255,74,106,.55);color:#fff;touch-action:manipulation}
+#btnExit{position:fixed;top:12px;right:12px;top:calc(12px + env(safe-area-inset-top, 0px));right:calc(12px + env(safe-area-inset-right, 0px));left:auto;bottom:auto;margin:0;z-index:12;min-width:42px;min-height:42px;box-sizing:border-box;width:42px;height:42px;padding:0;border-radius:50%;font:900 20px system-ui;line-height:1;display:none;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 14px rgba(255,74,106,.55);color:#fff;touch-action:manipulation}
 #btnExit.on{display:flex}
 #byeOv{position:fixed;inset:0;z-index:90;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at 50% 40%,#0b1a4a,#010309 75%);color:#cfe0ff;text-align:center;font-family:system-ui,sans-serif;padding:20px}
 #byeOv.on{display:flex}

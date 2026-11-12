@@ -61,7 +61,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 #rot p b{color:var(--gr)}
 #rot .ph{width:38px;height:66px;border:3px solid var(--cy);border-radius:9px;margin-top:20px;animation:rot 2.4s ease-in-out infinite;box-shadow:0 0 14px rgba(41,230,255,.5)}
 @keyframes rot{0%,15%{transform:rotate(0)}45%,70%{transform:rotate(90deg)}85%,100%{transform:rotate(0)}}
-#mapUI{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));z-index:8;display:none;flex-direction:column;align-items:flex-end;text-align:right;pointer-events:none;max-width:60vw}
+#mapUI{position:fixed;right:16px;bottom:12px;right:calc(16px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));z-index:8;display:none;flex-direction:column;align-items:flex-end;text-align:right;pointer-events:none;max-width:60vw}
 #mapUI.on{display:flex}
 #mapUI>*{pointer-events:auto}
 #mTitle{font-weight:800;font-size:clamp(15px,3.6vh,22px);letter-spacing:.05em;text-shadow:0 0 12px rgba(41,230,255,.8),0 2px 4px #000}
@@ -89,7 +89,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 #bD{left:calc(58px + env(safe-area-inset-left));bottom:calc(106px + var(--tpl,0vh));width:56px;height:56px;font-size:18px}
 #bA{right:calc(14px + env(safe-area-inset-right));bottom:calc(22px + var(--tpr,0vh));width:92px;height:92px;border-color:rgba(53,255,138,.85);font-size:15px}
 #bB{right:calc(116px + env(safe-area-inset-right));bottom:calc(22px + var(--tpr,0vh));width:68px;height:68px;border-color:rgba(198,60,255,.85);font-size:13px}
-#top{position:fixed;top:calc(14px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;display:none;gap:8px}
+#top{position:fixed;top:14px;right:8px;top:calc(14px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;display:none;gap:8px}
 #top.on{display:flex}
 #top .btn{padding:8px 13px;font-size:15px;border-radius:10px;touch-action:manipulation}
 #ios{z-index:40;background:rgba(5,8,24,.9)}
@@ -153,7 +153,7 @@ html,body{margin:0;height:100%;width:100%;position:fixed;inset:0;-webkit-text-si
 </div></div>
 
 <script src="js/qrcode.min.js"></script>
-<script src="game.js?v=102"></script>
+<script src="game.js?v=103"></script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function () {}); }); }
 </script>
