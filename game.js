@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.03';
+const VERSION = '1.05';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5992,7 +5992,7 @@ function showAccount() {
 let cloudT = 0;
 function cloudSave(now) {
   if (!ACC) return; clearTimeout(cloudT);
-  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV, dev: DEV, avc: AVS.list.map(x => x.c), avs: AVS.sel } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
+  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV, dev: DEV, avc: AVS.list.map(x => x.c), avs: AVS.sel, avx: AVS.del || [] } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
 }
 /* ======================= VENTANAS DEL JUEGO (sustituyen a los avisos nativos del navegador) ======================= */
 (() => { const st = document.createElement('style'); st.textContent = `
@@ -6072,16 +6072,22 @@ function avPrompt(ps) { return 'Te adjunto una foto de una persona. Quiero que c
   AV_PROMPT_POSE[ps] + '\n\n' +
   'ENCUADRE: un solo personaje, cuerpo entero de la cabeza a los pies, sin cortar nada, centrado, con los pies abajo del todo de la imagen. Formato vertical. Fondo blanco liso y uniforme, sin sombras en el suelo, sin escenario, sin texto, sin marcas de agua, para poder recortarlo fácilmente.'; }
 
-let AVS = { list: [], sel: '' }; try { AVS = Object.assign(AVS, JSON.parse(localStorage.getItem('tl_avs') || '{}')); } catch (e) {}
+let AVS = { list: [], sel: '', del: [] }; try { AVS = Object.assign(AVS, JSON.parse(localStorage.getItem('tl_avs') || '{}')); } catch (e) {}
 const AVIM = {};
 function avLoadImgs() { for (const k in AVIM) delete AVIM[k]; const a = AVS.list.find(x => x.c === AVS.sel); if (!a) return; for (const [ps] of AV_POSES) { const src = a.p[ps] || a.p['lucas-quieto']; if (src) { const im = new Image(); im.src = src; AVIM[ps] = im; } } }
 function avImg(pose) { const im = AVIM[pose]; return im && im.complete && im.naturalWidth ? im : null; }
 function avSave() { try { localStorage.setItem('tl_avs', JSON.stringify(AVS)); return true; } catch (e) { return false; } }
 avLoadImgs();
+// si el admin borra un avatar en el panel, desaparece también a los jugadores que lo tenían (se comprueba al abrir el juego)
+setTimeout(async () => { if (!AVS.list.length) return; let r; try { r = await api({ a: 'avCheck', cs: AVS.list.map(x => x.c) }); } catch (e) { return; } if (!r || !r.ok || !Array.isArray(r.ok2)) return;
+  const vale = new Set(r.ok2), n0 = AVS.list.length; AVS.list = AVS.list.filter(a => vale.has(a.c)); if (AVS.list.length !== n0) { if (AVS.sel && !vale.has(AVS.sel)) AVS.sel = ''; avSave(); avLoadImgs(); if (ACC) cloudSave(true); } }, 4000);
 function avInstall(av, keepSel) { let p; try { p = JSON.parse(av.datos); } catch (e) { return false; } if (!p || !p['lucas-quieto']) return false;
-  const old = JSON.stringify(AVS); AVS.list = AVS.list.filter(x => x.c !== av.c); AVS.list.push({ c: av.c, n: av.n || 'MI AVATAR', p }); if (!keepSel) AVS.sel = av.c;
+  const old = JSON.stringify(AVS); if (!keepSel) AVS.del = (AVS.del || []).filter(c => c !== av.c); AVS.list = AVS.list.filter(x => x.c !== av.c); AVS.list.push({ c: av.c, n: av.n || 'MI AVATAR', p }); if (!keepSel) AVS.sel = av.c;
   if (!avSave()) { AVS = JSON.parse(old); return false; } avLoadImgs(); if (ACC && !keepSel) cloudSave(true); return true; }
-async function avCloud(cloud) { if (!cloud || !Array.isArray(cloud.avc)) return; for (const c of cloud.avc) if (!AVS.list.some(x => x.c === c)) { const r = await api({ a: 'avGet', c }); if (r.ok && r.av) avInstall(r.av, true); }
+
+async function avCloud(cloud) { if (!cloud || !Array.isArray(cloud.avc)) return;
+  if (Array.isArray(cloud.avx)) { const dl = new Set([...(AVS.del || []), ...cloud.avx]); AVS.del = [...dl]; const n0 = AVS.list.length; AVS.list = AVS.list.filter(a => !dl.has(a.c)); if (AVS.sel && dl.has(AVS.sel)) AVS.sel = ''; if (AVS.list.length !== n0) { avSave(); avLoadImgs(); } }
+  for (const c of cloud.avc) if (!AVS.list.some(x => x.c === c) && !(AVS.del || []).includes(c)) { const r = await api({ a: 'avGet', c }); if (r.ok && r.av) avInstall(r.av, true); }
   if (cloud.avs !== undefined && (cloud.avs === '' || AVS.list.some(x => x.c === cloud.avs)) && cloud.avs !== AVS.sel) { AVS.sel = cloud.avs; avSave(); avLoadImgs(); } }
 function avOpenLink(u) { try { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = u; } }
 function avSwitch(n) {        // escribir AVATAR 1, AVATAR 2… en cualquier parte: 1 es Lucas y los demás, los avatares que tengas por orden
@@ -6093,13 +6099,20 @@ function avNext() { const n = AVS.list.length + 1, cur = AVS.sel ? AVS.list.find
 function avToast(t, err) { let el = document.getElementById('avToast'); if (!el) { el = document.createElement('div'); el.id = 'avToast'; el.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:99998;padding:10px 22px;border-radius:14px;font:900 16px system-ui;letter-spacing:.06em;pointer-events:none;transition:opacity .4s;background:rgba(6,12,40,.92);box-shadow:0 0 22px rgba(41,230,255,.4)'; document.body.appendChild(el); }
   el.textContent = t; el.style.color = err ? '#ff6a7a' : '#35ff8a'; el.style.border = '2px solid ' + (err ? '#ff6a7a' : '#29e6ff'); el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = '0', 1800); }
 async function avPicker() {
-  const card = (id, img, name, on) => '<button class="avc' + (on ? ' on' : '') + '" data-av="' + id + '">' + (img ? '<img src="' + img + '" alt="">' : '<span class="avplus">+</span>') + '<b>' + esc(name) + '</b>' + (on ? '<i>✔ EN USO</i>' : '') + '</button>';
+  const card = (id, img, name, on) => '<div class="avw"><button class="avc' + (on ? ' on' : '') + '" data-av="' + id + '">' + (img ? '<img src="' + img + '" alt="">' : '<span class="avplus">+</span>') + '<b>' + esc(name) + '</b>' + (on ? '<i>✔ EN USO</i>' : '') + '</button>' + (id && id !== '+' ? '<button class="avdel" data-avx="' + id + '" title="Eliminar avatar">🗑</button>' : '') + '</div>';
   const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', '1 · LUCAS', !AVS.sel) + AVS.list.map((a, i) => card(a.c, a.p['lucas-quieto'], (i + 2) + ' · ' + (a.n || 'AVATAR'), AVS.sel === a.c)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
   const dlg = uiDialog({ icon: '🧑‍🚀', title: 'SKIN · AVATAR', html: html(), buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
   const bind = () => $('uidlg').querySelectorAll('[data-av]').forEach(b => b.onclick = () => { const id = b.dataset.av; tone(900, 900, 0.04, 'square', 0.05);
     if (id === '+') { $('uidlg').querySelector('.ok') && $('uidlg').querySelector('.ok').click(); setTimeout(avBuy, 150); return; }
-    AVS.sel = id; avSave(); avLoadImgs(); if (ACC) cloudSave(true); const box = $('uidlg').querySelector('.avg'); if (box) { box.outerHTML = html().replace(/^.*?(<div class="avg">)/, '$1'); bind(); } });
-  setTimeout(bind, 30); await dlg;
+    AVS.sel = id; avSave(); avLoadImgs(); if (ACC) cloudSave(true); const box = $('uidlg').querySelector('.avg'); if (box) { box.outerHTML = html().replace(/^.*?(<div class="avg">)/, '$1'); bind(); bindDel(); } });
+  const bindDel = () => $('uidlg').querySelectorAll('[data-avx]').forEach(b => b.onclick = e => { e.stopPropagation(); const c = b.dataset.avx; const okb = $('uidlg').querySelector('.ok'); if (okb) okb.click(); setTimeout(() => avDelete(c), 150); });
+  setTimeout(() => { bind(); bindDel(); }, 30); await dlg;
+}
+async function avDelete(c) {
+  const i = AVS.list.findIndex(a => a.c === c); if (i < 0) return avPicker(); const a = AVS.list[i];
+  const ok = await uiConfirm('¿ELIMINAR AVATAR?', '¿Seguro que quieres eliminar el avatar <b>' + esc(a.n || 'AVATAR ' + (i + 2)) + '</b>?<br><br>Se borrará de este dispositivo y de tu cuenta. Solo podrás recuperarlo volviendo a meter su código en <b>TALLER › CANJEAR CÓDIGO</b>.', 'ELIMINAR', 'CANCELAR', '🗑️');
+  if (ok) { AVS.list.splice(i, 1); AVS.del = [...new Set([...(AVS.del || []), c])]; if (AVS.sel === c) AVS.sel = ''; avSave(); avLoadImgs(); if (ACC) cloudSave(true); avToast('🗑 AVATAR ELIMINADO'); }
+  avPicker();
 }
 async function avBuy() {
   const v = await uiDialog({ icon: '✨', tone: 'gold', title: 'AVATAR PERSONALIZADO',
@@ -6159,7 +6172,7 @@ function admAvatares(B) {
   B.querySelectorAll('[data-avpr]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(avPrompt(b.dataset.avpr)); } catch (e) {} b.textContent = '✔ COPIADO'; setTimeout(() => b.textContent = 'COPIAR', 1500); });
   admOp('avList').then(paintL).catch(e => admMsg(e.message, 1));
 }
-(() => { const st = document.createElement('style'); st.textContent = '.avg{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}.avc{width:112px;min-height:150px;border-radius:14px;border:2px solid #2a3a7a;background:linear-gradient(#0c1640,#060b24);color:#fff;font:800 12px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;cursor:pointer;position:relative}.avc img{height:92px;max-width:96px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}.avc.on{border-color:#35ff8a;box-shadow:0 0 18px rgba(53,255,138,.45)}.avc i{font-style:normal;color:#35ff8a;font-size:10px}.avplus{width:70px;height:70px;border-radius:50%;border:3px dashed #ffd23c;color:#ffd23c;font:900 44px/62px system-ui;text-align:center;animation:avp 1.6s ease-in-out infinite}@keyframes avp{50%{transform:scale(1.08);box-shadow:0 0 22px rgba(255,210,60,.5)}}.avpro{text-align:left;color:#dfe8ff;font-size:14px;line-height:1.45}.avpro ol{padding-left:20px;margin:10px 0}.avpro li{margin:6px 0}.avhero{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}.avhero img{height:80px}.avhero span{font:900 30px system-ui;color:#ffd23c}.avhero b{width:80px;height:80px;border-radius:50%;background:radial-gradient(#ffd23c,#ff8a3c);color:#1a0a00;font:900 22px/80px system-ui;text-align:center;box-shadow:0 0 24px rgba(255,190,60,.6)}.avprice{text-align:center;font:900 40px system-ui;color:#ffd23c;text-shadow:0 0 18px rgba(255,210,60,.5)}.avprice small{display:block;font:700 12px system-ui;color:#8ea3e6;text-shadow:none}.avup{display:flex;flex-wrap:wrap;gap:8px}.avslot{width:104px;height:140px;border:2px dashed #2a3a7a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px;cursor:pointer;font:800 11px system-ui;color:#8ea3e6}.avslot.ok{border-color:#35ff8a;border-style:solid}.avslot img{height:96px;max-width:92px;object-fit:contain;background:repeating-conic-gradient(#1a2450 0 25%,#0c1438 0 50%) 0 0/12px 12px;border-radius:6px}.avslot img:not([src]){visibility:hidden}.avslot input{width:92px;font-size:9px}'; document.head.appendChild(st); })();
+(() => { const st = document.createElement('style'); st.textContent = '.avg{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}.avw{position:relative}.avdel{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;border:2px solid #ff4a6a;background:#2a0812;color:#fff;font-size:14px;line-height:1;cursor:pointer;box-shadow:0 0 10px rgba(255,74,106,.5);padding:0}.avc{width:112px;min-height:150px;border-radius:14px;border:2px solid #2a3a7a;background:linear-gradient(#0c1640,#060b24);color:#fff;font:800 12px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;cursor:pointer;position:relative}.avc img{height:92px;max-width:96px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}.avc.on{border-color:#35ff8a;box-shadow:0 0 18px rgba(53,255,138,.45)}.avc i{font-style:normal;color:#35ff8a;font-size:10px}.avplus{width:70px;height:70px;border-radius:50%;border:3px dashed #ffd23c;color:#ffd23c;font:900 44px/62px system-ui;text-align:center;animation:avp 1.6s ease-in-out infinite}@keyframes avp{50%{transform:scale(1.08);box-shadow:0 0 22px rgba(255,210,60,.5)}}.avpro{text-align:left;color:#dfe8ff;font-size:14px;line-height:1.45}.avpro ol{padding-left:20px;margin:10px 0}.avpro li{margin:6px 0}.avhero{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}.avhero img{height:80px}.avhero span{font:900 30px system-ui;color:#ffd23c}.avhero b{width:80px;height:80px;border-radius:50%;background:radial-gradient(#ffd23c,#ff8a3c);color:#1a0a00;font:900 22px/80px system-ui;text-align:center;box-shadow:0 0 24px rgba(255,190,60,.6)}.avprice{text-align:center;font:900 40px system-ui;color:#ffd23c;text-shadow:0 0 18px rgba(255,210,60,.5)}.avprice small{display:block;font:700 12px system-ui;color:#8ea3e6;text-shadow:none}.avup{display:flex;flex-wrap:wrap;gap:8px}.avslot{width:104px;height:140px;border:2px dashed #2a3a7a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px;cursor:pointer;font:800 11px system-ui;color:#8ea3e6}.avslot.ok{border-color:#35ff8a;border-style:solid}.avslot img{height:96px;max-width:92px;object-fit:contain;background:repeating-conic-gradient(#1a2450 0 25%,#0c1438 0 50%) 0 0/12px 12px;border-radius:6px}.avslot img:not([src]){visibility:hidden}.avslot input{width:92px;font-size:9px}'; document.head.appendChild(st); })();
 /* ======================= LICENCIA: pago único de 1,49 € con myPOS ======================= */
 // a partir de la fase 2 del planeta 3 hace falta la licencia; el pago lo valida a mano el administrador desde el panel (pestaña PAGOS)
 const LIC_URL = 'https://mypos.com/@futurmovil/1.49', LIC_PRECIO = '1,49 €';
