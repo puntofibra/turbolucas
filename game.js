@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.05';
+const VERSION = '1.06';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5568,6 +5568,11 @@ function conAdmin() {
   }
 }
 // el móvil que escanea el QR autoriza al otro dispositivo con la llave
+function qrFin() {        // el móvil solo servía de llave: se cierra el juego (o, si el navegador no deja cerrar la pestaña, se queda una pantalla final sin el juego)
+  try { nfcStop(); } catch (e) {} try { if (AC) AC.close(); } catch (e) {} try { sndOn = false; } catch (e) {}
+  try { window.open('', '_self'); window.close(); } catch (e) {}
+  setTimeout(() => { document.body.innerHTML = '<div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at 50% 40%,#06301a,#010309 75%);color:#cfe0ff;font-family:system-ui,sans-serif;text-align:center;padding:24px"><div style="font-size:64px">✅</div><h2 style="margin:0;color:#35ff8a;letter-spacing:.1em;text-shadow:0 0 14px #35ff8a">ACCESO CONCEDIDO</h2><div>El otro dispositivo ya está dentro del panel.<br>Ya puedes cerrar esta pestaña.</div></div>'; }, 400);
+}
 (() => {
   const q = new URLSearchParams(location.search).get('admq'); if (!q) return;
   history.replaceState(null, '', location.pathname);
@@ -5575,7 +5580,7 @@ function conAdmin() {
   a.innerHTML = '<div class="abody" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><h3 style="font-size:1.4em">AUTORIZAR ACCESO</h3>' + NFC_HTML + '<div class="amsg" id="amsg">' + (HAY_NFC ? '📡 Acerca tu llave a la parte de atrás del móvil…' : 'Este móvil no lee NFC. Usa un Android con Chrome.') + '</div>' + '<div class="arow"><button class="btn" id="qX">CERRAR</button></div></div>';
   $('qX').onclick = closeAdmin;
   if (HAY_NFC) {     // el lector se activa solo al abrir la pantalla (si Chrome aún no tiene el permiso, basta con tocar en cualquier sitio una única vez)
-    const err = t => admMsg(t, 1), go = () => nfcRead(async k => { const r = await api({ a: 'qrOk', q, k }); if (!r.ok) throw new Error(r.error); admMsg('✔ Acceso autorizado. Ya puedes cerrar esto.'); SFX && SFX.win(); }, err);
+    const err = t => admMsg(t, 1), go = () => nfcRead(async k => { const r = await api({ a: 'qrOk', q, k }); if (!r.ok) throw new Error(r.error); admMsg('✔ Acceso concedido'); SFX && SFX.win(); setTimeout(qrFin, 1600); }, err);
     err.gesture = () => { admMsg('📡 Acerca tu llave a la parte de atrás del móvil…'); const once = e => { if (e.target && e.target.id === 'qX') return; a.removeEventListener('pointerdown', once); go(); }; a.addEventListener('pointerdown', once); };
     go();
   }
