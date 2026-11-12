@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.96';
+const VERSION = '0.97';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -458,6 +458,12 @@ function conEdit(arg) {        // EDIT 3-5: te lleva a esa fase con el editor de
   say('>> ABRIENDO EL EDITOR EN LA FASE ' + id + ' ✏️', 'g big', 22); SFX.power();
   setTimeout(() => { closeConsole(); const wi = WORLDS.findIndex(w => w.nodes.some(n => n.id === id)); if (wi >= 0) setWorld(wi); curId = id; startGame(); setTimeout(() => { if (state === 'play' && curId === id) openEditOff(); }, 700); }, 1300);
 }
+// escribir la palabra CONSOLA en cualquier parte (teclado del PC, o en cualquier casilla de texto del móvil o la tablet) abre la consola
+let conWord = '';
+window.addEventListener('keydown', e => { if (CON.on || e.ctrlKey || e.metaKey || e.altKey || !e.key || e.key.length !== 1) return;
+  conWord = (conWord + e.key.toUpperCase()).slice(-7); if (conWord === 'CONSOLA') { conWord = ''; const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => { t.value = t.value.replace(/consol?a?$/i, ''); try { t.blur(); } catch (x) {} }, 0); e.preventDefault(); setTimeout(() => openConsole(), 30); } }, true);
+document.addEventListener('input', e => { const t = e.target; if (CON.on || !t || t === conIn || !/^(INPUT|TEXTAREA)$/.test(t.tagName) || typeof t.value !== 'string') return;
+  if (/consola/i.test(t.value)) { t.value = t.value.replace(/consola/ig, ''); try { t.dispatchEvent(new Event('change')); t.blur(); } catch (x) {} conWord = ''; setTimeout(() => openConsole(), 30); } }, true);
 function conStatus(arg) {      // STATUS 1-4: deja la partida abierta hasta esa fase y con candados desde ahí
   const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/);
   const id = m ? m[1] + '-' + m[2] : '';
