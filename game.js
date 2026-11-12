@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.95';
+const VERSION = '0.96';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -402,7 +402,7 @@ let conHold = 0;      // si el jugador sube a leer, no le bajamos de golpe
 function conScroll(force) { if (force) conHold = 0; if (!force && conHold > performance.now()) return; conOut.scrollTop = conOut.scrollHeight; }
 conOut.addEventListener('wheel', () => { conHold = performance.now() + 4000; }, { passive: true }); conOut.addEventListener('touchmove', () => { conHold = performance.now() + 4000; }, { passive: true });
 function conPrompt() {        // línea de escritura con el cursor _ parpadeando
-  conLine = document.createElement('div'); conLine.innerHTML = '<span class="g">C:\\LUCAS&gt;</span> <span class="w" id="conTx"></span><span class="cur">_</span>';
+  conLine = document.createElement('div'); conLine.innerHTML = '<span class="g">C:\\' + (CON.dir === undefined ? 'LUCAS' : CON.dir) + '&gt;</span> <span class="w" id="conTx"></span><span class="cur">_</span>';
   conOut.appendChild(conLine); CON.busy = false; $('conTx').textContent = conIn.value; conScroll();
   if (CON.pend.length) conRun(CON.pend.shift());
 }
@@ -433,7 +433,7 @@ function pauseTapOn(pad) {
   if (pauseTap.n >= 10) { pauseTap = { n: 0, t: 0 }; openConsole(pad === true); }
 }
 function openConsole(fromPad) {
-  audio(); CON.on = true; CON.q = []; CON.typing = false; CON.busy = true; CON.pend = []; conIn.value = ''; clearTimeout(conTimer); conOut.innerHTML = '';
+  audio(); CON.on = true; CON.dir = 'LUCAS'; CON.q = []; CON.typing = false; CON.busy = true; CON.pend = []; conIn.value = ''; clearTimeout(conTimer); conOut.innerHTML = '';
   for (const k in K) K[k] = false;
   const c = $('con'); c.classList.remove('off'); c.classList.add('on', 'boot'); setTimeout(() => c.classList.remove('boot'), 800);
   padPrev.ctri = true; padPrev.cx = true;
@@ -449,6 +449,14 @@ function openConsole(fromPad) {
     say('', '', 0, true);
     say(activeTxt(), 'y', 0, true);
   }, 650);
+}
+function conLvl(arg) { const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/), id = m ? m[1] + '-' + m[2] : ''; return id && typeof LEVELS[id] === 'function' && ALLN().some(n => n.id === id) ? id : ''; }
+function conEdit(arg) {        // EDIT 3-5: te lleva a esa fase con el editor de pantallas abierto
+  if (!arg) { say('ESCRIBE EL MUNDO Y EL NIVEL: EDIT 3-5', 'y', 12); return; }
+  const id = conLvl(arg); if (!id) { say('ERROR · LA FASE "' + String(arg).slice(0, 10) + '" NO EXISTE. Prueba con algo como EDIT 3-5.', 'r', 12); tone(140, 90, 0.3, 'square', 0.08); return; }
+  if (!CHEAT.test) { CHEAT.test = true; saveCheats(); say('   (Modo pruebas activado para poder editar)', 'd', 0, true); }
+  say('>> ABRIENDO EL EDITOR EN LA FASE ' + id + ' ✏️', 'g big', 22); SFX.power();
+  setTimeout(() => { closeConsole(); const wi = WORLDS.findIndex(w => w.nodes.some(n => n.id === id)); if (wi >= 0) setWorld(wi); curId = id; startGame(); setTimeout(() => { if (state === 'play' && curId === id) openEditOff(); }, 700); }, 1300);
 }
 function conStatus(arg) {      // STATUS 1-4: deja la partida abierta hasta esa fase y con candados desde ahí
   const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/);
@@ -477,7 +485,7 @@ function conRun(raw) {
     say('>> LISTA DE TRUCOS', 'g big', 20);
     CODES.forEach(c => say((CHEAT[c[0].toLowerCase()] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], CHEAT[c[0].toLowerCase()] ? 'g' : 'y', 0, true));
     say('>> COMANDOS', 'w', 14);
-    [['TEST', 'MODO PRUEBAS: TRUCOS, EDITOR Y PLANETAS EN LA PAUSA', CHEAT.test], ['FULLACCESS', 'LICENCIA GRATIS EN ESTE DISPOSITIVO', CHEAT.full], ['OPEN', 'ACTIVA TODOS LOS TRUCOS'], ['CLOSE', 'DESACTIVA TODOS LOS TRUCOS'], ['LOCK', 'BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)'], ['STATUS', 'ABRE HASTA UNA FASE (EJ: STATUS 1-4) Y CANDADOS DESDE AHÍ'], ['HACK', 'LISTA CON LA ANIMACIÓN DE HACKEO'], ['ADMIN', 'PANEL SECRETO (PIDE LA LLAVE)'], ['LIST', 'ESTA LISTA'], ['CLS', 'LIMPIA LA PANTALLA'], ['EXIT', 'CIERRA LA CONSOLA']]
+    [['TEST', 'MODO PRUEBAS: TRUCOS, EDITOR Y PLANETAS EN LA PAUSA', CHEAT.test], ['FULLACCESS', 'LICENCIA GRATIS EN ESTE DISPOSITIVO', CHEAT.full], ['OPEN', 'ACTIVA TODOS LOS TRUCOS'], ['CLOSE', 'DESACTIVA TODOS LOS TRUCOS'], ['LOCK', 'BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)'], ['STATUS', 'ABRE HASTA UNA FASE (EJ: STATUS 1-4) Y CANDADOS DESDE AHÍ'], ['EDIT', 'ABRE EL EDITOR EN UNA FASE (EJ: EDIT 3-5)'], ['ERASE', 'BORRA LA PANTALLA DE LA CONSOLA'], ['CD..', 'SUBE A C:\\  (CD LUCAS PARA VOLVER)'], ['HACK', 'LISTA CON LA ANIMACIÓN DE HACKEO'], ['ADMIN', 'PANEL SECRETO (PIDE LA LLAVE)'], ['LIST', 'ESTA LISTA'], ['CLS', 'LIMPIA LA PANTALLA'], ['EXIT', 'CIERRA LA CONSOLA']]
       .forEach(c => say((c[2] === undefined ? '    ' : c[2] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], c[2] ? 'g' : 'y', 0, true));
     say('Los trucos duran 1 hora como máximo.', 'd', 0, true); SFX.chip(); return;
   }
@@ -511,7 +519,11 @@ function conRun(raw) {
   if (cmd === 'LOCK') { PROG = {}; DEV = {}; GOT = {}; PRV = Date.now(); try { localStorage.setItem('tl_rv', String(PRV)); } catch (e) {} CHEAT.unlock = false; saveCheats(); try { localStorage.setItem('tl_prog', '{}'); localStorage.setItem('tl_dev', '{}'); localStorage.setItem('tl_got', '{}'); } catch (e) {} setWorld(0); mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; cloudSave(true);
     say('>> TODOS LOS CANDADOS BLOQUEADOS 🔒', 'r big', 24); say('   El juego vuelve a empezar desde la fase 1-1, como si nunca hubieras jugado.', '', 10); tone(400, 90, 0.5, 'sawtooth', 0.06); return; }
   if (cmd === 'ADMIN') { conAdmin(); return; }
-  if (cmd === 'CLS' || cmd === 'LIMPIAR') { conOut.innerHTML = ''; say('', '', 0, true); return; }
+  if (/^CD\s*(\.\.|\\)$/.test(cmd)) { CON.dir = ''; say('', '', 0, true); return; }
+  if (/^CD\s*\\?\s*LUCAS$/.test(cmd)) { CON.dir = 'LUCAS'; say('', '', 0, true); return; }
+  if (/^CD\b/.test(cmd)) { const d = cmd.replace(/^CD\s*/, ''); if (!d) { say('C:\\' + CON.dir, '', 0, true); return; } say('RUTA NO ENCONTRADA: ' + d.slice(0, 20), 'r', 12); tone(140, 90, 0.3, 'square', 0.08); return; }
+  if (/^EDIT\b/.test(cmd)) { conEdit(cmd.replace(/^EDIT\s*/, '')); return; }
+  if (cmd === 'CLS' || cmd === 'LIMPIAR' || cmd === 'ERASE') { conOut.innerHTML = ''; say('', '', 0, true); return; }
   if (cmd === 'SALIR' || cmd === 'EXIT') { closeConsole(); return; }
   say('ERROR 0x' + rh(4) + ' · CÓDIGO "' + cmd.slice(0, 20) + '" NO RECONOCIDO', 'r', 12); tone(140, 90, 0.3, 'square', 0.08);
 }
@@ -6132,7 +6144,7 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { finale() { showTheEnd(); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
+window.__TL = { finale() { showTheEnd(); }, con(c) { if (!CON.on) openConsole(); setTimeout(() => conRun(c), 1500); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
     return { id, W: l.W, H: l.H, g: l.g.map(r => Array.isArray(r) ? r.join('') : r), gk: l.gk || 1, vert: !!l.vert, water: l.water || null, spawn: l.spawn, goal: l.goal, sw: !!l.sw,
       pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick((l.lifts || []).concat(l.mags || []), ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
       pipes: pick(l.pipes, ['x', 'y', 'tox', 'toy', 'hid']), portals: pick(l.portals, ['x', 'y', 'tox', 'toy']), keys: pick(l.keys, ['x', 'y']), winds: pick(l.winds, ['x0', 'x1', 'y0', 'y1', 'f']), cps: pick(l.cps, ['x', 'y']), strips: pick(l.strips, ['x0', 'x1', 'y']), rise: !!l.rise, chase: !!l.chase, auto: !!l.auto, sky: !!l.sky }; },
