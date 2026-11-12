@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.97';
+const VERSION = '0.98';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4776,26 +4776,26 @@ const MAP3 = [
 ];
 /* ---------- mapa del planeta 4: SELVA LUMINOSA (4 pantallas de ancho; paint = plataforma dibujada por el juego) ---------- */
 const MAP4 = [
-  { id: '4-1', n: '1', name: 'SENDERO LUMINOSO', x: 0.1325, y: 0.529, rx: 0.04, built: true },
-  { id: '4-2', n: '2', name: 'LIANAS GIGANTES', x: 0.196, y: 0.70, rx: 0.04, built: true },
+  { id: '4-1', n: '1', name: 'SENDERO LUMINOSO', x: 0.196, y: 0.7, rx: 0.04, built: true },
+  { id: '4-2', n: '2', name: 'LIANAS GIGANTES', x: 0.1325, y: 0.529, rx: 0.04, built: true },
   { id: '4-3', n: '3', name: 'CIÉNAGA TÓXICA', x: 0.187, y: 0.386, rx: 0.04, built: true },
   { id: '4-4', n: '4', name: 'TORMENTA TROPICAL', x: 0.2775, y: 0.418, rx: 0.04, built: true },
-  { id: '4-5', n: '5', name: 'CHORROS DE ESPORAS', x: 0.362, y: 0.80, rx: 0.04, built: true, paint: true },
+  { id: '4-5', n: '5', name: 'CHORROS DE ESPORAS', x: 0.362, y: 0.8, rx: 0.04, built: true, paint: true },
   { id: '4-6', n: '6', name: 'DENTRO DEL ÁRBOL', x: 0.46, y: 0.842, rx: 0.04, built: true },
-  { id: '4-7', n: '7', name: 'LAS COPAS', x: 0.516, y: 0.544, rx: 0.04, built: true },
-  { id: '4-8', n: '8', name: 'NIDO DE PLANTAS CARNÍVORAS', x: 0.5225, y: 0.331, rx: 0.04, built: true },
-  { id: '4-9', n: '9', name: 'EL PUENTE COLGANTE', x: 0.6145, y: 0.348, rx: 0.04, built: true },
-  { id: '4-10', n: '10', name: 'LA GRAN CASCADA', x: 0.5375, y: 0.887, rx: 0.04, built: true },
-  { id: '4-11', n: '11', name: 'RÍO ABAJO', x: 0.64, y: 0.872, rx: 0.04, built: true },
-  { id: '4-12', n: '12', name: 'EL LAGO DE LOS NENÚFARES', x: 0.734, y: 0.643, rx: 0.04, built: true },
-  { id: '4-13', n: '13', name: 'LLUVIA DE SEMILLAS', x: 0.67, y: 0.214, rx: 0.04, built: true },
-  { id: '4-14', n: '14', name: 'LA CUEVA DE LAS SETAS', x: 0.71, y: 0.321, rx: 0.04, built: true },
-  { id: '4-15', n: '15', name: 'LA ESCALINATA', x: 0.746, y: 0.426, rx: 0.04, built: true },
+  { id: '4-7', n: '7', name: 'LAS COPAS', x: 0.5375, y: 0.887, rx: 0.04, built: true },
+  { id: '4-8', n: '8', name: 'NIDO DE PLANTAS CARNÍVORAS', x: 0.516, y: 0.544, rx: 0.04, built: true },
+  { id: '4-9', n: '9', name: 'EL PUENTE COLGANTE', x: 0.5225, y: 0.331, rx: 0.04, built: true },
+  { id: '4-10', n: '10', name: 'LA GRAN CASCADA', x: 0.6145, y: 0.348, rx: 0.04, built: true },
+  { id: '4-11', n: '11', name: 'RÍO ABAJO', x: 0.67, y: 0.214, rx: 0.04, built: true },
+  { id: '4-12', n: '12', name: 'EL LAGO DE LOS NENÚFARES', x: 0.71, y: 0.321, rx: 0.04, built: true },
+  { id: '4-13', n: '13', name: 'LLUVIA DE SEMILLAS', x: 0.746, y: 0.426, rx: 0.04, built: true },
+  { id: '4-14', n: '14', name: 'LA CUEVA DE LAS SETAS', x: 0.734, y: 0.643, rx: 0.04, built: true },
+  { id: '4-15', n: '15', name: 'LA ESCALINATA', x: 0.64, y: 0.872, rx: 0.04, built: true },
   { id: '4-16', n: '16', name: 'RUINAS DEL TEMPLO', x: 0.811, y: 0.877, rx: 0.042, built: true, gold: true },
   { id: '4-J', n: '', name: 'JEFE · COLOSO DE LA SELVA', x: 0.892, y: 0.56, rx: 0.055, boss: true, built: true },
-  { id: '4-B', n: '★', name: 'FASE SECRETA · NIDO DE LUCIÉRNAGAS', x: 0.44, y: 0.19, rx: 0.04, bonus: true, built: true, prev: 7, paint: true },
+  { id: '4-B', n: '★', name: 'FASE SECRETA · NIDO DE LUCIÉRNAGAS', x: 0.44, y: 0.19, rx: 0.04, bonus: true, built: true, prev: 8, paint: true },
   { id: '4-C', n: '★', name: 'FASE SECRETA · JARDÍN FLOTANTE', x: 0.36, y: 0.12, rx: 0.04, bonus: true, built: true, prev: 17, paint: true },
-  { id: '4-D', n: '★', name: 'FASE SECRETA · TRAS LA CASCADA', x: 0.566, y: 0.56, rx: 0.04, bonus: true, built: true, prev: 8, paint: true }
+  { id: '4-D', n: '★', name: 'FASE SECRETA · TRAS LA CASCADA', x: 0.566, y: 0.56, rx: 0.04, bonus: true, built: true, prev: 7, paint: true }
 ];
 const MAP5 = [
   { id: '5-1', n: '1', name: 'ARRECIFE DE CORAL', x: 0.067, y: 0.575, rx: 0.04, built: true },
