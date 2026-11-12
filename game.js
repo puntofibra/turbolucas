@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.08';
+const VERSION = '1.09';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -219,6 +219,9 @@ function bgMute(off) { try { if (!AC) return; if (off) { master.gain.value = 0; 
 document.addEventListener('visibilitychange', () => bgMute(document.hidden));
 addEventListener('pagehide', () => bgMute(true)); addEventListener('pageshow', () => { if (!document.hidden) bgMute(false); });
 document.addEventListener('freeze', () => bgMute(true));
+// la pantalla no se apaga sola mientras el juego está abierto (con el mando no se toca la pantalla y el móvil creería que nadie la usa)
+let wakeL = null; async function wakeOn() { try { if (!('wakeLock' in navigator) || document.hidden || (wakeL && !wakeL.released)) return; wakeL = await navigator.wakeLock.request('screen'); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeOn(); }); ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, wakeOn, { passive: true })); addEventListener('gamepadconnected', wakeOn); wakeOn();
 let touchCrouchT = 0;          // en pantalla táctil, Lucas sigue agachado 1 s después de soltar ▼ (da tiempo a pulsar ▶ y meterse por un hueco bajo)
 [['bL', 'left'], ['bR', 'right'], ['bD', 'down'], ['bA', 'jump'], ['bB', 'act']].forEach(([id, k]) => {
   const el = $(id);
