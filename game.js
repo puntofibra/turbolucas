@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.01';
+const VERSION = '1.02';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -461,8 +461,10 @@ function conEdit(arg) {        // EDIT 3-5: te lleva a esa fase con el editor de
 // escribir la palabra CONSOLA en cualquier parte (teclado del PC, o en cualquier casilla de texto del móvil o la tablet) abre la consola
 let conWord = '';
 window.addEventListener('keydown', e => { if (CON.on || e.ctrlKey || e.metaKey || e.altKey || !e.key || e.key.length !== 1) return;
-  conWord = (conWord + e.key.toUpperCase()).slice(-7); if (conWord === 'CONSOLA') { conWord = ''; const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => { t.value = t.value.replace(/consol?a?$/i, ''); try { t.blur(); } catch (x) {} }, 0); e.preventDefault(); setTimeout(() => openConsole(), 30); } }, true);
+  conWord = (conWord + e.key.toUpperCase()).slice(-12); const avm = conWord.match(/AVATAR ?([1-9])$/); if (avm) { conWord = ''; const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => { t.value = t.value.replace(/avatar ?[1-9]$/i, ''); }, 0); else e.preventDefault(); avSwitch(+avm[1]); return; }
+  if (conWord.slice(-7) === 'CONSOLA') { conWord = ''; const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => { t.value = t.value.replace(/consol?a?$/i, ''); try { t.blur(); } catch (x) {} }, 0); e.preventDefault(); setTimeout(() => openConsole(), 30); } }, true);
 document.addEventListener('input', e => { const t = e.target; if (CON.on || !t || t === conIn || !/^(INPUT|TEXTAREA)$/.test(t.tagName) || typeof t.value !== 'string') return;
+  const avm = t.value.match(/avatar ?([1-9])/i); if (avm) { t.value = t.value.replace(/avatar ?[1-9]/ig, ''); conWord = ''; avSwitch(+avm[1]); return; }
   if (/consola/i.test(t.value)) { t.value = t.value.replace(/consola/ig, ''); try { t.dispatchEvent(new Event('change')); t.blur(); } catch (x) {} conWord = ''; setTimeout(() => openConsole(), 30); } }, true);
 function conStatus(arg) {      // STATUS 1-4: deja la partida abierta hasta esa fase y con candados desde ahí
   const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/);
@@ -491,7 +493,7 @@ function conRun(raw) {
     say('>> LISTA DE TRUCOS', 'g big', 20);
     CODES.forEach(c => say((CHEAT[c[0].toLowerCase()] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], CHEAT[c[0].toLowerCase()] ? 'g' : 'y', 0, true));
     say('>> COMANDOS', 'w', 14);
-    [['TEST', 'MODO PRUEBAS: TRUCOS, EDITOR Y PLANETAS EN LA PAUSA', CHEAT.test], ['FULLACCESS', 'LICENCIA GRATIS EN ESTE DISPOSITIVO', CHEAT.full], ['OPEN', 'ACTIVA TODOS LOS TRUCOS'], ['CLOSE', 'DESACTIVA TODOS LOS TRUCOS'], ['LOCK', 'BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)'], ['STATUS', 'ABRE HASTA UNA FASE (EJ: STATUS 1-4) Y CANDADOS DESDE AHÍ'], ['EDIT', 'ABRE EL EDITOR EN UNA FASE (EJ: EDIT 3-5)'], ['ERASE', 'BORRA LA PANTALLA DE LA CONSOLA'], ['CD..', 'SUBE A C:\\  (CD LUCAS PARA VOLVER)'], ['HACK', 'LISTA CON LA ANIMACIÓN DE HACKEO'], ['ADMIN', 'PANEL SECRETO (PIDE LA LLAVE)'], ['LIST', 'ESTA LISTA'], ['CLS', 'LIMPIA LA PANTALLA'], ['EXIT', 'CIERRA LA CONSOLA']]
+    [['TEST', 'MODO PRUEBAS: TRUCOS, EDITOR Y PLANETAS EN LA PAUSA', CHEAT.test], ['FULLACCESS', 'LICENCIA GRATIS EN ESTE DISPOSITIVO', CHEAT.full], ['OPEN', 'ACTIVA TODOS LOS TRUCOS'], ['CLOSE', 'DESACTIVA TODOS LOS TRUCOS'], ['LOCK', 'BLOQUEA TODOS LOS CANDADOS (EMPIEZA DE CERO)'], ['STATUS', 'ABRE HASTA UNA FASE (EJ: STATUS 1-4) Y CANDADOS DESDE AHÍ'], ['EDIT', 'ABRE EL EDITOR EN UNA FASE (EJ: EDIT 3-5)'], ['AVATAR', 'CAMBIA DE AVATAR (AVATAR 1 = LUCAS, AVATAR 2, 3…)'], ['ERASE', 'BORRA LA PANTALLA DE LA CONSOLA'], ['CD..', 'SUBE A C:\\  (CD LUCAS PARA VOLVER)'], ['HACK', 'LISTA CON LA ANIMACIÓN DE HACKEO'], ['ADMIN', 'PANEL SECRETO (PIDE LA LLAVE)'], ['LIST', 'ESTA LISTA'], ['CLS', 'LIMPIA LA PANTALLA'], ['EXIT', 'CIERRA LA CONSOLA']]
       .forEach(c => say((c[2] === undefined ? '    ' : c[2] ? '[✔] ' : '[ ] ') + c[0] + '  -  ' + c[1], c[2] ? 'g' : 'y', 0, true));
     say('Los trucos duran 1 hora como máximo.', 'd', 0, true); SFX.chip(); return;
   }
@@ -528,6 +530,7 @@ function conRun(raw) {
   if (/^CD\s*(\.\.|\\)$/.test(cmd)) { CON.dir = ''; say('', '', 0, true); return; }
   if (/^CD\s*\\?\s*LUCAS$/.test(cmd)) { CON.dir = 'LUCAS'; say('', '', 0, true); return; }
   if (/^CD\b/.test(cmd)) { const d = cmd.replace(/^CD\s*/, ''); if (!d) { say('C:\\' + CON.dir, '', 0, true); return; } say('RUTA NO ENCONTRADA: ' + d.slice(0, 20), 'r', 12); tone(140, 90, 0.3, 'square', 0.08); return; }
+  if (/^AVATAR ?[1-9]$/.test(cmd)) { const n = +cmd.slice(-1); const ok = avSwitch(n); say(ok ? '>> AVATAR ' + n + ' ACTIVADO: ' + (n === 1 ? 'LUCAS' : String(AVS.list[n - 2].n || 'AVATAR ' + n).toUpperCase()) : 'NO TIENES EL AVATAR ' + n + ' (tienes ' + (AVS.list.length + 1) + ': el 1 es Lucas)', ok ? 'g' : 'r', 12); if (ok) SFX.power(); return; }
   if (/^EDIT\b/.test(cmd)) { conEdit(cmd.replace(/^EDIT\s*/, '')); return; }
   if (cmd === 'CLS' || cmd === 'LIMPIAR' || cmd === 'ERASE') { conOut.innerHTML = ''; say('', '', 0, true); return; }
   if (cmd === 'SALIR' || cmd === 'EXIT') { closeConsole(); return; }
@@ -6080,9 +6083,16 @@ function avInstall(av, keepSel) { let p; try { p = JSON.parse(av.datos); } catch
 async function avCloud(cloud) { if (!cloud || !Array.isArray(cloud.avc)) return; for (const c of cloud.avc) if (!AVS.list.some(x => x.c === c)) { const r = await api({ a: 'avGet', c }); if (r.ok && r.av) avInstall(r.av, true); }
   if (cloud.avs !== undefined && (cloud.avs === '' || AVS.list.some(x => x.c === cloud.avs)) && cloud.avs !== AVS.sel) { AVS.sel = cloud.avs; avSave(); avLoadImgs(); } }
 function avOpenLink(u) { try { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = u; } }
+function avSwitch(n) {        // escribir AVATAR 1, AVATAR 2… en cualquier parte: 1 es Lucas y los demás, los avatares que tengas por orden
+  const a = n === 1 ? null : AVS.list[n - 2]; if (n !== 1 && !a) { avToast('NO TIENES EL AVATAR ' + n, true); return false; }
+  const sel = a ? a.c : ''; if (AVS.sel !== sel) { AVS.sel = sel; avSave(); avLoadImgs(); if (ACC) cloudSave(true); try { tone(700, 1400, 0.15, 'square', 0.05); } catch (e) {} }
+  avToast('🧑‍🚀 ' + (a ? String(a.n || 'AVATAR ' + n).toUpperCase() : 'LUCAS')); return true;
+}
+function avToast(t, err) { let el = document.getElementById('avToast'); if (!el) { el = document.createElement('div'); el.id = 'avToast'; el.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:99998;padding:10px 22px;border-radius:14px;font:900 16px system-ui;letter-spacing:.06em;pointer-events:none;transition:opacity .4s;background:rgba(6,12,40,.92);box-shadow:0 0 22px rgba(41,230,255,.4)'; document.body.appendChild(el); }
+  el.textContent = t; el.style.color = err ? '#ff6a7a' : '#35ff8a'; el.style.border = '2px solid ' + (err ? '#ff6a7a' : '#29e6ff'); el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = '0', 1800); }
 async function avPicker() {
   const card = (id, img, name, on) => '<button class="avc' + (on ? ' on' : '') + '" data-av="' + id + '">' + (img ? '<img src="' + img + '" alt="">' : '<span class="avplus">+</span>') + '<b>' + esc(name) + '</b>' + (on ? '<i>✔ EN USO</i>' : '') + '</button>';
-  const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', 'LUCAS', !AVS.sel) + AVS.list.map(a => card(a.c, a.p['lucas-quieto'], a.n, AVS.sel === a.c)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
+  const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', '1 · LUCAS', !AVS.sel) + AVS.list.map((a, i) => card(a.c, a.p['lucas-quieto'], (i + 2) + ' · ' + (a.n || 'AVATAR'), AVS.sel === a.c)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
   const dlg = uiDialog({ icon: '🧑‍🚀', title: 'SKIN · AVATAR', html: html(), buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
   const bind = () => $('uidlg').querySelectorAll('[data-av]').forEach(b => b.onclick = () => { const id = b.dataset.av; tone(900, 900, 0.04, 'square', 0.05);
     if (id === '+') { $('uidlg').querySelector('.ok') && $('uidlg').querySelector('.ok').click(); setTimeout(avBuy, 150); return; }
