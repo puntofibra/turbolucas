@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '0.88';
+const VERSION = '0.89';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -2567,6 +2567,72 @@ LEVELS['8-C'] = function () {
   B.en('alien', 50, 13); B.en('alien', 90, 13); B.gear(24, 4); B.gear(64, 4); B.gear(110, 12);
   return B.done(LT({ name: 'LLUVIA DE CARAMELOS', intro: '¡UNA LLUVIA DE PREMIOS!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 124 * T + T / 2, y: 14 * T } }));
 };
+/* ---------- planeta 6 · fases 11 a 17 (generadas a partir de una semilla, con las piezas del desierto) ---------- */
+function deGen(o) {
+  const W = o.W || 180, B = DB(W), R = skyRng(o.seed), pick = a => a[Math.floor(R() * a.length)], F = o.feats || {};
+  B.ground(0, 9); B.row(4, 8, 12); if (o.dark) B.torch(2, 14); let x = 10, gi = 0, cpN = 0;
+  const gearAt = [0.22, 0.52, 0.82].map(f => Math.floor(f * W)), cpAt = [Math.floor(W * 0.36), Math.floor(W * 0.68)];
+  while (x < W - 24) {
+    const kinds = ['gap']; for (const k in F) if (F[k]) for (let i = 0; i < F[k]; i++) kinds.push(k); const kind = pick(kinds);
+    if (kind === 'gap') { const g = 2 + Math.floor(R() * 3); B.arc(x, x + g - 1, 11, 2); x += g; }
+    else if (kind === 'sand') { const g = 6 + Math.floor(R() * 6); B.ground(x, x + g - 1); B.sand(x, x + g - 1, 14, 15); for (let s = x + 3; s < x + g - 1; s += 4) B.block(s, s, 12, 13); B.worm(x + Math.floor(g / 2), 14, 4 + Math.floor(R() * 2), R() * 2.8); B.row(x, x + g - 1, 10); x += g; }
+    else if (kind === 'carpet') { const g = 9 + Math.floor(R() * 4); B.ground(x, x + g - 1); B.sand(x, x + g - 1, 14, 15); B.carpet(x + Math.floor(g / 2) - 1, 12, 3, Math.floor(g / 2) - 2, 0, 0.9 + R() * 0.3, R() * 6); B.worm(x + 2, 14, 5, R() * 2.8); B.row(x + 2, x + g - 3, 9); x += g; }
+    else if (kind === 'fall') { const g = 7 + Math.floor(R() * 3); B.fall(x + 1, 13, 2); B.fall(x + g - 3, 12, 2); if (g > 8) B.fall(x + 4, 11, 2); B.arc(x, x + g - 1, 9, 2); x += g; }
+    const len = 7 + Math.floor(R() * 8), a = x, b = Math.min(W - 16, x + len - 1); if (b - a < 4) break;
+    B.ground(a, b); if (o.dark && R() < 0.6) B.torch(a + 1, 14);
+    if (F.steps && R() < 0.4 && b - a > 6) { B.block(a + 2, a + 3, 12, 13); B.block(a + 4, a + 5, 10, 13); B.row(a + 4, a + 5, 9); }
+    if (F.spike && R() < 0.5 && b - a > 6) B.spike(a + 2, Math.min(b - 2, a + 5), 14, 2.2 + R() * 0.8, R() * 3);
+    if (F.wind && R() < 0.4) B.wind(a, b + 6, 0, 15, (R() < 0.5 ? -1 : 1) * (1000 + R() * 300), R() * 6);
+    if ((o.ene || []).length && b - a >= 6 && R() < (o.dens || 0.6)) { const t = pick(o.ene); if (t === 'dron') B.en('dron', Math.floor((a + b) / 2), 8, { x0: a - 3, x1: b + 3 }); else B.en(t, a + 3 + Math.floor(R() * (b - a - 4)), 13); }
+    if (gi < 3 && a >= gearAt[gi]) { B.gear(Math.floor((a + b) / 2), 10); gi++; }
+    if (cpN < 2 && a >= cpAt[cpN]) { B.cp(a + 1, 14); cpN++; }
+    if (R() < 0.12 && b - a >= 5) B.box(a + 2, 10, pick(['escudo', 'laser', 'turbo', 'iman'])); else if (R() < 0.08) B.hid(a + 2, 10, 'vida');
+    x = b + 1;
+  }
+  while (gi < 3) { B.gear(x - 3, 10 - gi); gi++; }
+  B.ground(x, W - 1); B.block(W - 1, W - 1, 0, 15); if (o.dark) B.torch(W - 8, 14);
+  B.goalAt = { x: (W - 6) * T + T / 2, y: 14 * T };
+  return B;
+}
+[['6-11', 'LAS COLUMNAS ROTAS', 6111, { fall: 2, steps: 1 }, ['patrulla', 'dron'], 0.6, '¡CUIDADO CON LAS COLUMNAS!', false],
+ ['6-12', 'EL VALLE DE LAS ESTATUAS', 6212, { steps: 2, spike: 1 }, ['torreta', 'alien'], 0.7, '¡LAS ESTATUAS DISPARAN!', false],
+ ['6-13', 'DUNAS DE CRISTAL', 6313, { sand: 2, carpet: 1 }, ['erizo', 'patrulla'], 0.6, '¡SALTA DE ROCA EN ROCA!', false],
+ ['6-14', 'EL ESPEJISMO', 6414, { wind: 2, sand: 1 }, ['dron', 'erizo'], 0.6, '¡EL VIENTO ENGAÑA!', false],
+ ['6-15', 'EL TEMPLO DE LOS PILARES', 6515, { spike: 3, fall: 1 }, ['alien', 'torreta'], 0.7, '¡PINCHOS POR TODAS PARTES!', false],
+ ['6-16', 'LA NOCHE DE LOS ESCORPIONES', 6616, { sand: 1, spike: 1, carpet: 1 }, ['patrulla', 'patrulla', 'dron'], 0.75, '¡ESCORPIONES EN LA OSCURIDAD!', true],
+ ['6-17', 'LA GUARIDA DEL GUSANO', 6717, { sand: 1, carpet: 1, fall: 1, spike: 1, wind: 1 }, ['erizo', 'dron', 'torreta', 'patrulla'], 0.8, '¡LA ÚLTIMA PRUEBA DEL DESIERTO!', false]
+].forEach(([id, name, seed, feats, ene, dens, intro, dark], i) => { LEVELS[id] = function () {
+  const B = deGen({ seed, W: 178 + i * 3, feats, ene, dens, dark });
+  return B.done(LD({ name, dark, intro, spawn: { x: 3 * T, y: 14 * T }, goal: B.goalAt }));
+}; });
+/* ---------- planeta 8 · fases 9, 10 y secreta D ---------- */
+// 8-9 · el circuito de carreras: coches y vagones a toda velocidad
+LEVELS['8-9'] = function () {
+  const B = TB(188), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 16); B.row(4, 10, 12); B.en('patrulla', 12, 13);
+  B.train(20, 12, 3, 3, 1.6, 0); B.ground(27, 44); B.belt(30, 42, 14, 1); B.en('erizo', 38, 13); B.train(48, 11, 3, 3, 1.8, 1); B.gear(49, 6); B.ground(55, 74); B.cp(57, 14); B.en('torreta', 70, 13);
+  B.train(78, 12, 3, 4, 1.7, 0); B.train(88, 10, 3, 3, 1.9, 2); B.en('dron', 86, 6, { x0: 76, x1: 98 }); B.ground(96, 118); B.belt(98, 116, 14, -1); B.cp(98, 14); B.en('alien', 108, 13); B.gear(112, 10); B.block(111, 113, 12, 13); B.hid(104, 10, 'vida');
+  B.train(122, 12, 3, 4, 1.8, 1); B.train(133, 11, 3, 4, 1.6, 0); B.train(144, 12, 3, 3, 2, 2); B.gear(134, 6); B.ground(150, 187); B.block(187, 187, 0, 15); B.cp(152, 14); B.en('patrulla', 160, 13); B.en('erizo', 170, 13); B.box(164, 10, 'turbo');
+  return B.done(LT({ name: 'EL CIRCUITO DE CARRERAS', intro: '¡LOS VAGONES VAN A TOPE!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 182 * T + T / 2, y: 14 * T } }));
+};
+// 8-10 · el gran regalo: todo lo de la juguetería junto
+LEVELS['8-10'] = function () {
+  const B = TB(196), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, 195); B.block(195, 195, 0, 15); B.row(4, 10, 12); B.en('patrulla', 14, 13);
+  B.choc(20, 34, 14, 15); B.block(24, 25, 12, 13); B.block(29, 30, 12, 13); B.row(22, 32, 9); B.jello(37, 14); P(40, 44, 8); B.gear(42, 5); B.en('alien', 48, 13);
+  B.cp(52, 14); B.belt(56, 76, 14, -1); B.popper(62, 14, 5, 0.3); B.popper(70, 14, 5, 1.4); B.en('torreta', 80, 13); B.block(84, 86, 11, 13); B.block(87, 89, 9, 13); B.gear(88, 5);
+  B.block(92, 108, 14, 15, ' '); B.train(94, 12, 3, 3, 1.2, 0); B.fall(102, 11, 2); B.fall(106, 13, 2); B.cp(112, 14); B.en('erizo', 118, 13); B.en('dron', 124, 8, { x0: 112, x1: 136 }); B.hid(120, 10, 'vida');
+  B.choc(130, 150, 14, 15); B.train(132, 12, 3, 4, 1, 0); B.jello(146, 13, 1); B.block(146, 146, 14, 15); B.gear(140, 7); B.cp(154, 14); B.belt(158, 176, 14, 1); B.popper(166, 14, 5, 0.8); B.en('patrulla', 180, 13); B.box(172, 10, 'escudo');
+  return B.done(LT({ name: 'EL GRAN REGALO', factory: true, intro: '¡LA ÚLTIMA PRUEBA DE LA JUGUETERÍA!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 189 * T + T / 2, y: 14 * T } }));
+};
+// 8-D · dentro del regalo (secreta)
+LEVELS['8-D'] = function () {
+  const B = TB(130);
+  B.ground(0, 129); B.block(129, 129, 0, 15); B.block(0, 129, 0, 2);
+  for (let x = 14; x < 112; x += 7) { B.jello(x, 14, 1); B.arc(x - 3, x + 3, 6, 3); }
+  B.gear(28, 4); B.gear(70, 4); B.gear(105, 4); B.en('alien', 60, 13);
+  return B.done(LT({ name: 'DENTRO DEL REGALO', factory: true, intro: '¡UN REGALO LLENO DE CHIPS!', spawn: { x: 3 * T, y: 14 * T }, goal: { x: 124 * T + T / 2, y: 14 * T } }));
+};
 /* lo ya cogido en cada fase se recuerda: al repetir no vuelven los chips, las vidas ocultas, las cajas de chips ni la lluvia de chips */
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
@@ -4187,20 +4253,27 @@ const MAP5 = [
   { id: '5-D', n: '★', name: 'FASE SECRETA · RAYOS DE SOL', x: 0.409, y: 0.262, rx: 0.035, bonus: true, built: true, prev: 6 }
 ];
 const MAP6 = [
-  { id: '6-1', n: '1', name: 'DUNAS DORADAS', x: 0.125, y: 0.83, rx: 0.04, built: true },
-  { id: '6-2', n: '2', name: 'EL CAÑÓN ROJO', x: 0.187, y: 0.58, rx: 0.04, built: true },
-  { id: '6-3', n: '3', name: 'ARENAS MOVEDIZAS', x: 0.252, y: 0.725, rx: 0.04, built: true },
-  { id: '6-4', n: '4', name: 'TORMENTA DE ARENA', x: 0.338, y: 0.84, rx: 0.04, built: true },
-  { id: '6-5', n: '5', name: 'LA GRAN PIRÁMIDE', x: 0.414, y: 0.695, rx: 0.04, built: true },
-  { id: '6-6', n: '6', name: 'ALFOMBRAS VOLADORAS', x: 0.50, y: 0.85, rx: 0.04, built: true },
-  { id: '6-7', n: '7', name: 'EL TEMPLO DE LAS TRAMPAS', x: 0.715, y: 0.855, rx: 0.04, built: true },
-  { id: '6-8', n: '8', name: 'LA ESTATUA GIGANTE', x: 0.722, y: 0.585, rx: 0.04, built: true },
-  { id: '6-9', n: '9', name: 'NOCHE EN EL DESIERTO', x: 0.762, y: 0.70, rx: 0.04, built: true },
-  { id: '6-10', n: '10', name: 'EL OJO DE LA TORMENTA', x: 0.816, y: 0.845, rx: 0.04, built: true, gold: true },
-  { id: '6-J', n: '', name: 'JEFE · GUSANO DE ARENA', x: 0.917, y: 0.815, rx: 0.06, boss: true, built: true },
-  { id: '6-B', n: '★', name: 'FASE SECRETA · EL ARCO DEL CIELO', x: 0.301, y: 0.40, rx: 0.035, bonus: true, built: true, prev: 1 },
-  { id: '6-C', n: '★', name: 'FASE SECRETA · EL TEMPLO ENTERRADO', x: 0.611, y: 0.895, rx: 0.035, bonus: true, built: true, prev: 5 },
-  { id: '6-D', n: '★', name: 'FASE SECRETA · EL OASIS ESCONDIDO', x: 0.666, y: 0.69, rx: 0.04, bonus: true, built: true, prev: 8 }
+  { id: '6-1', n: '1', name: 'DUNAS DORADAS', x: 0.101, y: 0.560, rx: 0.03, built: true },
+  { id: '6-2', n: '2', name: 'EL CAÑÓN ROJO', x: 0.155, y: 0.436, rx: 0.03, built: true },
+  { id: '6-3', n: '3', name: 'ARENAS MOVEDIZAS', x: 0.196, y: 0.647, rx: 0.03, built: true },
+  { id: '6-4', n: '4', name: 'TORMENTA DE ARENA', x: 0.270, y: 0.480, rx: 0.03, built: true },
+  { id: '6-5', n: '5', name: 'LA GRAN PIRÁMIDE', x: 0.270, y: 0.746, rx: 0.03, built: true },
+  { id: '6-6', n: '6', name: 'ALFOMBRAS VOLADORAS', x: 0.352, y: 0.564, rx: 0.03, built: true },
+  { id: '6-7', n: '7', name: 'EL TEMPLO DE LAS TRAMPAS', x: 0.369, y: 0.828, rx: 0.03, built: true },
+  { id: '6-8', n: '8', name: 'LA ESTATUA GIGANTE', x: 0.411, y: 0.690, rx: 0.03, built: true },
+  { id: '6-9', n: '9', name: 'NOCHE EN EL DESIERTO', x: 0.474, y: 0.807, rx: 0.03, built: true },
+  { id: '6-10', n: '10', name: 'EL OJO DE LA TORMENTA', x: 0.525, y: 0.640, rx: 0.03, built: true },
+  { id: '6-11', n: '11', name: 'LAS COLUMNAS ROTAS', x: 0.599, y: 0.494, rx: 0.03, built: true },
+  { id: '6-12', n: '12', name: 'EL VALLE DE LAS ESTATUAS', x: 0.654, y: 0.600, rx: 0.03, built: true },
+  { id: '6-13', n: '13', name: 'DUNAS DE CRISTAL', x: 0.604, y: 0.826, rx: 0.03, built: true },
+  { id: '6-14', n: '14', name: 'EL ESPEJISMO', x: 0.714, y: 0.436, rx: 0.03, built: true },
+  { id: '6-15', n: '15', name: 'EL TEMPLO DE LOS PILARES', x: 0.718, y: 0.770, rx: 0.03, built: true },
+  { id: '6-16', n: '16', name: 'LA NOCHE DE LOS ESCORPIONES', x: 0.772, y: 0.555, rx: 0.03, built: true },
+  { id: '6-17', n: '17', name: 'LA GUARIDA DEL GUSANO', x: 0.832, y: 0.666, rx: 0.03, built: true, gold: true },
+  { id: '6-J', n: '', name: 'JEFE · GUSANO DE ARENA', x: 0.911, y: 0.545, rx: 0.05, boss: true, built: true },
+  { id: '6-B', n: '★', name: 'FASE SECRETA · EL ARCO DEL CIELO', x: 0.209, y: 0.233, rx: 0.026, bonus: true, built: true, prev: 1 },
+  { id: '6-C', n: '★', name: 'FASE SECRETA · EL TEMPLO ENTERRADO', x: 0.376, y: 0.436, rx: 0.026, bonus: true, built: true, prev: 5 },
+  { id: '6-D', n: '★', name: 'FASE SECRETA · EL OASIS ESCONDIDO', x: 0.451, y: 0.618, rx: 0.026, bonus: true, built: true, prev: 8 }
 ];
 const MAP7 = [
   { id: '7-1', n: '1', name: 'MOLINOS DEL VIENTO', x: 0.085, y: 0.61, rx: 0.033, built: true },
@@ -4224,17 +4297,20 @@ const MAP7 = [
   { id: '7-D', n: '★', name: 'FASE SECRETA · EL DIRIGIBLE', x: 0.547, y: 0.088, rx: 0.028, bonus: true, built: true, prev: 11 }
 ];
 const MAP8 = [
-  { id: '8-1', n: '1', name: 'EL VALLE DE LOS JUGUETES', x: 0.059, y: 0.775, rx: 0.04, built: true },
-  { id: '8-2', n: '2', name: 'EL RÍO DE CHOCOLATE', x: 0.174, y: 0.615, rx: 0.04, built: true },
-  { id: '8-3', n: '3', name: 'EL CASTILLO DE NAIPES', x: 0.261, y: 0.43, rx: 0.04, built: true },
-  { id: '8-4', n: '4', name: 'CAMAS ELÁSTICAS', x: 0.290, y: 0.68, rx: 0.04, built: true },
-  { id: '8-5', n: '5', name: 'FICHAS DE DOMINÓ', x: 0.408, y: 0.83, rx: 0.04, built: true },
-  { id: '8-6', n: '6', name: 'EL TREN DE JUGUETE', x: 0.561, y: 0.765, rx: 0.04, built: true },
-  { id: '8-7', n: '7', name: 'LA FÁBRICA DE JUGUETES', x: 0.664, y: 0.615, rx: 0.04, built: true },
-  { id: '8-8', n: '8', name: 'CAJAS SORPRESA', x: 0.719, y: 0.745, rx: 0.04, built: true, gold: true },
-  { id: '8-J', n: '', name: 'JEFE · EL MUÑECO SORPRESA', x: 0.832, y: 0.795, rx: 0.055, boss: true, built: true },
-  { id: '8-B', n: '★', name: 'FASE SECRETA · NUBE DE ALGODÓN', x: 0.292, y: 0.105, rx: 0.035, bonus: true, built: true, prev: 2 },
-  { id: '8-C', n: '★', name: 'FASE SECRETA · LLUVIA DE CARAMELOS', x: 0.456, y: 0.087, rx: 0.035, bonus: true, built: true, prev: 4 }
+  { id: '8-1', n: '1', name: 'EL VALLE DE LOS JUGUETES', x: 0.069, y: 0.640, rx: 0.033, built: true },
+  { id: '8-2', n: '2', name: 'EL RÍO DE CHOCOLATE', x: 0.094, y: 0.475, rx: 0.033, built: true },
+  { id: '8-3', n: '3', name: 'EL CASTILLO DE NAIPES', x: 0.208, y: 0.516, rx: 0.033, built: true },
+  { id: '8-4', n: '4', name: 'CAMAS ELÁSTICAS', x: 0.235, y: 0.353, rx: 0.033, built: true },
+  { id: '8-5', n: '5', name: 'FICHAS DE DOMINÓ', x: 0.302, y: 0.727, rx: 0.033, built: true },
+  { id: '8-6', n: '6', name: 'EL TREN DE JUGUETE', x: 0.367, y: 0.593, rx: 0.033, built: true },
+  { id: '8-7', n: '7', name: 'LA FÁBRICA DE JUGUETES', x: 0.431, y: 0.450, rx: 0.033, built: true },
+  { id: '8-8', n: '8', name: 'CAJAS SORPRESA', x: 0.585, y: 0.555, rx: 0.033, built: true },
+  { id: '8-9', n: '9', name: 'EL CIRCUITO DE CARRERAS', x: 0.645, y: 0.741, rx: 0.033, built: true },
+  { id: '8-10', n: '10', name: 'EL GRAN REGALO', x: 0.759, y: 0.545, rx: 0.033, built: true, gold: true },
+  { id: '8-J', n: '', name: 'JEFE · EL MUÑECO SORPRESA', x: 0.905, y: 0.635, rx: 0.055, boss: true, built: true },
+  { id: '8-B', n: '★', name: 'FASE SECRETA · NUBE DE ALGODÓN', x: 0.362, y: 0.093, rx: 0.028, bonus: true, built: true, prev: 3 },
+  { id: '8-C', n: '★', name: 'FASE SECRETA · LLUVIA DE CARAMELOS', x: 0.633, y: 0.058, rx: 0.028, bonus: true, built: true, prev: 7 },
+  { id: '8-D', n: '★', name: 'FASE SECRETA · DENTRO DEL REGALO', x: 0.687, y: 0.432, rx: 0.026, bonus: true, built: true, prev: 8 }
 ];
 const WORLDS = [
   { n: 1, name: 'ESTACIÓN ORBITAL', img: 'mapa1', nodes: MAP1, col: '#29e6ff', fog: 'nebula' },
@@ -4242,9 +4318,9 @@ const WORLDS = [
   { n: 3, name: 'PLANETA VOLCÁNICO', img: 'mapa3', nodes: MAP3, col: '#ffb040', fog: 'smoke' },
   { n: 4, name: 'SELVA LUMINOSA', img: 'mapa4', nodes: MAP4, col: '#9aff6a', fog: 'mist', plat: 'obj-plat4', platW: 0.0419, platA: [0.494, 0.377, 0.3988] },
   { n: 5, name: 'OCÉANO ABISAL', img: 'mapa5', nodes: MAP5, col: '#3cf0ff', fog: 'mist', bossIco: '🐙' },
-  { n: 6, name: 'DESIERTO DE LOS ANILLOS', img: 'mapa6', nodes: MAP6, col: '#ffc860', fog: 'smoke', bossIco: '🪱' },
+  { n: 6, name: 'DESIERTO DE LOS ANILLOS', img: 'mapa6', nodes: MAP6, col: '#ffc860', fog: 'smoke', bossIco: '🪱', ar: 3.0 },
   { n: 7, name: 'ISLAS DE LA TORMENTA', img: 'mapa7', nodes: MAP7, col: '#9fd8ff', fog: 'mist', bossIco: '🐉', ar: 3.0 },
-  { n: 8, name: 'JUGUETERÍA', img: 'mapa8', nodes: MAP8, col: '#ff8ad8', fog: 'mist', bossIco: '🤡' }
+  { n: 8, name: 'JUGUETERÍA', img: 'mapa8', nodes: MAP8, col: '#ff8ad8', fog: 'mist', bossIco: '🤡', ar: 3.0 }
 ];
 // tramos sin camino dibujado: arco suave entre plataformas (la proporción del mapa se tiene en cuenta para que se vea redondo)
 WORLDS.forEach(W => { const ar = W.ar || (W.img === 'mapa3' ? 3.03 : W.img === 'mapa1' || W.img === 'mapa2' ? 1.79 : 4.03); W.nodes.forEach((n, i) => { if (!i) return; const p = W.nodes[n.prev !== undefined ? n.prev : i - 1], dx = (n.x - p.x) * ar, dy = n.y - p.y, d = Math.hypot(dx, dy), lift = Math.min(0.05, d * 0.1); n.way = [];
