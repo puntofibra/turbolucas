@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.24';
+const VERSION = '1.25';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -43,7 +43,7 @@ function preLava() { LAVA_SET.forEach(n => xi(n)); for (const k in LAVN) xi(LAVN
 const lavaI = n => L && L.theme === 'lava' && okI(IMG[n]) ? IMG[n] : null;
 // imágenes de la selva
 const SELN = { patrulla: ['enemigo-patrulla-selva', 4, 1.3], dron: ['enemigo-dron-selva', 4, 1.3], erizo: ['enemigo-erizo-selva', 4, 1.3], alien: ['enemigo-alien-selva', 4, 1.9], torreta: ['enemigo-torreta-selva', 3, 1.3] };
-const SEL_SET = ['suelo-selva', 'plataforma-selva', 'caja-selva', 'seta-0', 'seta-1', 'seta-2', 'fondo-lejos-selva', 'fondo-cerca-selva', 'jefe4', 'jefe4-roto'];
+const SEL_SET = ['suelo-selva', 'plataforma-selva', 'caja-selva', 'seta-0', 'seta-1', 'seta-2', 'luciernaga', 'flor-esporas', 'liana', 'vaina', 'planta-cerrada', 'planta-abierta', 'seta-trampolin', 'nenufar', 'puente-tablas', 'bola-piedra', 'totem-selva', 'balsa', 'fondo-lejos-selva', 'fondo-cerca-selva', 'jefe4', 'jefe4-roto'];
 function preSel() { SEL_SET.forEach(n => xi(n)); for (const k in SELN) xi(SELN[k][0], SELN[k][1]); }
 const selI = n => L && L.theme === 'jungle' && okI(IMG[n]) ? IMG[n] : null;
 const preTheme = t => { if (t === 'ice') preIce(); else if (t === 'lava') preLava(); else if (t === 'jungle') preSel(); };
@@ -3697,7 +3697,7 @@ function drawExtras() {
     ctx.save(); ctx.translate(j.x, y); ctx.rotate(j.vy < 0 ? Math.PI : 0); const bg = ctx.createRadialGradient(-5, -6, 2, 0, 0, 20); bg.addColorStop(0, '#fff2a0'); bg.addColorStop(0.5, '#ff8a20'); bg.addColorStop(1, '#a01e08'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#3a0a04'; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-6, 2, 5, 0, 6.283); ctx.arc(6, 2, 5, 0, 6.283); ctx.fill(); ctx.fillStyle = '#200'; ctx.beginPath(); ctx.arc(-6, 4, 2.4, 0, 6.283); ctx.arc(6, 4, 2.4, 0, 6.283); ctx.fill(); ctx.restore();
     if (Math.random() < 0.6) parts.push({ x: j.x + (Math.random() - 0.5) * 16, y: y + (j.vy > 0 ? 16 : -16), vx: 0, vy: j.vy > 0 ? 60 : -60, life: 0.4, max: 0.4, col: '#ff8a20', size: 3, grav: 0 }); }
-  for (const gg of L.guns) { if (!vis(gg.x)) continue; if (L.theme === 'jungle') { ctx.save(); ctx.translate(gg.x, gg.y); ctx.scale(gg.dir, 1); ctx.fillStyle = '#5a6a5a'; ctx.fillRect(-24, -60, 44, 60); ctx.strokeStyle = '#1a2a1a'; ctx.lineWidth = 2.5; ctx.strokeRect(-24, -60, 44, 60); ctx.fillStyle = '#2a3a2a'; ctx.fillRect(4, -30, 18, 14); ctx.fillStyle = '#5aff6a'; ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.arc(-6, -44, 5, 0, 6.283); ctx.arc(10, -44, 5, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#3a8a3a'; ctx.fillRect(-26, -64, 48, 6); ctx.restore(); continue; }
+  for (const gg of L.guns) { if (!vis(gg.x)) continue; if (L.theme === 'jungle') { const ti = selI('totem-selva'); if (ti) { const th = 84, tw2 = th * ti.naturalWidth / ti.naturalHeight; ctx.save(); ctx.translate(gg.x, gg.y + 2); ctx.scale(gg.dir, 1); ctx.drawImage(ti, 40 - tw2 * 0.8, -th, tw2, th); ctx.restore(); continue; } ctx.save(); ctx.translate(gg.x, gg.y); ctx.scale(gg.dir, 1); ctx.fillStyle = '#5a6a5a'; ctx.fillRect(-24, -60, 44, 60); ctx.strokeStyle = '#1a2a1a'; ctx.lineWidth = 2.5; ctx.strokeRect(-24, -60, 44, 60); ctx.fillStyle = '#2a3a2a'; ctx.fillRect(4, -30, 18, 14); ctx.fillStyle = '#5aff6a'; ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.arc(-6, -44, 5, 0, 6.283); ctx.arc(10, -44, 5, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#3a8a3a'; ctx.fillRect(-26, -64, 48, 6); ctx.restore(); continue; }
     { const ci = xi('canon-nieve', 3); if (okI(ci)) { ci._f = gg.t < 0.45 ? 1 : (gg.per - gg.t < 0.3 ? 2 : 0); spr(ci, gg.x, gg.y + 2, 72, 0.389, 1, gg.dir < 0); continue; } }      // cañón de bolas de nieve: reposo, cargando y disparo
     ctx.save(); ctx.translate(gg.x, gg.y); ctx.scale(gg.dir, 1); ctx.fillStyle = '#3a5a7a'; ctx.fillRect(-22, -22, 30, 22); ctx.fillStyle = '#5a86ac'; ctx.beginPath(); ctx.arc(-6, -30, 20, 0, 6.283); ctx.fill(); ctx.fillStyle = '#2a3e56'; ctx.fillRect(4, -40, 32, 20); ctx.fillStyle = '#10182a'; ctx.beginPath(); ctx.ellipse(36, -30, 5, 10, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#f4fcff'; ctx.beginPath(); ctx.ellipse(-6, -48, 22, 7, 0, 0, 6.283); ctx.fill(); ctx.restore(); }
   for (const q of L.bl) { const a = Math.min(1, q.t / 1.3); if (q.bolt) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(180,230,255,' + (0.4 + 0.5 * Math.abs(Math.sin(time * 14))) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(q.x, q.gy, 50 * (1.3 - a * 0.3), 11, 0, 0, 6.283); ctx.stroke(); if (q.t > 1.2) { ctx.strokeStyle = '#eaf6ff'; ctx.lineWidth = 5; ctx.beginPath(); let yy = cam.y - 20, xx = q.x + 40; ctx.moveTo(xx, yy); while (yy < q.gy) { yy += 40; xx = q.x + (Math.random() - 0.5) * 40 * (1 - yy / q.gy); ctx.lineTo(xx, Math.min(yy, q.gy)); } ctx.stroke(); } ctx.globalCompositeOperation = 'source-over'; continue; }
@@ -3765,10 +3765,11 @@ function drawJungleWorld() {          // dentro del mundo (con la cámara): luci
   if (L.cascade) { const x0 = L.cascade[0] * T, x1 = (L.cascade[1] + 1) * T, y0 = Math.max(0, cam.y - 20), y1 = cam.y + VHv + 20; const cg = ctx.createLinearGradient(x0, 0, x1, 0); cg.addColorStop(0, 'rgba(120,230,255,.15)'); cg.addColorStop(0.5, 'rgba(190,250,255,.35)'); cg.addColorStop(1, 'rgba(120,230,255,.15)'); ctx.fillStyle = cg; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
     ctx.strokeStyle = 'rgba(230,255,255,.5)'; ctx.lineWidth = 2; ctx.beginPath(); for (let k = 0; k < 14; k++) { const xx = x0 + (k + 0.5) * (x1 - x0) / 14, off = (time * 600 + k * 97) % 160; for (let yy = y0 - 160 + off; yy < y1; yy += 160) { ctx.moveTo(xx, yy); ctx.lineTo(xx, yy + 70); } } ctx.stroke();
     if (Math.random() < 0.6) parts.push({ x: x0 + Math.random() * (x1 - x0), y: cam.y + Math.random() * VHv, vx: (Math.random() - 0.5) * 40, vy: 200, life: 0.5, max: 0.5, col: '#e8ffff', size: 2, grav: 0 }); }
-  for (const v of L.vines) { if (!vis(v.x)) continue; ctx.strokeStyle = '#2a6a2a'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); for (let y = v.y0; y <= v.y1; y += 12) { const x = v.x + Math.sin(y * 0.05 + time * 1.5) * 4; y === v.y0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+  for (const v of L.vines) { if (!vis(v.x)) continue; { const li = selI('liana'); if (li) { const lw = 56, lh = lw * li.naturalHeight / li.naturalWidth, sw = Math.sin(time * 1.5 + v.x) * 2; ctx.save(); ctx.beginPath(); ctx.rect(v.x - lw, v.y0, lw * 2, v.y1 - v.y0); ctx.clip(); for (let yy = v.y0; yy < v.y1; yy += lh - 1) ctx.drawImage(li, v.x - lw / 2 + sw, yy, lw, lh); ctx.restore(); continue; } } ctx.strokeStyle = '#2a6a2a'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); for (let y = v.y0; y <= v.y1; y += 12) { const x = v.x + Math.sin(y * 0.05 + time * 1.5) * 4; y === v.y0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
     ctx.strokeStyle = '#6ad86a'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = '#4ac84a'; for (let y = v.y0 + 20; y < v.y1; y += 34) { const x = v.x + Math.sin(y * 0.05 + time * 1.5) * 4, s = (y / 34) % 2 ? 1 : -1; ctx.beginPath(); ctx.ellipse(x + s * 9, y, 9, 4, s * 0.5, 0, 6.283); ctx.fill(); } ctx.lineCap = 'butt'; }
   for (const s of L.spores) { if (!vis(s.x)) continue; const x = s.x, y = s.y;
-    ctx.fillStyle = '#3a1a3a'; ctx.beginPath(); ctx.ellipse(x, y + 2, 24, 8, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ff7ad8'; ctx.beginPath(); ctx.ellipse(x, y, 16, 5, 0, 0, 6.283); ctx.fill();
+    const fe = selI('flor-esporas'); if (fe) { const fw = 76, fh = fw * fe.naturalHeight / fe.naturalWidth; ctx.drawImage(fe, x - fw / 2, y + 8 - fh, fw, fh); } else {
+    ctx.fillStyle = '#3a1a3a'; ctx.beginPath(); ctx.ellipse(x, y + 2, 24, 8, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ff7ad8'; ctx.beginPath(); ctx.ellipse(x, y, 16, 5, 0, 0, 6.283); ctx.fill(); }
     ctx.globalCompositeOperation = 'lighter';
     if (s.warn && Math.random() < 0.5) parts.push({ x: x + (Math.random() - 0.5) * 24, y: y - 2, vx: (Math.random() - 0.5) * 30, vy: -60 - Math.random() * 60, life: 0.5, max: 0.5, col: '#ffb0f0', size: 2, grav: 0 });
     if (s.on) { const hh = s.h * (0.9 + 0.1 * Math.sin(time * 30)); const g2 = ctx.createLinearGradient(0, y - hh, 0, y); g2.addColorStop(0, 'rgba(255,120,220,0)'); g2.addColorStop(0.5, 'rgba(255,150,230,.35)'); g2.addColorStop(1, 'rgba(255,220,250,.7)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.lineTo(x - 30, y - hh); ctx.lineTo(x + 30, y - hh); ctx.lineTo(x + 18, y); ctx.closePath(); ctx.fill();
@@ -3780,6 +3781,7 @@ function drawJungleWorld() {          // dentro del mundo (con la cámara): luci
   for (const f of L.flyb) { const x = f.x, y = f.y + (f.got ? 0 : Math.sin(time * 3 + f.x) * 6), a = 0.7 + 0.3 * Math.sin(time * 8 + f.x);
     const g2 = ctx.createRadialGradient(x, y, 0, x, y, f.got ? 30 : 40); g2.addColorStop(0, 'rgba(230,255,120,' + a + ')'); g2.addColorStop(0.3, 'rgba(180,255,80,' + 0.4 * a + ')'); g2.addColorStop(1, 'rgba(120,255,60,0)'); ctx.fillStyle = g2; ctx.fillRect(x - 40, y - 40, 80, 80); ctx.fillStyle = '#ffffe0'; ctx.fillRect(x - 2, y - 2, 4, 4); }
   ctx.globalCompositeOperation = 'source-over';
+  { const lu = selI('luciernaga'); if (lu) for (const f of L.flyb) { if (!vis(f.x)) continue; const y = f.y + (f.got ? 0 : Math.sin(time * 3 + f.x) * 6); f._px = f._px === undefined ? f.x : f._px; const fl = f.x < f._px - 0.5 ? true : f.x > f._px + 0.5 ? false : !!f._fl; f._fl = fl; f._px = f.x; spr(lu, f.x, y, 34, 0.5, 0.5, fl, 0, 1, 1 + 0.06 * Math.sin(time * 30 + f.x)); } }
 }
 let RAIN = []; for (let i = 0; i < 140; i++) RAIN.push({ x: Math.random(), y: Math.random(), v: 0.9 + Math.random() * 0.6 });
 function drawJungleFx() {          // por delante: lluvia tropical con relámpagos
@@ -3796,6 +3798,7 @@ function swampBand(x0, ww, y, dep) {          // ciénaga tóxica: agua verde co
 }
 function drawLily(m, x, y, w) {          // nenúfar que se hunde en la ciénaga
   if (m.st === 3) return; const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0, cx = x + w / 2 + jx, cy = y + 6;
+  { const ni = selI('nenufar'); if (ni) { const nw = w * 1.12, nh = nw * ni.naturalHeight / ni.naturalWidth; ctx.drawImage(ni, cx - nw / 2, y - nh * 0.12, nw, nh); return; } }
   ctx.fillStyle = 'rgba(0,30,20,.35)'; ctx.beginPath(); ctx.ellipse(cx, cy + 6, w * 0.52, 9, 0, 0, 6.283); ctx.fill();
   const g2 = ctx.createRadialGradient(cx - 10, cy - 4, 4, cx, cy, w * 0.55); g2.addColorStop(0, m.st === 1 ? '#c8ff6a' : '#8aea5a'); g2.addColorStop(1, '#2a8a3a'); ctx.fillStyle = g2;
   ctx.beginPath(); ctx.ellipse(cx, cy, w * 0.52, 11, 0, 0.25, 6.03); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#0a3a1a'; ctx.lineWidth = 2; ctx.stroke();
@@ -3805,12 +3808,14 @@ function drawLily(m, x, y, w) {          // nenúfar que se hunde en la ciénaga
 function drawChomp(j) {          // planta carnívora que sale de la ciénaga a morder
   const x = j.x, y = j.y, open = 0.35 + 0.35 * Math.sin(time * 12);
   ctx.strokeStyle = '#2a6a2a'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x, j.by + 30); ctx.quadraticCurveTo(x + 14, (y + j.by) / 2, x, y + 14); ctx.stroke(); ctx.strokeStyle = '#5ac85a'; ctx.lineWidth = 3; ctx.stroke();
+  { const pi2 = selI(open > 0.45 ? 'planta-abierta' : 'planta-cerrada'); if (pi2) { spr(pi2, x, y + 26, 60, 0.5, 1); return; } }
   ctx.save(); ctx.translate(x, y); const top = ctx.createRadialGradient(-6, -10, 3, 0, 0, 26); top.addColorStop(0, '#ff8ae0'); top.addColorStop(1, '#8a1a8a'); ctx.fillStyle = top;
   ctx.beginPath(); ctx.ellipse(0, -4 - open * 10, 24, 15, 0, Math.PI, 0); ctx.fill(); ctx.beginPath(); ctx.ellipse(0, 4 + open * 10, 24, 13, 0, 0, Math.PI); ctx.fill();
   ctx.fillStyle = '#fff6d0'; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(k * 8 - 4, -4 - open * 10); ctx.lineTo(k * 8, 4 - open * 10); ctx.lineTo(k * 8 + 4, -4 - open * 10); ctx.fill(); ctx.beginPath(); ctx.moveTo(k * 8 - 4, 4 + open * 10); ctx.lineTo(k * 8, -4 + open * 10); ctx.lineTo(k * 8 + 4, 4 + open * 10); ctx.fill(); }
   ctx.fillStyle = '#d8ff3a'; ctx.beginPath(); ctx.arc(-8, -14 - open * 10, 4, 0, 6.283); ctx.fill(); ctx.restore();
 }
 function drawPod(ic, x, y, L2) {          // vaina de semillas colgando (en vez de carámbano)
+  { const vi = selI('vaina'); if (vi) { const vh = L2 + 16, vw = vh * vi.naturalWidth / vi.naturalHeight; ctx.drawImage(vi, x - vw / 2, y - 8, vw, vh); return; } }
   ctx.strokeStyle = '#3a7a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); ctx.stroke();
   const g2 = ctx.createLinearGradient(x - 12, 0, x + 12, 0); g2.addColorStop(0, '#5a3a1a'); g2.addColorStop(0.5, '#a8743a'); g2.addColorStop(1, '#5a3a1a'); ctx.fillStyle = g2;
   ctx.beginPath(); ctx.ellipse(x, y + 6 + L2 * 0.42, L2 * 0.22, L2 * 0.42, 0, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#2a1a08'; ctx.lineWidth = 2; ctx.stroke();
@@ -3818,6 +3823,7 @@ function drawPod(ic, x, y, L2) {          // vaina de semillas colgando (en vez 
 }
 function drawMush(pd) {          // seta trampolín gigante
   const k = Math.max(0, 1 - pd.t * 5), cx = pd.x + pd.w / 2, top = pd.y, base = pd.y + T, c = pd.c || 0, col = [['#3a8aff', '90,170,255'], ['#ff4ac8', '255,90,210'], ['#4ae84a', '120,255,120']][c % 3], sq = 1 - k * 0.35, ww = pd.w * 0.62 * (1 + k * 0.25);
+  { const si = selI('seta-trampolin'); if (si) { const sw2 = Math.max(76, pd.w * 1.5) * (1 + k * 0.12), sh2 = sw2 * si.naturalHeight / si.naturalWidth; ctx.save(); ctx.translate(cx, base); ctx.scale(1, sq); ctx.drawImage(si, -sw2 / 2, -sh2 * 0.93, sw2, sh2); ctx.restore(); return; } }
   ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(cx, top + 10, 4, cx, top + 10, 70); gg.addColorStop(0, 'rgba(' + col[1] + ',' + (0.3 + 0.12 * Math.sin(time * 3 + pd.x) + k * 0.4) + ')'); gg.addColorStop(1, 'rgba(' + col[1] + ',0)'); ctx.fillStyle = gg; ctx.fillRect(cx - 70, top - 60, 140, 140); ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = '#e8f0e0'; ctx.fillRect(cx - 9, top + 10, 18, base - top - 10); ctx.strokeStyle = '#2a3a2a'; ctx.lineWidth = 2; ctx.strokeRect(cx - 9, top + 10, 18, base - top - 10);
   ctx.save(); ctx.translate(cx, top + 14); ctx.scale(1, sq); const cg = ctx.createRadialGradient(-10, -16, 4, 0, -6, ww); cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.35, col[0]); cg.addColorStop(1, '#101a3a'); ctx.fillStyle = cg;
@@ -3890,6 +3896,7 @@ function drawStageBack() {          // por detrás de los personajes
     ctx.globalCompositeOperation = 'lighter'; for (const fx of PFX) { const g2 = ctx.createRadialGradient(x + w * fx, y + h, 0, x + w * fx, y + h, w * 0.16); g2.addColorStop(0, 'rgba(255,190,60,.5)'); g2.addColorStop(1, 'rgba(255,190,60,0)'); ctx.fillStyle = g2; ctx.fillRect(x + w * fx - w * 0.16, y + h - 4, w * 0.32, w * 0.18); } ctx.globalCompositeOperation = 'source-over';
     if ((L.theme === 'jungle' && m.fall && L.planks) || m.plank) { if (m.st === 3) continue; const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0; for (let xx = x + 4; xx < x + w - 4; xx += 16) { ctx.fillStyle = m.st === 1 ? '#a86a32' : '#7a4a22'; ctx.fillRect(xx + jx, y + 2, 14, 12); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.strokeRect(xx + jx, y + 2, 14, 12); } continue; }
     if (L.theme === 'jungle' && m.fall) { drawLily(m, x, y, w); continue; }
+    if (m.raft && okI(xi('balsa'))) { const bi = IMG.balsa, bw = w + 12, bh = bw * bi.naturalHeight / bi.naturalWidth; ctx.drawImage(bi, x - 6, y - bh * 0.18, bw, bh); continue; }
     if (m.raft) { ctx.fillStyle = '#6a4220'; for (let k = 0; k < Math.round(w / 18); k++) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x + k * 18, y, 17, 20, 8) : ctx.rect(x + k * 18, y, 17, 20); ctx.fill(); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.stroke(); } ctx.strokeStyle = '#c8a060'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x + w, y + 6); ctx.moveTo(x, y + 14); ctx.lineTo(x + w, y + 14); ctx.stroke(); for (let k = 0; k < 2; k++) parts.push({ x: x + Math.random() * w, y: y + 22, vx: -40 - Math.random() * 40, vy: -20, life: 0.4, max: 0.4, col: '#c8fff0', size: 2, grav: 200 }); continue; }
     if (L.theme === 'lava' || m.fall) { drawRock(m, x, y, w); continue; }
     if (PI && PI.naturalWidth) ctx.drawImage(PI, x, y, w, h); else { ctx.fillStyle = '#2c386e'; ctx.fillRect(x, y, w, 14); } }
@@ -4262,6 +4269,7 @@ function drawTiles() {
     if (L.theme === 'junk') { jkPlat(x, pl.ty * T, w); continue; }
     if (L.theme === 'fort') { ftPlat(x, pl.ty * T, w); continue; }
     if (L.theme === 'jungle') { const yy = pl.ty * T;          // puente de tablas y cuerdas
+      { const bi = selI('puente-tablas'); if (bi) { const iw = bi.naturalWidth, ih = bi.naturalHeight, sy = ih * 0.204, sh = ih * 0.63, sc = 15 / (ih * 0.19), dh = sh * sc, tw = iw * sc, top = yy - (ih * 0.552 - sy) * sc; ctx.save(); ctx.beginPath(); ctx.rect(x, top - 2, w, dh + 4); ctx.clip(); for (let xx = x; xx < x + w; xx += tw - 1) ctx.drawImage(bi, 0, sy, iw, sh, xx, top, tw, dh); ctx.restore(); continue; } }
       ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, yy - 18); ctx.quadraticCurveTo(x + w / 2, yy - 6, x + w, yy - 18); ctx.stroke();
       for (let xx = x + 2; xx < x + w - 4; xx += 16) { ctx.fillStyle = (xx / 16 | 0) % 2 ? '#8a5a2a' : '#7a4a22'; ctx.fillRect(xx, yy, 14, 12); ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 1.5; ctx.strokeRect(xx, yy, 14, 12); ctx.strokeStyle = '#6a4a2a'; ctx.beginPath(); ctx.moveTo(xx + 7, yy); ctx.lineTo(xx + 7, yy - 14); ctx.stroke(); }
       ctx.fillStyle = '#4ac84a'; for (let xx = x + 10; xx < x + w; xx += 37) { ctx.beginPath(); ctx.ellipse(xx, yy + 13, 7, 3, 0.4, 0, 6.283); ctx.fill(); } continue; }
@@ -4490,6 +4498,7 @@ function drawWorld() {
   ctx.globalCompositeOperation = 'lighter';
   for (const s of shots) {
     if (s.mine) { ctx.fillStyle = 'rgba(255,60,90,.4)'; ctx.fillRect(s.x - 18, s.y - 6, 36, 12); ctx.fillStyle = '#ff6a8a'; ctx.fillRect(s.x - 12, s.y - 3, 24, 6); ctx.fillStyle = '#fff'; ctx.fillRect(s.x - 9, s.y - 1, 18, 2); }
+    else if (s.ball && selI('bola-piedra')) spr(IMG['bola-piedra'], s.x, s.y, 40, 0.5, 0.5, false, s.rot || 0);
     else if (s.ball && L.theme === 'jungle') { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const sg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); sg.addColorStop(0, '#b8b8a0'); sg.addColorStop(1, '#4a4a3a'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, 0, 19, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1a1a10'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = '#5aff6a'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 4); ctx.stroke(); ctx.restore(); }
     else if (s.seed && L.theme === 'toy') { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(time * 6); ctx.fillStyle = TOYC[Math.floor(s.x) % 6]; ctx.beginPath(); ctx.arc(0, 0, 13, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 4); ctx.stroke(); ctx.fillStyle = '#ffe0f0'; ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(-22, -7); ctx.lineTo(-22, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(22, -7); ctx.lineTo(22, 7); ctx.fill(); ctx.restore(); }
     else if (s.seed) { ctx.globalCompositeOperation = 'lighter'; const sg = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, 22); sg.addColorStop(0, 'rgba(200,255,120,.9)'); sg.addColorStop(1, 'rgba(80,255,60,0)'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(s.x, s.y, 22, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#6a4a1a'; ctx.beginPath(); ctx.ellipse(s.x, s.y, 9, 12, Math.atan2(s.vy, s.vx), 0, 6.283); ctx.fill(); ctx.fillStyle = '#9aff6a'; ctx.beginPath(); ctx.arc(s.x, s.y - 3, 3, 0, 6.283); ctx.fill(); }
