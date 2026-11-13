@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.25';
+const VERSION = '1.26';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -46,7 +46,12 @@ const SELN = { patrulla: ['enemigo-patrulla-selva', 4, 1.3], dron: ['enemigo-dro
 const SEL_SET = ['suelo-selva', 'plataforma-selva', 'caja-selva', 'seta-0', 'seta-1', 'seta-2', 'luciernaga', 'flor-esporas', 'liana', 'vaina', 'planta-cerrada', 'planta-abierta', 'seta-trampolin', 'nenufar', 'puente-tablas', 'bola-piedra', 'totem-selva', 'balsa', 'fondo-lejos-selva', 'fondo-cerca-selva', 'jefe4', 'jefe4-roto'];
 function preSel() { SEL_SET.forEach(n => xi(n)); for (const k in SELN) xi(SELN[k][0], SELN[k][1]); }
 const selI = n => L && L.theme === 'jungle' && okI(IMG[n]) ? IMG[n] : null;
-const preTheme = t => { if (t === 'ice') preIce(); else if (t === 'lava') preLava(); else if (t === 'jungle') preSel(); };
+// imágenes del océano abisal
+const OCEN = { patrulla: ['enemigo-cangrejo', 4, 159, 547, 60], alien: ['enemigo-pulpo', 4, 153, 589, 62], erizo: ['enemigo-erizo-mar', 4, 78, 639, 58], dron: ['enemigo-pezglobo', 4, 129, 583, 56], torreta: ['enemigo-almeja', 3, 15, 706, 56], medusa: ['enemigo-medusa', 4, 22, 671, 84], tiburon: ['enemigo-tiburon', 4, 184, 526, 72] };
+const OCE_SET = ['fondo-lejos-oceano', 'fondo-cerca-oceano', 'plataforma-oceano', 'caja-oceano', 'alga', 'mina', 'respiradero', 'perla', 'tentaculo', 'jefe5', 'jefe5-roto'];
+function preOce() { OCE_SET.forEach(n => xi(n)); for (const k in OCEN) xi(OCEN[k][0], OCEN[k][1]); }
+const oceI = n => L && L.theme === 'ocean' && okI(IMG[n]) ? IMG[n] : null;
+const preTheme = t => { if (t === 'ice') preIce(); else if (t === 'lava') preLava(); else if (t === 'jungle') preSel(); else if (t === 'ocean') preOce(); };
 function loadImages(done) {
   NAMES.forEach(n => {
     const im = new Image();
@@ -1582,6 +1587,7 @@ function drawOceanBg() {
   if (k > 0.4) for (let i = 0; i < 7; i++) { const x = ((i * 410 - cam.x * 0.05) % (VW + 400) + VW + 400) % (VW + 400) - 200, y = VHv * (0.2 + 0.12 * (i % 4)) + Math.sin(time * 0.8 + i) * 18, r = 30 + (i % 3) * 18, a = (k - 0.4) * 0.45 * (0.6 + 0.4 * Math.sin(time * 2 + i));
     const jg = ctx.createRadialGradient(x, y, 2, x, y, r * 2.4); jg.addColorStop(0, 'rgba(' + (i % 2 ? '255,110,220' : '110,240,255') + ',' + a + ')'); jg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = jg; ctx.fillRect(x - r * 2.4, y - r * 2.4, r * 4.8, r * 4.8); }
   ctx.globalCompositeOperation = 'source-over';
+  { const FA = oceI('fondo-lejos-oceano'), FB = oceI('fondo-cerca-oceano'); if (FA && FB) { bgLayer(FA, Math.max(200, VHv * 0.5), VHv * 0.86 + up * 0.04, 0.08); ctx.fillStyle = 'rgba(2,14,36,' + (0.22 + k * 0.45) + ')'; ctx.fillRect(0, 0, VW, VHv); bgLayer(FB, Math.max(210, VHv * 0.4), VHv + 16 + up * 0.1, 0.2); if (k > 0.3) { ctx.fillStyle = 'rgba(2,10,30,' + (k - 0.3) * 0.5 + ')'; ctx.fillRect(0, 0, VW, VHv); } return; } }
   const layer = (par, base, amp, col, step, seed) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, VHv); for (let x = -40; x <= VW + 40; x += 20) { const wx = x + cam.x * par, y = base - amp * (0.5 + 0.5 * Math.sin(wx * step + seed)) - amp * 0.4 * Math.sin(wx * step * 2.7 + seed * 3); ctx.lineTo(x, y); } ctx.lineTo(VW, VHv); ctx.closePath(); ctx.fill(); };
   layer(0.12, VHv * 0.82 + up * 0.04, VHv * 0.22, seaMix('15607a', '061428', k) , 0.004, 1.3);
   // algas lejanas que se mecen
@@ -1624,16 +1630,17 @@ function seaTile(tx, ty, d) {
   if (ty < L.H - 1 && !isSolid(L.g[ty + 1][tx])) { ctx.fillStyle = 'rgba(0,8,20,.4)'; ctx.fillRect(x, y + T - 4, T, 4); if (seaHash(tx, ty + 7) < 0.5) { ctx.strokeStyle = seaMix('3aa070', '1a4a50', k); ctx.lineWidth = 3; ctx.beginPath(); const sx = x + 10 + seaHash(tx, 1) * 26; ctx.moveTo(sx, y + T); ctx.quadraticCurveTo(sx + Math.sin(time * 1.5 + tx) * 6, y + T + 12, sx + Math.sin(time * 1.5 + tx) * 4, y + T + 22); ctx.stroke(); } }
 }
 function seaPlat(x, y, w) {             // repisa de coral
+  { const pi = oceI('plataforma-oceano'); if (pi) { const ph = w * pi.naturalHeight / pi.naturalWidth; ctx.drawImage(pi, x - 4, y - ph * 0.2, w + 8, ph); return; } }
   const k = L.depth || 0; ctx.fillStyle = seaMix('ff8aa8', '8a3a8a', k); ctx.beginPath(); ctx.moveTo(x + 6, y + 2); ctx.quadraticCurveTo(x + w / 2, y - 6, x + w - 6, y + 2); ctx.quadraticCurveTo(x + w, y + 10, x + w - 10, y + 16); ctx.lineTo(x + 10, y + 16); ctx.quadraticCurveTo(x, y + 10, x + 6, y + 2); ctx.fill();
   ctx.strokeStyle = 'rgba(40,10,40,.7)'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = 'rgba(255,230,240,.55)'; for (let xx = x + 12; xx < x + w - 8; xx += 14) { ctx.beginPath(); ctx.arc(xx, y + 6 + Math.sin(xx) * 2, 2, 0, 6.283); ctx.fill(); }
   ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x + 10, y, w - 20, 2);
 }
 function drawOceanWorld() {
   const vis = x => x > cam.x - 150 && x < cam.x + VW + 150;
-  for (const kp of (L.kelps || [])) { if (!vis(kp.x)) continue; const segs = Math.round(kp.h / 14); ctx.strokeStyle = '#2aa060'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(kp.x, kp.y);
+  for (const kp of (L.kelps || [])) { if (!vis(kp.x)) continue; { const ai = oceI('alga'); if (ai) { const aw = 52, ah = aw * ai.naturalHeight / ai.naturalWidth, sw = Math.sin(time * 1.3 + kp.x * 0.01) * 4; ctx.save(); ctx.beginPath(); ctx.rect(kp.x - aw, kp.y - kp.h, aw * 2, kp.h + 4); ctx.clip(); for (let yy = kp.y; yy > kp.y - kp.h - ah; yy -= ah - 1) ctx.drawImage(ai, kp.x - aw / 2 + sw, yy - ah, aw, ah); ctx.restore(); continue; } } const segs = Math.round(kp.h / 14); ctx.strokeStyle = '#2aa060'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(kp.x, kp.y);
     let px = kp.x, py = kp.y; for (let s = 1; s <= segs; s++) { const f = s / segs; px = kp.x + Math.sin(time * 1.3 + kp.x * 0.01 + f * 3) * 18 * f; py = kp.y - kp.h * f; ctx.lineTo(px, py); } ctx.stroke();
     ctx.fillStyle = '#3ac070'; for (let s = 2; s <= segs; s += 2) { const f = s / segs, lx = kp.x + Math.sin(time * 1.3 + kp.x * 0.01 + f * 3) * 18 * f, ly = kp.y - kp.h * f; ctx.beginPath(); ctx.ellipse(lx + (s % 4 ? 8 : -8), ly, 10, 4, s % 4 ? 0.5 : -0.5, 0, 6.283); ctx.fill(); } }
-  for (const b of (L.bubs || [])) { if (!vis(b.x)) continue; ctx.fillStyle = '#3a2a4a'; ctx.beginPath(); ctx.ellipse(b.x, b.y + 2, 22, 8, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#6a5a8a'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 2, 14, 6, 0, 0, 6.283); ctx.fill();
+  for (const b of (L.bubs || [])) { if (!vis(b.x)) continue; const ri = oceI('respiradero'); if (ri) { const rw = 96, rh = rw * ri.naturalHeight / ri.naturalWidth; ctx.drawImage(ri, b.x - rw / 2, b.y + 8 - rh, rw, rh); } else { ctx.fillStyle = '#3a2a4a'; ctx.beginPath(); ctx.ellipse(b.x, b.y + 2, 22, 8, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#6a5a8a'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 2, 14, 6, 0, 0, 6.283); ctx.fill(); }
     ctx.globalCompositeOperation = 'lighter'; const g2 = ctx.createLinearGradient(0, b.y - b.h, 0, b.y); g2.addColorStop(0, 'rgba(180,240,255,0)'); g2.addColorStop(1, 'rgba(180,240,255,.18)'); ctx.fillStyle = g2; ctx.fillRect(b.x - 24, b.y - b.h, 48, b.h); ctx.globalCompositeOperation = 'source-over'; }
   for (const c of (L.curs || [])) { if (c.x1 < cam.x || c.x0 > cam.x + VW) continue; ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(200,250,255,.22)'; ctx.lineWidth = 2;
     const n = Math.max(4, Math.round((c.x1 - c.x0) * (c.y1 - c.y0) / 26000)), sp = Math.hypot(c.fx, c.fy) * 0.5, ux = c.fx / (Math.hypot(c.fx, c.fy) || 1), uy = c.fy / (Math.hypot(c.fx, c.fy) || 1);
@@ -1642,7 +1649,7 @@ function drawOceanWorld() {
       ctx.globalAlpha = Math.sin(along * Math.PI); ctx.beginPath(); ctx.moveTo(px0, py0); ctx.lineTo(px0 - ux * L2, py0 - uy * L2); ctx.stroke(); }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
   for (const m of (L.mines || [])) { if (!vis(m.x)) continue; ctx.strokeStyle = '#2a3a44'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(m.x, m.y + 16); ctx.lineTo(m.x + Math.sin(time + m.x) * 3, m.anchor); ctx.stroke();
-    if (m.st) continue; const r = 18, blink = Math.sin(time * 6 + m.x) > 0.3;
+    if (m.st) continue; { const mi = oceI('mina'); if (mi) { spr(mi, m.x, m.y + 4, 50, 0.5, 0.5, false, Math.sin(time * 1.2 + m.x) * 0.08); continue; } } const r = 18, blink = Math.sin(time * 6 + m.x) > 0.3;
     const mg = ctx.createRadialGradient(m.x - 6, m.y - 6, 2, m.x, m.y, r); mg.addColorStop(0, '#7a8a96'); mg.addColorStop(1, '#2a3440'); ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(m.x, m.y, r, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#11181e'; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = '#5a6a76'; for (let a = 0; a < 8; a++) { const aa = a * 0.785 + 0.2, sx = m.x + Math.cos(aa) * r, sy = m.y + Math.sin(aa) * r; ctx.beginPath(); ctx.arc(sx + Math.cos(aa) * 4, sy + Math.sin(aa) * 4, 3.4, 0, 6.283); ctx.fill(); ctx.stroke(); }
     ctx.fillStyle = blink ? '#ff3a3a' : '#5a1010'; ctx.beginPath(); ctx.arc(m.x, m.y - 4, 4, 0, 6.283); ctx.fill(); if (blink) { ctx.globalCompositeOperation = 'lighter'; const bg = ctx.createRadialGradient(m.x, m.y - 4, 1, m.x, m.y - 4, 26); bg.addColorStop(0, 'rgba(255,60,60,.6)'); bg.addColorStop(1, 'rgba(255,60,60,0)'); ctx.fillStyle = bg; ctx.fillRect(m.x - 26, m.y - 30, 52, 52); ctx.globalCompositeOperation = 'source-over'; } }
@@ -1655,6 +1662,9 @@ function seaEnemy(e) {
   ctx.save(); ctx.translate(cx, by); if (e.dead && e.how === 'fly') ctx.rotate(e.dead * 8); ctx.scale(1, sq); ctx.globalAlpha = e.dead ? Math.max(0, 1 - e.dead) : 1; ctx.lineJoin = 'round';
   const ol = () => { ctx.strokeStyle = '#140a14'; ctx.lineWidth = 2.5; ctx.stroke(); };
   const eye = (x, y, r) => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ol(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x + f * r * 0.3, y, r * 0.5, 0, 6.283); ctx.fill(); };
+  { const od = OCEN[e.type], oi = od && oceI(od[0]); if (oi) { const fh = 724, hh = od[4] * fh / (od[3] - od[2]), yo = (fh - od[3]) / fh * hh + (e.type === 'medusa' ? 18 : 0);
+      oi._f = e.type === 'torreta' ? (e.shotT > 0 ? 2 : e.near && e.timer < 0.6 ? 1 : 0) : Math.floor(time * (e.type === 'medusa' ? 6 : 9) + e.x * 0.013) % od[1];
+      spr(oi, 0, yo, hh, 0.5, 1, f < 0); ctx.restore(); return true; } }
   if (e.type === 'patrulla') {             // cangrejo
     ctx.strokeStyle = '#8a1a1a'; ctx.lineWidth = 3; for (let i = 0; i < 3; i++) for (const s of [-1, 1]) { const lx = s * (10 + i * 7), ph = Math.sin(t * 2 + i + (s > 0 ? 1.5 : 0)) * 3; ctx.beginPath(); ctx.moveTo(lx * 0.6, -14); ctx.lineTo(lx + s * 4, -8 + ph); ctx.lineTo(lx + s * 7, 0); ctx.stroke(); }
     ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.ellipse(0, -20, 24, 15, 0, 0, 6.283); ctx.fill(); ol(); ctx.fillStyle = 'rgba(255,200,170,.45)'; ctx.beginPath(); ctx.ellipse(-6, -26, 10, 5, -0.3, 0, 6.283); ctx.fill();
@@ -1702,6 +1712,12 @@ function drawKraken(b) {
   const body = cool ? '#7a6a9a' : ph2 ? '#c0304a' : '#a03a7a', dark = cool ? '#4a3a6a' : ph2 ? '#6a1028' : '#5a1a4a';
   ctx.fillStyle = 'rgba(0,0,10,.35)'; ctx.beginPath(); ctx.ellipse(b.x, gy + 2, 120, 14, 0, 0, 6.283); ctx.fill();
   if (dang && b.st !== 'die') { ctx.globalCompositeOperation = 'lighter'; const ag = ctx.createRadialGradient(x, y, 40, x, y, 190); ag.addColorStop(0, 'rgba(255,40,80,0)'); ag.addColorStop(0.7, 'rgba(255,40,80,' + (0.16 + 0.1 * Math.sin(time * 18)) + ')'); ag.addColorStop(1, 'rgba(255,40,80,0)'); ctx.fillStyle = ag; ctx.fillRect(x - 190, y - 190, 380, 380); ctx.globalCompositeOperation = 'source-over'; }
+  const KI = oceI(cool || b.st === 'die' ? 'jefe5-roto' : 'jefe5');
+  if (KI) { const kh = 300, kw = kh * KI.naturalWidth / KI.naturalHeight, ky = y - 135, rot = b.st === 'die' ? (Math.random() - 0.5) * 0.1 : Math.sin(time * 2) * 0.03;
+    const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, ky + kh); ctx.rotate(rot); ctx.scale(1, 1 + 0.02 * Math.sin(time * 3)); ctx.drawImage(src, -kw / 2, -kh, kw, kh); ctx.restore(); };
+    draw(KI, 1); if (ph2 && !cool) { const t2 = tintOf(KI, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.15 + 0.12 * (0.5 + 0.5 * Math.sin(time * 8))); }
+    if (b.flash > 0) { const t3 = tintOf(KI, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); } }
+  else {
   for (let i = 0; i < 8; i++) { const s = i < 4 ? -1 : 1, j = i % 4, bx0 = x + s * (14 + j * 16), by0 = y + 40, sw = cool ? 0.2 : 1, len = 110 + j * 18;
     ctx.strokeStyle = dark; ctx.lineWidth = 26 - j * 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx0, by0);
     const mx = bx0 + s * (30 + j * 22) + Math.sin(time * 2 + i) * 20 * sw, my = by0 + len * 0.55, ex = bx0 + s * (60 + j * 34) + Math.sin(time * 2.6 + i * 1.7) * 30 * sw, ey = Math.min(gy - 6, by0 + len + Math.cos(time * 2 + i) * 14 * sw);
@@ -1713,7 +1729,8 @@ function drawKraken(b) {
   for (const s of [-1, 1]) { const exx = x + s * 32, eyy = y + 2; ctx.fillStyle = '#fff8e0'; ctx.beginPath(); ctx.ellipse(exx, eyy, 22, cool ? 6 : 18, 0, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1a0510'; ctx.lineWidth = 3; ctx.stroke();
     if (!cool) { const px = Math.max(-8, Math.min(8, (P.x - exx) / 60)); ctx.fillStyle = b.st === 'aim' ? '#ff2030' : '#ffb000'; ctx.beginPath(); ctx.ellipse(exx + px, eyy, 9, 14, 0, 0, 6.283); ctx.fill(); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(exx + px, eyy, 3, 11, 0, 0, 6.283); ctx.fill();
       ctx.strokeStyle = '#1a0510'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(exx - s * 24, eyy - 24 + (ph2 ? 6 : 0)); ctx.lineTo(exx + s * 16, eyy - 16 - (ph2 ? 4 : 0)); ctx.stroke(); } }
-  if (b.flash > 0) { ctx.globalAlpha = Math.min(1, b.flash / 0.15) * 0.8; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y - 30, 100, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+  if (!KI && b.flash > 0) { ctx.globalAlpha = Math.min(1, b.flash / 0.15) * 0.8; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y - 30, 100, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
   if (b.st === 'aim') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,40,60,' + (0.25 + 0.25 * Math.sin(time * 30)) + ')'; ctx.fillRect(b.x - 110, gy - 6, 220, 8); ctx.globalCompositeOperation = 'source-over'; }
   if (cool) { ctx.font = '900 26px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let k = 0; k < 3; k++) { const aa = time * 4 + k * 2.094; ctx.fillStyle = '#ffd23c'; ctx.fillText('★', x + Math.cos(aa) * 70, y - 120 + Math.sin(aa) * 12); }
     ctx.font = '800 13px system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! ¡GOLPÉALE!', x, y - 150); ctx.textBaseline = 'alphabetic'; }
@@ -1722,6 +1739,7 @@ function drawTentacle(w) {          // los tentáculos que salen del suelo en el
   const gy = 14 * T;
   if (w.life > 0.5) { ctx.fillStyle = 'rgba(255,90,160,' + (0.3 + 0.3 * Math.sin(time * 30)) + ')'; ctx.beginPath(); ctx.ellipse(w.x, gy, 26, 6, 0, 0, 6.283); ctx.fill(); if (Math.random() < 0.3) parts.push({ x: w.x + (Math.random() - 0.5) * 30, y: gy - 2, vx: 0, vy: -90, life: 0.5, max: 0.5, col: 'rgba(230,250,255,.8)', size: 3, grav: 0, ring: 1 }); return; }
   const hh = 170 * Math.min(1, (0.5 - w.life) * 8); ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'round';
+  { const ti = oceI('tentaculo'); if (ti && hh > 2) { const tw = 60, th = 190; ctx.save(); ctx.beginPath(); ctx.rect(w.x - 80, gy - hh - 10, 160, hh + 16); ctx.clip(); ctx.translate(w.x, gy + 6); ctx.rotate(Math.sin(time * 6 + w.x) * 0.06); ctx.drawImage(ti, -tw / 2, -hh - 6, tw, th); ctx.restore(); ctx.globalCompositeOperation = 'lighter'; return; } }
   ctx.strokeStyle = '#5a1a4a'; ctx.lineWidth = 26; ctx.beginPath(); ctx.moveTo(w.x, gy + 6); ctx.quadraticCurveTo(w.x + Math.sin(time * 8 + w.x) * 20, gy - hh * 0.5, w.x + Math.sin(time * 6 + w.x) * 14, gy - hh); ctx.stroke();
   ctx.strokeStyle = '#c04a8a'; ctx.lineWidth = 18; ctx.stroke(); ctx.fillStyle = '#ffc0d8'; for (let q = 1; q < 6; q++) { ctx.beginPath(); ctx.arc(w.x + Math.sin(time * 7 + q) * 4 + 6, gy - hh * q / 6, 3, 0, 6.283); ctx.fill(); }
   ctx.globalCompositeOperation = 'lighter';
@@ -4363,6 +4381,7 @@ function drawBoxes(x0, x1, y0, y1) {
     } else if (c === 'B' && iceI('caja-hielo')) spr(IMG['caja-hielo'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && lavaI('caja-lava')) spr(IMG['caja-lava'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && selI('caja-selva')) spr(IMG['caja-selva'], cx, cy, 52, 0.5, 0.5);
+    else if (c === 'B' && oceI('caja-oceano')) spr(IMG['caja-oceano'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && L.theme === 'ice') { const x = cx - 23, y = cy - 23, g2 = ctx.createLinearGradient(x, y, x + 46, y + 46); g2.addColorStop(0, 'rgba(230,252,255,.95)'); g2.addColorStop(0.5, 'rgba(120,210,255,.85)'); g2.addColorStop(1, 'rgba(60,150,230,.9)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, 46, 46, 6) : ctx.rect(x, y, 46, 46); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.moveTo(x + 8, y + 30); ctx.lineTo(x + 20, y + 12); ctx.moveTo(x + 26, y + 38); ctx.lineTo(x + 38, y + 20); ctx.stroke(); }
     else spr(IMG[c === 'B' ? 'caja-x' : 'caja-usada'], cx, cy, c === 'B' ? 53 : 54, 0.5, 0.5);
   }
@@ -4506,6 +4525,7 @@ function drawWorld() {
     else if (s.ball && L.theme === 'desert') { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const dg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); dg.addColorStop(0, '#f0c890'); dg.addColorStop(1, '#8a5a30'); ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#3a1a08'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.strokeStyle = 'rgba(70,255,230,.6)'; ctx.beginPath(); ctx.arc(0, 0, 9, 0, 4); ctx.stroke(); ctx.restore(); }
     else if (s.ball && iceI('bola-nieve')) spr(IMG['bola-nieve'], s.x, s.y, 40, 0.5, 0.5, false, s.rot || 0);
     else if (s.ball) { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const bg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.7, '#d8f2ff'); bg.addColorStop(1, '#8cc8ec'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, 19, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#5a9cc8'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = 'rgba(120,180,220,.7)'; ctx.beginPath(); ctx.arc(0, 0, 11, 0.3, 2.2); ctx.stroke(); ctx.restore(); }
+    else if (L.theme === 'ocean' && !s.magma && !s.ball && oceI('perla')) spr(IMG.perla, s.x, s.y, 26, 0.5, 0.5);
     else if (L.theme === 'sky' && !s.magma && !s.ball) { ctx.globalCompositeOperation = 'lighter'; const eg = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, 20); eg.addColorStop(0, 'rgba(255,255,220,1)'); eg.addColorStop(0.4, 'rgba(120,220,255,.8)'); eg.addColorStop(1, 'rgba(80,140,255,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(s.x, s.y, 20, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
     else if (s.magma && L.theme === 'ocean') { ctx.fillStyle = 'rgba(20,10,30,.85)'; ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, 6.283); ctx.fill(); ctx.fillStyle = 'rgba(120,60,160,.6)'; ctx.beginPath(); ctx.arc(s.x - 4, s.y - 4, 5, 0, 6.283); ctx.fill(); if (Math.random() < 0.5) parts.push({ x: s.x, y: s.y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30, life: 0.8, max: 0.8, col: 'rgba(30,10,40,.6)', size: 6 + Math.random() * 6, grav: 0 }); }
     else if (s.magma) { ctx.globalCompositeOperation = 'lighter'; const mg = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, 24); mg.addColorStop(0, 'rgba(255,220,120,.9)'); mg.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(s.x, s.y, 24, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#3a1410'; ctx.beginPath(); ctx.arc(s.x, s.y, 11, 0, 6.283); ctx.fill(); ctx.fillStyle = '#ff9a30'; ctx.beginPath(); ctx.arc(s.x - 2, s.y - 2, 6, 0, 6.283); ctx.fill(); if (Math.random() < 0.6) parts.push({ x: s.x, y: s.y, vx: (Math.random() - 0.5) * 30, vy: -20, life: 0.4, max: 0.4, col: '#ff8a20', size: 3, grav: 0 }); }
