@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.28';
+const VERSION = '1.29';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -544,6 +544,7 @@ function conRun(raw) {
     else { say('>> FULL ACCESS DESACTIVADO', 'r', 22); say('   Vuelve a hacer falta la licencia desde la fase 3-2.', '', 10); tone(500, 120, 0.3, 'square', 0.06); } return; }
   if (cmd === 'LOCK') { PROG = {}; DEV = {}; GOT = {}; PRV = Date.now(); try { localStorage.setItem('tl_rv', String(PRV)); } catch (e) {} CHEAT.unlock = false; saveCheats(); try { localStorage.setItem('tl_prog', '{}'); localStorage.setItem('tl_dev', '{}'); localStorage.setItem('tl_got', '{}'); } catch (e) {} setWorld(0); mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; cloudSave(true);
     say('>> TODOS LOS CANDADOS BLOQUEADOS 🔒', 'r big', 24); say('   El juego vuelve a empezar desde la fase 1-1, como si nunca hubieras jugado.', '', 10); tone(400, 90, 0.5, 'sawtooth', 0.06); return; }
+  if (cmd === 'KIDS' || cmd === 'KID' || cmd === 'NIÑOS') { const on = !KID.on; say(on ? '>> 👶 MODO NIÑOS ACTIVADO' : '>> MODO NIÑOS DESACTIVADO', on ? 'g big' : 'r big', 24); say(on ? '   Todas las fases más fáciles, vidas infinitas y jefes de 2 toques. No puntúa en el ranking. Para quitarlo: pausa › 👶 MODO NIÑOS.' : '   Vuelves a tu partida normal, con tus candados.', '', 10); KID.av = true; kidSave(); setTimeout(() => { closeConsole(); kidToggle('consola'); }, 1600); return; }
   if (cmd === 'ADMIN') { conAdmin(); return; }
   if (/^CD\s*(\.\.|\\)$/.test(cmd)) { CON.dir = ''; say('', '', 0, true); return; }
   if (/^CD\s*\\?\s*LUCAS$/.test(cmd)) { CON.dir = 'LUCAS'; say('', '', 0, true); return; }
@@ -3286,6 +3287,7 @@ function buildLevel() {
     l.gears.forEach((g, i) => { g.i = i; g.old = gs.has(i); });
     o.b.forEach(k => { const [x, y] = k.split(',').map(Number); if (l.g[y] && (l.g[y][x] === '?' || l.g[y][x] === 'I')) l.g[y][x] = l.g[y][x] === 'I' ? ' ' : 'U'; });
     if (o.r && l.rain) l.rain.st = 2; }
+  if (KID.on && !l.custom) kidEase(l);
   l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.icicles = (l.icicles || []).map(c => Object.assign({ x: c.x0, y: c.y0, st: 0, t: 0, vy: 0 }, c)); l.winds = l.winds || []; l.warps = l.warps || []; l.crys = l.crys || []; l.geysers = l.geysers || []; l.cogs = l.cogs || []; l.vines = l.vines || []; l.spores = l.spores || []; l.flyb = l.flyb || []; jungleInit(l); l.keys = l.keys || []; l.pipes = l.pipes || []; l.jumpers = l.jumpers || []; l.guns = l.guns || []; l.sw = 0; if (l.bombs) l.bombs.acc = 0; l.bl = []; if (l.auto) l.auto.x = 0; l.lastCp = null; if (l.bossLvl) bossInit(l);
   return l;
 }
@@ -3340,7 +3342,7 @@ function newPlayer(x, y) {          // en las fases de jefe empiezas (y reaparec
 }
 function spawnEnemies() {
   enemies = L.ents.map(e => {
-    const d = ENEMY[e.type];
+    const d0 = ENEMY[e.type], d = KID.on && L && L.kid && d0 ? Object.assign({}, d0, { speed: d0.speed * 0.7 }) : d0;
     const o = { type: e.type, d, w: d.w, h: d.bh, x: e.tx * T + (T - d.w) / 2, y: (e.ty + 1) * T - d.bh - 0.01, vx: -d.speed, vy: 0, dir: -1, dead: 0, t: Math.random() * 5, timer: 1.5 };
     if (d.fly) { o.x0 = e.x0 * T; o.x1 = e.x1 * T; o.by = e.ty * T; }
     if (d.sea) { o.by = e.ty * T; o.y = o.by; o.bx = o.x; o.amp = (e.amp || 2) * T; o.ph = e.ph || 0; o.x0 = (e.x0 != null ? e.x0 : e.tx - 6) * T; o.x1 = (e.x1 != null ? e.x1 : e.tx + 6) * T; }
@@ -3410,7 +3412,7 @@ function hurt() {
 function die() {
   if (P.dead) return;
   P.dead = true; P.deadT = 0; P.vy = -620; P.vx = 0; P.tTurbo = P.tMagnet = P.tStar = 0; P.shield = false; P.power = null;
-  if (!CHEAT.live) G.lives--; G.deaths++; SFX.die(); shake = 0.25;
+  if (!CHEAT.live && !KID.on) G.lives--; G.deaths++; SFX.die(); shake = 0.25;
 }
 function respawn() {
   const cp = L.lastCp || L.spawn;
@@ -3500,6 +3502,9 @@ function updatePlayer(dt) {
     if (cand !== undefined) hitBlock(cand, ty);
   }
   if (p.y > L.H * T - 10) { const wp = L.warps.find(w => p.x + p.w / 2 > w.x0 && p.x + p.w / 2 < w.x1); if (wp) { burst(p.x + p.w / 2, L.H * T - 40, 26, '#9ff0ff', 260, 0.6, 0, 4); SFX.portal(); p.x = wp.tox - p.w / 2; p.y = wp.toy - p.h - 200; p.vy = 120; p.vx = 0; p.inv = Math.max(p.inv, 1); pop(wp.tox, wp.toy - 140, '¡ZONA SECRETA!', '#9ff0ff'); } }
+  if (KID.on && L.kid && !p.dead) { const fx = Math.floor((p.x + p.w / 2) / T), fy = Math.floor((p.y + p.h + 2) / T);       // modo niños: si se cae por un hueco, vuelve al último suelo firme
+    if (p.onGround && isSolid(tileAt(fx, fy)) && !collide(p)) { p.safeX = p.x; p.safeY = p.y; }
+    if (p.y > L.H * T + 60 && p.safeX != null) { p.x = p.safeX; p.y = p.safeY - 4; p.vx = 0; p.vy = 0; p.inv = Math.max(p.inv, 1.4); burst(p.x + p.w / 2, p.y + p.h / 2, 22, '#ffd23c', 220, 0.6, 0, 3); pop(p.x + p.w / 2, p.y - 30, '¡AÚPA!', '#ffd23c'); SFX.portal(); } }
   if (p.y > L.H * T + 120) die();
   // láser
   if (actPressed && (p.power === 'laser' || CHEAT.laser) && p.cool <= 0 && shots.filter(s => s.mine).length < 3) {
@@ -4591,11 +4596,11 @@ function drawHUD() {
   const w = VW / s;
   ctx.font = '800 20px system-ui,sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
   const txt = (t, x, y, col = '#fff') => { ctx.fillStyle = 'rgba(5,7,26,.85)'; ctx.fillText(t, x + 1.5, y + 1.5); ctx.fillStyle = col; ctx.fillText(t, x, y); };
-  spr(avImg('lucas-quieto') || IMG['lucas-quieto'], pad + 14, 44, 38, 0.5, 1); txt('× ' + (CHEAT.live ? '∞' : Math.max(0, G.lives)), pad + 34, 26, CHEAT.live ? '#7fe9ff' : '#fff');
+  spr(avImg('lucas-quieto') || IMG['lucas-quieto'], pad + 14, 44, 38, 0.5, 1); txt('× ' + (CHEAT.live || KID.on ? '∞' : Math.max(0, G.lives)), pad + 34, 26, CHEAT.live || KID.on ? '#7fe9ff' : '#fff');
   spr(IMG['obj-chip'], pad + 112, 26, 24, 0.5, 0.5); txt(String(G.chips), pad + 130, 26, '#ffe27a');
   for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < G.gears ? 1 : 0.28; spr(IMG['obj-engranaje'], pad + 196 + i * 28, 26, 24, 0.5, 0.5); } ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; txt(String(G.score).padStart(6, '0'), w / 2, 26);
-  ctx.font = '700 12px system-ui,sans-serif'; txt(L.custom ? 'TALLER · ' + L.name : 'PLANETA ' + curId, w / 2, 46, '#9fb4ff');
+  ctx.font = '700 12px system-ui,sans-serif'; txt(L.custom ? 'TALLER · ' + L.name : 'PLANETA ' + curId + (KID.on ? '  ·  👶 MODO NIÑOS' : ''), w / 2, 46, KID.on ? '#ffd23c' : '#9fb4ff');
   { // reloj: se pone rojo y late cuando quedan 30 s
     const tl = Math.ceil(G.tleft), low = tl <= 30, vlow = tl <= 10, tx = Math.min(w - 190, w / 2 + 200), pu = low ? 1 + (vlow ? 0.16 : 0.08) * Math.abs(Math.sin(time * (vlow ? 10 : 5))) : 1, col = low ? '#ff4a5a' : '#fff';
     ctx.save(); ctx.translate(tx, 30); ctx.scale(pu, pu);
@@ -4701,9 +4706,9 @@ function startGame() {
 function togglePause() {
   if (state !== 'play' || CON.on) return;
   paused = !paused;
-  if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button>' + (CHEAT.test && L && !L.custom ? '<button class="btn" id="pEd" style="border-color:#ffd23c">✏️ EDITAR</button>' : '') + '</div>' + (CHEAT.test ? '<div style="margin-top:12px;color:#ffd23c;font:800 12px system-ui;letter-spacing:.08em">🧪 MODO PRUEBAS · TOCA PARA ACTIVAR O QUITAR</div><div class="row" id="pTest" style="max-width:640px">' + CODES.map(c => '<button class="btn' + (CHEAT[c[0].toLowerCase()] ? ' tOn' : '') + '" data-ck="' + c[0].toLowerCase() + '" style="font-size:12px;padding:8px 11px">' + (c[0] === 'UNLOCK' ? '🔓 SALTAR CANDADOS' : c[1]) + '</button>').join('') + '</div><div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(41,230,255,.3);color:#9ff0ff;font:800 12px system-ui;letter-spacing:.08em">🌍 IR AL MAPA DE CADA PLANETA</div><div class="row" id="pWorlds" style="max-width:640px">' + WORLDS.map((w, i) => '<button class="btn" data-gw="' + i + '" style="font-size:12px;padding:8px 11px' + (i === curW ? ';border-color:#ffd23c' : '') + '">PLANETA ' + w.n + '</button>').join('') + '</div><div class="row" style="margin-top:12px"><button class="btn red" id="pTestX" style="font-size:12px;padding:8px 14px">🚪 SALIR DEL MODO PRUEBAS</button></div>' : ''); show('panel', true);
+  if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button>' + (CHEAT.test && L && !L.custom ? '<button class="btn" id="pEd" style="border-color:#ffd23c">✏️ EDITAR</button>' : '') + '</div>' + (kidCan() && L && !L.custom ? '<div class="row" style="margin-top:10px"><button class="btn" id="pKid" style="border-color:' + (KID.on ? '#35ff8a;background:rgba(20,90,50,.9)' : '#ffd23c') + '">👶 MODO NIÑOS: ' + (KID.on ? 'ACTIVADO' : 'DESACTIVADO') + '</button></div>' : '') + (CHEAT.test ? '<div style="margin-top:12px;color:#ffd23c;font:800 12px system-ui;letter-spacing:.08em">🧪 MODO PRUEBAS · TOCA PARA ACTIVAR O QUITAR</div><div class="row" id="pTest" style="max-width:640px">' + CODES.map(c => '<button class="btn' + (CHEAT[c[0].toLowerCase()] ? ' tOn' : '') + '" data-ck="' + c[0].toLowerCase() + '" style="font-size:12px;padding:8px 11px">' + (c[0] === 'UNLOCK' ? '🔓 SALTAR CANDADOS' : c[1]) + '</button>').join('') + '</div><div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(41,230,255,.3);color:#9ff0ff;font:800 12px system-ui;letter-spacing:.08em">🌍 IR AL MAPA DE CADA PLANETA</div><div class="row" id="pWorlds" style="max-width:640px">' + WORLDS.map((w, i) => '<button class="btn" data-gw="' + i + '" style="font-size:12px;padding:8px 11px' + (i === curW ? ';border-color:#ffd23c' : '') + '">PLANETA ' + w.n + '</button>').join('') + '</div><div class="row" style="margin-top:12px"><button class="btn red" id="pTestX" style="font-size:12px;padding:8px 14px">🚪 SALIR DEL MODO PRUEBAS</button></div>' : ''); show('panel', true);
     if (CHEAT.test) { if (!$('tOnSt')) { const s = document.createElement('style'); s.id = 'tOnSt'; s.textContent = '#pTest .btn.tOn{border-color:#35ff8a;background:rgba(20,90,50,.9);box-shadow:0 0 14px rgba(53,255,138,.7)}'; document.head.appendChild(s); }
-      $('card').querySelectorAll('[data-ck]').forEach(b => b.onclick = () => { const k = b.dataset.ck; CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; saveCheats(); b.classList.toggle('tOn', CHEAT[k]); tone(CHEAT[k] ? 1200 : 500, CHEAT[k] ? 1600 : 300, 0.08, 'square', 0.05); }); } $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); if ($('pEd')) $('pEd').onclick = openEditOff; if ($('pTestX')) $('pTestX').onclick = () => { CHEAT.test = false; CODES.forEach(c => CHEAT[c[0].toLowerCase()] = false); CHEAT.floorT = 0; for (const k in EDRAFT) delete EDRAFT[k]; saveCheats(); tone(600, 200, 0.3, 'square', 0.06); paused = false; show('panel', false); togglePause(); pop(P.x + P.w / 2, P.y - 40, 'MODO PRUEBAS DESACTIVADO', '#9ff0ff'); }; $('card').querySelectorAll('[data-gw]').forEach(b => b.onclick = () => { const w = +b.dataset.gw; paused = false; show('panel', false); setWorld(w); mapSel = mapAt = 0; openMap(); SFX.chip(); }); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
+      $('card').querySelectorAll('[data-ck]').forEach(b => b.onclick = () => { const k = b.dataset.ck; CHEAT[k] = !CHEAT[k]; if (k === 'floor') CHEAT.floorT = 0; saveCheats(); b.classList.toggle('tOn', CHEAT[k]); tone(CHEAT[k] ? 1200 : 500, CHEAT[k] ? 1600 : 300, 0.08, 'square', 0.05); }); } $('pc').onclick = togglePause; $('pm').onclick = () => toMap(false); if ($('pKid')) $('pKid').onclick = () => kidToggle('pausa'); if ($('pEd')) $('pEd').onclick = openEditOff; if ($('pTestX')) $('pTestX').onclick = () => { CHEAT.test = false; CODES.forEach(c => CHEAT[c[0].toLowerCase()] = false); CHEAT.floorT = 0; for (const k in EDRAFT) delete EDRAFT[k]; saveCheats(); tone(600, 200, 0.3, 'square', 0.06); paused = false; show('panel', false); togglePause(); pop(P.x + P.w / 2, P.y - 40, 'MODO PRUEBAS DESACTIVADO', '#9ff0ff'); }; $('card').querySelectorAll('[data-gw]').forEach(b => b.onclick = () => { const w = +b.dataset.gw; paused = false; show('panel', false); setWorld(w); mapSel = mapAt = 0; openMap(); SFX.chip(); }); pauseTap = { n: 0, t: 0 }; $('pauseT').addEventListener('pointerup', pauseTapOn); }
   else show('panel', false);
 }
 function cheatsOff() { let any = false; for (const c of CODES) { const k = c[0].toLowerCase(); if (CHEAT[k]) any = true; CHEAT[k] = false; } if (any) saveCheats(); }
@@ -5020,6 +5025,44 @@ let bossBeatBefore = false, warp = null, mapHideLucas = false;
 let PROG = {}, curId = '1-1', mapSel = 0, mapAt = 0, mapL = { x: MAP[0].x, y: MAP[0].y }, mapRoute = [], mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 }, mapUnl = null, mapParts = [], justOpened = -1;
 try { PROG = JSON.parse(localStorage.getItem('tl_prog') || '{}') || {}; const os = +localStorage.getItem('tl_stars_1_1') || 0; if (os && !PROG['1-1']) PROG['1-1'] = { stars: os, best: +localStorage.getItem('tl_best_1_1') || 0 }; } catch (e) { PROG = {}; }
 function saveProg() { try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); } catch (e) {} cloudSave(); }
+// ---------- MODO NIÑOS: progreso aparte (el activo siempre está en tl_prog/tl_got; el del otro modo se guarda en tl_kid)
+let KID = { on: false, av: false, perm: false, prog: {}, got: {}, w: 0, sel: 0, n: null };
+try { Object.assign(KID, JSON.parse(localStorage.getItem('tl_kid') || '{}') || {}); } catch (e) {}
+function kidSave() { try { localStorage.setItem('tl_kid', JSON.stringify(KID)); } catch (e) {} }
+const kidCan = () => KID.av || KID.perm || CHEAT.test;
+function kidSwap(on) {
+  if (!!KID.on === !!on) return;
+  const cur = { prog: PROG, got: GOT, w: curW, sel: mapSel };
+  let nx;
+  if (on) { KID.n = cur; nx = { prog: KID.prog || {}, got: KID.got || {}, w: KID.w || 0, sel: KID.sel || 0 }; }
+  else { KID.prog = cur.prog; KID.got = cur.got; KID.w = cur.w; KID.sel = cur.sel; nx = KID.n || { prog: {}, got: {}, w: 0, sel: 0 }; KID.n = null; }
+  KID.on = !!on; PROG = nx.prog || {}; GOT = nx.got || {};
+  try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {}
+  kidSave(); setWorld(WORLDS[nx.w] ? nx.w : 0); mapSel = mapAt = Math.max(0, Math.min(MAP.length - 1, nx.sel || 0)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; cloudSave(true);
+}
+function kidToggle(src) {          // activa o quita el modo niños y vuelve al mapa en la posición de ese modo
+  const on = !KID.on; KID.av = true; kidSwap(on); tmpOff(); paused = false; show('panel', false); openMap();
+  mapMsg = { txt: on ? '👶 MODO NIÑOS ACTIVADO' : 'MODO NIÑOS DESACTIVADO', t: 3, ok: on }; on ? SFX.power() : tone(600, 200, 0.3, 'square', 0.06);
+}
+// en modo niños las fases son las mismas pero más fáciles
+function kidEase(l) {
+  l.kid = true; l.time = Math.round((l.time || 180) * 1.5); l.bossHp = Math.min(l.bossHp || 6, 2);
+  if (l.ents && l.ents.length > 2) l.ents = l.ents.filter((e, i) => i % 2 === 0);
+  if (l.jumpers && l.jumpers.length > 2) l.jumpers = l.jumpers.filter((e, i) => i % 2 === 0);
+  if (l.chase && l.chase.speed) l.chase.speed *= 0.7; if (l.rise && l.rise.speed) l.rise.speed *= 0.65; if (l.auto && l.auto.speed) l.auto.speed *= 0.8; if (l.bombs && l.bombs.every) l.bombs.every *= 1.7;
+  if (l.vert || (l.movers || []).some(m => m.raft)) return l;
+  const g = l.g, H = l.H, W = l.W, sol = c => c === '#' || c === '?' || c === 'U' || c === 'B' || c === 'C';
+  const surf = x => { if (!sol(g[H - 1][x])) return -1; let y = H - 1; while (y > 0 && sol(g[y - 1][x])) y--; return y; };
+  const keep = x => (l.warps || []).some(w => (x + 0.5) * T > w.x0 - T && (x + 0.5) * T < w.x1 + T) || (l.jumpers || []).some(j => Math.abs(j.x - (x + 0.5) * T) < T * 1.5) || (l.sands || []).some(z => (x + 0.5) * T > z.x0 && (x + 0.5) * T < z.x1);
+  for (let x = 1; x < W - 1; x++) { if (surf(x) >= 0 || surf(x - 1) < 0) continue;
+    let b = x; while (b + 1 < W && surf(b + 1) < 0) b++; if (b + 1 >= W) break;
+    const a = x, w = b - a + 1, top = Math.max(surf(a - 1), surf(b + 1)); x = b;
+    if (w <= 2) continue;
+    const fill = c => { if (keep(c)) return; for (let y = Math.max(1, top); y < H; y++) if (g[y][c] === ' ') g[y][c] = '#'; };
+    if (w <= 6) { const m = a + Math.floor((w - 2) / 2); for (let c = a; c <= b; c++) if (c < m || c > m + 1) fill(c); }
+    else for (let c = a; c <= b; c++) if ((c - a) % 4 >= 2 && b - c >= 1) fill(c); }
+  return l;
+}
 const mapPrev = i => MAP[i].prev !== undefined ? MAP[i].prev : i - 1;
 let DEV = {}; try { DEV = JSON.parse(localStorage.getItem('tl_dev') || '{}') || {}; } catch (e) { DEV = {}; }
 const isBuilt = n => n.built === true || (DEV[n.id] === 1 && typeof LEVELS[n.id] === 'function');
@@ -5539,7 +5582,7 @@ async function admOp(op, d) {
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
-  const tabs = ['PAGOS', 'AVATARES', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
+  const tabs = ['PAGOS', 'AVATARES', 'NIÑOS', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
   $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · COSMOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
@@ -5599,6 +5642,13 @@ function admPaint() {
       $('pgA').querySelectorAll('[data-pok],[data-pno]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } const x = l[+(b.dataset.pok || b.dataset.pno)], ok = b.dataset.pok !== undefined;
         try { paint(await admOp(ok ? 'licOk' : 'licNo', { email: x.email })); admMsg(ok ? '✔ Licencia de ' + x.nombre + ' activada' : '✖ Pago de ' + x.nombre + ' rechazado: se le bloquean las fases desde la 3-2'); } catch (e) { admMsg(e.message, 1); } }); };
     admOp('licList').then(paint).catch(e => admMsg(e.message, 1));
+  } else if (admTab === 'NIÑOS') {
+    B.innerHTML = '<h3>👶 MODO NIÑOS · CÓDIGO PERMANENTE</h3><div style="color:#8ea3e6">Pásale este código a quien quieras. Lo mete en <b>TALLER › 🔑 CANJEAR CÓDIGO</b> y se le activa el modo niños para siempre: luego lo pone o lo quita en <b>PAUSA › 👶 MODO NIÑOS</b>.<br>Mismas fases pero más fáciles (menos enemigos, huecos más estrechos, jefes de 2 toques, vidas infinitas y más tiempo). No puntúa en el ranking y cada modo guarda su propio avance.<br>También se activa escribiendo <b>KIDS</b> en la consola.</div><div id="kidC" style="font:900 34px system-ui;letter-spacing:.3em;color:#ffd23c;margin:14px 0">…</div><div class="arow"><button class="btn" id="kidCp">COPIAR</button><button class="btn" id="kidNw">GENERAR OTRO CÓDIGO</button></div><div style="color:#8ea3e6;font-size:12px;margin-top:6px">Si generas otro, el anterior deja de servir para nuevos canjes (quien ya lo metió lo conserva).</div><div class="arow" style="margin-top:12px"><button class="btn' + (KID.on ? ' on' : '') + '" id="kidMe">' + (KID.on ? 'MODO NIÑOS ACTIVADO EN ESTE DISPOSITIVO ✔' : 'ACTIVAR MODO NIÑOS EN ESTE DISPOSITIVO') + '</button></div>';
+    const paintK = r => { if (r && r.code) $('kidC').textContent = r.code; };
+    admOp('kidCode', {}).then(paintK).catch(e => admMsg(e.message || String(e), 1));
+    $('kidCp').onclick = () => { try { navigator.clipboard.writeText($('kidC').textContent); admMsg('✔ Copiado'); } catch (e) {} };
+    $('kidNw').onclick = () => { if ($('kidNw').dataset.ok !== '1') { $('kidNw').dataset.ok = '1'; $('kidNw').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } admOp('kidNew', {}).then(r => { paintK(r); admMsg('✔ Código nuevo generado'); $('kidNw').textContent = 'GENERAR OTRO CÓDIGO'; $('kidNw').dataset.ok = ''; }).catch(e => admMsg(e.message || String(e), 1)); };
+    $('kidMe').onclick = () => { KID.perm = true; KID.av = true; kidSave(); closeAdmin(); kidToggle('admin'); };
   } else if (admTab === 'AVATARES') { admAvatares(B);
   } else if (admTab === 'RANKING') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="rkA"></div>';
@@ -5762,6 +5812,7 @@ function tlAskCode() {
   c.innerHTML = '<h2>🔑 CANJEAR CÓDIGO</h2><div style="color:#cfe0ff;margin:6px 0">Escribe el código de 6 letras y números que te han pasado.<br><span style="color:#8ea3e6;font-size:13px">Sirve para pantallas de otros jugadores, códigos de fase y tu avatar personalizado.</span></div><input id="tlC" maxlength="6" style="font:900 26px system-ui;letter-spacing:.3em;text-transform:uppercase;width:220px;text-align:center;padding:8px;border-radius:10px;border:2px solid #29e6ff;background:#020a1e;color:#fff"><div id="tlM" style="min-height:1.4em;color:#ffd23c;margin-top:6px"></div><div class="row"><button class="btn" id="tlG">CANJEAR</button><button class="btn" id="tlB2">VOLVER</button></div>';
   show('panel', true); $('tlB2').onclick = () => openTaller(); setTimeout(() => $('tlC').focus(), 100);
   $('tlG').onclick = async () => { const code = $('tlC').value.trim().toUpperCase(); if (code.length !== 6) { $('tlM').textContent = 'El código tiene 6 caracteres'; return; } $('tlM').textContent = 'Buscando…';
+    const kc = await api({ a: 'kidCheck', c: code }); if (kc.ok && kc.kid) { $('tlM').textContent = ''; KID.perm = true; KID.av = true; kidSave(); cloudSave(true); SFX.win(); uiDialog({ icon: '👶', tone: 'gold', title: '¡MODO NIÑOS DESBLOQUEADO!', html: 'Ya puedes jugar en <b>modo niños</b>: las mismas fases pero más fáciles, con vidas infinitas y jefes de 2 toques.<br><br>Para activarlo o quitarlo, entra en cualquier fase, pulsa <b>PAUSA</b> y toca <b>👶 MODO NIÑOS</b>.<br><br>Cada modo guarda su propio avance.' }); return; }
     const lk = await api({ a: 'nivLlave', c: code, ids: ALLN().map(n => n.id) }); if (lk.ok && lk.id) { const nd = ALLN().find(n => n.id === lk.id); $('tlM').textContent = ''; if (nd && await uiConfirm('🔓 CÓDIGO DE NIVEL', 'Tu partida se ajustará a la fase <b>' + lvlName(nd) + '</b>:<br>todas las anteriores quedarán abiertas (conservas tus estrellas) y desde ahí en adelante, con candado.', 'AJUSTAR', 'CANCELAR')) unlockTo(lk.id); return; }
     const av = await api({ a: 'avGet', c: code }); if (av.ok && av.av) { $('tlM').textContent = ''; if (avInstall(av.av)) { SFX.win(); uiDialog({ icon: '🧑‍🚀', tone: 'gold', title: '¡TU AVATAR YA ESTÁ AQUÍ!', html: 'Tu personaje <b>' + esc(av.av.n || '') + '</b> ya está activado. 🚀<br><br>A partir de ahora juegas con tu propio avatar. Puedes volver a Lucas cuando quieras desde <b>⚙️ AJUSTES › SKIN · AVATAR</b>.', buttons: [{ t: '¡A JUGAR!', cls: 'ok', v: 1 }] }); } else $('tlM').textContent = '✖ No se ha podido guardar el avatar en este dispositivo'; return; }
     if (ACC) { const r = await api({ a: 'nivCopiar', ses: ACC.ses, c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en tu taller con el código ' + r.c); }
@@ -5949,7 +6000,7 @@ const who = () => ({ id: PID, ses: ACC && ACC.ses || '' });
 /* ---------- ranking: suma de tus mejores puntuaciones de cada fase conseguidas SIN trucos ---------- */
 const cheatOn = () => CODES.some(c => CHEAT[c[0].toLowerCase()]) || TMPON.length > 0;
 let rankT = null;
-function rankSend() { clearTimeout(rankT); rankT = setTimeout(() => { let p = 0, f = 0, e = 0; for (const k in PROG) { p += PROG[k].rb || 0; if (PROG[k].rb) f++; e += PROG[k].stars || 0; } if (p <= 0) return;
+function rankSend() { if (KID.on) return; clearTimeout(rankT); rankT = setTimeout(() => { let p = 0, f = 0, e = 0; for (const k in PROG) { p += PROG[k].rb || 0; if (PROG[k].rb) f++; e += PROG[k].stars || 0; } if (p <= 0) return;
   let nick = ''; try { nick = localStorage.getItem('tl_nick') || ''; } catch (x) {} api(Object.assign({ a: 'puntos', puntos: p, fases: f, estrellas: e, nombre: nick }, who())); }, 1500); }
 async function showRanking() {
   const c = $('card'); c.classList.add('tips'); c.innerHTML = '<h2>🏆 RANKING</h2><div class="tbody" id="rkB" style="text-align:center">Cargando…</div><div class="row"><button class="btn" id="rkX">CERRAR</button></div>'; show('panel', true); $('rkX').onclick = () => show('panel', false);
@@ -6059,6 +6110,11 @@ function unlockTo(id) {     // código de nivel: ajusta la partida a esa fase. H
   mapUnl = { i: mapSel, t: 0, snd: false }; SFX.life(); mapMsg = { txt: '🔓 PARTIDA AJUSTADA A ' + lvlName(all[k]), t: 3.5, ok: true }; return true;
 }
 function mergeProg(cloud) {
+  if (KID.on) { const ks = { w: curW, sel: mapSel }; kidSwap(false); mergeProg0(cloud); kidSwap(true); return; }
+  mergeProg0(cloud);
+}
+function mergeProg0(cloud) {
+  try { const ck = cloud && cloud.kid; if (ck) { if (ck.perm) KID.perm = true; if (ck.av) KID.av = true; KID.prog = KID.prog || {}; for (const id in (ck.prog || {})) if (!KID.prog[id]) KID.prog[id] = ck.prog[id]; if (ck.got && !Object.keys(KID.got || {}).length) KID.got = ck.got; kidSave(); } } catch (e) {}
   try { avCloud(cloud); } catch (e) {}      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor (salvo que en la nube se haya reiniciado)
   const cp = (cloud && cloud.prog) || {}, cg = (cloud && cloud.got) || {};
   if (cloud && (+cloud.rv || 0) > PRV) { PRV = +cloud.rv; PROG = {}; GOT = {}; DEV = {}; try { localStorage.setItem('tl_rv', String(PRV)); localStorage.setItem('tl_dev', '{}'); } catch (e) {} if (typeof cloud.w === 'number' && WORLDS[cloud.w]) setWorld(cloud.w); else setWorld(0); }
@@ -6081,7 +6137,7 @@ function showAccount() {
 let cloudT = 0;
 function cloudSave(now) {
   if (!ACC) return; clearTimeout(cloudT);
-  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: PROG, got: GOT, w: curW, rv: PRV, dev: DEV, avc: AVS.list.map(x => x.c), avs: AVS.sel, avx: AVS.del || [] } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
+  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: KID.on && KID.n ? KID.n.prog : PROG, got: KID.on && KID.n ? KID.n.got : GOT, w: KID.on && KID.n ? KID.n.w : curW, kid: { prog: KID.on ? PROG : KID.prog, got: KID.on ? GOT : KID.got, perm: KID.perm, av: KID.av }, rv: PRV, dev: DEV, avc: AVS.list.map(x => x.c), avs: AVS.sel, avx: AVS.del || [] } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
 }
 /* ======================= VENTANAS DEL JUEGO (sustituyen a los avisos nativos del navegador) ======================= */
 (() => { const st = document.createElement('style'); st.textContent = `
