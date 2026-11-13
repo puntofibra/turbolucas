@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.20';
+const VERSION = '1.22';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5213,9 +5213,10 @@ async function checkUpdates() {
 }
 async function openCfg() {
   const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', x: 0, html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '📖 CÓMO SE JUEGA', cls: 'ok', v: 'tuto' }, { t: '🧑‍🚀 SKIN · AVATAR', cls: 'ok', v: 'skin' }, { t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []) });
+  if (v === 'tuto' || v === 'skin' || v === 'upd' || v === 'tp') NAV.push(openCfg);
   if (v === 'tuto') showTuto(); else if (v === 'skin') avPicker(); else if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); if (sndOn) SFX.chip(); openCfg(); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
 }
-tapBind($('btnCfg'), openCfg);
+tapBind($('btnCfg'), () => { NAV = []; openCfg(); });
 // posición de los botones táctiles (rueda ⚙ arriba): izquierda y derecha, bajos / medios / altos, se guarda en el dispositivo
 const TP_LV = [0, 13, 26];       // cuánto se suben (en % de la altura de la pantalla)
 let TPOS = { l: 0, r: 0 }; try { TPOS = Object.assign(TPOS, JSON.parse(localStorage.getItem('tl_tpos') || '{}')); } catch (e) {}
@@ -6044,6 +6045,13 @@ function cloudSave(now) {
 @keyframes uiPop{from{transform:scale(.82) translateY(20px);opacity:0}to{transform:none;opacity:1}}`; document.head.appendChild(st);
   const d = document.createElement('div'); d.id = 'uidlg'; d.className = 'uiw'; document.body.appendChild(d); })();
 // muestra una ventana con botones; devuelve una promesa con el botón pulsado (o el texto escrito si hay campo)
+// iconos dibujados (no dependen de las fuentes del dispositivo: en algunos, como la pantalla del Tesla, los símbolos ✕ salían rotos)
+const SVG_X = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="#fff" stroke-width="3.2" stroke-linecap="round" fill="none"/></svg>';
+const SVG_BACK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 12H6M12 5L5 12L12 19" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+// submenús: al entrar en uno se guarda de dónde venías y sale una flecha para volver atrás (además de la ✕ que lo cierra todo)
+let NAV = [];
+const navOpen = () => ($('uidlg') && $('uidlg').classList.contains('on')) || ($('tuto') && $('tuto').classList.contains('on'));
+function navBack() { const f = NAV.pop(); if (f) f(); }
 const UI_CLOSE = /^(CERRAR|VOLVER|◀ VOLVER)$/, UI_CANCEL = /^(CANCELAR|AHORA NO|LUEGO|NO)$/;
 function uiDialog(o) {
   if (o.x === undefined && o.buttons && o.buttons.length) {          // todas las ventanas llevan ✕ arriba a la derecha; los botones CERRAR/VOLVER se quitan (la ✕ hace lo mismo)
@@ -6052,15 +6060,15 @@ function uiDialog(o) {
     else { const k = o.buttons.find(b => UI_CANCEL.test(lab(b))); o = Object.assign({}, o, { x: k ? k.v : o.buttons.length === 1 ? o.buttons[0].v : null }); }
   }
   return new Promise(res => { const d = $('uidlg'); try { SFX.chip(); } catch (e) {}
-    d.innerHTML = '<div class="ucard ' + (o.tone || '') + '">' + (o.x !== undefined ? '<button class="btn ux" id="uiX" aria-label="Cerrar">✕</button>' : '') + (o.icon ? '<div class="uic">' + o.icon + '</div>' : '') + (o.title ? '<h2>' + o.title + '</h2>' : '') + (o.html ? '<div class="utx">' + o.html + '</div>' : '') +
+    d.innerHTML = '<div class="ucard ' + (o.tone || '') + '">' + (o.x !== undefined || NAV.length ? '<div class="xbar" id="uiXB">' + (NAV.length ? '<button class="btn ux uxb" id="uiB" aria-label="Volver">' + SVG_BACK + '</button>' : '') + (o.x !== undefined ? '<button class="btn ux" id="uiX" aria-label="Cerrar">' + SVG_X + '</button>' : '') + '</div>' : '') + (o.icon ? '<div class="uic">' + o.icon + '</div>' : '') + (o.title ? '<h2>' + o.title + '</h2>' : '') + (o.html ? '<div class="utx">' + o.html + '</div>' : '') +
       (o.input !== undefined ? '<input id="uiIn" maxlength="' + (o.max || 40) + '" value="' + esc(o.input) + '">' : '') +
       (o.buttons.length ? '<div class="urow">' : '<div class="urow" style="display:none">') + o.buttons.map((b, i) => '<button class="btn ' + (b.cls || '') + '" data-ui="' + i + '">' + b.t + '</button>').join('') + '</div>' + (o.foot ? '<div class="usmall">' + o.foot + '</div>' : '') + '</div>';
     d.className = 'uiw on' + (o.wrap ? ' ' + o.wrap : ''); const inp = $('uiIn'); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
-    const done = v => { d.className = 'uiw'; d.innerHTML = ''; res(v); };
+    const done = v => { d.className = 'uiw'; d.innerHTML = ''; res(v); setTimeout(() => { if (!navOpen()) NAV = []; }, 500); };
     d.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { const bt = o.buttons[+b.dataset.ui]; if (bt.fn) { bt.fn(); return; } done(inp ? (bt.v ? inp.value : null) : bt.v); });
     if (inp) inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
-    if ($('uiX')) xFix($('uiX'), d.querySelector('.ucard'));
-    if (o.x !== undefined && $('uiX')) $('uiX').onclick = () => { const bt = o.buttons.find(b => b.v === o.x && b.fn); if (bt) bt.fn(); else done(o.x); };
+    if ($('uiXB')) xFix($('uiXB'), d.querySelector('.ucard')); if ($('uiB')) { $('uiB').onclick = () => { d.className = 'uiw'; d.innerHTML = ''; res(undefined); navBack(); }; }
+    if (o.x !== undefined && $('uiX')) $('uiX').onclick = () => { NAV = []; const bt = o.buttons.find(b => b.v === o.x && b.fn); if (bt) bt.fn(); else done(o.x); };
   });
 }
 const uiAlert = (title, html, icon) => uiDialog({ title, html, icon, buttons: [{ t: 'ENTENDIDO', cls: 'ok', v: true }] });
@@ -6124,32 +6132,38 @@ function tuGo(d) { const n = tuI + d; if (n < 0) return; if (n >= TUTO.length) r
 function tuClose() { const ov = $('tuto'); if (ov) ov.classList.remove('on'); }
 function tuPaint() {
   const s = TUTO[tuI], last = tuI === TUTO.length - 1, ov = $('tuto');
-  ov.innerHTML = '<div class="tucard"><div class="tuhead"><b>📖 CÓMO SE JUEGA</b><span>' + (tuI + 1) + ' / ' + TUTO.length + '</span><button class="btn" id="tuX">✕</button></div>' +
+  ov.innerHTML = '<div class="tucard"><div class="tuhead"><b>📖 CÓMO SE JUEGA</b><span>' + (tuI + 1) + ' / ' + TUTO.length + '</span>' + (NAV.length ? '<button class="btn" id="tuB" aria-label="Volver">' + SVG_BACK + '</button>' : '') + '<button class="btn" id="tuX" aria-label="Cerrar">' + SVG_X + '</button></div>' +
     '<div class="tubody' + (s.dev ? ' dev' : '') + (s.big ? ' big' : '') + '">' + (s.img ? '<div class="tuimg"><img src="' + s.img + '" alt=""></div>' : s.diag ? tuDiag() : '') + '<div class="tutxt"><h2>' + s.t + '</h2><div>' + s.h + '</div></div></div>' +
     '<div class="tufoot"><button class="btn" id="tuP"' + (tuI ? '' : ' disabled') + '>◀ ANTERIOR</button><div class="tudots">' + TUTO.map((_, i) => '<i class="' + (i === tuI ? 'on' : '') + '" data-tu="' + i + '"></i>').join('') + '</div><button class="btn ok" id="tuN">' + (last ? '✔ ¡A JUGAR!' : 'SIGUIENTE ▶') + '</button></div></div>';
-  $('tuX').onclick = tuClose; $('tuP').onclick = () => tuGo(-1); $('tuN').onclick = () => tuGo(1);
+  $('tuX').onclick = () => { NAV = []; tuClose(); }; if ($('tuB')) $('tuB').onclick = () => { tuClose(); navBack(); }; $('tuP').onclick = () => tuGo(-1); $('tuN').onclick = () => tuGo(1);
   ov.querySelectorAll('[data-tu]').forEach(d => d.onclick = () => { tuI = +d.dataset.tu; tuPaint(); });
 }
 // los menús del panel (taller, cuenta, ranking…) también: el botón VOLVER/CERRAR se cambia por una ✕ arriba a la derecha
 function xify(box) { if (!box) return; const bs = [...box.querySelectorAll('button')].filter(b => !b.classList.contains('cxk') && UI_CLOSE.test(b.textContent.trim().toUpperCase()) && b.style.display !== 'none'); if (!bs.length) return;
-  const old = box.querySelector(':scope > .cx'); if (old) old.remove(); const tgt = bs[0]; bs.forEach(b => { b.style.display = 'none'; b.classList.add('cxk'); });
-  const x = document.createElement('button'); x.className = 'btn cx'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '✕'; x.onclick = e => { e.stopPropagation(); tgt.click(); }; box.prepend(x); xFix(x, box); }
+  box.querySelectorAll(':scope > .cx').forEach(o => o.remove()); const tgt = bs[0]; bs.forEach(b => { b.style.display = 'none'; b.classList.add('cxk'); });
+  const sub = SUBBACK.has(tgt.id), bar = document.createElement('div'); bar.className = 'xbar cx'; const x = document.createElement('button'); x.className = 'btn ux'; x.setAttribute('aria-label', 'Cerrar'); x.innerHTML = SVG_X;
+  x.onclick = e => { e.stopPropagation(); if (sub) show('panel', false); else tgt.click(); };
+  if (sub) { const k = document.createElement('button'); k.className = 'btn ux uxb'; k.setAttribute('aria-label', 'Volver'); k.innerHTML = SVG_BACK; k.onclick = e => { e.stopPropagation(); tgt.click(); }; bar.appendChild(k); }
+  bar.appendChild(x); box.prepend(bar); xFix(bar, box); }
+const SUBBACK = new Set(['tpX', 'tlB2']);      // pantallas que salen desde otro menú (vuelven al taller)
 function xFix(x, box) { try { const cs = getComputedStyle(box), g = 10; x.style.marginTop = x.style.top = (g - parseFloat(cs.paddingTop)) + 'px'; x.style.marginRight = (g - parseFloat(cs.paddingRight)) + 'px'; } catch (e) {} }      // la ✕ queda a la misma distancia del borde por arriba y por la derecha
 ['card', 'adm'].forEach(id => { const el = $(id); if (!el) return; let q = 0; new MutationObserver(() => { if (q) return; q = 1; requestAnimationFrame(() => { q = 0; xify(id === 'adm' ? el.querySelector('.abody') : el); }); }).observe(el, { childList: true, subtree: true }); });
 (() => { const st = document.createElement('style'); st.textContent = `
-#card{position:relative}#card>.cx,.abody>.cx{position:sticky;top:0;float:right;align-self:flex-end;margin:-8px -12px -36px auto;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:3}
-.abody{position:relative}#card:has(>.cx) h2{padding:0 38px}
+#card{position:relative}#card>.cx,.abody>.cx{}
+.abody{position:relative}#card:has(>.cx) h2{padding:0 44px}#card:has(.uxb) h2{padding:0 88px}
 #uidlg .ucard *,#card,#card *,.tutxt *,.tubody *{touch-action:pan-y}
-.ucard .ux,#card>.cx,.abody>.cx,.tuhead #tuX,#btnExit{border-radius:11px!important;border:2px solid #ff4a6a!important;box-shadow:0 0 10px rgba(255,74,106,.5),inset 0 0 8px rgba(255,74,106,.18)!important;color:#fff!important;background:rgba(40,8,20,.85)!important}
+.xbar{position:sticky;top:0;float:right;align-self:flex-end;display:flex;gap:8px;margin:-12px -14px -36px auto;z-index:3}
+.xbar .ux{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;line-height:1}
+.ux,.tuhead #tuX,.tuhead #tuB,#btnExit{border-radius:11px!important;border:2px solid #ff4a6a!important;box-shadow:0 0 10px rgba(255,74,106,.5),inset 0 0 8px rgba(255,74,106,.18)!important;color:#fff!important;background:rgba(40,8,20,.85)!important}
 #panel #card{max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #panel #card.tips{overflow:hidden}
 .uiw .ucard{max-height:92dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.ucard .ux{position:sticky;top:0;float:right;align-self:flex-end;margin:-12px -14px -36px auto;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:2}
-.ucard:has(.ux) h2{padding:0 34px}
+
+.ucard:has(.xbar) h2{padding:0 44px}.ucard:has(.uxb) h2{padding:0 88px}
 #tuto{position:fixed;inset:0;z-index:58;display:none;align-items:center;justify-content:center;padding:10px;background:radial-gradient(ellipse at 50% 30%,rgba(10,30,80,.92),rgba(1,3,12,.97));backdrop-filter:blur(4px);font-family:system-ui,sans-serif}
 #tuto.on{display:flex}
 .tucard{width:min(98vw,1060px);max-height:96vh;display:flex;flex-direction:column;border:2px solid #29e6ff;border-radius:20px;background:linear-gradient(160deg,#0b1640,#050a22);box-shadow:0 0 40px rgba(41,230,255,.35),inset 0 0 30px rgba(41,230,255,.08);padding:12px 16px;color:#cfe0ff}
-.tuhead{display:flex;align-items:center;gap:12px}.tuhead b{color:#29e6ff;letter-spacing:.12em;font-size:14px;text-shadow:0 0 10px rgba(41,230,255,.7)}.tuhead span{margin-left:auto;color:#8ea3e6;font:700 13px system-ui}.tuhead .btn{width:36px;height:36px;padding:0;border-radius:50%;margin-right:-4px}
+.tuhead{display:flex;align-items:center;gap:12px}.tuhead b{color:#29e6ff;letter-spacing:.12em;font-size:14px;text-shadow:0 0 10px rgba(41,230,255,.7)}.tuhead span{margin-left:auto;color:#8ea3e6;font:700 13px system-ui}.tuhead .btn{width:36px;height:36px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center}.tuhead #tuX{margin-right:-4px}
 .tubody{display:flex;gap:18px;align-items:stretch;flex:1;min-height:0;margin:8px 0;overflow:hidden}.tuimg{align-self:center}.tutxt{overflow-y:auto;max-height:calc(96vh - 120px);align-self:center;padding-right:4px;scrollbar-width:thin;touch-action:pan-y}
 .tuimg{flex:1.35;min-width:0;display:flex;justify-content:center}.tuimg img{width:100%;max-height:62vh;object-fit:contain;border-radius:14px;border:2px solid rgba(41,230,255,.5);box-shadow:0 0 22px rgba(41,230,255,.3)}
 .tubody.dev .tuimg img,.tubody.big .tuimg img{border:none;box-shadow:none;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6))}.tubody.big .tuimg img{max-height:52vh;width:auto}
@@ -6252,9 +6266,9 @@ async function avPicker() {
   const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', '1 · LUCAS', !AVS.sel) + avAll().map((a, i) => card(a.c, a.p['lucas-quieto'], (i + 2) + ' · ' + (a.n || 'AVATAR'), AVS.sel === a.c, a.serie)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
   const dlg = uiDialog({ title: 'SKIN · AVATAR', html: html(), x: 0, buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
   const bind = () => $('uidlg').querySelectorAll('[data-av]').forEach(b => b.onclick = () => { const id = b.dataset.av; tone(900, 900, 0.04, 'square', 0.05);
-    if (id === '+') { $('uidlg').querySelector('.ok') && $('uidlg').querySelector('.ok').click(); setTimeout(avBuy, 150); return; }
+    if (id === '+') { const nv = NAV.slice(); $('uidlg').querySelector('.ok') && $('uidlg').querySelector('.ok').click(); setTimeout(() => { NAV = nv.concat([avPicker]); avBuy(); }, 150); return; }
     AVS.sel = id; avSave(); avLoadImgs(); if (ACC) cloudSave(true); const box = $('uidlg').querySelector('.avg'); if (box) { box.outerHTML = html().replace(/^.*?(<div class="avg">)/, '$1'); bind(); bindDel(); } });
-  const bindDel = () => $('uidlg').querySelectorAll('[data-avx]').forEach(b => b.onclick = e => { e.stopPropagation(); const c = b.dataset.avx; const okb = $('uidlg').querySelector('.ok'); if (okb) okb.click(); setTimeout(() => avDelete(c), 150); });
+  const bindDel = () => $('uidlg').querySelectorAll('[data-avx]').forEach(b => b.onclick = e => { e.stopPropagation(); const c = b.dataset.avx; const nv = NAV.slice(); const okb = $('uidlg').querySelector('.ok'); if (okb) okb.click(); setTimeout(() => { NAV = nv; avDelete(c); }, 150); });
   setTimeout(() => { bind(); bindDel(); }, 30); await dlg;
 }
 async function avDelete(c) {
@@ -6447,9 +6461,9 @@ window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { 
 #byeOv img{width:min(70vw,460px);filter:drop-shadow(0 0 16px rgba(53,255,138,.45))}
 #byeOv h2{margin:0;color:#35ff8a;letter-spacing:.12em;text-shadow:0 0 12px #35ff8a}`;
   document.head.appendChild(st);
-  const b = document.createElement('button'); b.id = 'btnExit'; b.className = 'btn'; b.textContent = '✕'; b.title = 'Salir del juego'; document.body.appendChild(b);
+  const b = document.createElement('button'); b.id = 'btnExit'; b.className = 'btn'; b.innerHTML = SVG_X; b.title = 'Salir del juego'; document.body.appendChild(b);
   const bye = document.createElement('div'); bye.id = 'byeOv';
-  const logo = document.querySelector('#title .logo'); bye.innerHTML = (logo ? '<img src="' + logo.getAttribute('src') + '" alt="">' : '') + '<h2>¡HASTA PRONTO!</h2><div>Tu progreso está guardado. Ya puedes cerrar la app o esta pestaña.</div><button class="btn" id="byeBack">VOLVER A JUGAR</button>';
+  const logo = document.querySelector('#title .logo'); bye.innerHTML = (logo ? '<img src="' + logo.getAttribute('src') + '" alt="">' : '') + '<h2>¡HASTA PRONTO!</h2><div>Tu progreso está guardado.<br>Este navegador no deja que el juego se cierre solo: ciérralo desde las pestañas o deslizando la app.</div><button class="btn" id="byeBack" style="opacity:.6;font-size:12px">VOLVER</button>';
   document.body.appendChild(bye);
   const vis = () => { const on = !CON.on && !$('adm').classList.contains('on') && !bye.classList.contains('on') && !$('uidlg').classList.contains('on') && ((state === 'title' && $('title').classList.contains('on') && !$('panel').classList.contains('on')) || (state === 'map' && !warp && !$('panel').classList.contains('on'))); b.classList.toggle('on', on); };
   setInterval(vis, 200);
@@ -6457,8 +6471,9 @@ window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { 
   tapBind(b, async () => { if (busy) return; busy = true;
     const ok = await uiConfirm('¿SALIR DEL JUEGO?', 'Se cerrará COSMOLUCAS. Tu progreso queda guardado.', 'SALIR', 'CANCELAR', '<img src="img/puerta-salir.webp" alt="" style="height:clamp(70px,16vh,120px);filter:drop-shadow(0 0 14px rgba(53,255,138,.45))">'); busy = false; if (!ok) return;
     try { cloudSave(true); } catch (e) {} try { if (AC) AC.suspend(); } catch (e) {}
-    try { window.close(); } catch (e) {}
-    setTimeout(() => { bye.classList.add('on'); b.classList.remove('on'); }, 350);      // si el navegador no deja cerrar (pestaña normal, iPhone), se queda la pantalla de despedida
+    try { window.open('', '_self'); window.close(); } catch (e) {}          // app instalada (y ventanas abiertas por otra página): se cierra del todo
+    setTimeout(() => { if (document.hidden) return; if (history.length > 1) { try { history.back(); } catch (e) {} }      // si se abrió desde otra página, se sale del juego hacia atrás
+      setTimeout(() => { if (!document.hidden) { bye.classList.add('on'); b.classList.remove('on'); } }, 600); }, 300);      // si el navegador no deja cerrar la pestaña, pantalla de despedida      // si el navegador no deja cerrar (pestaña normal, iPhone), se queda la pantalla de despedida
   });
   $('byeBack').onclick = () => { bye.classList.remove('on'); try { audio(); } catch (e) {} };
 })();
