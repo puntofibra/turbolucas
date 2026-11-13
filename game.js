@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.13';
+const VERSION = '1.14';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -538,7 +538,7 @@ function conRun(raw) {
   if (/^CD\s*(\.\.|\\)$/.test(cmd)) { CON.dir = ''; say('', '', 0, true); return; }
   if (/^CD\s*\\?\s*LUCAS$/.test(cmd)) { CON.dir = 'LUCAS'; say('', '', 0, true); return; }
   if (/^CD\b/.test(cmd)) { const d = cmd.replace(/^CD\s*/, ''); if (!d) { say('C:\\' + CON.dir, '', 0, true); return; } say('RUTA NO ENCONTRADA: ' + d.slice(0, 20), 'r', 12); tone(140, 90, 0.3, 'square', 0.08); return; }
-  if (/^AVATAR ?[1-9]$/.test(cmd)) { const n = +cmd.slice(-1); const ok = avSwitch(n); say(ok ? '>> AVATAR ' + n + ' ACTIVADO: ' + (n === 1 ? 'LUCAS' : String(AVS.list[n - 2].n || 'AVATAR ' + n).toUpperCase()) : 'NO TIENES EL AVATAR ' + n + ' (tienes ' + (AVS.list.length + 1) + ': el 1 es Lucas)', ok ? 'g' : 'r', 12); if (ok) SFX.power(); return; }
+  if (/^AVATAR ?[1-9]$/.test(cmd)) { const n = +cmd.slice(-1); const ok = avSwitch(n); say(ok ? '>> AVATAR ' + n + ' ACTIVADO: ' + (n === 1 ? 'LUCAS' : String(avAll()[n - 2].n || 'AVATAR ' + n).toUpperCase()) : 'NO TIENES EL AVATAR ' + n + ' (tienes ' + (avAll().length + 1) + ': el 1 es Lucas)', ok ? 'g' : 'r', 12); if (ok) SFX.power(); return; }
   if (/^EDIT\b/.test(cmd)) { conEdit(cmd.replace(/^EDIT\s*/, '')); return; }
   if (cmd === 'CLS' || cmd === 'LIMPIAR' || cmd === 'ERASE') { conOut.innerHTML = ''; say('', '', 0, true); return; }
   if (cmd === 'SALIR' || cmd === 'EXIT') { closeConsole(); return; }
@@ -6181,6 +6181,14 @@ function avPrompt(ps) { return 'Te adjunto una foto de una persona. Quiero que c
 
 let AVS = { list: [], sel: '', del: [] }; try { AVS = Object.assign(AVS, JSON.parse(localStorage.getItem('tl_avs') || '{}')); } catch (e) {}
 const AVIM = {};
+// personajes de serie (vienen con el juego, como Lucas): no se pueden borrar y van antes que los avatares comprados
+let AVSERIE = []; try { AVSERIE = JSON.parse(localStorage.getItem('tl_avserie') || '[]'); } catch (e) {}
+const avAll = () => AVSERIE.concat(AVS.list);
+async function avSerieSync() { let r; try { r = await api({ a: 'avSerie' }); } catch (e) { return; } if (!r || !r.ok || !Array.isArray(r.list)) return;
+  const nl = []; for (const x of r.list) { try { const p = JSON.parse(x.datos); if (p['lucas-quieto']) nl.push({ c: x.c, n: x.n || 'PERSONAJE', p, serie: 1 }); } catch (e) {} }
+  const sig = l => l.map(a => a.c + ':' + a.n + ':' + JSON.stringify(a.p).length).join('|'); if (sig(nl) === sig(AVSERIE)) return;
+  AVSERIE = nl; try { localStorage.setItem('tl_avserie', JSON.stringify(nl)); } catch (e) {} if (AVS.sel && !avAll().some(a => a.c === AVS.sel)) { AVS.sel = ''; avSave(); } avLoadImgs(); }
+setTimeout(avSerieSync, 2500);
 const AVFEET = {};
 function avFeet(im) {      // busca dónde están los dos pies en la imagen del avatar (para poner un fuego en cada bota)
   try { const H = Math.min(240, im.naturalHeight), W = Math.max(1, Math.round(im.naturalWidth * H / im.naturalHeight)), c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, A = (i, j) => d[(j * W + i) * 4 + 3] > 40;
@@ -6190,14 +6198,14 @@ function avFeet(im) {      // busca dónde están los dos pies en la imagen del 
     let f; if (cl.length >= 2) { const a = cl[0], b = cl[cl.length - 1]; f = [(a[0] + a[1]) / 2, (b[0] + b[1]) / 2]; } else if (cl.length === 1) { const a = cl[0], w = a[1] - a[0]; f = [a[0] + w * 0.28, a[0] + w * 0.72]; } else f = [W * 0.38, W * 0.62];
     return { f: f.map(v => v / W - 0.5), y: (H - 1 - yb) / H };
   } catch (e) { return { f: [-0.14, 0.14], y: 0 }; } }
-function avLoadImgs() { for (const k in AVIM) delete AVIM[k]; const a = AVS.list.find(x => x.c === AVS.sel); if (!a) return; for (const [ps] of AV_POSES) { const src = a.p[ps] || a.p['lucas-quieto']; if (src) { const im = new Image(); im.onload = () => { AVFEET[ps] = avFeet(im); }; im.src = src; AVIM[ps] = im; } } }
+function avLoadImgs() { for (const k in AVIM) delete AVIM[k]; const a = avAll().find(x => x.c === AVS.sel); if (!a) return; for (const [ps] of AV_POSES) { const src = a.p[ps] || a.p['lucas-quieto']; if (src) { const im = new Image(); im.onload = () => { AVFEET[ps] = avFeet(im); }; im.src = src; AVIM[ps] = im; } } }
 function avMouths(pose, im, cx, by, h, fs, sx) { const ft = AVFEET[pose] || { f: [-0.14, 0.14], y: 0 }, w = h * im.naturalWidth / im.naturalHeight; return ft.f.map(fx => [cx + fs * fx * w * sx, by - ft.y * h - 2]); }
 function avImg(pose) { const im = AVIM[pose]; return im && im.complete && im.naturalWidth ? im : null; }
 function avSave() { try { localStorage.setItem('tl_avs', JSON.stringify(AVS)); return true; } catch (e) { return false; } }
 avLoadImgs();
 // si el admin borra un avatar en el panel, desaparece también a los jugadores que lo tenían (se comprueba al abrir el juego)
 setTimeout(async () => { if (!AVS.list.length) return; let r; try { r = await api({ a: 'avCheck', cs: AVS.list.map(x => x.c) }); } catch (e) { return; } if (!r || !r.ok || !Array.isArray(r.ok2)) return;
-  const vale = new Set(r.ok2), n0 = AVS.list.length; AVS.list = AVS.list.filter(a => vale.has(a.c)); if (AVS.list.length !== n0) { if (AVS.sel && !vale.has(AVS.sel)) AVS.sel = ''; avSave(); avLoadImgs(); if (ACC) cloudSave(true); } }, 4000);
+  const vale = new Set(r.ok2), n0 = AVS.list.length; AVS.list = AVS.list.filter(a => vale.has(a.c)); if (AVS.list.length !== n0) { if (AVS.sel && !vale.has(AVS.sel) && !AVSERIE.some(a => a.c === AVS.sel)) AVS.sel = ''; avSave(); avLoadImgs(); if (ACC) cloudSave(true); } }, 4000);
 function avInstall(av, keepSel) { let p; try { p = JSON.parse(av.datos); } catch (e) { return false; } if (!p || !p['lucas-quieto']) return false;
   const old = JSON.stringify(AVS); if (!keepSel) AVS.del = (AVS.del || []).filter(c => c !== av.c); AVS.list = AVS.list.filter(x => x.c !== av.c); AVS.list.push({ c: av.c, n: av.n || 'MI AVATAR', p }); if (!keepSel) AVS.sel = av.c;
   if (!avSave()) { AVS = JSON.parse(old); return false; } avLoadImgs(); if (ACC && !keepSel) cloudSave(true); return true; }
@@ -6205,19 +6213,19 @@ function avInstall(av, keepSel) { let p; try { p = JSON.parse(av.datos); } catch
 async function avCloud(cloud) { if (!cloud || !Array.isArray(cloud.avc)) return;
   if (Array.isArray(cloud.avx)) { const dl = new Set([...(AVS.del || []), ...cloud.avx]); AVS.del = [...dl]; const n0 = AVS.list.length; AVS.list = AVS.list.filter(a => !dl.has(a.c)); if (AVS.sel && dl.has(AVS.sel)) AVS.sel = ''; if (AVS.list.length !== n0) { avSave(); avLoadImgs(); } }
   for (const c of cloud.avc) if (!AVS.list.some(x => x.c === c) && !(AVS.del || []).includes(c)) { const r = await api({ a: 'avGet', c }); if (r.ok && r.av) avInstall(r.av, true); }
-  if (cloud.avs !== undefined && (cloud.avs === '' || AVS.list.some(x => x.c === cloud.avs)) && cloud.avs !== AVS.sel) { AVS.sel = cloud.avs; avSave(); avLoadImgs(); } }
+  if (cloud.avs !== undefined && (cloud.avs === '' || avAll().some(x => x.c === cloud.avs)) && cloud.avs !== AVS.sel) { AVS.sel = cloud.avs; avSave(); avLoadImgs(); } }
 function avOpenLink(u) { try { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = u; } }
 function avSwitch(n) {        // escribir AVATAR 1, AVATAR 2… en cualquier parte: 1 es Lucas y los demás, los avatares que tengas por orden
-  const a = n === 1 ? null : AVS.list[n - 2]; if (n !== 1 && !a) { avToast('NO TIENES EL AVATAR ' + n, true); return false; }
+  const a = n === 1 ? null : avAll()[n - 2]; if (n !== 1 && !a) { avToast('NO TIENES EL AVATAR ' + n, true); return false; }
   const sel = a ? a.c : ''; if (AVS.sel !== sel) { AVS.sel = sel; avSave(); avLoadImgs(); if (ACC) cloudSave(true); try { tone(700, 1400, 0.15, 'square', 0.05); } catch (e) {} }
   avToast('🧑‍🚀 ' + (a ? String(a.n || 'AVATAR ' + n).toUpperCase() : 'LUCAS')); return true;
 }
-function avNext() { const n = AVS.list.length + 1, cur = AVS.sel ? AVS.list.findIndex(a => a.c === AVS.sel) + 2 : 1; avSwitch(cur >= n ? 1 : cur + 1); }
+function avNext() { const all = avAll(), n = all.length + 1, cur = AVS.sel ? all.findIndex(a => a.c === AVS.sel) + 2 : 1; avSwitch(cur >= n ? 1 : cur + 1); }
 function avToast(t, err) { let el = document.getElementById('avToast'); if (!el) { el = document.createElement('div'); el.id = 'avToast'; el.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:99998;padding:10px 22px;border-radius:14px;font:900 16px system-ui;letter-spacing:.06em;pointer-events:none;transition:opacity .4s;background:rgba(6,12,40,.92);box-shadow:0 0 22px rgba(41,230,255,.4)'; document.body.appendChild(el); }
   el.textContent = t; el.style.color = err ? '#ff6a7a' : '#35ff8a'; el.style.border = '2px solid ' + (err ? '#ff6a7a' : '#29e6ff'); el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = '0', 1800); }
 async function avPicker() {
-  const card = (id, img, name, on) => '<div class="avw"><button class="avc' + (on ? ' on' : '') + '" data-av="' + id + '">' + (img ? '<img src="' + img + '" alt="">' : '<span class="avplus">+</span>') + '<b>' + esc(name) + '</b>' + (on ? '<i>✔ EN USO</i>' : '') + '</button>' + (id && id !== '+' ? '<button class="avdel" data-avx="' + id + '" title="Eliminar avatar">🗑</button>' : '') + '</div>';
-  const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', '1 · LUCAS', !AVS.sel) + AVS.list.map((a, i) => card(a.c, a.p['lucas-quieto'], (i + 2) + ' · ' + (a.n || 'AVATAR'), AVS.sel === a.c)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
+  const card = (id, img, name, on, serie) => '<div class="avw"><button class="avc' + (on ? ' on' : '') + '" data-av="' + id + '">' + (img ? '<img src="' + img + '" alt="">' : '<span class="avplus">+</span>') + '<b>' + esc(String(name).toUpperCase()) + '</b>' + (on ? '<i>✔ EN USO</i>' : '') + '</button>' + (id && id !== '+' && !serie ? '<button class="avdel" data-avx="' + id + '" title="Eliminar avatar">🗑</button>' : '') + '</div>';
+  const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', '1 · LUCAS', !AVS.sel) + avAll().map((a, i) => card(a.c, a.p['lucas-quieto'], (i + 2) + ' · ' + (a.n || 'AVATAR'), AVS.sel === a.c, a.serie)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
   const dlg = uiDialog({ icon: '🧑‍🚀', title: 'SKIN · AVATAR', html: html(), buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
   const bind = () => $('uidlg').querySelectorAll('[data-av]').forEach(b => b.onclick = () => { const id = b.dataset.av; tone(900, 900, 0.04, 'square', 0.05);
     if (id === '+') { $('uidlg').querySelector('.ok') && $('uidlg').querySelector('.ok').click(); setTimeout(avBuy, 150); return; }
@@ -6227,7 +6235,7 @@ async function avPicker() {
 }
 async function avDelete(c) {
   const i = AVS.list.findIndex(a => a.c === c); if (i < 0) return avPicker(); const a = AVS.list[i];
-  const ok = await uiConfirm('¿ELIMINAR AVATAR?', '¿Seguro que quieres eliminar el avatar <b>' + esc(a.n || 'AVATAR ' + (i + 2)) + '</b>?<br><br>Se borrará de este dispositivo y de tu cuenta. Solo podrás recuperarlo volviendo a meter su código en <b>TALLER › CANJEAR CÓDIGO</b>.', 'ELIMINAR', 'CANCELAR', '🗑️');
+  const ok = await uiConfirm('¿ELIMINAR AVATAR?', '¿Seguro que quieres eliminar el avatar <b>' + esc(a.n || 'AVATAR ' + (i + 2 + AVSERIE.length)) + '</b>?<br><br>Se borrará de este dispositivo y de tu cuenta. Solo podrás recuperarlo volviendo a meter su código en <b>TALLER › CANJEAR CÓDIGO</b>.', 'ELIMINAR', 'CANCELAR', '🗑️');
   if (ok) { AVS.list.splice(i, 1); AVS.del = [...new Set([...(AVS.del || []), c])]; if (AVS.sel === c) AVS.sel = ''; avSave(); avLoadImgs(); if (ACC) cloudSave(true); avToast('🗑 AVATAR ELIMINADO'); }
   avPicker();
 }
