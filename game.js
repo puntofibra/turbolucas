@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.15';
+const VERSION = '1.17';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -232,7 +232,7 @@ let touchCrouchT = 0;          // en pantalla táctil, Lucas sigue agachado 1 s 
 document.addEventListener('contextmenu', e => e.preventDefault());
 // nada de ampliar la pantalla: ni pellizco, ni doble toque, ni Ctrl+rueda
 const noZoom = e => { if (e.touches && e.touches.length > 1 || e.scale !== undefined && e.scale !== 1) e.preventDefault(); };
-document.addEventListener('touchstart', noZoom, { passive: false }); document.addEventListener('touchmove', e => { if (!(e.touches.length === 1 && e.target.closest && e.target.closest('#conOut,.abody,.tbody,.pal,#uidlg .ucard'))) e.preventDefault(); }, { passive: false });
+document.addEventListener('touchstart', noZoom, { passive: false }); document.addEventListener('touchmove', e => { if (!(e.touches.length === 1 && e.target.closest && e.target.closest('#conOut,.abody,.tbody,.pal,#uidlg .ucard,#card,.tutxt,.tubody'))) e.preventDefault(); }, { passive: false });
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
 let lastTap = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTap < 320) e.preventDefault(); lastTap = n; }, { passive: false });
 document.addEventListener('dblclick', e => e.preventDefault());
@@ -5212,7 +5212,7 @@ async function checkUpdates() {
   if (v === 2) forceUpdate(VERSION);
 }
 tapBind($('btnCfg'), async () => {
-  const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '📖 CÓMO SE JUEGA', cls: 'ok', v: 'tuto' }, { t: '🧑‍🚀 SKIN · AVATAR', cls: 'ok', v: 'skin' }, { t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []).concat([{ t: 'CERRAR', v: 0 }]) });
+  const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', x: 0, html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '📖 CÓMO SE JUEGA', cls: 'ok', v: 'tuto' }, { t: '🧑‍🚀 SKIN · AVATAR', cls: 'ok', v: 'skin' }, { t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []) });
   if (v === 'tuto') showTuto(); else if (v === 'skin') avPicker(); else if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
 });
 // posición de los botones táctiles (rueda ⚙ arriba): izquierda y derecha, bajos / medios / altos, se guarda en el dispositivo
@@ -6043,15 +6043,22 @@ function cloudSave(now) {
 @keyframes uiPop{from{transform:scale(.82) translateY(20px);opacity:0}to{transform:none;opacity:1}}`; document.head.appendChild(st);
   const d = document.createElement('div'); d.id = 'uidlg'; d.className = 'uiw'; document.body.appendChild(d); })();
 // muestra una ventana con botones; devuelve una promesa con el botón pulsado (o el texto escrito si hay campo)
+const UI_CLOSE = /^(CERRAR|VOLVER|◀ VOLVER)$/, UI_CANCEL = /^(CANCELAR|AHORA NO|LUEGO|NO)$/;
 function uiDialog(o) {
+  if (o.x === undefined && o.buttons && o.buttons.length) {          // todas las ventanas llevan ✕ arriba a la derecha; los botones CERRAR/VOLVER se quitan (la ✕ hace lo mismo)
+    const lab = b => String(b.t || '').replace(/<[^>]*>/g, '').trim().toUpperCase(), ci = o.buttons.findIndex(b => UI_CLOSE.test(lab(b)));
+    if (ci >= 0) { o = Object.assign({}, o, { x: o.buttons[ci].v, buttons: o.buttons.filter((_, i) => i !== ci) }); }
+    else { const k = o.buttons.find(b => UI_CANCEL.test(lab(b))); o = Object.assign({}, o, { x: k ? k.v : o.buttons.length === 1 ? o.buttons[0].v : null }); }
+  }
   return new Promise(res => { const d = $('uidlg'); try { SFX.chip(); } catch (e) {}
-    d.innerHTML = '<div class="ucard ' + (o.tone || '') + '">' + (o.icon ? '<div class="uic">' + o.icon + '</div>' : '') + (o.title ? '<h2>' + o.title + '</h2>' : '') + (o.html ? '<div class="utx">' + o.html + '</div>' : '') +
+    d.innerHTML = '<div class="ucard ' + (o.tone || '') + '">' + (o.x !== undefined ? '<button class="btn ux" id="uiX" aria-label="Cerrar">✕</button>' : '') + (o.icon ? '<div class="uic">' + o.icon + '</div>' : '') + (o.title ? '<h2>' + o.title + '</h2>' : '') + (o.html ? '<div class="utx">' + o.html + '</div>' : '') +
       (o.input !== undefined ? '<input id="uiIn" maxlength="' + (o.max || 40) + '" value="' + esc(o.input) + '">' : '') +
-      '<div class="urow">' + o.buttons.map((b, i) => '<button class="btn ' + (b.cls || '') + '" data-ui="' + i + '">' + b.t + '</button>').join('') + '</div>' + (o.foot ? '<div class="usmall">' + o.foot + '</div>' : '') + '</div>';
+      (o.buttons.length ? '<div class="urow">' : '<div class="urow" style="display:none">') + o.buttons.map((b, i) => '<button class="btn ' + (b.cls || '') + '" data-ui="' + i + '">' + b.t + '</button>').join('') + '</div>' + (o.foot ? '<div class="usmall">' + o.foot + '</div>' : '') + '</div>';
     d.className = 'uiw on' + (o.wrap ? ' ' + o.wrap : ''); const inp = $('uiIn'); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
     const done = v => { d.className = 'uiw'; d.innerHTML = ''; res(v); };
     d.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { const bt = o.buttons[+b.dataset.ui]; if (bt.fn) { bt.fn(); return; } done(inp ? (bt.v ? inp.value : null) : bt.v); });
     if (inp) inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
+    if (o.x !== undefined && $('uiX')) $('uiX').onclick = () => { const bt = o.buttons.find(b => b.v === o.x && b.fn); if (bt) bt.fn(); else done(o.x); };
   });
 }
 const uiAlert = (title, html, icon) => uiDialog({ title, html, icon, buttons: [{ t: 'ENTENDIDO', cls: 'ok', v: true }] });
@@ -6121,7 +6128,20 @@ function tuPaint() {
   $('tuX').onclick = tuClose; $('tuP').onclick = () => tuGo(-1); $('tuN').onclick = () => tuGo(1);
   ov.querySelectorAll('[data-tu]').forEach(d => d.onclick = () => { tuI = +d.dataset.tu; tuPaint(); });
 }
+// los menús del panel (taller, cuenta, ranking…) también: el botón VOLVER/CERRAR se cambia por una ✕ arriba a la derecha
+function xify(box) { if (!box) return; const bs = [...box.querySelectorAll('button')].filter(b => !b.classList.contains('cxk') && UI_CLOSE.test(b.textContent.trim().toUpperCase()) && b.style.display !== 'none'); if (!bs.length) return;
+  const old = box.querySelector(':scope > .cx'); if (old) old.remove(); const tgt = bs[0]; bs.forEach(b => { b.style.display = 'none'; b.classList.add('cxk'); });
+  const x = document.createElement('button'); x.className = 'btn cx'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '✕'; x.onclick = e => { e.stopPropagation(); tgt.click(); }; box.prepend(x); }
+['card', 'adm'].forEach(id => { const el = $(id); if (!el) return; let q = 0; new MutationObserver(() => { if (q) return; q = 1; requestAnimationFrame(() => { q = 0; xify(id === 'adm' ? el.querySelector('.abody') : el); }); }).observe(el, { childList: true, subtree: true }); });
 (() => { const st = document.createElement('style'); st.textContent = `
+#card{position:relative}#card>.cx,.abody>.cx{position:sticky;top:0;float:right;margin:-8px -16px -36px 8px;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:3}
+.abody{position:relative}#card:has(>.cx) h2{padding:0 38px}
+#uidlg .ucard *,#card,#card *,.tutxt *,.tubody *{touch-action:pan-y}
+#panel #card{max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#panel #card.tips{overflow:hidden}
+.uiw .ucard{max-height:92dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.ucard .ux{position:sticky;top:0;float:right;margin:-12px -14px -36px 8px;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:2}
+.ucard:has(.ux) h2{padding:0 34px}
 #tuto{position:fixed;inset:0;z-index:58;display:none;align-items:center;justify-content:center;padding:10px;background:radial-gradient(ellipse at 50% 30%,rgba(10,30,80,.92),rgba(1,3,12,.97));backdrop-filter:blur(4px);font-family:system-ui,sans-serif}
 #tuto.on{display:flex}
 .tucard{width:min(98vw,1060px);max-height:96vh;display:flex;flex-direction:column;border:2px solid #29e6ff;border-radius:20px;background:linear-gradient(160deg,#0b1640,#050a22);box-shadow:0 0 40px rgba(41,230,255,.35),inset 0 0 30px rgba(41,230,255,.08);padding:12px 16px;color:#cfe0ff}
@@ -6226,7 +6246,7 @@ function avToast(t, err) { let el = document.getElementById('avToast'); if (!el)
 async function avPicker() {
   const card = (id, img, name, on, serie) => '<div class="avw"><button class="avc' + (on ? ' on' : '') + '" data-av="' + id + '">' + (img ? '<img src="' + img + '" alt="">' : '<span class="avplus">+</span>') + '<b>' + esc(String(name).toUpperCase()) + '</b>' + (on ? '<i>✔ EN USO</i>' : '') + '</button>' + (id && id !== '+' && !serie ? '<button class="avdel" data-avx="' + id + '" title="Eliminar avatar">🗑</button>' : '') + '</div>';
   const html = () => '<div style="color:#cfe0ff;margin-bottom:10px">Elige con qué personaje quieres jugar.</div><div class="avg">' + card('', 'img/' + TIER + '/lucas-quieto.webp', '1 · LUCAS', !AVS.sel) + avAll().map((a, i) => card(a.c, a.p['lucas-quieto'], (i + 2) + ' · ' + (a.n || 'AVATAR'), AVS.sel === a.c, a.serie)).join('') + card('+', '', 'TU AVATAR', false) + '</div>';
-  const dlg = uiDialog({ icon: '🧑‍🚀', title: 'SKIN · AVATAR', html: html(), buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
+  const dlg = uiDialog({ title: 'SKIN · AVATAR', html: html(), x: 0, buttons: [{ t: '✔ LISTO', cls: 'ok', v: 1 }] });
   const bind = () => $('uidlg').querySelectorAll('[data-av]').forEach(b => b.onclick = () => { const id = b.dataset.av; tone(900, 900, 0.04, 'square', 0.05);
     if (id === '+') { $('uidlg').querySelector('.ok') && $('uidlg').querySelector('.ok').click(); setTimeout(avBuy, 150); return; }
     AVS.sel = id; avSave(); avLoadImgs(); if (ACC) cloudSave(true); const box = $('uidlg').querySelector('.avg'); if (box) { box.outerHTML = html().replace(/^.*?(<div class="avg">)/, '$1'); bind(); bindDel(); } });
@@ -6240,7 +6260,7 @@ async function avDelete(c) {
   avPicker();
 }
 async function avBuy() {
-  const v = await uiDialog({ icon: '✨', tone: 'gold', title: 'AVATAR PERSONALIZADO',
+  const v = await uiDialog({ icon: '✨', tone: 'gold', title: 'AVATAR PERSONALIZADO', x: 0,
     html: '<div class="avpro"><div class="avhero"><img src="img/' + TIER + '/lucas-quieto.webp" alt=""><span>➜</span><b>TÚ</b></div>' +
       '<p><b>¡Juega a COSMOLUCAS siendo tú el protagonista!</b> Convertimos una foto tuya en tu propio personaje de dibujos animados, con todas sus posiciones: quieto, andando, saltando, cayendo, agachado, celebrando…</p>' +
       '<ol><li>💳 Compra tu avatar por <b>' + AV_PRECIO + '</b> (pago único).</li><li>📸 Mándanos una foto tuya por <b>WhatsApp</b>: de cuerpo entero, de frente y con buena luz.</li><li>🎁 En las próximas horas te enviamos un <b>código</b>. Mételo en <b>TALLER › CANJEAR CÓDIGO</b> y tu avatar aparecerá aquí, listo para jugar.</li></ol>' +
