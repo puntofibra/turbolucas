@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.18';
+const VERSION = '1.19';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6138,6 +6138,7 @@ function xify(box) { if (!box) return; const bs = [...box.querySelectorAll('butt
 #card{position:relative}#card>.cx,.abody>.cx{position:sticky;top:0;float:right;align-self:flex-end;margin:-8px -12px -36px auto;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:3}
 .abody{position:relative}#card:has(>.cx) h2{padding:0 38px}
 #uidlg .ucard *,#card,#card *,.tutxt *,.tubody *{touch-action:pan-y}
+.ucard .ux,#card>.cx,.abody>.cx,.tuhead #tuX,#btnExit{border-radius:11px!important;border:2px solid #ff4a6a!important;box-shadow:0 0 10px rgba(255,74,106,.5),inset 0 0 8px rgba(255,74,106,.18)!important;color:#fff!important;background:rgba(40,8,20,.85)!important}
 #panel #card{max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #panel #card.tips{overflow:hidden}
 .uiw .ucard{max-height:92dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
