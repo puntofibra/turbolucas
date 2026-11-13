@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.22';
+const VERSION = '1.23';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5201,7 +5201,7 @@ tapBind($('btnPause'), togglePause);
 async function forceUpdate(v) {
   try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch (e) {}
   try { if (navigator.serviceWorker) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.update().catch(() => {}))); } } catch (e) {}
-  location.replace(location.pathname + '?u=' + encodeURIComponent(v || VERSION) + '&t=' + Date.now());
+  location.reload();      // recarga sin añadir pasos al historial (así la app instalada se puede seguir cerrando con la X)
 }
 async function checkUpdates() {
   uiDialog({ icon: '🛰️', title: 'BUSCANDO ACTUALIZACIONES…', html: 'Conectando con la base de COSMOLUCAS…', buttons: [] });
@@ -5556,7 +5556,7 @@ function admPaint() {
   } else if (admTab === 'SISTEMA') {
     B.innerHTML = '<div class="akey">Versión del juego: <b style="color:#35ff8a">v' + VERSION + '</b><br>Calidad de imágenes: <b>' + (TIER === 'hd' ? 'HD (tablet/PC)' : 'SD (móvil)') + '</b><br>Lector NFC en este dispositivo: <b>' + (HAY_NFC ? 'SÍ' : 'NO') + '</b><br>Mando conectado: <b>' + (padUsed ? 'SÍ' : 'NO') + '</b></div>' +
       '<div class="arow"><button class="btn" id="aUpd">BUSCAR ACTUALIZACIÓN</button><button class="btn red" id="aOut">CERRAR SESIÓN ADMIN</button></div><div class="amsg" id="amsg"></div>';
-    $('aUpd').onclick = () => { admMsg('Buscando…'); fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v !== VERSION) { admMsg('Hay versión nueva (v' + j.v + '). Recargando…'); setTimeout(() => location.replace(location.pathname + '?u=' + j.v), 900); } else admMsg('✔ Ya tienes la última versión'); }).catch(() => admMsg('Sin conexión', 1)); };
+    $('aUpd').onclick = () => { admMsg('Buscando…'); fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v !== VERSION) { admMsg('Hay versión nueva (v' + j.v + '). Recargando…'); setTimeout(() => location.reload(), 900); } else admMsg('✔ Ya tienes la última versión'); }).catch(() => admMsg('Sin conexión', 1)); };
     $('aOut').onclick = () => { setAdm(null); closeAdmin(); };
   }
 }
@@ -6431,7 +6431,7 @@ function updApply() {
   if (!updPending || (state !== 'title' && state !== 'map') || (state === 'map' && (mapUnl || mapRoute.length))) return;
   try { const k = 'tl_upd_' + updPending, last = +sessionStorage.getItem(k) || 0; if (Date.now() - last < 300000) return; sessionStorage.setItem(k, Date.now()); } catch (e) {}
   try { if (state === 'map') sessionStorage.setItem('tl_back', JSON.stringify({ sel: mapSel, unl: mapUnl ? mapUnl.i : -1, w: curW })); } catch (e) {}
-  location.replace(location.pathname + '?u=' + encodeURIComponent(updPending));
+  location.reload();
 }
 setInterval(updCheck, 60000); setTimeout(updCheck, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) updCheck(); });
@@ -6471,9 +6471,11 @@ window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { 
   tapBind(b, async () => { if (busy) return; busy = true;
     const ok = await uiConfirm('¿SALIR DEL JUEGO?', 'Se cerrará COSMOLUCAS. Tu progreso queda guardado.', 'SALIR', 'CANCELAR', '<img src="img/puerta-salir.webp" alt="" style="height:clamp(70px,16vh,120px);filter:drop-shadow(0 0 14px rgba(53,255,138,.45))">'); busy = false; if (!ok) return;
     try { cloudSave(true); } catch (e) {} try { if (AC) AC.suspend(); } catch (e) {}
-    try { window.open('', '_self'); window.close(); } catch (e) {}          // app instalada (y ventanas abiertas por otra página): se cierra del todo
-    setTimeout(() => { if (document.hidden) return; if (history.length > 1) { try { history.back(); } catch (e) {} }      // si se abrió desde otra página, se sale del juego hacia atrás
-      setTimeout(() => { if (!document.hidden) { bye.classList.add('on'); b.classList.remove('on'); } }, 600); }, 300);      // si el navegador no deja cerrar la pestaña, pantalla de despedida      // si el navegador no deja cerrar (pestaña normal, iPhone), se queda la pantalla de despedida
+    const appInst = (() => { try { return matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } })();
+    try { window.close(); } catch (e) {}          // app instalada: se cierra del todo
+    setTimeout(() => { if (document.hidden) return; try { window.open('', '_self'); window.close(); } catch (e) {}
+    setTimeout(() => { if (document.hidden) return; if (!appInst && history.length > 1) { try { history.back(); } catch (e) {} }      // si se abrió desde otra página, se sale del juego hacia atrás
+      setTimeout(() => { if (!document.hidden) { bye.classList.add('on'); b.classList.remove('on'); } }, 600); }, 300); }, 150);      // si el navegador no deja cerrar la pestaña, pantalla de despedida      // si el navegador no deja cerrar (pestaña normal, iPhone), se queda la pantalla de despedida
   });
   $('byeBack').onclick = () => { bye.classList.remove('on'); try { audio(); } catch (e) {} };
 })();
