@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.17';
+const VERSION = '1.18';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5211,10 +5211,11 @@ async function checkUpdates() {
   const v = await uiDialog({ icon: '✅', title: '¡ESTÁS AL DÍA!', html: 'Tienes la <b>última versión de COSMOLUCAS (v' + VERSION + ')</b>.<br>Lucas tiene los propulsores a punto y todo funciona con lo más nuevo. 🚀<br><br><span style="color:#8ea3e6;font-size:13px">Si notas algo raro, puedes reinstalar el juego desde aquí: no se pierde tu progreso.</span>', buttons: [{ t: 'REINSTALAR', v: 2 }, { t: 'GENIAL', cls: 'ok', v: 1 }] });
   if (v === 2) forceUpdate(VERSION);
 }
-tapBind($('btnCfg'), async () => {
+async function openCfg() {
   const v = await uiDialog({ icon: '⚙️', title: 'AJUSTES', x: 0, html: 'Versión instalada: <b>v' + VERSION + '</b>', buttons: [{ t: '📖 CÓMO SE JUEGA', cls: 'ok', v: 'tuto' }, { t: '🧑‍🚀 SKIN · AVATAR', cls: 'ok', v: 'skin' }, { t: '🔄 BUSCAR ACTUALIZACIONES', cls: 'ok', v: 'upd' }, { t: sndOn ? '🔊 SONIDO: SÍ' : '🔇 SONIDO: NO', v: 'snd' }].concat(TOUCH ? [{ t: '🎮 POSICIÓN DE LOS BOTONES', v: 'tp' }] : []) });
-  if (v === 'tuto') showTuto(); else if (v === 'skin') avPicker(); else if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
-});
+  if (v === 'tuto') showTuto(); else if (v === 'skin') avPicker(); else if (v === 'upd') checkUpdates(); else if (v === 'snd') { audio(); setSnd(!sndOn); if (sndOn) SFX.chip(); openCfg(); } else if (v === 'tp') $('btnTouch').dispatchEvent(new Event('click'));
+}
+tapBind($('btnCfg'), openCfg);
 // posición de los botones táctiles (rueda ⚙ arriba): izquierda y derecha, bajos / medios / altos, se guarda en el dispositivo
 const TP_LV = [0, 13, 26];       // cuánto se suben (en % de la altura de la pantalla)
 let TPOS = { l: 0, r: 0 }; try { TPOS = Object.assign(TPOS, JSON.parse(localStorage.getItem('tl_tpos') || '{}')); } catch (e) {}
@@ -6134,13 +6135,13 @@ function xify(box) { if (!box) return; const bs = [...box.querySelectorAll('butt
   const x = document.createElement('button'); x.className = 'btn cx'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '✕'; x.onclick = e => { e.stopPropagation(); tgt.click(); }; box.prepend(x); }
 ['card', 'adm'].forEach(id => { const el = $(id); if (!el) return; let q = 0; new MutationObserver(() => { if (q) return; q = 1; requestAnimationFrame(() => { q = 0; xify(id === 'adm' ? el.querySelector('.abody') : el); }); }).observe(el, { childList: true, subtree: true }); });
 (() => { const st = document.createElement('style'); st.textContent = `
-#card{position:relative}#card>.cx,.abody>.cx{position:sticky;top:0;float:right;margin:-8px -16px -36px 8px;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:3}
+#card{position:relative}#card>.cx,.abody>.cx{position:sticky;top:0;float:right;align-self:flex-end;margin:-8px -12px -36px auto;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:3}
 .abody{position:relative}#card:has(>.cx) h2{padding:0 38px}
 #uidlg .ucard *,#card,#card *,.tutxt *,.tubody *{touch-action:pan-y}
 #panel #card{max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #panel #card.tips{overflow:hidden}
 .uiw .ucard{max-height:92dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.ucard .ux{position:sticky;top:0;float:right;margin:-12px -14px -36px 8px;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:2}
+.ucard .ux{position:sticky;top:0;float:right;align-self:flex-end;margin:-12px -14px -36px auto;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:2}
 .ucard:has(.ux) h2{padding:0 34px}
 #tuto{position:fixed;inset:0;z-index:58;display:none;align-items:center;justify-content:center;padding:10px;background:radial-gradient(ellipse at 50% 30%,rgba(10,30,80,.92),rgba(1,3,12,.97));backdrop-filter:blur(4px);font-family:system-ui,sans-serif}
 #tuto.on{display:flex}
