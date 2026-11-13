@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.26';
+const VERSION = '1.27';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -48,7 +48,7 @@ function preSel() { SEL_SET.forEach(n => xi(n)); for (const k in SELN) xi(SELN[k
 const selI = n => L && L.theme === 'jungle' && okI(IMG[n]) ? IMG[n] : null;
 // imágenes del océano abisal
 const OCEN = { patrulla: ['enemigo-cangrejo', 4, 159, 547, 60], alien: ['enemigo-pulpo', 4, 153, 589, 62], erizo: ['enemigo-erizo-mar', 4, 78, 639, 58], dron: ['enemigo-pezglobo', 4, 129, 583, 56], torreta: ['enemigo-almeja', 3, 15, 706, 56], medusa: ['enemigo-medusa', 4, 22, 671, 84], tiburon: ['enemigo-tiburon', 4, 184, 526, 72] };
-const OCE_SET = ['fondo-lejos-oceano', 'fondo-cerca-oceano', 'plataforma-oceano', 'caja-oceano', 'alga', 'mina', 'respiradero', 'perla', 'tentaculo', 'jefe5', 'jefe5-roto'];
+const OCE_SET = ['fondo-lejos-oceano', 'fondo-cerca-oceano', 'plataforma-oceano', 'caja-oceano', 'alga', 'mina', 'respiradero', 'perla', 'tentaculo', 'jefe5', 'jefe5-roto', 'suelo-borde-oceano', 'suelo-relleno-oceano'];
 function preOce() { OCE_SET.forEach(n => xi(n)); for (const k in OCEN) xi(OCEN[k][0], OCEN[k][1]); }
 const oceI = n => L && L.theme === 'ocean' && okI(IMG[n]) ? IMG[n] : null;
 const preTheme = t => { if (t === 'ice') preIce(); else if (t === 'lava') preLava(); else if (t === 'jungle') preSel(); else if (t === 'ocean') preOce(); };
@@ -1612,6 +1612,12 @@ function drawOceanFx() {             // por delante: cáusticas, nieve marina, s
   ctx.restore();
 }
 function seaTile(tx, ty, d) {
+  { const SR = oceI('suelo-relleno-oceano'), SB = oceI('suelo-borde-oceano'); if (SR && SB) { const x = tx * T, y = ty * T, k = L.depth || 0, cs = SR.naturalWidth / 3;
+      ctx.drawImage(SR, (((tx % 3) + 3) % 3) * cs, (((ty % 3) + 3) % 3) * cs, cs, cs, x, y, T + 0.5, T + 0.5);
+      const L1 = ty > 0 && tx >= 0 && tx < L.W ? L.g[ty - 1][tx] : '#';
+      if (d === 0 && !isSolid(L1)) { const ih = SB.naturalHeight, iw = SB.naturalWidth, sc = 50 / (ih * 238 / 724), sw = iw * sc, top = y + 3 - ih * (347 / 724) * sc, k0 = Math.floor(x / sw);
+        ctx.save(); ctx.beginPath(); ctx.rect(x, top, T + 0.5, y + T - top + 0.5); ctx.clip(); for (let q = k0; q <= k0 + 1; q++) ctx.drawImage(SB, q * sw, top, sw, ih * sc); ctx.restore(); }
+      if (k > 0.05) { ctx.fillStyle = 'rgba(2,12,30,' + k * 0.45 + ')'; ctx.fillRect(x, y, T + 0.5, T + 0.5); } return; } }
   const x = tx * T, y = ty * T, k = L.depth || 0, h = seaHash(tx, ty);
   const g = ctx.createLinearGradient(0, y, 0, y + T); g.addColorStop(0, seaMix('2f7486', '13334a', k)); g.addColorStop(1, seaMix('1d4a5e', '0a1a2c', k)); ctx.fillStyle = g; ctx.fillRect(x, y, T + 0.5, T + 0.5);
   ctx.fillStyle = 'rgba(0,10,25,.28)'; for (let i = 0; i < 3; i++) { const sx = x + seaHash(tx + i, ty * 3) * (T - 10), sy = y + seaHash(tx * 5, ty + i) * (T - 10); ctx.beginPath(); ctx.ellipse(sx + 5, sy + 5, 5 + h * 4, 3 + h * 2, h, 0, 6.283); ctx.fill(); }
