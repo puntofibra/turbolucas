@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.33';
+const VERSION = '1.34';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -499,6 +499,7 @@ function conEdit(arg) {        // EDIT 3-5: te lleva a esa fase con el editor de
 let conWord = '';
 window.addEventListener('keydown', e => { if (CON.on || e.ctrlKey || e.metaKey || e.altKey || !e.key || e.key.length !== 1) return;
   conWord = (conWord + e.key.toUpperCase()).slice(-12); const avm = conWord.match(/AVATAR ?([1-9])$/); if (avm) { conWord = ''; const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => { t.value = t.value.replace(/avatar ?[1-9]$/i, ''); }, 0); else e.preventDefault(); avSwitch(+avm[1]); return; }
+  if (state === 'map' && MAPC.on && !/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName || '')) { const w = conWord.slice(-5); if (w === 'CLOSE') { conWord = ''; mapOpenAll(false); return; } if (w.slice(-4) === 'OPEN') { conWord = ''; mapOpenAll(true); return; } }
   if (conWord.slice(-7) === 'CONSOLA') { conWord = ''; const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => { t.value = t.value.replace(/consol?a?$/i, ''); try { t.blur(); } catch (x) {} }, 0); e.preventDefault(); setTimeout(() => openConsole(), 30); } }, true);
 document.addEventListener('input', e => { const t = e.target; if (CON.on || !t || t === conIn || !/^(INPUT|TEXTAREA)$/.test(t.tagName) || typeof t.value !== 'string') return;
   const avm = t.value.match(/avatar ?([1-9])/i); if (avm) { t.value = t.value.replace(/avatar ?[1-9]/ig, ''); conWord = ''; avSwitch(+avm[1]); return; }
@@ -5116,7 +5117,10 @@ function setWorld(w) { mapCam = null; curW = w; MAP = WORLDS[w].nodes; mapImg(w)
 function mapImg(w) { const k = WORLDS[w].img; if (!IMG[k]) { const im = new Image(); im.src = 'img/' + TIER + '/' + k + '.webp?v=' + VERSION; IMG[k] = im; } return IMG[k]; }
 const worldOf = id => WORLDS.findIndex(w => w.nodes.some(n => n.id === id));
 const bossOf = w => WORLDS[w].nodes.find(n => n.boss);
-const worldOpen = w => w === 0 || CHEAT.unlock || !!PROG[bossOf(w - 1).id] || DEV[WORLDS[w].nodes[0].id] === 1;
+// en el mapa: escribir OPEN abre todos los candados y CLOSE los vuelve a cerrar (se puede desactivar desde ADMIN › SISTEMA)
+const MAPC = { on: true, all: false }; try { MAPC.on = localStorage.getItem('tl_mapc') !== '0'; MAPC.all = localStorage.getItem('tl_mapall') === '1'; } catch (e) {}
+function mapOpenAll(on) { MAPC.all = on; try { localStorage.setItem('tl_mapall', on ? '1' : '0'); } catch (e) {} if (state === 'map') { if (!on) { mapRoute = []; if (!mapOpen(mapSel)) { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; } } mapInfo(); mapMsg = { txt: on ? '🔓 TODOS LOS CANDADOS ABIERTOS' : '🔒 CANDADOS CERRADOS', t: 2.6, ok: on }; } on ? SFX.power() : tone(600, 200, 0.3, 'square', 0.06); }
+const worldOpen = w => w === 0 || CHEAT.unlock || MAPC.all || !!PROG[bossOf(w - 1).id] || DEV[WORLDS[w].nodes[0].id] === 1;
 let bossBeatBefore = false, warp = null, mapHideLucas = false;
 let PROG = {}, curId = '1-1', mapSel = 0, mapAt = 0, mapL = { x: MAP[0].x, y: MAP[0].y }, mapRoute = [], mapFace = 1, mapShake = { i: -1, t: 0 }, mapMsg = { txt: '', t: 0 }, mapUnl = null, mapParts = [], justOpened = -1;
 try { PROG = JSON.parse(localStorage.getItem('tl_prog') || '{}') || {}; const os = +localStorage.getItem('tl_stars_1_1') || 0; if (os && !PROG['1-1']) PROG['1-1'] = { stars: os, best: +localStorage.getItem('tl_best_1_1') || 0 }; } catch (e) { PROG = {}; }
@@ -5162,7 +5166,7 @@ function kidEase(l) {
 const mapPrev = i => MAP[i].prev !== undefined ? MAP[i].prev : i - 1;
 let DEV = {}; try { DEV = JSON.parse(localStorage.getItem('tl_dev') || '{}') || {}; } catch (e) { DEV = {}; }
 const isBuilt = n => n.built === true || (DEV[n.id] === 1 && typeof LEVELS[n.id] === 'function');
-const mapOpen = i => i === 0 ? worldOpen(curW) : (CHEAT.unlock || !!PROG[MAP[mapPrev(i)].id] || DEV[MAP[i].id] === 1);
+const mapOpen = i => i === 0 ? worldOpen(curW) : (CHEAT.unlock || MAPC.all || !!PROG[MAP[mapPrev(i)].id] || DEV[MAP[i].id] === 1);
 let devTap = { i: -1, n: 0, t: 0 };
 function devTapOn(i) {            // 10 toques rápidos sobre una fase aún no publicada: la abre solo en este dispositivo
   const n = MAP[i], now = performance.now(); if (typeof LEVELS[n.id] !== 'function' || mapOpen(i)) return false;
@@ -5772,9 +5776,11 @@ function admPaint() {
     }).catch(e => admMsg(e.message, 1));
   } else if (admTab === 'SISTEMA') {
     B.innerHTML = '<div class="akey">Versión del juego: <b style="color:#35ff8a">v' + VERSION + '</b><br>Calidad de imágenes: <b>' + (TIER === 'hd' ? 'HD (tablet/PC)' : 'SD (móvil)') + '</b><br>Lector NFC en este dispositivo: <b>' + (HAY_NFC ? 'SÍ' : 'NO') + '</b><br>Mando conectado: <b>' + (padUsed ? 'SÍ' : 'NO') + '</b></div>' +
+      '<h3>CÓDIGOS EN EL MAPA</h3><label style="display:flex;gap:10px;align-items:center;cursor:pointer;color:#cfe0ff"><input type="checkbox" id="aMapC" style="width:22px;height:22px;accent-color:#35ff8a"' + (MAPC.on ? ' checked' : '') + '> Dejar escribir <b style="color:#ffd23c">OPEN</b> (abre todos los candados) y <b style="color:#ffd23c">CLOSE</b> (los cierra) estando en el mapa</label><div style="color:#8ea3e6;font-size:12px;margin:4px 0 10px">Vale para todos los jugadores. Si lo quitas, a quien los tuviera abiertos se le vuelven a cerrar.</div>' +
       '<div class="arow"><button class="btn" id="aUpd">BUSCAR ACTUALIZACIÓN</button><button class="btn red" id="aOut">CERRAR SESIÓN ADMIN</button></div><div class="amsg" id="amsg"></div>';
     $('aUpd').onclick = () => { admMsg('Buscando…'); fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v !== VERSION) { admMsg('Hay versión nueva (v' + j.v + '). Recargando…'); setTimeout(() => location.reload(), 900); } else admMsg('✔ Ya tienes la última versión'); }).catch(() => admMsg('Sin conexión', 1)); };
     $('aOut').onclick = () => { setAdm(null); closeAdmin(); };
+    $('aMapC').onchange = () => { const v = $('aMapC').checked; admOp('cfgSet', { mapCodes: v }).then(() => { MAPC.on = v; try { localStorage.setItem('tl_mapc', v ? '1' : '0'); } catch (e) {} if (!v) mapOpenAll(false); admMsg(v ? '✔ OPEN / CLOSE activados en el mapa' : '✔ OPEN / CLOSE desactivados'); }).catch(e => { $('aMapC').checked = !v; admMsg(e.message || String(e), 1); }); };
   }
 }
 // la consola pide la llave
@@ -6583,6 +6589,7 @@ const LT_NOM = { main: 'Cartel de pago (fase 3-2)', guest: 'Sin cuenta', conf: '
 const LT_IC = { main: '🚀', guest: '🚀', conf: '💳', ok0: '🎉', ok1: '🎉', ok2: '🙏', rej1: '⚠️', rej2: '⚠️', pend1: '⏳', pend2: '⏳' };
 let LTX = {}; try { LTX = JSON.parse(localStorage.getItem('tl_ltx') || '{}') || {}; } catch (e) {}
 const lt = (k, f) => String(((LTX[k] && LTX[k][f]) || LT0[k][f])).replace(/\{PRECIO\}/g, LIC_PRECIO);
+setTimeout(() => api({ a: 'cfg' }).then(r => { if (r.ok && typeof r.mapCodes === 'boolean') { MAPC.on = r.mapCodes; try { localStorage.setItem('tl_mapc', r.mapCodes ? '1' : '0'); } catch (e) {} if (!r.mapCodes && MAPC.all) { MAPC.all = false; try { localStorage.setItem('tl_mapall', '0'); } catch (e) {} } } }), 2500);
 setTimeout(() => api({ a: 'licTxt' }).then(r => { if (r.ok && r.txt) { LTX = r.txt; try { localStorage.setItem('tl_ltx', JSON.stringify(LTX)); } catch (e) {} } }), 3000);
 const licGated = id => { const w = +String(id).split('-')[0]; return w >= 4 || (w === 3 && id !== '3-1'); };
 function licOk() {
