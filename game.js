@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.19';
+const VERSION = '1.20';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6059,6 +6059,7 @@ function uiDialog(o) {
     const done = v => { d.className = 'uiw'; d.innerHTML = ''; res(v); };
     d.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { const bt = o.buttons[+b.dataset.ui]; if (bt.fn) { bt.fn(); return; } done(inp ? (bt.v ? inp.value : null) : bt.v); });
     if (inp) inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
+    if ($('uiX')) xFix($('uiX'), d.querySelector('.ucard'));
     if (o.x !== undefined && $('uiX')) $('uiX').onclick = () => { const bt = o.buttons.find(b => b.v === o.x && b.fn); if (bt) bt.fn(); else done(o.x); };
   });
 }
@@ -6132,7 +6133,8 @@ function tuPaint() {
 // los menús del panel (taller, cuenta, ranking…) también: el botón VOLVER/CERRAR se cambia por una ✕ arriba a la derecha
 function xify(box) { if (!box) return; const bs = [...box.querySelectorAll('button')].filter(b => !b.classList.contains('cxk') && UI_CLOSE.test(b.textContent.trim().toUpperCase()) && b.style.display !== 'none'); if (!bs.length) return;
   const old = box.querySelector(':scope > .cx'); if (old) old.remove(); const tgt = bs[0]; bs.forEach(b => { b.style.display = 'none'; b.classList.add('cxk'); });
-  const x = document.createElement('button'); x.className = 'btn cx'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '✕'; x.onclick = e => { e.stopPropagation(); tgt.click(); }; box.prepend(x); }
+  const x = document.createElement('button'); x.className = 'btn cx'; x.setAttribute('aria-label', 'Cerrar'); x.textContent = '✕'; x.onclick = e => { e.stopPropagation(); tgt.click(); }; box.prepend(x); xFix(x, box); }
+function xFix(x, box) { try { const cs = getComputedStyle(box), g = 10; x.style.marginTop = x.style.top = (g - parseFloat(cs.paddingTop)) + 'px'; x.style.marginRight = (g - parseFloat(cs.paddingRight)) + 'px'; } catch (e) {} }      // la ✕ queda a la misma distancia del borde por arriba y por la derecha
 ['card', 'adm'].forEach(id => { const el = $(id); if (!el) return; let q = 0; new MutationObserver(() => { if (q) return; q = 1; requestAnimationFrame(() => { q = 0; xify(id === 'adm' ? el.querySelector('.abody') : el); }); }).observe(el, { childList: true, subtree: true }); });
 (() => { const st = document.createElement('style'); st.textContent = `
 #card{position:relative}#card>.cx,.abody>.cx{position:sticky;top:0;float:right;align-self:flex-end;margin:-8px -12px -36px auto;width:36px;height:36px;padding:0;border-radius:50%;font:900 16px system-ui;line-height:1;display:flex;align-items:center;justify-content:center;border-color:#ff4a6a;box-shadow:0 0 10px rgba(255,74,106,.45);z-index:3}
@@ -6147,7 +6149,7 @@ function xify(box) { if (!box) return; const bs = [...box.querySelectorAll('butt
 #tuto{position:fixed;inset:0;z-index:58;display:none;align-items:center;justify-content:center;padding:10px;background:radial-gradient(ellipse at 50% 30%,rgba(10,30,80,.92),rgba(1,3,12,.97));backdrop-filter:blur(4px);font-family:system-ui,sans-serif}
 #tuto.on{display:flex}
 .tucard{width:min(98vw,1060px);max-height:96vh;display:flex;flex-direction:column;border:2px solid #29e6ff;border-radius:20px;background:linear-gradient(160deg,#0b1640,#050a22);box-shadow:0 0 40px rgba(41,230,255,.35),inset 0 0 30px rgba(41,230,255,.08);padding:12px 16px;color:#cfe0ff}
-.tuhead{display:flex;align-items:center;gap:12px}.tuhead b{color:#29e6ff;letter-spacing:.12em;font-size:14px;text-shadow:0 0 10px rgba(41,230,255,.7)}.tuhead span{margin-left:auto;color:#8ea3e6;font:700 13px system-ui}.tuhead .btn{width:36px;height:36px;padding:0;border-radius:50%}
+.tuhead{display:flex;align-items:center;gap:12px}.tuhead b{color:#29e6ff;letter-spacing:.12em;font-size:14px;text-shadow:0 0 10px rgba(41,230,255,.7)}.tuhead span{margin-left:auto;color:#8ea3e6;font:700 13px system-ui}.tuhead .btn{width:36px;height:36px;padding:0;border-radius:50%;margin-right:-4px}
 .tubody{display:flex;gap:18px;align-items:stretch;flex:1;min-height:0;margin:8px 0;overflow:hidden}.tuimg{align-self:center}.tutxt{overflow-y:auto;max-height:calc(96vh - 120px);align-self:center;padding-right:4px;scrollbar-width:thin;touch-action:pan-y}
 .tuimg{flex:1.35;min-width:0;display:flex;justify-content:center}.tuimg img{width:100%;max-height:62vh;object-fit:contain;border-radius:14px;border:2px solid rgba(41,230,255,.5);box-shadow:0 0 22px rgba(41,230,255,.3)}
 .tubody.dev .tuimg img,.tubody.big .tuimg img{border:none;box-shadow:none;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6))}.tubody.big .tuimg img{max-height:52vh;width:auto}
