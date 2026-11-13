@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.12';
+const VERSION = '1.13';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6158,6 +6158,20 @@ const AV_PROMPT_POSE = {
   'lucas-agachado': 'POSICIÓN: AGACHADO. En cuclillas, agachado del todo con las rodillas muy dobladas y la cabeza baja, mirando a la DERECHA de la imagen, brazos recogidos delante del cuerpo como protegiéndose, expresión concentrada y atenta. Que ocupe poca altura, compacto.',
   'lucas-celebrando': 'POSICIÓN: CELEBRANDO. Saltito de victoria mirando hacia la DERECHA de la imagen, un puño levantado bien alto, el otro brazo flexionado celebrando, sonrisa enorme de felicidad con los ojos brillando, pies separados del suelo un poquito. Pequeñas chispas o estrellitas de celebración alrededor.'
 };
+const AV_PJ_POSE = {
+  'lucas-quieto': 'POSICIÓN: QUIETO. De pie, cuerpo entero, en vista tres cuartos girado hacia la DERECHA de la imagen, brazos relajados a los lados, piernas un poco separadas, expresión segura y simpática, listo para empezar la aventura.',
+  'lucas-avanzando': 'POSICIÓN: ANDANDO. Avanzando con energía hacia la DERECHA de la imagen, en vista tres cuartos casi de perfil, una pierna adelantada y la otra atrás, brazos balanceándose de forma natural y opuesta a las piernas, cuerpo ligeramente inclinado hacia delante, expresión decidida.',
+  'lucas-saltando': 'POSICIÓN: SALTANDO. En pleno salto hacia arriba mirando a la DERECHA de la imagen, rodillas recogidas, un brazo levantado hacia el cielo y el otro hacia atrás, cuerpo estirado hacia arriba, expresión de emoción.',
+  'lucas-cayendo': 'POSICIÓN: CAYENDO. Bajando de un salto mirando a la DERECHA de la imagen, piernas estiradas hacia abajo preparándose para aterrizar, brazos abiertos hacia los lados y un poco hacia arriba para mantener el equilibrio, expresión de sorpresa graciosa con los ojos muy abiertos.',
+  'lucas-golpeado': 'POSICIÓN: GOLPEADO. Acaba de recibir un golpe: cuerpo echado hacia atrás y hacia la IZQUIERDA (mirando a la derecha), brazos sueltos hacia arriba, una pierna levantada, cara de dolor cómico de dibujos animados con los ojos apretados. Sin daños ni piezas rotas: gracioso, apto para niños.',
+  'lucas-agachado': 'POSICIÓN: AGACHADO. En cuclillas, agachado del todo con las rodillas muy dobladas y la cabeza baja, mirando a la DERECHA de la imagen, brazos recogidos delante del cuerpo como protegiéndose, expresión concentrada. Que ocupe poca altura, compacto.',
+  'lucas-celebrando': 'POSICIÓN: CELEBRANDO. Saltito de victoria mirando hacia la DERECHA de la imagen, un puño levantado bien alto, el otro brazo flexionado celebrando, expresión de felicidad enorme, pies separados del suelo un poquito. Pequeñas chispas o estrellitas de celebración alrededor.'
+};
+function avPromptPJ(ps) { return 'Te adjunto la imagen de un personaje. Quiero que dibujes EXACTAMENTE a ESTE MISMO personaje en otra posición, para usarlo como protagonista de un videojuego de plataformas espacial llamado COSMOLUCAS.\n\n' +
+  'MISMO PERSONAJE: tiene que ser idéntico al de la imagen: misma forma de cabeza y de cuerpo, mismas proporciones, mismos colores, mismas luces y detalles, mismos ojos y misma cara, mismas orejas, antenas, casco o accesorios. No añadas, no quites y no cambies nada de su diseño: solo cambia la postura.\n\n' +
+  'ESTILO: exactamente el mismo estilo de dibujo que la imagen adjunta: dibujo animado de videojuego, contornos negros marcados, colores vivos con brillos y sombreado suave tipo cel-shading, acabado limpio y profesional.\n\n' +
+  AV_PJ_POSE[ps] + '\n\n' +
+  'ENCUADRE: un solo personaje, cuerpo entero de la cabeza a los pies, sin cortar nada, centrado, con los pies abajo del todo de la imagen. Formato vertical. Fondo blanco liso y uniforme, sin sombras en el suelo, sin escenario, sin texto, sin marcas de agua, para poder recortarlo fácilmente.'; }
 function avPrompt(ps) { return 'Te adjunto una foto de una persona. Quiero que conviertas a ESA persona en un personaje de dibujos animados para un videojuego de plataformas espacial llamado COSMOLUCAS.\n\n' +
   'PARECIDO: el personaje tiene que parecerse muchísimo a la persona de la foto, que se la reconozca al instante: misma forma de cara, mismos ojos y color de ojos, misma nariz, misma sonrisa, mismo peinado y color de pelo, mismo tono de piel, barba, gafas, pecas o lunares si los tiene. Exagera un poco las proporciones al estilo dibujo animado (cabeza algo más grande y expresiva) pero manteniendo un parecido súper realista.\n\n' +
   'ESTILO: dibujo animado moderno de videojuego, contornos negros marcados, colores vivos y brillantes, sombreado suave tipo cel-shading con brillos, acabado limpio y profesional, del mismo estilo que el robot Lucas de la imagen de referencia (si la adjunto).\n\n' +
@@ -6263,7 +6277,9 @@ function admAvatares(B) {
     '<div class="avup">' + AV_POSES.map(([ps, n]) => '<label class="avslot" data-ps="' + ps + '"><span>' + n + (ps === 'lucas-quieto' ? ' *' : '') + '</span><img alt=""><input type="file" accept="image/*" data-pf="' + ps + '"></label>').join('') + '</div>' +
     '<button class="btn" id="avGo" style="border-color:#35ff8a;margin-top:10px">✔ GENERAR CÓDIGO</button><div id="avOut"></div></div><h3>AVATARES CREADOS</h3><div id="avL">Cargando…</div>' +
     '<h3>PROMPTS PARA GEMINI (UNO POR POSICIÓN)</h3><div class="akey" style="color:#8ea3e6">Adjunta a Gemini la foto del cliente (y si quieres, la imagen de Lucas como referencia de estilo) y pega el prompt de cada posición. Haz las 7 en la misma conversación para que salga siempre igual. No hace falta recortarlas ni que midan lo mismo que Lucas: al subirlas, el panel quita el fondo blanco, recorta los bordes y el juego las pone a la altura de Lucas.</div>' +
-    AV_POSES.map(([ps, n]) => '<div class="akey"><b style="color:#ffd23c">' + n + '</b> <button class="btn" data-avpr="' + ps + '" style="float:right">COPIAR</button><div style="white-space:pre-wrap;color:#cfe0ff;font:13px/1.4 system-ui;margin-top:8px;clear:both">' + esc(avPrompt(ps)) + '</div></div>').join('');
+    AV_POSES.map(([ps, n]) => '<div class="akey"><b style="color:#ffd23c">' + n + '</b> <button class="btn" data-avpr="' + ps + '" style="float:right">COPIAR</button><div style="white-space:pre-wrap;color:#cfe0ff;font:13px/1.4 system-ui;margin-top:8px;clear:both">' + esc(avPrompt(ps)) + '</div></div>').join('') +
+    '<h3>PROMPTS PARA UN PERSONAJE NUEVO (DESDE SU DIBUJO)</h3><div class="akey" style="color:#8ea3e6">Para meter como skin un personaje que ya tienes dibujado (un robot, una mascota…): adjunta a Gemini su imagen y pega el prompt de cada posición, las 7 en la misma conversación. Luego súbelas aquí arriba igual que un avatar y genera su código.</div>' +
+    AV_POSES.map(([ps, n]) => '<div class="akey"><b style="color:#35ff8a">' + n + '</b> <button class="btn" data-avpj="' + ps + '" style="float:right">COPIAR</button><div style="white-space:pre-wrap;color:#cfe0ff;font:13px/1.4 system-ui;margin-top:8px;clear:both">' + esc(avPromptPJ(ps)) + '</div></div>').join('');
   B.querySelectorAll('[data-pf]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const u = await avResize(f); P2[inp.dataset.pf] = u; const img = inp.parentNode.querySelector('img'); img.src = u; inp.parentNode.classList.add('ok'); } catch (e) { admMsg('No se ha podido leer esa imagen', 1); } });
   const paintL = r => { const l = r.list || []; $('avL').innerHTML = l.map(x => '<div class="akey arow"><b style="color:#35ff8a;font:900 20px monospace;letter-spacing:.15em;width:120px">' + esc(x.c) + '</b><span style="flex:1">' + esc(x.n || '—') + '<br><span style="color:#8ea3e6;font-size:12px">' + (x.f ? new Date(x.f).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') + ' · canjeado ' + x.k + ' vez/veces</span></span><button class="btn" data-avcp="' + esc(x.c) + '">COPIAR</button><button class="btn red" data-avdel="' + esc(x.c) + '">BORRAR</button></div>').join('') || '<div class="akey">Todavía no has creado ningún avatar.</div>';
     $('avL').querySelectorAll('[data-avcp]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(b.dataset.avcp); } catch (e) {} b.textContent = '✔ COPIADO'; });
@@ -6272,6 +6288,7 @@ function admAvatares(B) {
     try { const r = await admOp('avNuevo', { nota: $('avN').value.trim(), datos: JSON.stringify(P2) }); paintL(r); admMsg('✔ Avatar creado. Pásale este código al cliente por WhatsApp: lo mete en TALLER › CANJEAR CÓDIGO.');
       $('avOut').innerHTML = '<div style="margin-top:12px;font:900 34px monospace;letter-spacing:.25em;color:#35ff8a">' + esc(r.c) + '</div><button class="btn" id="avCp">COPIAR CÓDIGO</button>';
       $('avCp').onclick = () => { try { navigator.clipboard.writeText(r.c); } catch (e) {} $('avCp').textContent = '✔ COPIADO'; }; } catch (e) { admMsg(e.message, 1); } b.disabled = false; };
+  B.querySelectorAll('[data-avpj]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(avPromptPJ(b.dataset.avpj)); } catch (e) {} b.textContent = '✔ COPIADO'; setTimeout(() => b.textContent = 'COPIAR', 1500); });
   B.querySelectorAll('[data-avpr]').forEach(b => b.onclick = () => { try { navigator.clipboard.writeText(avPrompt(b.dataset.avpr)); } catch (e) {} b.textContent = '✔ COPIADO'; setTimeout(() => b.textContent = 'COPIAR', 1500); });
   admOp('avList').then(paintL).catch(e => admMsg(e.message, 1));
 }
