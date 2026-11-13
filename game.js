@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.30';
+const VERSION = '1.31';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -61,7 +61,12 @@ const SKN = { patrulla: ['enemigo-veleta', 4, 0, 696, 86], alien: ['enemigo-nube
 const SKY_SET = ['fondo-lejos-cielo', 'fondo-cerca-cielo', 'suelo-borde-cielo', 'suelo-relleno-cielo', 'plataforma-cielo', 'plataforma-helices', 'nube-fragil', 'caja-cielo', 'ventilador', 'nube-tormenta', 'chispa', 'jefe7', 'jefe7-roto'];
 function preSky() { SKY_SET.forEach(n => xi(n)); for (const k in SKN) xi(SKN[k][0], SKN[k][1]); }
 const skyI = n => L && L.theme === 'sky' && okI(IMG[n]) ? IMG[n] : null;
-const preTheme = t => { if (t === 'ice') preIce(); else if (t === 'lava') preLava(); else if (t === 'jungle') preSel(); else if (t === 'ocean') preOce(); else if (t === 'desert') preDes(); else if (t === 'sky') preSky(); };
+const preTheme = t => { if (t === 'ice') preIce(); else if (t === 'lava') preLava(); else if (t === 'jungle') preSel(); else if (t === 'ocean') preOce(); else if (t === 'desert') preDes(); else if (t === 'sky') preSky(); else if (t === 'toy') preToy(); };
+// imágenes de la juguetería
+const TYN = { patrulla: ['enemigo-soldadito', 4, 0, 713, 96], alien: ['enemigo-osito', 4, 13, 718, 90], erizo: ['enemigo-pelota', 4, 71, 636, 72], dron: ['enemigo-avioneta', 4, 176, 554, 68], torreta: ['enemigo-canon-corcho', 3, 146, 648, 80] };
+const TOY_SET = ['fondo-lejos-jugueteria', 'fondo-cerca-jugueteria', 'suelo-borde-jugueteria', 'suelo-relleno-jugueteria', 'plataforma-galleta', 'caja-jugueteria', 'vagon', 'bloque-juguete', 'cinta', 'gelatina', 'muneco-sorpresa', 'corcho', 'muelle', 'jefe8', 'jefe8-roto'];
+function preToy() { TOY_SET.forEach(n => xi(n)); for (const k in TYN) xi(TYN[k][0], TYN[k][1]); }
+const toyI = n => L && L.theme === 'toy' && okI(IMG[n]) ? IMG[n] : null;
 function loadImages(done) {
   NAMES.forEach(n => {
     const im = new Image();
@@ -2495,6 +2500,7 @@ function drawToyBg() {
   if (night || fac) { g.addColorStop(0, '#2a1a4a'); g.addColorStop(0.6, '#6a2a6a'); g.addColorStop(1, '#ff7a6a'); } else { g.addColorStop(0, '#7ac8ff'); g.addColorStop(0.6, '#ffd8f0'); g.addColorStop(1, '#fff2c0'); }
   ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VHv);
   if (!night && !fac) { ctx.fillStyle = 'rgba(255,255,240,.9)'; ctx.beginPath(); ctx.arc(VW * 0.18 - cam.x * 0.01, VHv * 0.16, 46, 0, 6.283); ctx.fill(); }
+  { const FA = toyI('fondo-lejos-jugueteria'), FB = toyI('fondo-cerca-jugueteria'); if (FA && FB) { bgLayer(FA, Math.max(200, VHv * 0.52), VHv * 0.86 + up * 0.04, 0.08); if (night || fac) { ctx.fillStyle = 'rgba(40,10,60,.38)'; ctx.fillRect(0, 0, VW, VHv); } bgLayer(FB, Math.max(210, VHv * 0.42), VHv + 16 + up * 0.1, 0.22); if (night) { ctx.fillStyle = 'rgba(20,10,50,.3)'; ctx.fillRect(0, 0, VW, VHv); } return; } }
   // nubes de algodón de azúcar
   for (let i = 0; i < 6; i++) { const cx = ((i * 380 - cam.x * 0.06 + time * 4) % (VW + 400) + VW + 400) % (VW + 400) - 200, cy = VHv * (0.12 + 0.07 * (i % 3)); ctx.fillStyle = fac ? 'rgba(255,140,200,.25)' : ['rgba(255,190,230,.75)', 'rgba(200,230,255,.75)', 'rgba(255,255,255,.8)'][i % 3]; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(cx + k * 30, cy - (k % 2) * 14, 28 - (k % 2) * 6, 0, 6.283); ctx.fill(); } }
   if (fac) { // chimeneas con humo de colores
@@ -2508,6 +2514,12 @@ function drawToyBg() {
 }
 function drawToyFx() { if (!L.factory) return; ctx.save(); ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 20; i++) { const x = ((i * 137 + time * 30) % VW), y = ((i * 71 + time * 50 * (i % 3 + 1)) % VHv); ctx.fillStyle = 'rgba(' + ['255,120,200', '120,220,255', '255,220,90'][i % 3] + ',.5)'; ctx.fillRect(x, y, 4, 8); } ctx.restore(); }
 function tyTile(tx, ty, d) {          // bloques de construcción de colores
+  { const SR = toyI('suelo-relleno-jugueteria'), SB = toyI('suelo-borde-jugueteria'); if (SR && SB) { const x = tx * T, y = ty * T, cs = SR.naturalWidth / 3;
+      ctx.drawImage(SR, (((tx % 3) + 3) % 3) * cs, (((ty % 3) + 3) % 3) * cs, cs, cs, x, y, T + 0.5, T + 0.5);
+      const L1 = ty > 0 ? L.g[ty - 1][tx] : '#';
+      if (d === 0 && !isSolid(L1)) { const ih = SB.naturalHeight, iw = SB.naturalWidth, sc = 48 / (ih * 269 / 724), sw = iw * sc, top = y + 2 - ih * (455 / 724) * sc, k0 = Math.floor(x / sw);
+        ctx.save(); ctx.beginPath(); ctx.rect(x, top, T + 0.5, y + T - top + 0.5); ctx.clip(); for (let q = k0; q <= k0 + 1; q++) ctx.drawImage(SB, q * sw, top, sw, ih * sc); ctx.restore(); }
+      if (L.dark) { ctx.fillStyle = 'rgba(20,10,50,.35)'; ctx.fillRect(x, y, T + 0.5, T + 0.5); } return; } }
   const x = tx * T, y = ty * T, c = TOYC[Math.floor(tyH(Math.floor(tx / 2), Math.floor(ty / 2)) * 6)];
   ctx.fillStyle = c; ctx.fillRect(x, y, T + 0.5, T + 0.5); ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(x, y, T + 0.5, 6); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x, y + T - 6, T + 0.5, 6);
   ctx.strokeStyle = 'rgba(40,20,40,.35)'; ctx.lineWidth = 1.5; if (tx % 2 === 0) { ctx.beginPath(); ctx.moveTo(x + 0.5, y); ctx.lineTo(x + 0.5, y + T); ctx.stroke(); } if (ty % 2 === 0) { ctx.beginPath(); ctx.moveTo(x, y + 0.5); ctx.lineTo(x + T, y + 0.5); ctx.stroke(); }
@@ -2515,28 +2527,35 @@ function tyTile(tx, ty, d) {          // bloques de construcción de colores
   if (d === 0 && !isSolid(L1)) { for (const sx of [x + 12, x + 36]) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(sx, y - 1, 8, 4, 0, 0, 6.283); ctx.fill(); ctx.fillRect(sx - 8, y - 5, 16, 5); ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.ellipse(sx, y - 5, 8, 4, 0, 0, 6.283); ctx.fill(); ctx.strokeStyle = 'rgba(40,20,40,.4)'; ctx.stroke(); } }
 }
 function tyPlat(x, y, w) {            // galleta
+  { const pi = toyI('plataforma-galleta'); if (pi) { const pw = w + 10, ph = pw * pi.naturalHeight / pi.naturalWidth; ctx.drawImage(pi, x - 5, y - ph * 0.28, pw, ph); return; } }
   ctx.fillStyle = '#e0a860'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x + 3, y, w - 6, 16, 6) : ctx.rect(x + 3, y, w - 6, 16); ctx.fill(); ctx.strokeStyle = '#7a4a20'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#8a5a2a'; for (let xx = x + 12; xx < x + w - 8; xx += 16) { ctx.beginPath(); ctx.arc(xx, y + 8, 2, 0, 6.283); ctx.fill(); } }
 function tyMover(m) {                 // vagón del tren de juguete (o bloque que se cae)
   if (m.st === 3) return; const w = m.w, x = m.x, y = m.y;
+  if (m.fall && toyI('bloque-juguete')) { const bi = IMG['bloque-juguete'], jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0, bw = w + 8, bh = bw * bi.naturalHeight / bi.naturalWidth; ctx.drawImage(bi, x - 4 + jx, y - bh * 0.27, bw, bh); return; }
+  if (!m.fall && toyI('vagon')) { const vi = IMG.vagon, vw = w + 20, vh = vw * vi.naturalHeight / vi.naturalWidth; ctx.drawImage(vi, x - 10, y - vh * 0.1, vw, vh); return; }
   if (m.fall) { const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0, c = TOYC[Math.floor(tyH(m.bx, 3) * 6)]; ctx.fillStyle = c; ctx.fillRect(x + jx, y, w, 22); ctx.strokeStyle = 'rgba(40,20,40,.6)'; ctx.lineWidth = 2; ctx.strokeRect(x + jx, y, w, 22); for (let sx = x + 12; sx < x + w; sx += 24) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(sx + jx, y - 2, 8, 4, 0, 0, 6.283); ctx.fill(); ctx.stroke(); } return; }
   const c = TOYC[Math.floor(tyH(m.bx, m.by) * 6)]; ctx.fillStyle = c; ctx.fillRect(x, y, w, 24); ctx.strokeStyle = '#2a1a2a'; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, 24); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(x + 4, y + 3, w - 8, 5);
   for (const wx of [x + 14, x + w - 14]) { ctx.fillStyle = '#2a2a3a'; ctx.beginPath(); ctx.arc(wx, y + 26, 9, 0, 6.283); ctx.fill(); ctx.save(); ctx.translate(wx, y + 26); ctx.rotate(m.x / 9); ctx.fillStyle = '#ffd040'; ctx.fillRect(-2, -7, 4, 14); ctx.restore(); } }
 function drawToyWorld() {
   const vis = x => x > cam.x - 200 && x < cam.x + VW + 200;
-  for (const b of (L.belts || [])) { if (!vis(b.x0) && !vis(b.x1)) continue; ctx.fillStyle = '#3a3a4a'; ctx.fillRect(b.x0, b.y - 10, b.x1 - b.x0, 14); ctx.strokeStyle = '#ffd040'; ctx.lineWidth = 2; const off = (time * 150 * b.dir) % 24;
+  for (const b of (L.belts || [])) { if (!vis(b.x0) && !vis(b.x1)) continue; { const ci = toyI('cinta'); if (ci) { const ih = ci.naturalHeight, iw = ci.naturalWidth, sc = 26 / (ih * 342 / 724), tw = iw * sc, off = ((time * 150 * b.dir) % tw + tw) % tw; ctx.save(); ctx.beginPath(); ctx.rect(b.x0, b.y - 14, b.x1 - b.x0, 40); ctx.clip(); ctx.translate(b.x0 + (b.dir < 0 ? b.x1 - b.x0 : 0), 0); if (b.dir < 0) ctx.scale(-1, 1); for (let xx = -tw + off; xx < b.x1 - b.x0; xx += tw - 1) ctx.drawImage(ci, xx, b.y - 12 - ih * (200 / 724) * sc, tw, ih * sc); ctx.restore(); continue; } } ctx.fillStyle = '#3a3a4a'; ctx.fillRect(b.x0, b.y - 10, b.x1 - b.x0, 14); ctx.strokeStyle = '#ffd040'; ctx.lineWidth = 2; const off = (time * 150 * b.dir) % 24;
     for (let x = b.x0 + ((off % 24) + 24) % 24; x < b.x1; x += 24) { ctx.beginPath(); ctx.moveTo(x, b.y - 8); ctx.lineTo(x + 8 * b.dir, b.y - 3); ctx.lineTo(x, b.y + 2); ctx.stroke(); }
     for (const ex of [b.x0, b.x1]) { ctx.fillStyle = '#6a6a7a'; ctx.beginPath(); ctx.arc(ex, b.y - 3, 9, 0, 6.283); ctx.fill(); } }
   for (const z of (L.chocs || [])) { if (!vis(z.x0) && !vis(z.x1)) continue; const g = ctx.createLinearGradient(0, z.y0, 0, z.y1); g.addColorStop(0, '#8a4a28'); g.addColorStop(1, '#3a1808'); ctx.fillStyle = g; ctx.fillRect(z.x0, z.y0 + 6, z.x1 - z.x0, z.y1 - z.y0 - 6);
     ctx.fillStyle = '#a05a30'; ctx.beginPath(); ctx.moveTo(z.x0, z.y0 + 10); for (let x = z.x0; x <= z.x1; x += 12) ctx.lineTo(x, z.y0 + 6 + Math.sin(x * 0.05 + time * 3) * 3); ctx.lineTo(z.x1, z.y0 + 16); ctx.lineTo(z.x0, z.y0 + 16); ctx.fill(); ctx.fillStyle = 'rgba(255,220,180,.35)'; for (let i = 0; i < (z.x1 - z.x0) / 60; i++) { ctx.beginPath(); ctx.ellipse(z.x0 + ((i * 61 + time * 20) % (z.x1 - z.x0)), z.y0 + 12, 10, 2, 0, 0, 6.283); ctx.fill(); } }
-  for (const pd of L.pads) if (pd.jelly && vis(pd.x)) { const k = Math.max(0, 1 - pd.t * 5), sq = 1 - k * 0.35; ctx.save(); ctx.translate(pd.x + pd.w / 2, pd.y); ctx.scale(1 + k * 0.2, sq); ctx.globalAlpha = 0.85; const jg = ctx.createLinearGradient(0, -24, 0, 0); jg.addColorStop(0, '#ff9ad0'); jg.addColorStop(1, '#e04a90'); ctx.fillStyle = jg; ctx.beginPath(); ctx.moveTo(-pd.w / 2, 0); ctx.quadraticCurveTo(-pd.w / 2, -26, 0, -26); ctx.quadraticCurveTo(pd.w / 2, -26, pd.w / 2, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.ellipse(-pd.w * 0.2, -18, pd.w * 0.12, 4, -0.3, 0, 6.283); ctx.fill(); ctx.restore(); }
+  for (const pd of L.pads) if (pd.jelly && vis(pd.x) && toyI('gelatina')) { const k = Math.max(0, 1 - pd.t * 5), gi = IMG.gelatina, gw = Math.max(64, pd.w * 1.4); ctx.save(); ctx.translate(pd.x + pd.w / 2, pd.y + 6); ctx.scale(1 + k * 0.2, 1 - k * 0.35); ctx.drawImage(gi, -gw / 2, -gw, gw, gw); ctx.restore(); }
+  for (const pd of L.pads) if (pd.jelly && vis(pd.x) && !toyI('gelatina')) { const k = Math.max(0, 1 - pd.t * 5), sq = 1 - k * 0.35; ctx.save(); ctx.translate(pd.x + pd.w / 2, pd.y); ctx.scale(1 + k * 0.2, sq); ctx.globalAlpha = 0.85; const jg = ctx.createLinearGradient(0, -24, 0, 0); jg.addColorStop(0, '#ff9ad0'); jg.addColorStop(1, '#e04a90'); ctx.fillStyle = jg; ctx.beginPath(); ctx.moveTo(-pd.w / 2, 0); ctx.quadraticCurveTo(-pd.w / 2, -26, 0, -26); ctx.quadraticCurveTo(pd.w / 2, -26, pd.w / 2, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.ellipse(-pd.w * 0.2, -18, pd.w * 0.12, 4, -0.3, 0, 6.283); ctx.fill(); ctx.restore(); }
 }
 function drawJackPop(j) {               // muñeco sorpresa saltarín (sale de su caja)
-  const by = j.by, x = j.x, y = j.y; ctx.fillStyle = '#c0304a'; ctx.fillRect(x - 22, by - 30, 44, 30); ctx.strokeStyle = '#2a0a14'; ctx.lineWidth = 2.5; ctx.strokeRect(x - 22, by - 30, 44, 30); ctx.fillStyle = '#ffd040'; ctx.fillRect(x - 22, by - 18, 44, 6);
+  const by = j.by, x = j.x, y = j.y; { const mi = toyI('muneco-sorpresa'); if (mi) { const mh = Math.max(70, by - y + 50); spr(mi, x, by + 2, mh, 0.5, 1, false, 0, 1, 1); return; } } ctx.fillStyle = '#c0304a'; ctx.fillRect(x - 22, by - 30, 44, 30); ctx.strokeStyle = '#2a0a14'; ctx.lineWidth = 2.5; ctx.strokeRect(x - 22, by - 30, 44, 30); ctx.fillStyle = '#ffd040'; ctx.fillRect(x - 22, by - 18, 44, 6);
   ctx.strokeStyle = '#c8c8d0'; ctx.lineWidth = 3; ctx.beginPath(); for (let k = 0; k <= 10; k++) { const yy = by - 30 + (y - (by - 30)) * k / 10; ctx.lineTo(x + (k % 2 ? 8 : -8), yy); } ctx.stroke();
   ctx.fillStyle = '#f0f0f8'; ctx.beginPath(); ctx.arc(x, y - 6, 18, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#2a0a14'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = '#ff3a4a'; ctx.beginPath(); ctx.arc(x, y - 2, 4, 0, 6.283); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x - 6, y - 10, 2.5, 0, 6.283); ctx.arc(x + 6, y - 10, 2.5, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 2, 9, 0.3, 2.84); ctx.stroke(); }
 function tyEnemy(e) {
   const cx = e.x + e.w / 2, by = e.y + e.h, f = e.dir < 0 ? -1 : 1, sq = e.dead && e.how !== 'fly' ? Math.max(0.15, 1 - e.dead * 3) : 1, t = time * 6 + e.x * 0.01;
   ctx.save(); ctx.translate(cx, by); if (e.dead && e.how === 'fly') ctx.rotate(e.dead * 8); ctx.scale(1, sq); ctx.globalAlpha = e.dead ? Math.max(0, 1 - e.dead) : 1; ctx.lineJoin = 'round';
+  { const od = TYN[e.type], oi = od && toyI(od[0]); if (oi) { const fh = 724, hh = od[4] * fh / (od[3] - od[2]), yo = (fh - od[3]) / fh * hh;
+      oi._f = e.type === 'torreta' ? (e.shotT > 0 ? 2 : e.near && e.timer < 0.6 ? 1 : 0) : Math.floor(time * 9 + e.x * 0.013) % od[1];
+      spr(oi, 0, yo, hh, 0.5, 1, f < 0); ctx.restore(); return true; } }
   const ol = () => { ctx.strokeStyle = '#1a0a1a'; ctx.lineWidth = 2.5; ctx.stroke(); };
   if (e.type === 'patrulla') {             // soldadito de cuerda
     const st = Math.sin(t * 2) * 4; ctx.fillStyle = '#2a2a6a'; ctx.fillRect(-9, -18, 7, 18 + st * 0.3); ctx.fillRect(2, -18, 7, 18 - st * 0.3); ctx.fillStyle = '#d0303a'; ctx.beginPath(); ctx.rect(-12, -40, 24, 24); ctx.fill(); ol(); ctx.fillStyle = '#ffd040'; ctx.fillRect(-12, -30, 24, 3);
@@ -2563,6 +2582,12 @@ function drawJack(b) {
   let x = b.x, y = b.y; if (st === 'intro' || st === 'die') { x += (Math.random() - 0.5) * 8; }
   const air = Math.max(0, gy - y), ext = stun ? 30 : 110 + Math.sin(time * 6) * 12 + Math.min(80, air * 0.3);
   ctx.fillStyle = 'rgba(40,0,40,' + Math.max(0.12, 0.45 - air / 900) + ')'; ctx.beginPath(); ctx.ellipse(b.x, gy + 2, 110, 14, 0, 0, 6.283); ctx.fill();
+  { const JI = toyI(stun || st === 'die' ? 'jefe8-roto' : 'jefe8'); if (JI) { const jh = 300 + (stun ? -30 : Math.min(40, ext - 110)), jw = jh * JI.naturalWidth / JI.naturalHeight;
+      const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, y + 6); ctx.scale(f, 1); ctx.rotate(Math.sin(time * 3) * 0.03); ctx.drawImage(src, -jw / 2, -jh, jw, jh); ctx.restore(); };
+      draw(JI, 1); if (ph2 && !stun) { const t2 = tintOf(JI, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.15 + 0.12 * (0.5 + 0.5 * Math.sin(time * 8))); }
+      if (b.flash > 0) { const t3 = tintOf(JI, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); }
+      if (stun) { ctx.font = '800 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! ¡GOLPÉALE!', x, y - jh - 20); }
+      return; } }
   if (dang && st !== 'die') { ctx.globalCompositeOperation = 'lighter'; const ag = ctx.createRadialGradient(x, y - 120, 40, x, y - 120, 200); ag.addColorStop(0, 'rgba(255,60,160,0)'); ag.addColorStop(0.7, 'rgba(255,60,160,' + (0.18 + 0.1 * Math.sin(time * 18)) + ')'); ag.addColorStop(1, 'rgba(255,60,160,0)'); ctx.fillStyle = ag; ctx.fillRect(x - 200, y - 320, 400, 400); ctx.globalCompositeOperation = 'source-over'; }
   ctx.fillStyle = stun ? '#8a5a5a' : '#c0402a'; ctx.fillRect(x - 70, y - 90, 140, 90); ctx.strokeStyle = '#2a0a0a'; ctx.lineWidth = 4; ctx.strokeRect(x - 70, y - 90, 140, 90); ctx.fillStyle = '#ffd040'; ctx.fillRect(x - 70, y - 60, 140, 10);
   ctx.fillStyle = '#ffe080'; ctx.beginPath(); ctx.arc(x, y - 30, 16, 0, 6.283); ctx.fill(); ctx.fillStyle = '#2a0a0a'; ctx.beginPath(); ctx.arc(x - 5, y - 33, 3, 0, 6.283); ctx.arc(x + 5, y - 33, 3, 0, 6.283); ctx.fill();
@@ -2580,7 +2605,7 @@ function drawJack(b) {
     ctx.font = '800 13px system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! ¡GOLPÉALE!', x, hy - 100); ctx.textBaseline = 'alphabetic'; }
 }
 function drawToySpring(w) { const gy = 14 * T; if (w.life > 0.5) { ctx.fillStyle = 'rgba(255,80,200,' + (0.3 + 0.3 * Math.sin(time * 30)) + ')'; ctx.beginPath(); ctx.ellipse(w.x, gy, 26, 6, 0, 0, 6.283); ctx.fill(); return; }
-  const hh = 150 * Math.min(1, (0.5 - w.life) * 8); ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = '#d0d0dc'; ctx.lineWidth = 5; ctx.beginPath(); for (let k = 0; k <= 10; k++) ctx.lineTo(w.x + (k % 2 ? 12 : -12), gy - hh * k / 10); ctx.stroke();
+  const hh = 150 * Math.min(1, (0.5 - w.life) * 8); { const mi = toyI('muelle'); if (mi && hh > 2) { const mw = 50, mh = mw * mi.naturalHeight / mi.naturalWidth; ctx.save(); ctx.beginPath(); ctx.rect(w.x - 60, gy - hh - 40, 120, hh + 46); ctx.clip(); ctx.drawImage(mi, w.x - mw / 2, gy + 4 - Math.max(hh + 30, 60) , mw, mh); ctx.restore(); ctx.globalCompositeOperation = 'lighter'; return; } } ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = '#d0d0dc'; ctx.lineWidth = 5; ctx.beginPath(); for (let k = 0; k <= 10; k++) ctx.lineTo(w.x + (k % 2 ? 12 : -12), gy - hh * k / 10); ctx.stroke();
   ctx.fillStyle = TOYC[Math.floor(w.x) % 6]; ctx.beginPath(); ctx.arc(w.x, gy - hh - 14, 16, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#2a0a14'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.globalCompositeOperation = 'lighter'; }
 /* ---------- planeta 8 · JUGUETERÍA: las fases ---------- */
 function TB(W, H) {
@@ -4448,6 +4473,7 @@ function drawBoxes(x0, x1, y0, y1) {
     } else if (c === 'B' && iceI('caja-hielo')) spr(IMG['caja-hielo'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && lavaI('caja-lava')) spr(IMG['caja-lava'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && selI('caja-selva')) spr(IMG['caja-selva'], cx, cy, 52, 0.5, 0.5);
+    else if (c === 'B' && toyI('caja-jugueteria')) spr(IMG['caja-jugueteria'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && skyI('caja-cielo')) spr(IMG['caja-cielo'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && desI('caja-desierto')) spr(IMG['caja-desierto'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && oceI('caja-oceano')) spr(IMG['caja-oceano'], cx, cy, 52, 0.5, 0.5);
@@ -4595,6 +4621,7 @@ function drawWorld() {
     else if (s.ball && L.theme === 'desert') { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const dg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); dg.addColorStop(0, '#f0c890'); dg.addColorStop(1, '#8a5a30'); ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#3a1a08'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.strokeStyle = 'rgba(70,255,230,.6)'; ctx.beginPath(); ctx.arc(0, 0, 9, 0, 4); ctx.stroke(); ctx.restore(); }
     else if (s.ball && iceI('bola-nieve')) spr(IMG['bola-nieve'], s.x, s.y, 40, 0.5, 0.5, false, s.rot || 0);
     else if (s.ball) { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot || 0); const bg = ctx.createRadialGradient(-6, -6, 3, 0, 0, 19); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.7, '#d8f2ff'); bg.addColorStop(1, '#8cc8ec'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, 19, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#5a9cc8'; ctx.lineWidth = 2; ctx.stroke(); ctx.strokeStyle = 'rgba(120,180,220,.7)'; ctx.beginPath(); ctx.arc(0, 0, 11, 0.3, 2.2); ctx.stroke(); ctx.restore(); }
+    else if (L.theme === 'toy' && !s.magma && !s.ball && !s.seed && toyI('corcho')) spr(IMG.corcho, s.x, s.y, 18, 0.5, 0.5, s.vx < 0);
     else if (L.theme === 'desert' && !s.magma && !s.ball && !s.seed && desI('dardo')) spr(IMG.dardo, s.x, s.y, 16, 0.5, 0.5, false, Math.atan2(s.vy || 0, s.vx || 1));
     else if (L.theme === 'ocean' && !s.magma && !s.ball && oceI('perla')) spr(IMG.perla, s.x, s.y, 26, 0.5, 0.5);
     else if (L.theme === 'sky' && !s.magma && !s.ball && skyI('chispa')) spr(IMG.chispa, s.x, s.y, 30, 0.5, 0.5, false, time * 8);
