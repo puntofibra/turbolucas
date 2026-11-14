@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.35';
+const VERSION = '1.36';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4543,6 +4543,7 @@ function flame(x, y, len, w, seed) {
 }
 const ANCH = { 'lucas-quieto': 0.5, 'lucas-avanzando': 0.47, 'lucas-saltando': 0.44, 'lucas-cayendo': 0.5, 'lucas-golpeado': 0.5, 'lucas-celebrando': 0.5, 'lucas-agachado': 0.5 };
 function drawPlayer() {
+  if (L.adv && P.win && P.winT > 0.45) return;
   const p = P; if (!p) return;
   if (p.inv > 0 && !p.dead && Math.floor(time * 18) % 2) return;
   let pose = 'lucas-quieto';
@@ -4603,7 +4604,7 @@ function drawWorld() {
   }
   // punto de control y meta
   for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 100, 22, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y + 2, 118); ctx.globalAlpha = 1; }
-  if (vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y + 2, 250); }
+  if (!L.adv && vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y + 2, 250); }
   if (L.adv && L.adv.interior) advInterior();
   drawCogs(); drawTiles();
   drawStageBack();
@@ -4651,6 +4652,7 @@ function drawWorld() {
   }
   if (L.boss) drawBoss();
   drawPlayer();
+  if (L.adv) advDrawFront();
   drawFake();
   drawStageFront();
   drawWaves();
@@ -6839,7 +6841,7 @@ addEventListener('keydown', e => {
 }, true);
 
 /* ---------- la aventura dentro de la fase ---------- */
-const LUCAS_WHO = { name: 'LUCAS', img: 'lucas-quieto' };
+const LUCAS_WHO = { name: 'LUCAS', img: 'pj-lucas2' };
 function advApi(A) {
   return {
     say: (who, lines, then) => advSay(who, lines, then), ask: (who, t, o) => advAsk(who, t, o),
@@ -6874,7 +6876,7 @@ function advInit() {
     rs.c.forEach(k => { const [x, y] = k.split(',').map(Number); L.g[y][x] = ' '; }); (rs.ch || []).forEach((g, i) => { if (g && L.chips[i]) L.chips[i].got = true; }); }
   if (sw) { const go = ADVS.go; ADVS.go = null; P.x = go.tx * T + T / 2 - P.w / 2; P.y = go.ty * T - P.h - 2; P.vx = P.vy = 0; P.safeX = P.x; P.safeY = P.y + 2; cam.x = Math.max(0, Math.min(L.W * T - VW, P.x - VW * 0.4)); cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, P.y + P.h - VHv * 0.7));
     burst(P.x + P.w / 2, P.y + P.h / 2, 40, '#7fe9ff', 300, 0.8, 0, 4); if (A.enter) setTimeout(() => A.enter(A.api), 400); return; }
-  if (A.intro) setTimeout(() => { if (state === 'play' && L.adv === A) advSay({ name: 'NARRADOR', img: 'lucas-quieto' }, A.intro, () => A.introDone && A.introDone(A.api)); }, 700);
+  if (A.intro) setTimeout(() => { if (state === 'play' && L.adv === A) advSay({ name: 'NARRADOR', img: 'pj-lucas2' }, A.intro, () => A.introDone && A.introDone(A.api)); }, 700);
 }
 function advSafe() {          // en la aventura no se pierde nunca: si algo falla, vuelves al último suelo firme
   const p = P; if (p.safeX == null) { p.safeX = L.spawn.x - p.w / 2; p.safeY = L.spawn.y - p.h; }
@@ -6930,20 +6932,20 @@ function advDrawWorld() {
   const A = L.adv; if (!A.ready) return; const vis = x => x > cam.x - 200 && x < cam.x + VW + 200;
   for (const g of A.gates) { if (!vis(g.x)) continue; const h = g.y1p - g.y0p;
     if (g.kind === 'laser') { const a = g.open ? Math.max(0, 1 - g.ot * 2) : 1;
-      ctx.fillStyle = '#3a4258'; ctx.fillRect(g.x - 10, g.y0p - 14, 20, 16); ctx.fillRect(g.x - 10, g.y1p - 2, 20, 16); ctx.fillStyle = '#ffd23c'; ctx.fillRect(g.x - 10, g.y0p - 6, 20, 4); ctx.fillRect(g.x - 10, g.y1p + 4, 20, 4);
-      ctx.fillStyle = '#ff3a5a'; ctx.beginPath(); ctx.arc(g.x, g.y0p + 2, 6, 0, 6.283); ctx.arc(g.x, g.y1p - 2, 6, 0, 6.283); ctx.fill();
+      const po = xi('adv-poste'); if (okI(po)) spr(po, g.x + 14, g.y1p + 8, h + 16, 0.5, 1); else { ctx.fillStyle = '#3a4258'; ctx.fillRect(g.x - 10, g.y0p - 14, 20, 16); ctx.fillRect(g.x - 10, g.y1p - 2, 20, 16); }
       if (a > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
-        for (let k = 0; k < 3; k++) { const ox = (k - 1) * 9 + Math.sin(time * 9 + k) * 1.5, w = 5 + Math.sin(time * 20 + k * 2) * 1.5; const gr = ctx.createLinearGradient(g.x + ox - w * 2, 0, g.x + ox + w * 2, 0); gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(0.5, 'rgba(255,90,120,.95)'); gr.addColorStop(1, 'rgba(255,40,80,0)'); ctx.fillStyle = gr; ctx.fillRect(g.x + ox - w * 2, g.y0p + 6, w * 4, h - 12); }
-        ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(g.x - 1.5, g.y0p + 6, 3, h - 12); ctx.restore();
+        for (let k = 0; k < 3; k++) { const ox = -8 + (k - 1) * 5 + Math.sin(time * 9 + k) * 1.5, w = 5 + Math.sin(time * 20 + k * 2) * 1.5; const gr = ctx.createLinearGradient(g.x + ox - w * 2, 0, g.x + ox + w * 2, 0); gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(0.5, 'rgba(255,90,120,.95)'); gr.addColorStop(1, 'rgba(255,40,80,0)'); ctx.fillStyle = gr; ctx.fillRect(g.x + ox - w * 2, g.y0p + 6, w * 4, h - 12); }
+        ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(g.x - 9.5, g.y0p + 6, 3, h - 12); ctx.restore();
         if (Math.random() < 0.3) parts.push({ x: g.x + (Math.random() - 0.5) * 20, y: g.y0p + Math.random() * h, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, life: 0.4, max: 0.4, col: '#ff8aa0', size: 2, grav: 0 }); } }
     else if (g.kind === 'door') { const im = xi('adv-puerta', 4); im._n = 4; im._f = g.open ? Math.min(3, Math.floor(g.ot * 6)) : 0; spr(im, g.x, g.y1p + 2, Math.max(h, 2 * T) + 8, 0.5, 1); }
     else if (g.kind === 'vent') { const im = xi('adv-rejilla', 2); im._n = 2; im._f = g.open ? 1 : 0; spr(im, g.x, g.y1p, h, 0.5, 1); } }
-  for (const e of A.ents) { if (!vis(e.x) || (e.hide && e.hide(A.api))) continue;
+  for (const e of A.ents) { if (!vis(e.x) || e.front || (e.hide && e.hide(A.api))) continue;
+    if (e.kind === 'lever' && okI(xi('adv-palanca', 2))) { const im = IMG['adv-palanca']; im._n = 2; im._f = e.on ? 1 : 0; spr(im, e.x, e.y + 2, e.h, 0.5, 1); if (A.tgt === e) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#05071a'; ctx.fillText(e.name, e.x + 1, e.y - e.h - 9); ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, e.y - e.h - 10); } continue; }
     if (e.kind === 'lever') { const an = e.on ? 0.7 : -0.7; ctx.fillStyle = '#4a5470'; ctx.fillRect(e.x - 22, e.y - 16, 44, 16); ctx.fillStyle = e.on ? '#35ff8a' : '#ff3a5a'; ctx.beginPath(); ctx.arc(e.x + 14, e.y - 8, 4, 0, 6.283); ctx.fill(); ctx.save(); ctx.translate(e.x - 4, e.y - 14); ctx.rotate(an); ctx.fillStyle = '#c8d0e0'; ctx.fillRect(-3, -40, 6, 40); ctx.fillStyle = '#ffd23c'; ctx.beginPath(); ctx.arc(0, -42, 9, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1b2350'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
       if (A.tgt === e) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, e.y - 70); } continue; }
     const bob = e.float ? Math.sin(e.ph * 1.8) * 7 : 0, by = e.y + (e.fy || 0) + bob;
     if (e.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, by - e.h / 2, 4, e.x, by - e.h / 2, e.h * 0.8); gg.addColorStop(0, e.glow); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, by - e.h * 1.4, e.h * 2, e.h * 1.6); ctx.restore(); }
-    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
+    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
     if (im._n > 1) im._f = e.frame != null ? e.frame : Math.floor(e.ph * (e.fps || 5)) % im._n;
     const fl = e.kind === 'npc' && !e.noTurn ? (e.faceR ? e.face < 0 : e.face > 0) : !!e.flip, br = e.kind === 'npc' ? 1 + Math.sin(e.ph * 2.2) * 0.025 : 1;
     if (e.kind === 'npc' && !e.float) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 2, e.h * 0.32, 6, 0, 0, 6.283); ctx.fill(); }
@@ -6976,6 +6978,15 @@ function advInterior() {          // pared de nave por dentro: paneles, luces y 
       const fx = wx - r * 1.5 + ((time * 30 + w[0] * 50) % (3 * r)); ctx.fillStyle = '#ffb84a'; ctx.beginPath(); ctx.ellipse(fx, wy + Math.sin(time + w[0]) * r * 0.3, 10, 6, 0, 0, 6.283); ctx.fill(); ctx.beginPath(); ctx.moveTo(fx - 9, wy + Math.sin(time + w[0]) * r * 0.3); ctx.lineTo(fx - 17, wy - 6 + Math.sin(time + w[0]) * r * 0.3); ctx.lineTo(fx - 17, wy + 6 + Math.sin(time + w[0]) * r * 0.3); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.ellipse(wx - r * 0.35, wy - r * 0.4, r * 0.35, r * 0.15, -0.6, 0, 6.283); ctx.fill(); ctx.restore();
     ctx.fillStyle = '#c8d0e0'; for (let k = 0; k < 8; k++) { const a = k * 0.785; ctx.beginPath(); ctx.arc(wx + Math.cos(a) * (r + 7), wy + Math.sin(a) * (r + 7), 2.5, 0, 6.283); ctx.fill(); } }
+}
+function advDrawFront() {          // lo que va delante de Lucas: barcos, cohete... (Lucas se mete por detrás)
+  const A = L.adv; if (!A.ready) return; const vis = x => x > cam.x - 400 && x < cam.x + VW + 400;
+  for (const e of A.ents) { if (!e.front || !vis(e.x) || (e.hide && e.hide(A.api))) continue; const im = xi(e.img, e.fr); if (e.fr) { im._n = e.fr; im._f = e.frame || 0; } spr(im, e.x, e.y + (e.fy || 0), e.h, 0.5, 1, !!e.flip); }
+  if (L.goal.x > 0 && vis(L.goal.x)) { const rx = L.goal.x + 50, p = P, t = p.win ? p.winT : 0, lift = t > 0.7 ? Math.pow(t - 0.7, 2) * 700 : 0, sh = p.win && t < 0.7 ? Math.sin(time * 60) * 2 : 0;
+    const gg = ctx.createRadialGradient(rx, L.goal.y - 90, 4, rx, L.goal.y - 90, 120); gg.addColorStop(0, 'rgba(53,255,138,' + (0.18 + 0.08 * Math.sin(time * 3)) + ')'); gg.addColorStop(1, 'rgba(53,255,138,0)'); ctx.fillStyle = gg; ctx.fillRect(rx - 120, L.goal.y - 210, 240, 240);
+    if (t > 0.5) for (let k = 0; k < 4; k++) parts.push({ x: rx + (Math.random() - 0.5) * 40, y: L.goal.y - lift - 8, vx: (Math.random() - 0.5) * 160, vy: 200 + Math.random() * 200, life: 0.6, max: 0.6, col: ['#ffd23c', '#ff8a2a', '#ffffff', '#7fe9ff'][k], size: 5, grav: 0 });
+    if (t > 0.7 && !A.lifted) { A.lifted = 1; tone(80, 600, 1.4, 'sawtooth', 0.08); noise(1.4, 0.25, 900); shake = 0.4; }
+    spr(xi('adv-cohete'), rx + sh, L.goal.y + 4 - lift, 180, 0.5, 1); }
 }
 function advHUD() {
   const A = L.adv, pad = 14, s = Math.max(1, Math.min(1.25, VW / 900)); ctx.save(); ctx.scale(s, s); const w = VW / s;
@@ -7046,7 +7057,7 @@ LEVELS['A-2'] = function () {
   B.row(90, 96, 15); B.block(100, 109, 10, 15); B.block(103, 108, 13, 15, ' '); B.fake(100, 102, 13, 15); B.row(103, 104, 15); B.arc(99, 110, 8, 1);   // montaña con pared falsa
   B.block(114, 122, 0, 11); B.block(118, 118, 12, 15, 'G');                                                        // túnel con barrera de luz
   B.arc(125, 135, 12, 3); P(138, 142, 12); B.row(138, 142, 11); B.arc(145, 156, 12, 3);
-  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' }, chispas = { name: 'CHISPAS', img: 'pj-chispas' }, tuercas = { name: 'TUERCAS', img: 'robot-roto' }, triste = { name: 'BOLITA', img: 'pj-bolita-triste' };
+  const NAR = { name: 'NARRADOR', img: 'pj-lucas2' }, chispas = { name: 'CHISPAS', img: 'pj-chispas' }, tuercas = { name: 'TUERCAS', img: 'robot-roto' }, triste = { name: 'BOLITA', img: 'pj-bolita-triste' };
   const fixLeft = A => ['llavein', 'cable', 'soldador'].filter(k => !A.flag('fx_' + k));
   const fixGoal = A => { const f = fixLeft(A); if (!f.length) return; const n = 3 - f.length; A.goal('Busca las 3 herramientas (' + n + ' de 3)'); };
   const toolMsg = (id, t) => A => [t, 'Llévasela a Tuercas.'];
@@ -7062,7 +7073,7 @@ LEVELS['A-2'] = function () {
           const f = fixLeft(A), pista = { llavein: 'La llave inglesa brilla dentro de la primera montaña. Tiene una roca agrietada: ¡dispárale con el láser!', cable: 'El cable lo tiene Hoja, la jardinera del invernadero. Ve por el teletransporte.', soldador: 'El soldador está en el laboratorio de Byte. La puerta está más adelante.' };
           A.say(chispas, ['Todavía faltan ' + f.length + ' herramientas.', pista[f[0]]]);
         } }, chispas),
-      { id: 'tuercas', kind: 'npc', tx: 12, ty: 16, h: 96, img: 'robot-roto-suelo', img2: 'robot-roto', alt: A => !!A.flag('fx1'), name: 'TUERCAS', noTurn: true, mark: A => fixLeft(A).some(k => A.has(k)),
+      { id: 'tuercas', kind: 'npc', tx: 12, ty: 16, h: 96, img: 'robot-roto-suelo', img2: 'robot-roto', alt: A => !!A.flag('fx1'), img3: 'robot-arreglado', name: 'TUERCAS', noTurn: true, mark: A => fixLeft(A).some(k => A.has(k)),
         glow: null,
         use: (A, e) => {
           const have = fixLeft(A).filter(k => A.has(k));
@@ -7089,7 +7100,7 @@ LEVELS['A-2a'] = function () {
   B.block(0, W - 1, 12, H - 1); B.block(0, 0, 0, 11); B.block(W - 1, W - 1, 0, 11); B.block(0, W - 1, 0, 0); B.block(8, 11, 8, 8, '='); B.row(8, 11, 7); B.row(15, 20, 11);
   const byte = { name: 'BYTE', img: 'pj-byte' };
   const adv = { root: 'A-2', interior: { strips: [2, 11], light: '200,80,255', c0: '#2c2348', c1: '#140f28', win: [[19, 5, 1.2]], sea0: '#1a1040', sea1: '#05030f' },
-    enter: A => { if (!A.flag('lab1')) { A.flag('lab1', 1); A.say({ name: 'NARRADOR', img: 'lucas-quieto' }, ['Estás en el laboratorio de Byte. Hay pantallas y luces por todas partes.']); } },
+    enter: A => { if (!A.flag('lab1')) { A.flag('lab1', 1); A.say({ name: 'NARRADOR', img: 'pj-lucas2' }, ['Estás en el laboratorio de Byte. Hay pantallas y luces por todas partes.']); } },
     ents: [
       { id: 'door', kind: 'way', tx: 3, ty: 12, h: 110, img: 'adv-puerta', fr: 4, frame: 3, name: 'SALIR', use: (A, e) => { e.frame = 2; setTimeout(() => e.frame = 0, 200); setTimeout(() => A.go('A-2', 86, 16), 380); } },
       { id: 'o1', kind: 'deco', tx: 7, ty: 6, h: 54, img: 'esfera-formas', float: true }, { id: 'o2', kind: 'deco', tx: 13, ty: 5, h: 54, img: 'esfera-numeros', float: true }, { id: 'o3', kind: 'deco', tx: 22, ty: 9, h: 54, img: 'esfera-roja', float: true },
@@ -7132,7 +7143,7 @@ LEVELS['A-3'] = function () {
   B.block(91, 120, 20, H - 1); P(94, 97, 14); P(101, 104, 12); P(108, 111, 14); P(115, 118, 13); B.row(101, 104, 11); B.row(95, 118, 18); B.block(104, 106, 16, 19);
   B.block(121, W - 1, 12, H - 1); B.block(W - 1, W - 1, 0, 11); B.arc(124, 134, 9, 2); B.row(140, 150, 11); B.block(186, 189, 4, 11); B.block(186, 189, 9, 11, ' '); B.block(187, 187, 9, 11, 'G');
   B.row(175, 184, 11);
-  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' }, rayo = { name: 'RAYO', img: 'pj-amarillo' }, rojo = { name: 'EXPLORADOR ROJO', img: 'pj-rojo' }, cria = { name: 'CHISPITA', img: 'pj-chispas' };
+  const NAR = { name: 'NARRADOR', img: 'pj-lucas2' }, rayo = { name: 'RAYO', img: 'pj-amarillo' }, rojo = { name: 'EXPLORADOR ROJO', img: 'pj-rojo' }, cria = { name: 'CHISPITA', img: 'pj-cachorro', fr: 2 };
   const st = A => A.flag('st') || 0;
   const giveStars = (A, e) => { const n = A.cnt('estrella'); if (!n) return false; A.take('estrella', n); A.flag('st', st(A) + n); shake = 0.25; burst(e.x, e.y - 50, 50, '#7dff8a', 320, 0.9, 0, 4); [392, 523, 659, 784].forEach((f, i) => tone(f, f, 0.18, 'triangle', 0.12, i * 0.1)); return true; };
   const adv = {
@@ -7147,6 +7158,7 @@ LEVELS['A-3'] = function () {
           const pistas = ['Una estrella brilla dentro de la roca agrietada de la colina. Usa tu láser.', 'Otra estrella se cayó al fondo del primer lago. ¡Bucea!', 'El teletransporte de la colina lleva a una cueva de cristal. Allí hay otra.', 'El explorador Rojo tiene una estrella. Vive al otro lado del segundo lago.'];
           A.say(rayo, ['El huevo ya tiene ' + st(A) + ' de 4 estrellas.', pistas[st(A) % 4]]);
         } }, rayo),
+      { id: 'nido', kind: 'deco', tx: 11, ty: 13, h: 46, fy: 10, img: 'adv-nido' },
       { id: 'huevo', kind: 'npc', tx: 11, ty: 13, h: 92, img: 'huevo-1', name: 'EL HUEVO', noTurn: true, lbl: '🥚 MIRAR', hide: A => !!A.flag('hatch'), mark: A => A.has('estrella'),
         use: (A, e) => {
           if (!A.flag('m1')) return A.say({ name: 'EL HUEVO', img: 'huevo-1' }, ['Es un huevo muy raro, con luces por dentro. Rayo sabe algo de él.']);
@@ -7156,7 +7168,7 @@ LEVELS['A-3'] = function () {
           A.say({ name: 'EL HUEVO', img: 'huevo-5' }, ['¡El huevo se está abriendo!'], () => { shake = 0.5; for (let i = 0; i < 6; i++) setTimeout(() => burst(e.x, e.y - 50, 40, ['#7dff8a', '#ffd23c', '#7fe9ff'][i % 3], 380, 1, 300, 5), i * 120); SFX.win();
             setTimeout(() => { A.flag('hatch', 1); A.say(cria, ['¡Hola! ¡Hola! Me llamo Chispita.', '¡Gracias por darme tu energía, Lucas!', 'Ven conmigo. Sé dónde está tu cohete: al final de la selva, detrás de la puerta de luz.', 'Ya la he abierto para ti.'], () => { A.open('salida'); A.goal('Ve al final de la selva y sube a tu cohete'); }); }, 900); });
         } },
-      Object.assign({ id: 'cria', kind: 'npc', tx: 11, ty: 13, h: 70, cond: A => !!A.flag('hatch'), hide: A => !A.flag('hatch'), use: A => A.say(cria, ['¡Guau! Tu cohete está al final de la selva, a la derecha. Usa el teletransporte para llegar antes.']) }, cria),
+      Object.assign({ id: 'cria', kind: 'npc', tx: 11, ty: 13, h: 80, fps: 2, cond: A => !!A.flag('hatch'), hide: A => !A.flag('hatch'), use: A => A.say(cria, ['¡Guau! Tu cohete está al final de la selva, a la derecha. Usa el teletransporte para llegar antes.']) }, cria),
       { id: 'teleN', kind: 'tele', tx: 19, ty: 13, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', lbl: '✨ VIAJAR', use: A => A.ask({ name: 'TELETRANSPORTE', img: 'adv-teleport' }, '¿A dónde quieres viajar?', [{ t: '✨ CASA DEL EXPLORADOR', f: () => A.tele(146, 12) }, { t: 'QUEDARME AQUÍ' }]) },
       { id: 'teleC', kind: 'tele', tx: 85, ty: 12, h: 120, img: 'adv-teleport', name: 'A LA CUEVA DE CRISTAL', lbl: '✨ VIAJAR', use: A => A.go('A-3c', 4, 14) },
       Object.assign({ id: 'rojo', kind: 'npc', tx: 132, ty: 12, h: 128, faceR: true, mark: A => A.has('linterna'),
@@ -7179,7 +7191,7 @@ LEVELS['A-3c'] = function () {
   const W = 34, H = 16, B = LB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
   B.block(0, W - 1, 14, H - 1); B.block(0, 0, 0, 13); B.block(W - 1, W - 1, 0, 13); B.block(0, W - 1, 0, 0);
   P(8, 11, 11); P(13, 16, 8); P(18, 21, 5); B.row(8, 11, 10); B.row(13, 16, 7); B.block(24, 24, 1, 9); B.block(24, 24, 10, 13, 'G'); B.row(26, 31, 13); B.crystal(5, 14, 0, 1); B.crystal(22, 14, 1, 1); B.crystal(29, 14, 2, 1);
-  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' };
+  const NAR = { name: 'NARRADOR', img: 'pj-lucas2' };
   const adv = { root: 'A-3', interior: { strips: [3], light: '160,240,255', c0: '#1b3a5a', c1: '#0a1a30', win: [[11, 4, 1.1]], sea0: '#d8f6ff', sea1: '#7fc8ff' },
     enter: A => { if (!A.flag('cue1')) { A.flag('cue1', 1); A.say(NAR, ['Estás en la cueva de cristal. Todo brilla con luz azul.', 'Una barrera de luz protege el fondo. Busca la palanca.']); } },
     ents: [
@@ -7200,9 +7212,9 @@ LEVELS['A-1'] = function () {
   B.block(33, 34, 13, H - 1); B.block(35, 36, 15, H - 1); B.block(37, 38, 18, H - 1); B.block(39, 40, 22, H - 1); B.block(41, 192, 27, H - 1);
   B.row(33, 34, 12); B.row(35, 36, 14); B.row(37, 38, 17); B.row(39, 40, 21);
   // arrecife de los tres corales
-  B.block(44, 45, 25, 26); B.block(61, 63, 24, 26); B.kelp(50, 27, 3); B.kelp(53, 27, 4); B.kelp(56, 27, 3); B.row(47, 59, 22); B.kelp(43, 27, 2);
+  B.block(44, 45, 25, 26); B.block(61, 63, 24, 26); B.kelp(47, 27, 3); B.kelp(59, 27, 3); B.row(47, 59, 22); B.kelp(43, 27, 2);
   // isla del cofre (con su escalón en la superficie)
-  P(64, 68, 12); B.block(69, 78, 10, 14); B.arc(69, 78, 7, 2); B.kelp(72, 27, 5); B.kelp(76, 27, 4); B.row(80, 92, 20); B.block(84, 86, 25, 26); B.block(95, 96, 24, 26);
+  P(64, 68, 12); B.block(69, 78, 10, 14); B.arc(69, 78, 7, 2); B.kelp(72, 27, 5); B.kelp(76, 27, 4); B.row(80, 92, 20); B.block(97, 98, 25, 26);
   // zona de los pulpos: roca agrietada con un hueco dentro
   B.block(108, 115, 21, 26); B.block(110, 114, 23, 26, ' '); B.block(108, 109, 25, 26, 'C'); B.row(111, 112, 26); B.kelp(101, 27, 3); B.kelp(118, 27, 4); B.row(99, 106, 24);
   // isla de Rayo
@@ -7214,7 +7226,7 @@ LEVELS['A-1'] = function () {
   B.row(193, 200, 12); B.arc(204, 216, 8, 1);
   const almeja = { name: 'DOÑA ALMEJA', img: 'enemigo-almeja', fr: 3, frame: 0 }, cangrejo = { name: 'PINZAS', img: 'enemigo-cangrejo', fr: 4 }, bolita = { name: 'BOLITA', img: 'pj-bolita' },
     pulpo = { name: 'TINTA', img: 'enemigo-pulpo', fr: 4 }, rayo = { name: 'RAYO', img: 'pj-amarillo' }, medusa = { name: 'MEDI', img: 'enemigo-medusa', fr: 4 }, globo = { name: 'GLOBITO', img: 'enemigo-pezglobo', fr: 4 }, rojo = { name: 'CAPITÁN ROJO', img: 'pj-rojo' };
-  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' };
+  const NAR = { name: 'NARRADOR', img: 'pj-lucas2' };
   const perlas = A => A.cnt('perla');
   const teleSpots = [{ t: 'PLAYA DEL FARO', x: 15, y: 11 }, { t: 'ISLA DE RAYO', x: 133, y: 10 }, { t: 'PLAYA DEL CAPITÁN', x: 222, y: 11 }];
   const teleUse = k => A => A.ask({ name: 'TELETRANSPORTE', img: 'adv-teleport' }, '¿A dónde quieres viajar?', teleSpots.filter((s, i) => i !== k).map(s => ({ t: '✨ ' + s.t, f: () => A.tele(s.x, s.y) })).concat([{ t: 'QUEDARME AQUÍ' }]));
@@ -7229,8 +7241,13 @@ LEVELS['A-1'] = function () {
           if (!A.flag('m1')) return A.say(almeja, ['¡Hola, Lucas! Soy Doña Almeja. ¡Qué disgusto tengo!', 'Las olas rompieron mi collar y mis tres perlas mágicas se cayeron al fondo del mar.', '¿Me ayudas a encontrarlas? Si me las traes, te daré la llave del faro. Allí dentro está tu cohete.', 'Pregunta a mis amigos del mar. Ellos te darán pistas.'], () => { A.flag('m1', 1); A.goal('Busca las 3 perlas (0 de 3)'); });
           const n = perlas(A); if (n < 3) return A.say(almeja, ['Llevas ' + n + ' de 3 perlas. ¡Ánimo, ya queda menos!', 'Recuerda: mis amigos del mar te dan pistas.']);
           e.frame = 1; A.take('perla', 3);
-          A.say(almeja, ['¡Mis tres perlas! ¡Muchísimas gracias, Lucas!', 'Toma, aquí tienes la llave del faro. Abre la puerta y vuelve a tu cohete.'], () => { e.frame = 2; A.give('llave'); A.flag('done', 1); A.goal('Abre la puerta del faro con la llave'); });
+          A.say({ name: 'DOÑA ALMEJA', img: 'adv-collar' }, ['¡Mis tres perlas! ¡Mira qué bonito ha quedado mi collar!', '¡Muchísimas gracias, Lucas! Toma, aquí tienes la llave del faro. Abre la puerta y vuelve a tu cohete.'], () => { e.frame = 2; A.give('llave'); A.flag('done', 1); A.goal('Abre la puerta del faro con la llave'); });
         } }, almeja),
+      { id: 'cor1', kind: 'deco', tx: 50, ty: 27, h: 110, img: 'adv-corales', fr: 3, frame: 0 }, { id: 'cor2', kind: 'deco', tx: 53, ty: 27, h: 96, img: 'adv-corales', fr: 3, frame: 1 }, { id: 'cor3', kind: 'deco', tx: 56, ty: 27, h: 104, img: 'adv-corales', fr: 3, frame: 2 },
+      { id: 'barco', kind: 'deco', front: true, tx: 88, ty: 27, h: 250, img: 'adv-barco' },
+      { id: 'palm', kind: 'deco', tx: 9, ty: 11, h: 190, img: 'adv-playa', fr: 4, frame: 0 }, { id: 'somb', kind: 'deco', tx: 26, ty: 11, h: 120, img: 'adv-playa', fr: 4, frame: 1 }, { id: 'cast', kind: 'deco', tx: 31, ty: 11, h: 80, img: 'adv-playa', fr: 4, frame: 3 },
+      { id: 'palm2', kind: 'deco', tx: 228, ty: 11, h: 190, img: 'adv-playa', fr: 4, frame: 0 }, { id: 'cartel', kind: 'deco', tx: 203, ty: 11, h: 90, img: 'adv-playa', fr: 4, frame: 2 }, { id: 'palm3', kind: 'deco', tx: 137, ty: 10, h: 170, img: 'adv-playa', fr: 4, frame: 0, flip: true },
+      Object.assign({ id: 'tortuga', kind: 'npc', tx: 70, ty: 22, h: 90, float: true, faceR: true, fps: 3, use: A => A.say({ name: 'ABUELA CONCHA', img: 'pj-tortuga', fr: 2 }, ['Hola, pequeño. Soy la abuela Concha, la tortuga más vieja del mar.', 'Hace muchos años se hundió un barco pirata aquí abajo.', 'Dicen que dentro hay algo brillante. ¡Nada por detrás del barco y mira por sus ventanas!']) }, { name: 'ABUELA CONCHA', img: 'pj-tortuga', fr: 2 }),
       { id: 'tele0', kind: 'tele', tx: 18, ty: 11, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', use: teleUse(0) },
       Object.assign({ id: 'cangrejo', kind: 'npc', tx: 23, ty: 11, h: 96, use: A => A.say(cangrejo, ['Hola, soy Pinzas el cangrejo.', 'Ayer vi caer una perla en el arrecife de los tres corales. Está bajando por la playa, en el fondo del mar.', 'Para nadar hacia arriba, pulsa el botón de saltar muchas veces.']) }, cangrejo),
       { id: 'ascensor', kind: 'way', tx: 29, ty: 11, h: 132, img: 'adv-ascensor', fr: 3, frame: 0, name: 'TIENDA DE BOLITA', mark: A => A.flag('m1') && !A.has('tarjeta') && !A.flag('gate'),
@@ -7247,14 +7264,14 @@ LEVELS['A-1'] = function () {
         use: A => {
           if (A.flag('rojo')) return A.say(rojo, ['¡Gracias por encontrar mi consola! Ahora juego todos los días.']);
           if (A.has('consola')) { A.take('consola'); return A.say(rojo, ['¡Mi consola de juegos! ¡Qué alegría!', 'Toma, como te prometí: diez monedas para ti.'], () => { A.flag('rojo', 1); A.addCoins(10, P.x + P.w / 2, P.y); }); }
-          A.say(rojo, ['Hola, soy el capitán Rojo.', 'Se me cayó mi consola de juegos al agua, justo debajo de la isla del cofre.', 'Si me la traes, te daré diez monedas.']);
+          A.say(rojo, ['Hola, soy el capitán Rojo.', 'Se me cayó mi consola de juegos al mar y se quedó dentro del barco hundido.', 'Si me la traes, te daré diez monedas.']);
         } }, rojo),
       { id: 'tele2', kind: 'tele', tx: 222, ty: 11, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', use: teleUse(2) }],
     items: [
       { id: 'perla', tx: 53, ty: 26, msg: A => ['¡Has encontrado una perla entre los tres corales!', 'Ya tienes ' + A.cnt('perla') + ' de 3.'], then: A => A.goal(A.cnt('perla') >= 3 ? 'Lleva las perlas a Doña Almeja' : 'Busca las 3 perlas (' + A.cnt('perla') + ' de 3)') },
       { id: 'perla', tx: 113, ty: 26, msg: A => ['¡La roca escondía una perla!', 'Ya tienes ' + A.cnt('perla') + ' de 3.'], then: A => A.goal(A.cnt('perla') >= 3 ? 'Lleva las perlas a Doña Almeja' : 'Busca las 3 perlas (' + A.cnt('perla') + ' de 3)') },
       { id: 'perla', tx: 186, ty: 25, msg: A => ['¡Detrás de la pared falsa había una perla!', 'Ya tienes ' + A.cnt('perla') + ' de 3.'], then: A => A.goal(A.cnt('perla') >= 3 ? 'Lleva las perlas a Doña Almeja' : 'Busca las 3 perlas (' + A.cnt('perla') + ' de 3)') },
-      { id: 'consola', tx: 73, ty: 26, msg: () => ['¡Has encontrado una consola de juegos!', 'Seguro que es del capitán Rojo. Vive en la playa de la derecha.'] }],
+      { id: 'consola', tx: 90, ty: 25, msg: () => ['¡Has encontrado una consola de juegos dentro del barco hundido!', 'Seguro que es del capitán Rojo. Vive en la playa de la derecha.'] }],
     gates: [
       { id: 'faro', kind: 'door', tx: 7, y0: 9, y1: 10, use: A => { if (!A.has('llave')) return A.say(NAR, ['La puerta del faro está cerrada.', 'Necesitas la llave del faro. Doña Almeja la tiene.']); A.take('llave'); A.open('faro'); A.goal('¡Entra en el faro y sube a tu cohete!'); } },
       { id: 'cueva', kind: 'laser', tx: 152, y0: 22, y1: 25, use: A => { if (!A.has('tarjeta')) return A.say(NAR, ['Es una barrera de luz. No se puede pasar.', 'Necesitas la tarjeta mágica. La vende Bolita en su tienda: baja con el ascensor de la playa.']); A.take('tarjeta'); A.flag('gate', 1); A.say(NAR, ['Usas la tarjeta mágica. ¡La barrera se apaga!'], () => A.open('cueva')); } }]
