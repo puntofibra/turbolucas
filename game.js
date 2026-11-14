@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.59';
+const VERSION = '1.60';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7145,6 +7145,17 @@ function advCB(im) {          // parte visible de una imagen (las tiras de los b
     const d = x.getImageData(0, 0, w, h).data; let t = h, b = 0; for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) if (d[(y * w + i) * 4 + 3] > 40) { if (y < t) t = y; b = y; break; }
     im._cb = b > t ? { t: t / h, b: (b + 1) / h } : { t: 0, b: 1 }; } catch (e) { im._cb = { t: 0, b: 1 }; } return im._cb;
 }
+// edificio detrás de cada puerta de la aventura, con el nombre de la sala en su cartel
+function advBuilding(e) {
+  const im = xi('adv-edificio', 3); if (!okI(im)) return; im._n = 3; let hsh = 0; for (const c of e.id) hsh = (hsh * 31 + c.charCodeAt(0)) % 997; im._f = hsh % 3;
+  const H = e.h / 0.543, W = H * (im.naturalWidth / 3) / im.naturalHeight, x0 = e.x - W / 2, y0 = e.y + 4 - H * 0.985;
+  ctx.drawImage(im, im._f * im.naturalWidth / 3, 0, im.naturalWidth / 3, im.naturalHeight, x0, y0, W, H);
+  const nm = String(e.name || '').replace(/^(EL|LA|LOS|LAS)\s+/, ''), sx = x0 + W * 0.5025, sy = y0 + H * 0.2965, sw = W * 0.56, sh = H * 0.15;
+  let fs = 22; ctx.font = '900 ' + fs + 'px system-ui'; const words = nm.split(' '); let lines = [nm];
+  if (ctx.measureText(nm).width > sw && words.length > 1) { let best = null; for (let i = 1; i < words.length; i++) { const a = words.slice(0, i).join(' '), b = words.slice(i).join(' '), m = Math.max(ctx.measureText(a).width, ctx.measureText(b).width); if (!best || m < best[0]) best = [m, [a, b]]; } lines = best[1]; }
+  const n = lines.length, wmax = Math.max(...lines.map(l => ctx.measureText(l).width)); fs = Math.max(8, Math.min(fs * sw / wmax, sh / n * 0.95, 22)); ctx.font = '900 ' + fs + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  lines.forEach((l, i) => { const yy = sy + (i - (n - 1) / 2) * fs * 1.02; ctx.fillStyle = 'rgba(10,20,40,.85)'; ctx.fillText(l, sx, yy + 1); }); ctx.textBaseline = 'alphabetic';
+}
 function advDrawWorld() {
   const A = L.adv; if (!A.ready) return; const vis = x => x > cam.x - 200 && x < cam.x + VW + 200;
   if (A.amb) advAmb(A);
@@ -7162,6 +7173,7 @@ function advDrawWorld() {
     if (e.kind === 'lever') { const an = e.on ? 0.7 : -0.7; ctx.fillStyle = '#4a5470'; ctx.fillRect(e.x - 22, e.y - 16, 44, 16); ctx.fillStyle = e.on ? '#35ff8a' : '#ff3a5a'; ctx.beginPath(); ctx.arc(e.x + 14, e.y - 8, 4, 0, 6.283); ctx.fill(); ctx.save(); ctx.translate(e.x - 4, e.y - 14); ctx.rotate(an); ctx.fillStyle = '#c8d0e0'; ctx.fillRect(-3, -40, 6, 40); ctx.fillStyle = '#ffd23c'; ctx.beginPath(); ctx.arc(0, -42, 9, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1b2350'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
       if (A.tgt === e) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, e.y - 70); } continue; }
     const bob = e.float ? Math.sin(e.ph * 1.8) * 7 : 0, by = e.y + (e.fy || 0) + bob;
+    if (e.kind === 'way' && e.id !== 'out') advBuilding(e);
     const glw = (e.glowIf && e.glowIf(A.api)) || e.glow; if (glw) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, by - e.h / 2, 4, e.x, by - e.h / 2, e.h * 0.8); gg.addColorStop(0, glw); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, by - e.h * 1.4, e.h * 2, e.h * 1.6); ctx.restore(); }
     let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.frameIf) e.frame = e.frameIf(A.api); if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
     let an = e.anim; if (e.anim2 && e.alt && e.alt(A.api)) an = e.anim2; if (e.anim3 && e.glow) an = e.anim3; if (e.img3 && !e.glow && e.name === 'TUERCAS') an = null;
