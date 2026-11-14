@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.40';
+const VERSION = '1.42';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -273,6 +273,7 @@ function navButtons() {            // botones que el mando puede recorrer en la 
   if ($('adm').classList.contains('on')) return [...$('adm').querySelectorAll('button')].filter(vis);
   if ($('ios').classList.contains('on')) return [...$('ios').querySelectorAll('button')].filter(vis);
   if ($('panel').classList.contains('on')) return [...$('card').querySelectorAll('button')].filter(vis);
+  if ($('advMenu') && $('advMenu').classList.contains('on')) return [...$('advMenu').querySelectorAll('button')].filter(vis);
   if (state === 'title' && $('title').classList.contains('on')) return [...$('title').querySelectorAll('button')].filter(vis);
   return [];
 }
@@ -284,6 +285,7 @@ function pollPad() {
   padNames(gp); if (state === 'edit') { edPadPoll(gp); return; }
   if (CON.on) { padConsole(gp, b, ax, ay); return; }
   if (b(3) && !padPrev.tri && paused && $('pauseT')) pauseTapOn(true);
+  if (b(3) && !padPrev.tri && !paused && state === 'play' && L && L.adv && L.adv.tgt && !ADVT.on) { padPrev.tri = true; padPrev.jump = true; advUse(); }
   padPrev.tri = b(3);
   const now = { left: ax < -0.4 || b(14), right: ax > 0.4 || b(15), down: ay > 0.55 || b(13), jump: b(0) || b(3), act: b(2) || b(1) || b(5) };
   const up = ay < -0.55 || b(12);
@@ -6782,7 +6784,7 @@ function advCss() {
     '#advMenu{position:fixed;inset:0;display:none;z-index:50;background:radial-gradient(ellipse at 50% 30%,#1d3a7a,#060b24 75%);overflow:auto;font-family:system-ui;color:#fff;text-align:center;padding:18px 12px 30px}#advMenu.on{display:block}' +
     '#advMenu h1{font:900 clamp(26px,5vw,44px) system-ui;color:#ffd23c;text-shadow:0 4px 0 #6a3a00;margin:6px 0 2px;letter-spacing:.04em}#advMenu .sub{color:#9fc4ff;font-weight:700;margin-bottom:14px}' +
     '#advMenu .lvs{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}#advMenu .lv{width:min(230px,44vw);background:rgba(10,20,60,.85);border:3px solid #29e6ff;border-radius:22px;padding:12px;position:relative}' +
-    '#advMenu .lv img{width:110px;height:110px;object-fit:contain;animation:advSp 6s ease-in-out infinite}@keyframes advSp{50%{transform:translateY(-8px) rotate(4deg)}}#advMenu .lv h2{font:900 19px system-ui;margin:6px 0;color:#7fe9ff}' +
+    '#advMenu .lv .btn.pf{outline:3px solid #fff}#advMenu .lv img{width:110px;height:110px;object-fit:contain;animation:advSp 6s ease-in-out infinite}@keyframes advSp{50%{transform:translateY(-8px) rotate(4deg)}}#advMenu .lv h2{font:900 19px system-ui;margin:6px 0;color:#7fe9ff}' +
     '#advMenu .lv p{font:600 14px/1.35 system-ui;color:#d8e4ff;min-height:4em}#advMenu .lv.off{opacity:.5;border-color:#55608a}#advMenu .ok{position:absolute;top:8px;right:10px;font:900 14px system-ui;color:#35ff8a}' +
     '#advFl{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:58;transition:opacity .25s}';
   document.head.appendChild(s);
@@ -6888,8 +6890,10 @@ function advGo(room, tx, ty) {          // viajar a otra sala de la misma aventu
   if (typeof LEVELS[room] !== 'function') return; advRoomSave(); ADVS.go = { room, tx, ty }; const f = $('advFl'); if (f) f.style.opacity = '1'; SFX.portal(); $('advUse').classList.remove('on');
   setTimeout(() => { curId = room; const g = Object.assign({}, G); resetLevel(false); G = g; G.tleft = L.time; preTheme(L.theme); try { startMusic(); } catch (e) {} if (f) setTimeout(() => f.style.opacity = '0', 120); }, 280);
 }
+const ADV_DECO = {'A-1t': [['tienda-0', 19, 13, 80], ['tienda-1', 24, 13, 110], ['tienda-2', 10, 13, 60], ['mar-3', 6, 13, 50]], 'A-2a': [['laboratorio-0', 8, 12, 90], ['laboratorio-1', 19, 12, 110], ['laboratorio-2', 11, 12, 80], ['laboratorio-3', 23, 12, 40]], 'A-2b': [['plantas-0', 6, 12, 80], ['plantas-3', 26, 12, 90], ['jardin-0', 13, 12, 45], ['jardin-2', 21, 12, 55], ['jardin-3', 9, 12, 60], ['plantas-1', 24, 12, 60]], 'A-3c': [['hielo-0', 8, 14, 90], ['hielo-0', 31, 14, 80]], 'A-4p': [['egipto-0', 9, 12, 120], ['egipto-1', 16, 12, 80], ['egipto-3', 29, 12, 60], ['egipto-2', 23, 12, 100]], 'A-5t': [['taller-0', 8, 12, 70], ['taller-1', 13, 12, 80], ['taller-2', 21, 12, 90], ['taller-3', 5, 12, 45]], 'A-6c': [['circo-2', 8, 12, 60], ['fiesta-0', 13, 12, 120], ['circo-0', 19, 12, 45]], 'A-7c': [['hielo-0', 10, 12, 80], ['hielo-0', 21, 12, 70]], 'A-8m': [['maquinas-0', 6, 12, 100], ['maquinas-1', 13, 12, 80], ['maquinas-2', 20, 12, 100], ['maquinas-3', 26, 12, 110]], 'A-9t': [['selva-1', 6, 12, 80], ['selva-2', 13, 12, 100], ['selva-3', 27, 12, 60]], 'A-10s': [['reloj-0', 7, 12, 130], ['reloj-2', 11, 12, 70], ['reloj-1', 22, 12, 60]], 'A-11b': [['laboratorio-0', 8, 12, 90], ['laboratorio-1', 19, 12, 110], ['laboratorio-3', 11, 12, 40]], 'A-14c': [['circo-0', 6, 12, 45], ['circo-1', 14, 12, 90], ['circo-2', 16, 12, 55], ['circo-3', 22, 12, 100]], 'A-15': [['fiesta-0', 6, 13, 130], ['fiesta-2', 50, 13, 70], ['fiesta-0', 53, 13, 120], ['fiesta-1', 34, 6, 70]], 'A-15a': [['mar-0', 8, 12, 60], ['mar-1', 20, 12, 90], ['mar-2', 11, 12, 55]], 'A-15b': [['taller-0', 8, 12, 70], ['taller-1', 20, 12, 80], ['taller-3', 11, 12, 45]], 'A-15c': [['plantas-0', 7, 12, 80], ['plantas-3', 20, 12, 90], ['jardin-0', 11, 12, 45]], 'A-15d': [['egipto-0', 20, 12, 120], ['egipto-1', 11, 12, 80]], 'A-1': [['mar-0', 46, 27, 60], ['mar-1', 100, 27, 100], ['mar-2', 140, 27, 60], ['mar-3', 170, 27, 70], ['mar-2', 62, 24, 50]], 'A-13': [['mar-0', 40, 22, 60], ['mar-1', 95, 22, 110], ['mar-3', 150, 22, 70], ['mar-2', 62, 12, 50]], 'A-7': [['hielo-1', 4, 15, 100], ['hielo-2', 28, 15, 90], ['hielo-3', 52, 15, 130], ['hielo-3', 100, 15, 120], ['hielo-1', 135, 15, 90], ['hielo-0', 118, 15, 80]], 'A-4': [['egipto-1', 36, 15, 80], ['egipto-3', 84, 15, 55], ['egipto-2', 144, 15, 100]], 'A-9': [['selva-0', 30, 11, 100], ['selva-2', 186, 11, 110], ['selva-1', 176, 11, 80]], 'A-10': [['reloj-0', 22, 27, 140], ['reloj-1', 40, 27, 60], ['reloj-3', 100, 27, 120], ['reloj-2', 126, 27, 70]]};
 function advInit() {
   const A = L.adv; A.ready = true; A.root = A.root || curId;
+  if (ADV_DECO[curId] && !A.decoDone) { A.decoDone = 1; A.ents.unshift(...ADV_DECO[curId].map(([n, tx, ty, h], i) => ({ id: 'dc' + i, kind: 'deco', tx, ty, h: Math.round(h * 1.3), img: 'deco-' + n, flip: i % 3 === 2 }))); }
   const sw = ADVS && ADVS.root === A.root && ADVS.go; if (!sw) ADVS = { root: A.root, inv: {}, f: {}, rooms: {} };
   A.inv = ADVS.inv; A.f = ADVS.f; if (ADVS.goal) A.goalTxt = ADVS.goal; else if (A.goal0) ADVS.goal = A.goal0; A.t = 0; A.tgt = null; A.goalTxt = (ADVS && ADVS.goal) || A.goal0 || ''; A.goalT = 0; A.api = advApi(A);
   for (const e of A.ents) { e.x = e.tx * T + T / 2; e.y = e.ty * T; e.ph = Math.random() * 6;
