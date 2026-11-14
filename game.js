@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.37';
+const VERSION = '1.38';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6914,7 +6914,14 @@ function advTele(x, y) {          // teletransporte con destello
 function advUseLabel(e) { return e.lbl || (e.kind === 'npc' ? '💬 HABLAR' : e.kind === 'tele' ? '✨ VIAJAR' : e.kind === 'chest' ? '🔓 ABRIR' : e.kind === 'way' ? '🚪 ENTRAR' : e.kind === 'gate' ? '🔧 USAR' : '✋ MIRAR'); }
 function advUse() {
   const A = L && L.adv; if (!A || !A.tgt || ADVT.on || state !== 'play' || paused) return; const e = A.tgt;
-  if (e.use) { tone(660, 990, 0.08, 'triangle', 0.08); e.use(A.api, e); }
+  if (!e.use || A.slide) return; tone(660, 990, 0.08, 'triangle', 0.08);
+  if (e.kind === 'npc') {          // Lucas se aparta a un lado para que se vean los dos mientras hablan
+    const p = P, pc = p.x + p.w / 2, gap = Math.max(e.h * 0.38, 34) + p.w / 2 + 14;
+    if (Math.abs(pc - e.x) < gap) { let side = pc < e.x ? -1 : 1; const ok = sd => { const t = { x: e.x + sd * gap - p.w / 2, y: p.y, w: p.w, h: p.h - 4 }; return !collide(t) && t.x > 0 && t.x + t.w < L.W * T; };
+      if (!ok(side)) side = -side; if (ok(side)) { A.slide = { x: e.x + side * gap - p.w / 2, e, t: 0 }; return; } }
+    p.face = e.x > pc ? 1 : -1;
+  }
+  e.use(A.api, e);
 }
 function advUpdate(dt) {
   const A = L.adv; if (!A.ready) advInit(); A.t += dt; A.goalT += dt; if (A.newIt) A.newIt.t += dt;
@@ -6935,6 +6942,9 @@ function advUpdate(dt) {
   if (best !== A.tgt) { A.tgt = best; const u = $('advUse'); if (u) { if (best) { u.textContent = advUseLabel(best); u.classList.add('on'); } else u.classList.remove('on'); } }
   for (const g of A.gates) if (g.open) g.ot += dt;
   for (const e of A.ents) { e.ph += dt; if (e.kind === 'npc' && !e.noTurn) e.face = pc > e.x ? 1 : -1; }
+  if (A.slide) { const sl = A.slide, d = sl.x - p.x, st = Math.sign(d) * Math.min(Math.abs(d), 700 * dt); sl.t += dt; p.vx = 0; p.idle = 0;
+    const ox = p.x; p.x += st; if (collide(p)) p.x = ox; p.face = sl.e.x > p.x + p.w / 2 ? 1 : -1;
+    if (Math.abs(sl.x - p.x) < 2 || p.x === ox || sl.t > 0.6) { A.slide = null; p.face = sl.e.x > p.x + p.w / 2 ? 1 : -1; sl.e.use(A.api, sl.e); } }
   if (K.down && !A.pd && p.onGround && A.tgt) advUse(); A.pd = K.down;
   for (const k of A.cset) { const [x, y] = k.split(',').map(Number); if (L.g[y][x] !== 'C') continue;          // las rocas agrietadas se rompen enteras
     if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => A.cset.includes((x + dx) + ',' + (y + dy)) && L.g[y + dy][x + dx] === ' ')) { L.g[y][x] = ' '; SFX.brk(); burst(x * T + T / 2, y * T + T / 2, 14, '#aab4c4', 240, 0.7, 900, 4); } }
