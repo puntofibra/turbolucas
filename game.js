@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.50';
+const VERSION = '1.51';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4454,6 +4454,7 @@ const isWallT = c => c === '#' || c === 'F' || c === 'C' || c === 'D';
 function solidTile(tx, ty, G, gOk, gw, gh) {
     const x = tx * T, y = ty * T;
     let d = 0; while (d < 9 && ty - 1 - d >= 0 && isWallT(L.g[ty - 1 - d][tx])) d++;
+    { const s2 = SUELO2[L.theme]; if (s2) { const SA = xi('suelo-' + s2.n + '-arriba'), SK = xi('suelo-' + s2.n + '-abajo'); if (okI(SA) && okI(SK)) { suelo2(tx, ty, d, s2, SA, SK); return; } } }
     { const sn = SUELO12[L.theme || 'station'], S12 = sn && xi(sn); if (S12 && okI(S12)) {          // hoja nueva de 12 bloques (6 de superficie + 6 de relleno), como hielo, volcán y selva
       const cw = S12.naturalWidth / 6, th = S12.naturalHeight * 347 / 603, bh = S12.naturalHeight - th, sx = ((tx * 7 + ty * 3) % 6) * cw;
       if (d === 0) ctx.drawImage(S12, sx, 0, cw, th, x - 0.5, y - T * (th / cw - 1), T + 1, T * th / cw + 0.5); else ctx.drawImage(S12, sx, th, cw, bh, x, y, T + 0.5, T + 0.5); return; } }
@@ -5155,6 +5156,20 @@ function kidSwap(on) {
   KID.on = !!on; PROG = nx.prog || {}; GOT = nx.got || {};
   try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {}
   kidSave(); setWorld(WORLDS[nx.w] ? nx.w : 0); mapSel = mapAt = Math.max(0, Math.min(MAP.length - 1, nx.sel || 0)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; cloudSave(true);
+}
+// suelo por módulos: una tira de superficie con los extremos redondeados (se corta en trozos por tramo) y 6 bloques de relleno sueltos
+const SUELO2 = { ocean: { n: 'oceano', bt: 0.4376 } };
+function suelo2(tx, ty, d, s2, SA, SK) {
+  const x = tx * T, y = ty * T, wall = (cx, cy) => cx >= 0 && cx < L.W && cy >= 0 && cy < L.H && isWallT(L.g[cy][cx]), k = L.theme === 'ocean' ? L.depth || 0 : 0;
+  const sf = cx => wall(cx, ty) && !wall(cx, ty - 1);
+  if (d > 0 || !sf(tx)) { const c = SK.naturalHeight, i = ((tx * 7 + ty * 3) % 6 + 6) % 6; ctx.drawImage(SK, i * c, 0, c, c, x, y, T + 0.5, T + 0.5); }
+  else { let a = 0, b = 0; while (a < 64 && sf(tx - a - 1)) a++; while (b < 64 && sf(tx + b + 1)) b++; const n = a + b + 1;
+    const iw = SA.naturalWidth, ih = SA.naturalHeight, s = (T + 3) / (ih * (1 - s2.bt)), sw = T / s, top = y - 3 - ih * s2.bt * s, h = ih * s, m = Math.max(1, Math.floor((iw - 2 * sw) / sw));
+    if (n === 1) { ctx.drawImage(SA, 0, 0, sw / 2, ih, x, top, T / 2 + 0.5, h); ctx.drawImage(SA, iw - sw / 2, 0, sw / 2, ih, x + T / 2, top, T / 2, h); }
+    else if (a === 0 || b === 0) ctx.drawImage(SA, a === 0 ? 0 : iw - sw, 0, sw, ih, x, top, T + 0.5, h);
+    else { const q = (a - 1) % (2 * m), mir = q >= m, sx = sw + (mir ? 2 * m - 1 - q : q) * sw;          // ida y vuelta (en espejo) para que no se note el corte
+      if (!mir) ctx.drawImage(SA, sx, 0, sw, ih, x, top, T + 0.5, h); else { ctx.save(); ctx.translate(x + T, 0); ctx.scale(-1, 1); ctx.drawImage(SA, sx, 0, sw, ih, -0.5, top, T + 0.5, h); ctx.restore(); } } }
+  if (k > 0.05) { ctx.fillStyle = 'rgba(2,12,30,' + k * 0.45 + ')'; ctx.fillRect(x, y, T + 0.5, T + 0.5); }
 }
 const SUELO12 = { station: 'suelo-estacion', ocean: 'suelo-oceano', desert: 'suelo-desierto', sky: 'suelo-cielo', toy: 'suelo-jugueteria', junk: 'suelo-chatarra', fort: 'suelo-fortaleza' };
 function kidToggle(src) {          // activa o quita el modo niños y vuelve al mapa en la posición de ese modo
@@ -8722,7 +8737,7 @@ advQuest('A-70', { n: 'LA FIESTA DE TODOS LOS AMIGOS', img: 'deco-fiesta-1', s: 
   end: 'Todos los amigos de Lucas vinieron a la gran fiesta.<br>¡Gracias por jugar, aventurero!',
   plan: [['room', { k: 'lake', door: 'tele', name: 'EL MAR', th: 'ocean', who: 'GLOBITO' }], ['room', { door: 'tele', name: 'LA SELVA', bg: 'templo', th: 'jungle', who: 'SALTARÍN', ask: ['¡Hola, Lucas! Este regalo es para la fiesta.', '¡Nos vemos allí!'] }], ['room', { door: 'tele', name: 'EL HIELO', bg: 'cueva', th: 'ice', who: 'COPITO', ask: ['¡Hola! He envuelto este regalo con papel de nieve.', '¡Para la fiesta!'] }], ['room', { door: 'tele', name: 'EL CIRCO', bg: 'carpa', who: 'CASCABEL', ask: ['¡Bienvenido! Aquí tienes mi regalo.', '¡Qué gran fiesta va a ser!'] }], ['plats'], ['rock'], ['cave']] });
 
-window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
+window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
 LEVELS['A-1'] = function () {
   const W = 240, H = 30, B = SB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
