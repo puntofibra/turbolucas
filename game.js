@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.49';
+const VERSION = '1.50';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6765,8 +6765,7 @@ async function showAdvPaywall(retry, fromOther) {
 }
 // al pulsar JUGAR AVENTURA: cartel que explica que hay dos juegos y que la aventura es para niños
 async function advIntro() {
-  const paid = LICA && LICA.estado === 'activa' || CHEAT.full;
-  const v = await uiDialog({ icon: LT_IC.aintro, tone: 'gold', title: lt('aintro', 't'), html: lt('aintro', 'h') + (paid ? '' : '<div style="margin-top:10px;font:700 13px system-ui;color:#9fb0e6">Las <b>' + ADV_FREE + ' primeras aventuras son gratis</b>. Después, todas las aventuras (y las nuevas que vayan saliendo) por un pago único de ' + ADV_PRECIO + '.</div>'),
+    const v = await uiDialog({ icon: LT_IC.aintro, tone: 'gold', title: lt('aintro', 't'), html: lt('aintro', 'h'),
     buttons: [{ t: '🚀 IR AL JUEGO NORMAL', v: 2 }, { t: '🗺️ SEGUIR A LA AVENTURA', cls: 'ok', v: 1 }], x: 0 });
   if (v === 1) advMenu(); else if (v === 2) { try { $('btnPlay').click(); } catch (e) {} }
 }
@@ -7256,7 +7255,7 @@ function advDone() {
 }
 function advMenu() {
   advCss(); tmpOff && tmpOff(); paused = false; state = 'advm'; ['panel', 'top', 'touch', 'mapUI', 'title'].forEach(id => show(id, false)); $('advUse').classList.remove('on'); $('advDlg').classList.remove('on'); ADVT.on = false;
-  const m = $('advMenu'); m.innerHTML = '<h1>🗺️ MODO AVENTURA</h1><div class="sub">Habla con todos, busca objetos escondidos y resuelve cada misión. ¡Aquí nadie te hace daño!</div>' + (LICA && LICA.estado === 'activa' || CHEAT.full ? '' : '<div class="sub" style="color:#ffd23c">' + (advDoneN() < ADV_FREE ? '🎁 Aventuras gratis: llevas ' + advDoneN() + ' de ' + ADV_FREE + ' completadas' : '🔓 Has completado tus ' + ADV_FREE + ' aventuras gratis') + '</div>') + '<div class="lvs">' +
+  const m = $('advMenu'); m.innerHTML = '<h1>🗺️ MODO AVENTURA</h1><div class="sub">Habla con todos, busca objetos escondidos y resuelve cada misión. ¡Aquí nadie te hace daño!</div>' + (LICA && LICA.estado === 'activa' || CHEAT.full || advDoneN() < ADV_FREE ? '' : '<div class="sub" style="color:#ffd23c">🔓 Has completado tus ' + ADV_FREE + ' aventuras gratis</div>') + '<div class="lvs">' +
     ADV_LV.map((l, i) => { const ok = typeof LEVELS[l.id] === 'function'; return '<div class="lv' + (ok ? '' : ' off') + '">' + (ADV.done[l.id] ? '<div class="ok">✔ HECHA</div>' : '') + '<img src="' + advImg(l.img) + '" alt=""><h2>NIVEL ' + (i + 1) + ' · ' + l.n + '</h2><p>' + l.s + '</p>' +
       (ok ? '<button class="btn" data-go="' + l.id + '">¡JUGAR!</button> <button class="btn" data-sp="' + i + '" title="Escuchar">🔊</button>' : '<button class="btn" disabled>PRÓXIMAMENTE</button>') + '</div>'; }).join('') +
     '</div><div class="row" style="margin-top:18px;justify-content:center"><button class="btn" id="advBk">VOLVER</button></div>';
