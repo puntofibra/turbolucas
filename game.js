@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.38';
+const VERSION = '1.39';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6814,7 +6814,19 @@ function advSay(who, lines, then, opts) {
   ADVT.pj = K.jump; ADVT.pl = K.left; ADVT.pr = K.right; ADVT.pd = K.act;
   $('advPic').src = advPortrait(who); $('advNm').textContent = who.name || ''; $('advDlg').classList.add('on'); advLine(); advLoop();
 }
+const ADV_ANIM = { 'DOÑA ALMEJA': 'almeja', 'PINZAS': 'pinzas', 'TINTA': 'tinta', 'PULPITO': 'tinta', 'GLOBITO': 'globito', 'MEDI': 'medi', 'ABUELA CONCHA': 'concha', 'RAYO': 'rayo', 'HOJA': 'hoja',
+  'CAPITÁN ROJO': 'rojo', 'EXPLORADOR ROJO': 'rojo', 'BYTE': 'byte', 'CHISPAS': 'chispas', 'DOÑA VENDA': 'venda', 'PINCHO': 'pincho', 'ARENITA': 'arenita', 'GATO DE PIEDRA': 'gato', 'GIRO': 'giro', 'ALGODÓN': 'algodon',
+  'CHISPAZO': 'chispazo', 'PLUMITA': 'plumita', 'PELUSÍN': 'pelusin', 'TAMBOR': 'tambor', 'SALTITOS': 'tambor', 'HÉLICE': 'helice', 'CASCABEL': 'cascabel', 'MUELLE': 'muelle', 'COPITO': 'copito', 'BRISA': 'brisa',
+  'ESCARCHA': 'escarcha', 'BRASA': 'brasa', 'MAGMA': 'magma', 'SALTARÍN': 'saltarin', 'MUSGO': 'musgo', 'TIC-TAC': 'tictac', 'CAMPANITA': 'campanita', 'RECICLA': 'recicla', 'REINA TENTÁCULA': 'reina', 'DIENTES': 'dientes' };
+const ADV_MOVE = new Set(['globito', 'concha', 'dientes', 'plumita', 'helice', 'medi']);          // los que nadan o vuelan: mueven los fotogramas 1 y 2 sin parar
+function advAnimOf(name, img) {          // personaje animado (tira de 4 fotogramas) que sustituye al provisional
+  if (!name) return null; if (/^MEDUSA (LILA|ROSA|AZUL|VERDE)$/.test(name)) return { img: 'anim-medusas', fr: 4, frame: ['LILA', 'ROSA', 'AZUL', 'VERDE'].indexOf(name.slice(7)) };
+  if (name === 'BOLITA') return { img: img === 'pj-bolita-triste' ? 'anim-bolita-triste' : 'anim-bolita', fr: 4 };
+  if (name === 'TUERCAS') return img === 'robot-arreglado' ? { img: 'anim-tuercas', fr: 4 } : null;
+  const k = ADV_ANIM[name]; return k ? { img: 'anim-' + k, fr: 4 } : null;
+}
 function advPortrait(who) {
+  { const an = advAnimOf(who.name, who.img); if (an) { const im0 = xi(an.img, 4); im0._n = 4; if (okI(im0)) try { const fw = im0.naturalWidth / 4, f = an.frame != null ? an.frame : 1, c = document.createElement('canvas'); c.width = fw; c.height = im0.naturalHeight; c.getContext('2d').drawImage(im0, fw * f, 0, fw, im0.naturalHeight, 0, 0, fw, im0.naturalHeight); return c.toDataURL(); } catch (e) {} } }
   const n = who.pic || who.img, im = IMG[n]; if (!im || !im._n || im._n < 2 || !im.naturalWidth) return advImg(n);
   try { const fw = im.naturalWidth / im._n, c = document.createElement('canvas'); c.width = fw; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0, fw, im.naturalHeight, 0, 0, fw, im.naturalHeight); return c.toDataURL(); } catch (e) { return advImg(n); }
 }
@@ -6880,7 +6892,9 @@ function advInit() {
   const A = L.adv; A.ready = true; A.root = A.root || curId;
   const sw = ADVS && ADVS.root === A.root && ADVS.go; if (!sw) ADVS = { root: A.root, inv: {}, f: {}, rooms: {} };
   A.inv = ADVS.inv; A.f = ADVS.f; if (ADVS.goal) A.goalTxt = ADVS.goal; else if (A.goal0) ADVS.goal = A.goal0; A.t = 0; A.tgt = null; A.goalTxt = (ADVS && ADVS.goal) || A.goal0 || ''; A.goalT = 0; A.api = advApi(A);
-  for (const e of A.ents) { e.x = e.tx * T + T / 2; e.y = e.ty * T; e.ph = Math.random() * 6; if (e.img) xi(e.img, e.fr); if (e.img2) xi(e.img2, e.fr2); }
+  for (const e of A.ents) { e.x = e.tx * T + T / 2; e.y = e.ty * T; e.ph = Math.random() * 6;
+    if (e.kind === 'npc') { const an = advAnimOf(e.name, e.img); if (an) { e.anim = an; xi(an.img, 4); if (/chispas|globito|concha|dientes|plumita|helice|arenita/.test(an.img)) { e.faceR = true; e.noTurn = false; } } if (e.img2) { const a2 = advAnimOf(e.name, e.img2); if (a2) e.anim2 = a2; } if (e.img3) e.anim3 = advAnimOf(e.name, e.img3); }
+    if (e.img) xi(e.img, e.fr); if (e.img2) xi(e.img2, e.fr2); }
   for (const o of A.items) { o.x = o.tx * T + T / 2; o.y = o.ty * T + T / 2; o.got = false; xi(ADV_IT[o.id].img); }
   for (const g of A.gates) { g.open = false; g.ot = 0; g.x = g.tx * T + T / 2; g.y0p = g.y0 * T; g.y1p = (g.y1 + 1) * T; }
   xi('adv-puerta', 4); xi('adv-rejilla', 2); ['adv-cofre', 'adv-cofre-abierto', 'adv-teleport', 'perla'].forEach(n => xi(n));
@@ -6941,7 +6955,7 @@ function advUpdate(dt) {
   for (const g of A.gates) { if (g.open || !g.use) continue; const d = Math.abs(pc - g.x); if (d < 120 && pf > g.y0p - 20 && p.y < g.y1p + 20 && d < bd) { best = g; bd = d; } }
   if (best !== A.tgt) { A.tgt = best; const u = $('advUse'); if (u) { if (best) { u.textContent = advUseLabel(best); u.classList.add('on'); } else u.classList.remove('on'); } }
   for (const g of A.gates) if (g.open) g.ot += dt;
-  for (const e of A.ents) { e.ph += dt; if (e.kind === 'npc' && !e.noTurn) e.face = pc > e.x ? 1 : -1; }
+  for (const e of A.ents) { e.ph += dt; if (e.happy > 0) e.happy -= dt; if (e.kind === 'npc' && !e.noTurn) e.face = pc > e.x ? 1 : -1; }
   if (A.slide) { const sl = A.slide, d = sl.x - p.x, st = Math.sign(d) * Math.min(Math.abs(d), 700 * dt); sl.t += dt; p.vx = 0; p.idle = 0;
     const ox = p.x; p.x += st; if (collide(p)) p.x = ox; p.face = sl.e.x > p.x + p.w / 2 ? 1 : -1;
     if (Math.abs(sl.x - p.x) < 2 || p.x === ox || sl.t > 0.6) { A.slide = null; p.face = sl.e.x > p.x + p.w / 2 ? 1 : -1; sl.e.use(A.api, sl.e); } }
@@ -6974,8 +6988,11 @@ function advDrawWorld() {
       if (A.tgt === e) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, e.y - 70); } continue; }
     const bob = e.float ? Math.sin(e.ph * 1.8) * 7 : 0, by = e.y + (e.fy || 0) + bob;
     const glw = (e.glowIf && e.glowIf(A.api)) || e.glow; if (glw) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, by - e.h / 2, 4, e.x, by - e.h / 2, e.h * 0.8); gg.addColorStop(0, glw); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, by - e.h * 1.4, e.h * 2, e.h * 1.6); ctx.restore(); }
-    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
-    if (im._n > 1) im._f = e.frame != null ? e.frame : Math.floor(e.ph * (e.fps || 5)) % im._n;
+    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.frameIf) e.frame = e.frameIf(A.api); if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
+    let an = e.anim; if (e.anim2 && e.alt && e.alt(A.api)) an = e.anim2; if (e.anim3 && e.glow) an = e.anim3; if (e.img3 && !e.glow && e.name === 'TUERCAS') an = null;
+    if (an && okI(xi(an.img, 4))) { im = IMG[an.img]; im._n = 4; const talk = ADVT.on && ADVT.who && ADVT.who.name === e.name, mv = ADV_MOVE.has(an.img.slice(5)), cyc = (e.ph + e.x) % 6;
+      im._f = an.frame != null ? an.frame : talk ? (Math.floor(time * 4) % 2 ? 1 : 2) : mv ? (Math.floor(time * 4 + e.x) % 2) : (e.happy > 0 ? 3 : cyc < 0.7 ? 3 : cyc > 3 && cyc < 3.5 ? 1 : 0); }
+    else if (im._n > 1) im._f = e.frame != null ? e.frame : Math.floor(e.ph * (e.fps || 5)) % im._n;
     const fl = e.kind === 'npc' && !e.noTurn ? (e.faceR ? e.face < 0 : e.face > 0) : !!e.flip, br = e.kind === 'npc' ? 1 + Math.sin(e.ph * 2.2) * 0.025 : 1;
     if (e.kind === 'npc' && !e.float) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 2, e.h * 0.32, 6, 0, 0, 6.283); ctx.fill(); }
     const cb = advCB(im); spr(im, e.x, by, e.h / (cb.b - cb.t), 0.5, cb.b, fl, e.id === 'huevo' ? Math.sin(e.ph * 7) * 0.025 * (1 + (A.f.st || 0)) : 0, 1, br);
@@ -6987,7 +7004,7 @@ function advDrawWorld() {
       if (e.name) { ctx.font = '900 13px system-ui'; ctx.fillStyle = '#05071a'; ctx.fillText(e.name, e.x + 1, yy - 37); ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, yy - 38); } } }
   for (const o of A.items) { if (o.got || !vis(o.x)) continue; const c = tileAt(o.tx, o.ty); if (c === 'C' || c === '#') continue; const it = ADV_IT[o.id], y = o.y + Math.sin(time * 3 + o.x) * 4, oimg = o.img || it.img;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(o.x, y, 3, o.x, y, 44); gg.addColorStop(0, 'rgba(255,250,200,.75)'); gg.addColorStop(1, 'rgba(255,240,150,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(o.x, y, 44, 0, 6.283); ctx.fill(); ctx.restore();
-    spr(xi(oimg), o.x, y, it.h, 0.5, 0.5, false, Math.sin(time * 2 + o.x) * 0.12);
+    { const oi = xi(oimg); if (o.fr) { oi._n = o.fr; oi._f = o.frame || 0; } spr(oi, o.x, y, it.h, 0.5, 0.5, false, Math.sin(time * 2 + o.x) * 0.12); }
     if (Math.random() < 0.12) parts.push({ x: o.x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40, vx: 0, vy: -30, life: 0.7, max: 0.7, col: '#ffffff', size: 2, grav: 0 }); }
 }
 function advInterior() {          // pared de nave por dentro: paneles, luces y ojos de buey al mar
@@ -7014,7 +7031,7 @@ function advFx(k, x, y) {          // efectos: fuente de agua, chispas, confeti,
   const n = k === 'confeti' ? 3 : 2; for (let i = 0; i < n; i++) { if (Math.random() > 0.6) continue; const a = -Math.PI / 2 + (Math.random() - 0.5) * (k === 'agua' ? 0.8 : 1.6), v = (k === 'agua' ? 380 : 200) * (0.6 + Math.random() * 0.5);
     parts.push({ x: x + (Math.random() - 0.5) * 16, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, max: 1, col: C[i % C.length], size: k === 'confeti' ? 4 : 3, grav: k === 'agua' || k === 'confeti' ? 700 : -40, sqr: k === 'confeti' }); }
 }
-function advParty(x, y) { shake = 0.3; SFX.win(); for (let i = 0; i < 8; i++) setTimeout(() => { const xx = x + (Math.random() - 0.5) * 500, yy = y - 100 - Math.random() * 200; burst(xx, yy, 40, ['#ff4a8a', '#ffd23c', '#35ff8a', '#29e6ff', '#c63cff'][i % 5], 360, 1.1, 300, 4); tone(500 + i * 120, 900 + i * 120, 0.2, 'triangle', 0.08); }, i * 220); }
+function advParty(x, y) { try { for (const e of L.adv.ents) if (e.kind === 'npc' && Math.abs(e.x - x) < 900) e.happy = 4; } catch (e) {} shake = 0.3; SFX.win(); for (let i = 0; i < 8; i++) setTimeout(() => { const xx = x + (Math.random() - 0.5) * 500, yy = y - 100 - Math.random() * 200; burst(xx, yy, 40, ['#ff4a8a', '#ffd23c', '#35ff8a', '#29e6ff', '#c63cff'][i % 5], 360, 1.1, 300, 4); tone(500 + i * 120, 900 + i * 120, 0.2, 'triangle', 0.08); }, i * 220); }
 function advAmb(A) {          // vida de fondo: pájaros, aviones, peces, luciérnagas, copos, estrellas fugaces
   const WW = L.W * T + 600, wy = L.water ? L.water.y : -1e9;
   for (const a of A.amb) { const n = a.n || 4;
@@ -7117,7 +7134,7 @@ LEVELS['A-2'] = function () {
     intro: ['Lucas ha llegado al Planeta Chatarra, un desguace enorme lleno de robots.', 'Alguien necesita ayuda. Habla con todos y busca bien por todas partes.', 'Los transportadores y las puertas te llevan a otras salas.'],
     endTxt: 'Lucas encontró las tres herramientas y Tuercas volvió a funcionar.<br>Byte prometió no volver a esconder nada.<br>¡Chispas está feliz!',
     ents: [
-      Object.assign({ id: 'chispas', kind: 'npc', tx: 7, ty: 16, h: 100, mark: A => !A.flag('m1'),
+      Object.assign({ id: 'chispas', kind: 'npc', tx: 7, ty: 16, h: 115, mark: A => !A.flag('m1'),
         use: A => {
           if (!A.flag('m1')) return A.say(chispas, ['¡Hola! Soy Chispas, el perro robot.', 'Mi amigo Tuercas se cayó de la montaña de chatarra y se rompió.', 'Para arreglarlo necesitamos tres herramientas: una llave inglesa, un cable y un soldador.', 'Alguien las ha escondido. ¿Me ayudas a buscarlas?'], () => { A.flag('m1', 1); A.goal('Busca las 3 herramientas (0 de 3)'); });
           if (!fixLeft(A).length) return A.say(chispas, ['¡Tuercas ya está arreglado! ¡Eres el mejor, Lucas!']);
@@ -7322,13 +7339,13 @@ LEVELS['A-4'] = function () {
     intro: ['Lucas ha llegado al Desierto de los Anillos.', 'Hace mucho calor y la fuente del oasis se ha secado.', 'Habla con todos para descubrir cómo ayudar.'],
     endTxt: 'Lucas encontró las tres gotas mágicas y la fuente del oasis volvió a brotar.<br>¡Ahora todo el desierto tiene agua fresca!',
     ents: [
-      { id: 'palm', kind: 'deco', tx: 6, ty: g, h: 180, img: 'adv-playa', fr: 4, frame: 0 },
-      advNpc({ id: 'momia', who: momia, tx: 12, ty: g, h: 110, need: 'gota', n: 3, goal: 'Busca 3 gotas de agua mágica (0 de 3)', fx: A => A.flag('q_momia') ? 'agua' : null, fxy: 1.1,
+      { id: 'palm', kind: 'deco', tx: 6, ty: g, h: 180, img: 'adv-playa', fr: 4, frame: 0 }, { id: 'fuente', kind: 'deco', tx: 16, ty: g, h: 110, img: 'adv-fuente', fr: 2, frameIf: A => A.flag('q_momia') ? 1 : 0, fx: A => A.flag('q_momia') ? 'agua' : null, fxy: 0.95 },
+      advNpc({ id: 'momia', who: momia, tx: 11, ty: g, h: 110, need: 'gota', n: 3, goal: 'Busca 3 gotas de agua mágica (0 de 3)',
         ask: ['¡Hola, Lucas! Soy Doña Venda y cuido el oasis.', 'La fuente se ha secado y las plantas tienen mucha sed.', 'Para que vuelva el agua necesito tres gotas de agua mágica.', 'Una está en una roca agrietada, otra dentro de la pirámide y otra la vende Pincho, el cactus.'],
         wait: A => ['Llevas ' + A.cnt('gota') + ' de 3 gotas.', 'Escucha a Arenita, el escorpión. Sabe un secreto de la duna grande.'],
         thanks: ['¡Las tres gotas mágicas! Voy a echarlas en la fuente.', '¡Mira, Lucas! ¡El agua vuelve a salir!', 'Gracias. He abierto el camino hacia tu cohete.'], done: ['¡Qué fresquita está el agua! Gracias, Lucas.'],
         reward: A => { advParty(P.x, P.y); A.open('salida'); A.goal('Ve hasta tu cohete, al final del desierto'); } }),
-      ...advTeles([['t1', 17, g, 'EL OASIS'], ['t2', 137, g, 'LA TIENDA DE PINCHO']]),
+      ...advTeles([['t1', 21, g, 'EL OASIS'], ['t2', 137, g, 'LA TIENDA DE PINCHO']]),
       advWay('pira', 42, g, 'A-4p', 4, 12, 'PIRÁMIDE'),
       advNpc({ id: 'esc', who: esc, tx: 82, ty: g, h: 60, ask: ['Hola, soy Arenita.', 'Te cuento un secreto: la pared de la duna grande no es de verdad.', 'Sube a las rocas y camina hacia ella. ¡Dentro hay una cueva enorme!'] }),
       advNpc({ id: 'buitre', who: buitre, tx: 75, ty: 9, h: 70, ask: ['¡Hola desde aquí arriba! Soy Plumón.', 'Desde aquí lo veo todo. En la duna de la izquierda hay una roca agrietada.', '¡Rómpela con tu láser!'], reward: A => A.addCoins(3, P.x, P.y - 40) }),
@@ -7402,7 +7419,7 @@ LEVELS['A-6'] = function () {
   B.block(92, 112, 8, 14); B.block(95, 109, 10, 14, ' '); B.fake(92, 94, 10, 14); B.block(88, 91, 12, 14); B.row(96, 108, 14); B.arc(90, 114, 6, 1);   // castillo de bloques con pared falsa
   B.block(126, 129, 13, 14); B.row(132, 146, 14); B.block(160, 160, 0, 10);
   const osito = PJ('PELUSÍN', 'enemigo-osito', 4), sold = PJ('TAMBOR', 'enemigo-soldadito', 4), avion = PJ('HÉLICE', 'enemigo-avioneta', 4), pelota = PJ('BOTI', 'enemigo-pelota', 4);
-  const GL = (tx, ty, k, where) => advIC('globo', tx, ty, 6, 'un globo ' + where, 'Busca 6 globos para la fiesta', 'Lleva los globos a Pelusín', { img: 'adv-burbuja-' + k });
+  const GL = (tx, ty, k, where) => advIC('globo', tx, ty, 6, 'un globo ' + where, 'Busca 6 globos para la fiesta', 'Lleva los globos a Pelusín', { img: 'adv-globos', fr: 6, frame: k });
   const adv = {
     goal0: 'Habla con Pelusín, el osito', amb: [{ img: 'enemigo-avioneta', fr: 4, n: 3, y0: 1, y1: 5, h: 42, sp: 90 }, { k: 'mariposa', n: 6, y0: 6, y1: 13, sp: 40 }],
     intro: ['Lucas ha llegado al Mundo de los Juguetes.', 'Hoy es el cumpleaños de Pelusín, el osito, ¡pero la fiesta no tiene globos!', 'Habla con todos y busca los globos por todas partes.'],
@@ -7433,7 +7450,7 @@ LEVELS['A-6c'] = function () {
     ents: [advWay('out', 3, 12, 'A-6', 120, 15, 'SALIR', 'tele'), { id: 'm1', kind: 'deco', tx: 21, ty: 12, h: 90, img: 'muneco-sorpresa' },
       advShop({ id: 'buf', who: buf, tx: 16, ty: 12, h: 130, item: 'globo', price: 10, hello: ['¡Sorpresa! Soy Cascabel, el bufón de la caja.', 'Tengo un globo mágico de colores. Te lo cambio por 10 monedas.'], got: ['¡Un globo para la fiesta!', 'Llévaselo a Pelusín.'], then: A => A.goal(A.cnt('globo') >= 6 ? 'Lleva los globos a Pelusín' : 'Busca 6 globos para la fiesta (' + A.cnt('globo') + ' de 6)') }),
       advChest('ch', 11, 9, 6)],
-    items: [advIC('globo', 7, 11, 6, 'un globo en la caja sorpresa', 'Busca 6 globos para la fiesta', 'Lleva los globos a Pelusín', { img: 'adv-burbuja-5' })], gates: [] };
+    items: [advIC('globo', 7, 11, 6, 'un globo en la caja sorpresa', 'Busca 6 globos para la fiesta', 'Lleva los globos a Pelusín', { img: 'adv-globos', fr: 6, frame: 5 })], gates: [] };
   return advRoom(B, 'LA CAJA SORPRESA', adv, { theme: 'toy' });
 };
 
@@ -7445,7 +7462,7 @@ LEVELS['A-7'] = function () {
   B.block(30, 36, 12, 14); B.block(32, 35, 13, 14, ' '); B.block(30, 31, 13, 14, 'C'); B.arc(30, 36, 10, 1);
   B.block(150, 150, 0, 10); B.row(100, 120, 14); B.arc(122, 140, 12, 2);
   const cop = PJ('COPITO', 'enemigo-patrulla-hielo', 4), esc = PJ('ESCARCHA', 'jefe2'), bri = PJ('BRISA', 'enemigo-alien-hielo', 4);
-  const CR = (tx, ty, k, where) => advIC('cristal', tx, ty, 3, 'un cristal de hielo ' + where, 'Busca los 3 cristales de Copito', 'Lleva los cristales a Copito', { img: 'cristal-' + k });
+  const CR = (tx, ty, k, where) => advIC('cristal', tx, ty, 3, 'un cristal de hielo ' + where, 'Busca los 3 cristales de Copito', 'Lleva los cristales a Copito', { img: 'adv-cristales', fr: 3, frame: k % 3 });
   const adv = {
     goal0: 'Habla con Copito', amb: [{ k: 'copo', n: 40, y0: 0, y1: 20, sp: 15 }, { img: 'enemigo-gaviota', fr: 4, n: 2, y0: 2, y1: 5, h: 32, sp: 60 }, { k: 'pez', n: 6, y0: 16, y1: 19, sp: 40 }],
     intro: ['Lucas ha llegado al Planeta de Hielo. ¡Brrr, qué frío!', 'Copito, un robot de nieve, está muy triste. Ha perdido algo muy importante.'],
@@ -7472,7 +7489,7 @@ LEVELS['A-7c'] = function () {
   B.crystal(5, 12, 0, 1); B.crystal(17, 12, 1, 1); B.crystal(27, 12, 2, 1);
   const adv = { root: 'A-7', interior: { strips: [3], light: '160,240,255', c0: '#1b3a5a', c1: '#0a1a30', win: [] },
     ents: [advWay('out', 3, 12, 'A-7', 44, 15, 'SALIR'), advLever('lev', 15, 6, 'fondo'), advChest('ch', 9, 9, 5)],
-    items: [advIC('cristal', 27, 11, 3, 'un cristal de hielo en la cueva', 'Busca los 3 cristales de Copito', 'Lleva los cristales a Copito', { img: 'cristal-2' })],
+    items: [advIC('cristal', 27, 11, 3, 'un cristal de hielo en la cueva', 'Busca los 3 cristales de Copito', 'Lleva los cristales a Copito', { img: 'adv-cristales', fr: 3, frame: 2 })],
     gates: [advLaser('fondo', 24, 9, 11, ['Una barrera de luz. Busca la palanca, está arriba.'])] };
   return advRoom(B, 'CUEVA DE CRISTAL', adv, { theme: 'ice' });
 };
@@ -7753,7 +7770,7 @@ LEVELS['A-15'] = function () {
           if (cnt(A) < 4) return A.say(ray, ['Ya han venido ' + cnt(A) + ' de 4 amigos.']);
           A.flag('fiesta', 1); advParty(P.x, P.y); setTimeout(() => advParty(P.x + 300, P.y), 1800); A.say(ray, ['¡Ya estamos todos! ¡Que empiece la fiesta!', 'Cuando quieras, tu cohete te espera a la derecha.'], () => { A.open('salida'); A.goal('Sube a tu cohete'); }); } },
       ...[['A-15a', 'EL MAR DE ALMEJA'], ['A-15b', 'EL DESGUACE DE TUERCAS'], ['A-15c', 'LA SELVA DE CHISPITA'], ['A-15d', 'EL OASIS DE VENDA']].map(([r, n], i) => advWay('w' + i, 18 + i * 9, g, r, 4, 12, n, 'tele')),
-      friend('alm', 29, 'enemigo-almeja', 'DOÑA ALMEJA', 3, 80), friend('tue', 32, 'robot-arreglado', 'TUERCAS', 0, 110), friend('chi', 35, 'pj-cachorro', 'CHISPITA', 2, 70), friend('ven', 38, 'enemigo-momia', 'DOÑA VENDA', 4, 100)],
+      friend('alm', 28, 'enemigo-almeja', 'DOÑA ALMEJA', 3, 80), friend('tue', 31, 'robot-arreglado', 'TUERCAS', 0, 110), friend('chi', 37, 'pj-cachorro', 'CHISPITA', 2, 70), friend('ven', 40, 'enemigo-momia', 'DOÑA VENDA', 4, 100), { id: 'tarta', kind: 'deco', tx: 34, ty: 9, h: 90, img: 'adv-tarta', hide: A => !A.flag('fiesta'), fx: () => 'luz', fxy: 1 }],
     items: [], gates: [advLaser('salida', 56, 10, 12, ['La fiesta todavía no ha empezado. Habla con Rayo.'])]
   };
   return advMain(B, o => o, 'LA GRAN FIESTA', adv, 62, g);
