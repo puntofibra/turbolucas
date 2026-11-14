@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.42';
+const VERSION = '1.43';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -489,7 +489,7 @@ function openConsole(fromPad) {
     say(activeTxt(), 'y', 0, true);
   }, 650);
 }
-function conLvl(arg) { { const a = String(arg).toUpperCase().replace(/\s+/g, ''); if (/^A-?\d$/.test(a)) { const id = 'A-' + a.slice(-1); return typeof LEVELS[id] === 'function' ? id : ''; } } const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/), id = m ? m[1] + '-' + m[2] : ''; return id && typeof LEVELS[id] === 'function' && ALLN().some(n => n.id === id) ? id : ''; }
+function conLvl(arg) { { const a = String(arg).toUpperCase().replace(/\s+/g, ''); if (/^A-?\d{1,2}$/.test(a)) { const id = 'A-' + a.replace(/^A-?/, ''); return typeof LEVELS[id] === 'function' ? id : ''; } } const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/), id = m ? m[1] + '-' + m[2] : ''; return id && typeof LEVELS[id] === 'function' && ALLN().some(n => n.id === id) ? id : ''; }
 function conEdit(arg) {        // EDIT 3-5: te lleva a esa fase con el editor de pantallas abierto
   if (!arg) { say('ESCRIBE EL MUNDO Y EL NIVEL: EDIT 3-5', 'y', 12); return; }
   const id = conLvl(arg); if (!id) { say('ERROR · LA FASE "' + String(arg).slice(0, 10) + '" NO EXISTE. Prueba con algo como EDIT 3-5.', 'r', 12); tone(140, 90, 0.3, 'square', 0.08); return; }
@@ -4607,6 +4607,7 @@ function drawWorld() {
   // punto de control y meta
   for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 100, 22, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y + 2, 118); ctx.globalAlpha = 1; }
   if (!L.adv && vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y + 2, 250); }
+  if (state === 'edit' && L.adv) advEdPrep();
   if (L.adv && (L.adv.interior || ADV_BG[curId])) advInterior();
   drawCogs(); drawTiles();
   drawStageBack();
@@ -5847,7 +5848,7 @@ const GOOGLE_ID = '454055120059-nuhaop4r62urc3u036cc3grpqo71ulg7.apps.googleuser
 let ACC = null, GUEST = false; try { ACC = JSON.parse(localStorage.getItem('tl_acc') || 'null'); GUEST = localStorage.getItem('tl_guest') === '1'; } catch (e) {}
 /* ======================= TALLER ESPACIAL: crea tus niveles en una cuadrícula ======================= */
 const TL_PAL = [
-  ['erase', '🧽', 'Borrar'], ['#', '🧱', 'Suelo'], ['=', '➖', 'Plataforma'], ['?', '❓', 'Caja sorpresa'], ['B', '📦', 'Caja rompible'], ['I', '👻', 'Bloque invisible (vida)'], ['F', '🌫️', 'Pared falsa'],
+  ['grab', '🖱️', 'Mover pieza'], ['erase', '🧽', 'Borrar'], ['#', '🧱', 'Suelo'], ['=', '➖', 'Plataforma'], ['?', '❓', 'Caja sorpresa'], ['B', '📦', 'Caja rompible'], ['I', '👻', 'Bloque invisible (vida)'], ['F', '🌫️', 'Pared falsa'],
   ['C', '💥', 'Pared agrietada (láser)'], ['!', '❗', 'Interruptor'], ['X', '🟥', 'Bloque rojo'], ['Y', '🟦', 'Bloque azul'], ['D', '🚪', 'Puerta de llaves'],
   ['o:chip', '🪙', 'Chip'], ['o:gear', '⚙️', 'Engranaje'], ['o:key', '🔑', 'Llave'],
   ['o:en:patrulla', '🤖', 'Robot patrulla'], ['o:en:dron', '🚁', 'Dron'], ['o:en:erizo', '🦔', 'Erizo'], ['o:en:alien', '👽', 'Alien'], ['o:en:torreta', '🔫', 'Torreta'],
@@ -5984,7 +5985,7 @@ function openEditor() {
 }
 /* ---------- editor de las pantallas reales (modo pruebas · pausa › EDITAR) ---------- */
 const ptEmpty = () => ({ t: {}, bx: {}, d: [], a: [] });
-const ptIsEmpty = p => !p || (!Object.keys(p.t || {}).length && !(p.d || []).length && !(p.a || []).length && !p.s && !p.e);
+const ptIsEmpty = p => !p || (!Object.keys(p.t || {}).length && !(p.d || []).length && !(p.a || []).length && !p.s && !p.e && !Object.keys(p.m || {}).length);
 function offRefreshED() { ED = { n: EDO.id, t: L.theme || '', fx: '', w: L.W, h: L.H, g: L.g.map(r => r.join('')), bx: L.boxes || {}, o: EDO.p.a, s: null, e: null }; }
 function offRebuild() { curId = EDO.id; EDRAFT[EDO.id] = EDO.p; L = buildLevel(); spawnEnemies(); items = []; shots = []; P = newPlayer(L.spawn.x, L.spawn.y); P.x = EDO.px; P.y = EDO.py; offRefreshED(); }
 function openEditOff() {
@@ -6082,14 +6083,52 @@ function edPut(tx, ty, erase) {
   else { if (cur === t && (t !== '?' || ED.bx[key] === edBox)) return; setT(t); if (ob) ED.o = ED.o.filter(o => o !== ob); if (t === '?') ED.bx[key] = edBox; else delete ED.bx[key]; }
   edRebuild();
 }
+// ---- MOVER PIEZA: toca una pieza ya puesta y luego toca dónde la quieres (o arrástrala) ----
+let edSel = null;
+const EDK = { chips: 'chip', gears: 'gear', keys: 'key', cps: 'cp', vines: 'vine', spores: 'spore', flyb: 'fly', crys: 'crystal', geysers: 'geyser', jumpers: 'jumper', icicles: 'icicle', guns: 'snowgun' };
+function edKindOf(k, o) {
+  if (EDK[k]) return EDK[k]; if (k === 'ents') return 'en:' + o.type; if (k === 'pads') return o.crystal ? 'spring' : o.mush ? 'mush' : 'pad';
+  if (k === 'movers') return o.plank ? 'plank' : o.fall ? 'fall' : o.ay ? 'moverV' : 'moverH'; if (k === 'lasers') return o.lava ? 'lavafall' : 'laser'; return null;
+}
+function edPick(tx, ty) {          // qué hay en esa casilla
+  if (EDO) { const A = L.adv;
+    if (A) { const e = A.ents.find(e => e.tx === tx && ty <= e.ty && ty >= e.ty - Math.max(1, Math.ceil((e.h || 60) / T))); if (e) return { adv: 'e:' + (e.id || A.ents.indexOf(e)), name: e.name || e.id, tx, ty };
+      const ii = A.items.findIndex(o => o.tx === tx && o.ty === ty); if (ii >= 0) return { adv: 'i:' + ii, name: ADV_IT[A.items[ii].id].n, tx, ty }; }
+    const ad = EDO.p.a.find(o => o.x === tx && o.y === ty); if (ad) return { add: ad, name: ad.k, tx, ty };
+    for (const k in L) { const a = L[k]; if (k === 'g' || k === 'plats' || !Array.isArray(a) || !a.length || typeof a[0] !== 'object') continue;
+      for (const o of a) { const c = ptCells(o, k); if (c && tx >= c[0] && tx <= c[1] && ty >= c[2] && ty <= c[3]) { const kind = edKindOf(k, o); if (kind) return { obj: kind, name: kind, tx, ty }; } } }
+  } else { const ob = ED.o.find(o => o.x === tx && o.y === ty); if (ob) return { cob: ob, name: ob.k, tx, ty }; }
+  const sp = EDO ? L.spawn : null; if (EDO && Math.floor(L.spawn.x / T) === tx && Math.floor(L.spawn.y / T) - 1 === ty) return { start: 1, name: 'salida', tx, ty };
+  const c = (EDO ? L.g[ty] && L.g[ty][tx] : ED.g[ty] && ED.g[ty][tx]); if (c && c !== ' ') return { tile: c, bx: (EDO ? L.boxes : ED.bx)[tx + ',' + ty], name: 'bloque', tx, ty };
+  void sp; return null;
+}
+function edDrop(tx, ty) {
+  const s0 = edSel; edSel = null; if (!s0 || (s0.tx === tx && s0.ty === ty)) return; edSnap();
+  if (!EDO) { if (s0.cob) { s0.cob.x = tx; s0.cob.y = ty; } else if (s0.tile) { const set = (x, y, c) => { ED.g[y] = ED.g[y].slice(0, x) + c + ED.g[y].slice(x + 1); }; set(s0.tx, s0.ty, ' '); set(tx, ty, s0.tile); if (s0.bx) { ED.bx[tx + ',' + ty] = s0.bx; delete ED.bx[s0.tx + ',' + s0.ty]; } } edRebuild(); return; }
+  const p = EDO.p, k0 = s0.tx + ',' + s0.ty, k1 = tx + ',' + ty;
+  if (s0.adv) { p.m = p.m || {}; const A = L.adv, cur = s0.adv[0] === 'e' ? A.ents.find((e, i) => 'e:' + (e.id || i) === s0.adv) : A.items[+s0.adv.slice(2)]; const dy = cur ? ty - s0.ty : 0; p.m[s0.adv] = [tx, (cur ? cur.ty : ty) + dy]; }
+  else if (s0.add) { s0.add.x = tx; s0.add.y = ty; }
+  else if (s0.obj) { if (!p.d.includes(k0)) p.d.push(k0); p.a = p.a.filter(o => !(o.x === tx && o.y === ty)); p.a.push({ k: s0.obj, x: tx, y: ty }); }
+  else if (s0.start) p.s = [tx, ty];
+  else if (s0.tile) { p.t[k0] = ' '; delete p.bx[k0]; p.t[k1] = s0.tile; if (s0.tile === '?' && s0.bx) p.bx[k1] = s0.bx; }
+  EDO.dirty = true; offRebuild();
+}
+function edGrabDown(tx, ty) {
+  const m = $('edMsg'), say2 = t => { if (m) m.textContent = t; };
+  if (!edSel) { const s1 = edPick(tx, ty); if (!s1) { say2('🖱️ Aquí no hay nada. Toca una pieza que ya esté puesta para moverla.'); return; } edSel = s1; edDrag = { grab: true, last: tx + ',' + ty }; tone(900, 1200, 0.06, 'triangle', 0.06);
+    say2('🖱️ Has cogido: ' + String(s1.name).toUpperCase() + '. Arrástrala o toca dónde quieres ponerla.'); return; }
+  edDrop(tx, ty); SFX.chip(); say2('✔ Pieza movida. Toca otra pieza para moverla.');
+}
 function edCell(e) { const x = e.clientX * DPR / SC, y = e.clientY * DPR / SC; return [Math.floor((x + cam.x) / T), Math.floor((y + cam.y) / T)]; }
 cv.addEventListener('pointerdown', e => { if (state !== 'edit') return; e.preventDefault(); const [tx, ty] = edCell(e);
   if (edTool === 'move' || e.button === 1) { edDrag = { x: e.clientX, y: e.clientY, cam: edCam, camY: edCamY, pan: true }; return; }
+  if (edTool === 'grab' && e.button !== 2) { edGrabDown(tx, ty); return; }
   edSnap(); edDrag = { erase: e.button === 2, last: tx + ',' + ty }; edPut(tx, ty, e.button === 2); });
 cv.addEventListener('pointermove', e => { if (state !== 'edit') return; const [tx, ty] = edCell(e); edHover = [tx, ty]; if (!edDrag) return;
   if (edDrag.pan) { edCam = edDrag.cam - (e.clientX - edDrag.x) * DPR / SC; edCamY = edDrag.camY - (e.clientY - edDrag.y) * DPR / SC; return; }
+  if (edDrag.grab) return;
   const k = tx + ',' + ty; if (k !== edDrag.last && !['start', 'goal', 'o:portal'].includes(edTool)) { edDrag.last = k; edPut(tx, ty, edDrag.erase); } });
-addEventListener('pointerup', () => { edDrag = null; });
+addEventListener('pointerup', e => { if (edDrag && edDrag.grab && edSel && state === 'edit' && e.target === cv) { const [tx, ty] = edCell(e); if (tx !== edSel.tx || ty !== edSel.ty) { edDrop(tx, ty); SFX.chip(); const m = $('edMsg'); if (m) m.textContent = '✔ Pieza movida. Toca otra pieza para moverla.'; } } edDrag = null; });
 cv.addEventListener('contextmenu', e => { if (state === 'edit') e.preventDefault(); });
 cv.addEventListener('wheel', e => { if (state !== 'edit') return; if (e.shiftKey) edCamY += e.deltaY; else edCam += (e.deltaX || e.deltaY) * 1.2; e.preventDefault(); }, { passive: false });
 addEventListener('keydown', e => { if (state !== 'edit' || (e.target && e.target.tagName === 'INPUT')) return; if (e.code === 'ArrowRight') edCam += 96; if (e.code === 'ArrowLeft') edCam -= 96; if (e.code === 'ArrowUp') edCamY -= 96; if (e.code === 'ArrowDown') edCamY += 96; if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') edUndoDo(); });
@@ -6098,7 +6137,7 @@ let edPad = { x: 5, y: 10, prev: {} };
 function edPadPoll(gp) { if (state !== 'edit' || !gp) return; const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), P2 = edPad.prev, edge = i => b(i) && !P2[i];
   if (!ED) return; if (edge(15)) edPad.x++; if (edge(14)) edPad.x--; if (edge(12)) edPad.y--; if (edge(13)) edPad.y++; edPad.x = Math.max(0, Math.min(ED.w - 1, edPad.x)); edPad.y = Math.max(0, Math.min(ED.h - 1, edPad.y)); edHover = [edPad.x, edPad.y];
   const sx = edPad.x * T - cam.x, sy = edPad.y * T - cam.y; if (sx < 80) edCam -= 96; if (sx > VW - 120) edCam += 96; if (sy < 70) edCamY -= 96; if (sy > VHv - 150) edCamY += 96;
-  if (edge(0)) { edSnap(); edPut(edPad.x, edPad.y, false); } if (edge(1)) { edSnap(); edPut(edPad.x, edPad.y, true); }
+  if (edge(0)) { if (edTool === 'grab') edGrabDown(edPad.x, edPad.y); else { edSnap(); edPut(edPad.x, edPad.y, false); } } if (edge(1)) { edSnap(); edPut(edPad.x, edPad.y, true); }
   if (edge(4) || edge(5)) { const i = TL_PAL.findIndex(p => p[0] === edTool), n = (Math.max(0, i) + (edge(5) ? 1 : -1) + TL_PAL.length) % TL_PAL.length; edTool = TL_PAL[n][0]; const bts = $('ed').querySelectorAll('.pal button'); bts.forEach((q, k) => q.classList.toggle('on', k === n)); bts[n] && bts[n].scrollIntoView({ inline: 'center', block: 'nearest' }); }
   if (edge(3)) { if (EDO) offLeave(true); else tlPlay(true); }
   for (let i = 0; i < 16; i++) P2[i] = b(i); }
@@ -6114,6 +6153,8 @@ function drawEditorOverlay() {
   for (const o of ED.o) if (o.x >= x0 && o.x <= x1 && ['laser', 'lavafall', 'jumper', 'snowgun', 'icicle', 'portal'].includes(o.k)) { ctx.globalAlpha = 0.6; ctx.fillText(TL_PAL.find(p => p[0] === 'o:' + o.k)[1], o.x * T + T / 2, o.y * T + T / 2); ctx.globalAlpha = 1; }
   if (ED.s) { ctx.strokeStyle = '#35ff8a'; ctx.lineWidth = 2; ctx.strokeRect(ED.s[0] * T + 1, ED.s[1] * T + 1, T - 2, T - 2); }
   if (edHover) { const [hx, hy] = edHover; ctx.strokeStyle = '#ffd23c'; ctx.lineWidth = 3; ctx.strokeRect(hx * T + 1.5, hy * T + 1.5, T - 3, T - 3); const p = TL_PAL.find(q => q[0] === edTool); if (p && edTool !== 'move') { ctx.globalAlpha = 0.55; ctx.fillText(p[1], hx * T + T / 2, hy * T + T / 2); ctx.globalAlpha = 1; } }
+  if (edSel) { const a = 0.6 + 0.4 * Math.sin(time * 8); ctx.strokeStyle = 'rgba(53,255,138,' + a + ')'; ctx.lineWidth = 4; ctx.setLineDash([8, 5]); ctx.strokeRect(edSel.tx * T + 2, edSel.ty * T + 2, T - 4, T - 4); ctx.setLineDash([]);
+    if (edHover) { ctx.fillStyle = 'rgba(53,255,138,.22)'; ctx.fillRect(edHover[0] * T, edHover[1] * T, T, T); } }
   ctx.restore(); ctx.textBaseline = 'alphabetic';
 }
 /* ---------- jugador: código anónimo del dispositivo (para no contar dos veces a la misma persona el mismo día) ---------- */
@@ -6858,7 +6899,8 @@ function advClose() {
 function advLoop() {          // mando y teclado mientras se habla (el juego está parado)
   if (!ADVT.on) return; requestAnimationFrame(advLoop); try { pollPad(); } catch (e) {}
   const j = K.jump, a = K.act, l = K.left, r = K.right;
-  if ((j && !ADVT.pj) || (a && !ADVT.pd)) { if (ADVT.opts && ADVT.i === ADVT.lines.length - 1 && ADVT.shown >= (ADVT.lines[ADVT.i] || '').length) advPick(ADVT.sel); else advNext(); }
+  if (a && !ADVT.pd) advSpeak(ADVT.lines[ADVT.i] || '');          // cuadrado: lee el narrador
+  else if (j && !ADVT.pj) { if (ADVT.opts && ADVT.i === ADVT.lines.length - 1 && ADVT.shown >= (ADVT.lines[ADVT.i] || '').length) advPick(ADVT.sel); else advNext(); }
   if (ADVT.opts && ((l && !ADVT.pl) || (r && !ADVT.pr))) { ADVT.sel = (ADVT.sel + (r ? 1 : -1) + ADVT.opts.length) % ADVT.opts.length; advOpts(); tone(700, 700, 0.04, 'square', 0.04); }
   ADVT.pj = j; ADVT.pd = a; ADVT.pl = l; ADVT.pr = r;
 }
@@ -6884,6 +6926,20 @@ function advApi(A) {
     tele: (x, y) => advTele(x, y)
   };
 }
+function advMoves(A) {          // posiciones cambiadas con el editor (personajes, objetos y decorados de la aventura)
+  if (A.movesDone) return; A.movesDone = 1; const p = EDRAFT[curId] || PATCH[curId], m = p && p.m; if (!m) return;
+  A.ents.forEach((e, i) => { const k = m['e:' + (e.id || i)]; if (k) { e.tx = k[0]; e.ty = k[1]; } });
+  A.items.forEach((o, i) => { const k = m['i:' + i]; if (k) { o.tx = k[0]; o.ty = k[1]; } });
+}
+function advEdPrep() {          // en el editor también se ven los personajes de la aventura (sin diálogos ni nada)
+  const A = L && L.adv; if (!A || A.edPrep) return; A.edPrep = 1; try { $('advUse').classList.remove('on'); } catch (e) {}
+  if (ADV_DECO[curId] && !A.decoDone) { A.decoDone = 1; A.ents.unshift(...ADV_DECO[curId].map(([n, tx, ty, h], i) => ({ id: 'dc' + i, kind: 'deco', tx, ty, h: Math.round(h * 1.3), img: 'deco-' + n, flip: i % 3 === 2 }))); }
+  advMoves(A); A.inv = {}; A.f = {}; A.api = advApi(A); A.tgt = null;
+  for (const e of A.ents) { e.x = e.tx * T + T / 2; e.y = e.ty * T; e.ph = 0; if (e.kind === 'npc') { const an = advAnimOf(e.name, e.img); if (an) e.anim = an; } }
+  for (const o of A.items) { o.x = o.tx * T + T / 2; o.y = o.ty * T + T / 2; o.got = false; }
+  for (const g of A.gates) { g.open = false; g.ot = 0; g.x = g.tx * T + T / 2; g.y0p = g.y0 * T; g.y1p = (g.y1 + 1) * T; }
+  A.ready = true;
+}
 let ADVS = null;          // partida de aventura en curso: mochila, avisos y lo que ya pasó en cada sala (para viajar entre salas)
 function advRoomSave() { const A = L && L.adv; if (!A || !A.ready || !ADVS) return; ADVS.rooms[curId] = { it: A.items.map(o => o.got), gt: A.gates.filter(g => g.open).map(g => g.id), en: A.ents.filter(e => e.opened).map(e => e.id), en2: A.ents.filter(e => e.frame != null).map(e => [e.id, e.frame]), c: A.cset.filter(k => { const [x, y] = k.split(',').map(Number); return L.g[y][x] !== 'C'; }), ch: L.chips.map(c => !!c.got) }; }
 function advGo(room, tx, ty) {          // viajar a otra sala de la misma aventura por un transportador
@@ -6896,9 +6952,10 @@ function advInit() {
   if (ADV_DECO[curId] && !A.decoDone) { A.decoDone = 1; A.ents.unshift(...ADV_DECO[curId].map(([n, tx, ty, h], i) => ({ id: 'dc' + i, kind: 'deco', tx, ty, h: Math.round(h * 1.3), img: 'deco-' + n, flip: i % 3 === 2 }))); }
   const sw = ADVS && ADVS.root === A.root && ADVS.go; if (!sw) ADVS = { root: A.root, inv: {}, f: {}, rooms: {} };
   A.inv = ADVS.inv; A.f = ADVS.f; if (ADVS.goal) A.goalTxt = ADVS.goal; else if (A.goal0) ADVS.goal = A.goal0; A.t = 0; A.tgt = null; A.goalTxt = (ADVS && ADVS.goal) || A.goal0 || ''; A.goalT = 0; A.api = advApi(A);
-  for (const e of A.ents) { e.x = e.tx * T + T / 2; e.y = e.ty * T; e.ph = Math.random() * 6;
+  for (const e of A.ents) { if (!e.decoSet) advMoves(A); e.x = e.tx * T + T / 2; e.y = e.ty * T; e.ph = Math.random() * 6;
     if (e.kind === 'npc') { const an = advAnimOf(e.name, e.img); if (an) { e.anim = an; xi(an.img, 4); if (/chispas|globito|concha|dientes|plumita|helice|arenita/.test(an.img)) { e.faceR = true; e.noTurn = false; } } if (e.img2) { const a2 = advAnimOf(e.name, e.img2); if (a2) e.anim2 = a2; } if (e.img3) e.anim3 = advAnimOf(e.name, e.img3); }
     if (e.img) xi(e.img, e.fr); if (e.img2) xi(e.img2, e.fr2); }
+  advMoves(A);
   for (const o of A.items) { o.x = o.tx * T + T / 2; o.y = o.ty * T + T / 2; o.got = false; xi(ADV_IT[o.id].img); }
   for (const g of A.gates) { g.open = false; g.ot = 0; g.x = g.tx * T + T / 2; g.y0p = g.y0 * T; g.y1p = (g.y1 + 1) * T; }
   xi('adv-puerta', 4); xi('adv-rejilla', 2); ['adv-cofre', 'adv-cofre-abierto', 'adv-teleport', 'perla'].forEach(n => xi(n));
@@ -7810,7 +7867,7 @@ advFriendRoom('A-15b', 'tue', 'EL DESGUACE DE TUERCAS', { name: 'TUERCAS', img: 
 advFriendRoom('A-15c', 'chi', 'LA SELVA DE CHISPITA', { name: 'CHISPITA', img: 'pj-cachorro', fr: 2, h: 80, yes: ['¡Guau! ¡Una fiesta! ¡Me encantan las fiestas!', '¡Voy corriendo!'] }, { theme: 'jungle' }, { strips: [], light: '120,255,140', c0: '#1a3a22', c1: '#0a1a10', win: [] }, [{ id: 'n', kind: 'deco', tx: 9, ty: 12, h: 46, img: 'adv-nido' }]);
 advFriendRoom('A-15d', 'ven', 'EL OASIS DE VENDA', { name: 'DOÑA VENDA', img: 'enemigo-momia', fr: 4, h: 110, yes: ['¡Una invitación! Llevaré agua fresquita de mi fuente para todos.'] }, { theme: 'desert' }, { strips: [], light: '255,200,100', c0: '#7a5a2a', c1: '#3a2a10', win: [] }, [{ id: 'p', kind: 'deco', tx: 9, ty: 12, h: 170, img: 'adv-playa', fr: 4, frame: 0 }]);
 
-window.__TLA = { get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), get id() { return curId; } };
+window.__TLA = { get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
 LEVELS['A-1'] = function () {
   const W = 240, H = 30, B = SB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
