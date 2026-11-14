@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.57';
+const VERSION = '1.58';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6988,7 +6988,8 @@ function advAsk(who, text, opts) { advSay(who, [text], null, opts); }
 function advLine() {
   const t = ADVT.lines[ADVT.i] || ''; ADVT.shown = 0; $('advTx').textContent = ''; $('advOp').innerHTML = ''; clearInterval(ADVT.tm);
   try { speechSynthesis.cancel(); } catch (e) {}
-  ADVT.tm = setInterval(() => { ADVT.shown = Math.min(t.length, ADVT.shown + 1); $('advTx').textContent = t.slice(0, ADVT.shown); if (ADVT.shown % 3 === 0 && t[ADVT.shown - 1] !== ' ') tone(620 + Math.random() * 160, 620, 0.025, 'triangle', 0.025); if (ADVT.shown >= t.length) { clearInterval(ADVT.tm); advOpts(); advSpeak(t); } }, 26);
+  advSpeak(t);          // el narrador empieza a leer a la vez que se escribe el texto
+  ADVT.tm = setInterval(() => { ADVT.shown = Math.min(t.length, ADVT.shown + 1); $('advTx').textContent = t.slice(0, ADVT.shown); if (ADVT.shown >= t.length) { clearInterval(ADVT.tm); advOpts(); } }, 26);
 }
 function advOpts() {
   const last = ADVT.i === ADVT.lines.length - 1; $('advNx').style.visibility = last && ADVT.opts ? 'hidden' : '';
@@ -6998,7 +6999,7 @@ function advOpts() {
 function advPick(k) { const op = ADVT.opts && ADVT.opts[k]; if (!op) return; SFX.chip(); advClose(); if (op.f) setTimeout(op.f, 60); }
 function advNext() {
   if (!ADVT.on) return; const t = ADVT.lines[ADVT.i] || '';
-  if (ADVT.shown < t.length) { clearInterval(ADVT.tm); ADVT.shown = t.length; $('advTx').textContent = t; advOpts(); advSpeak(t); return; }
+  if (ADVT.shown < t.length) { clearInterval(ADVT.tm); ADVT.shown = t.length; $('advTx').textContent = t; advOpts(); return; }
   if (ADVT.i === ADVT.lines.length - 1 && ADVT.opts) return;
   ADVT.i++; tone(880, 1100, 0.05, 'triangle', 0.05);
   if (ADVT.i >= ADVT.lines.length) { const th = ADVT.then; advClose(); if (th) setTimeout(th, 60); } else advLine();
