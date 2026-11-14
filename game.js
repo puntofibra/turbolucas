@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.56';
+const VERSION = '1.57';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5158,11 +5158,11 @@ function kidSwap(on) {
   kidSave(); setWorld(WORLDS[nx.w] ? nx.w : 0); mapSel = mapAt = Math.max(0, Math.min(MAP.length - 1, nx.sel || 0)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; cloudSave(true);
 }
 // suelo por módulos: una tira de superficie con los extremos redondeados (se corta en trozos por tramo) y 6 bloques de relleno sueltos
-const SUELO2 = { ocean: { n: 'oceano', bt: 0.4376 }, desert: { n: 'desierto', bt: 0.313 }, sky: { n: 'cielo', bt: 0.2774 }, toy: { n: 'jugueteria', bt: 0.41 }, junk: { n: 'chatarra', bt: 0.205 } };
+const SUELO2 = { ocean: { n: 'oceano', bt: 0.4376 }, desert: { n: 'desierto', bt: 0.313 }, sky: { n: 'cielo', bt: 0.2774 }, toy: { n: 'jugueteria', bt: 0.41 }, junk: { n: 'chatarra', bt: 0.205 }, fort: { n: 'fortaleza', bt: 0.2006 } };
 function suelo2(tx, ty, d, s2, SA, SK) {
   const x = tx * T, y = ty * T, wall = (cx, cy) => cx >= 0 && cx < L.W && cy >= 0 && cy < L.H && isWallT(L.g[cy][cx]), k = L.theme === 'ocean' ? L.depth || 0 : 0;
   const sf = cx => wall(cx, ty) && !wall(cx, ty - 1);
-  if (d > 0 || !sf(tx)) { const c = SK.naturalHeight, i = ((tx * 7 + ty * 3) % 6 + 6) % 6; ctx.drawImage(SK, i * c, 0, c, c, x, y, T + 0.5, T + 0.5); }
+  if (d > 0 || !sf(tx)) { const c = SK.naturalHeight, i = ((tx * 7 + ty * 3) % 6 + 6) % 6; ctx.drawImage(SK, i * c, 0, c, c, x - 1.5, y - 1.5, T + 3, T + 3); }          // un pelín más grandes para que los bloques queden juntos
   else { let a = 0, b = 0; while (a < 64 && sf(tx - a - 1)) a++; while (b < 64 && sf(tx + b + 1)) b++; const n = a + b + 1;
     const iw = SA.naturalWidth, ih = SA.naturalHeight, s = (T + 3) / (ih * (1 - s2.bt)), sw = T / s, top = y - 3 - ih * s2.bt * s, h = ih * s, m = Math.max(1, Math.floor((iw - 2 * sw) / sw));
     if (n === 1) { ctx.drawImage(SA, 0, 0, sw / 2, ih, x, top, T / 2 + 0.5, h); ctx.drawImage(SA, iw - sw / 2, 0, sw / 2, ih, x + T / 2, top, T / 2, h); }
