@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.53';
+const VERSION = '1.54';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -5158,7 +5158,7 @@ function kidSwap(on) {
   kidSave(); setWorld(WORLDS[nx.w] ? nx.w : 0); mapSel = mapAt = Math.max(0, Math.min(MAP.length - 1, nx.sel || 0)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; cloudSave(true);
 }
 // suelo por módulos: una tira de superficie con los extremos redondeados (se corta en trozos por tramo) y 6 bloques de relleno sueltos
-const SUELO2 = { ocean: { n: 'oceano', bt: 0.4376 }, desert: { n: 'desierto', bt: 0.313 } };
+const SUELO2 = { ocean: { n: 'oceano', bt: 0.4376 }, desert: { n: 'desierto', bt: 0.313 }, sky: { n: 'cielo', bt: 0.2774 } };
 function suelo2(tx, ty, d, s2, SA, SK) {
   const x = tx * T, y = ty * T, wall = (cx, cy) => cx >= 0 && cx < L.W && cy >= 0 && cy < L.H && isWallT(L.g[cy][cx]), k = L.theme === 'ocean' ? L.depth || 0 : 0;
   const sf = cx => wall(cx, ty) && !wall(cx, ty - 1);
