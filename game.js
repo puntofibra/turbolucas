@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.64';
+const VERSION = '1.65';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4086,7 +4086,9 @@ function drawStageBack() {          // por detrás de los personajes
     { const ci = iceI('cristal-salto'); if (ci) { spr(ci, cx, y + 3, 50, 0.5, 1, false, 0, 1 + k * 0.12, sq); continue; } }
     for (const [dx, hh, w2] of [[-12, 24, 9], [12, 26, 9], [0, 38, 12]]) { const h2 = hh * sq; const cg = ctx.createLinearGradient(cx + dx - w2, 0, cx + dx + w2, 0); cg.addColorStop(0, '#7a2ad8'); cg.addColorStop(0.5, '#f0b8ff'); cg.addColorStop(1, '#a050ff'); ctx.fillStyle = cg; ctx.beginPath(); ctx.moveTo(cx + dx - w2, y); ctx.lineTo(cx + dx - w2 * 0.8, y - h2 * 0.7); ctx.lineTo(cx + dx, y - h2); ctx.lineTo(cx + dx + w2 * 0.8, y - h2 * 0.7); ctx.lineTo(cx + dx + w2, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,230,255,.8)'; ctx.lineWidth = 1.2; ctx.stroke(); } }
   for (const pd of L.pads) if (pd.mush) drawMush(pd);
-  for (const pd of L.pads) if (!pd.crystal && !pd.mush && !pd.jelly) { const k = Math.max(0, 1 - pd.t * 5), x = pd.x, y = pd.y - 9 + k * 6;
+  for (const pd of L.pads) if (!pd.crystal && !pd.mush && !pd.jelly) { const mn = MUELLE[L.theme || 'station'], mi = mn && xi('muelle-' + mn, 2); if (mi && okI(mi)) {          // trampolín con imagen: se aplasta al saltar
+      const k = Math.max(0, 1 - pd.t * 5); mi._n = 2; mi._f = k > 0.25 ? 1 : 0; const h = 62, cb = advCB(mi); spr(mi, pd.x + pd.w / 2, pd.y + 4, h / (cb.b - cb.t), 0.5, cb.b, false, 0, 1, 1 + k * 0.06); continue; }
+    const k = Math.max(0, 1 - pd.t * 5), x = pd.x, y = pd.y - 9 + k * 6;
     ctx.fillStyle = '#10182e'; ctx.fillRect(x + 2, y, pd.w - 4, 10); ctx.fillStyle = '#3d4d7c'; ctx.fillRect(x + 2, y, pd.w - 4, 3);
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 3; i++) { const ph = (time * 1.6 + i / 3) % 1, yy = y - 4 - ph * 26; ctx.globalAlpha = (1 - ph) * 0.9; ctx.strokeStyle = '#35ff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 12, yy + 6); ctx.lineTo(x + pd.w / 2, yy); ctx.lineTo(x + pd.w - 12, yy + 6); ctx.stroke(); }
@@ -5210,6 +5212,7 @@ function suelo2(tx, ty, d, s2, SA, SK) {
       if (!mir) ctx.drawImage(SA, sx, 0, sw, ih, x, top, T + 0.5, h); else { ctx.save(); ctx.translate(x + T, 0); ctx.scale(-1, 1); ctx.drawImage(SA, sx, 0, sw, ih, -0.5, top, T + 0.5, h); ctx.restore(); } } }
   if (k > 0.05) { ctx.fillStyle = 'rgba(2,12,30,' + k * 0.45 + ')'; ctx.fillRect(x, y, T + 0.5, T + 0.5); }
 }
+const MUELLE = { station: 'estacion', lava: 'volcan', ocean: 'oceano', desert: 'desierto', sky: 'cielo', toy: 'jugueteria', junk: 'chatarra', fort: 'fortaleza' };
 const SUELO12 = { station: 'suelo-estacion', ocean: 'suelo-oceano', desert: 'suelo-desierto', sky: 'suelo-cielo', toy: 'suelo-jugueteria', junk: 'suelo-chatarra', fort: 'suelo-fortaleza' };
 function kidToggle(src) {          // activa o quita el modo niños y vuelve al mapa en la posición de ese modo
   const on = !KID.on, w0 = curW, s0 = Math.max(0, MAP.findIndex(n => n.id === curId)) || mapSel; KID.av = true; kidSwap(on); tmpOff();
