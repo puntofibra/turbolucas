@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.58';
+const VERSION = '1.59';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7053,7 +7053,7 @@ function advEdPrep() {          // en el editor también se ven los personajes d
   A.ready = true;
 }
 let ADVS = null;          // partida de aventura en curso: mochila, avisos y lo que ya pasó en cada sala (para viajar entre salas)
-function advRoomSave() { const A = L && L.adv; if (!A || !A.ready || !ADVS) return; ADVS.rooms[curId] = { it: A.items.map(o => o.got), gt: A.gates.filter(g => g.open).map(g => g.id), en: A.ents.filter(e => e.opened).map(e => e.id), en2: A.ents.filter(e => e.frame != null).map(e => [e.id, e.frame]), c: A.cset.filter(k => { const [x, y] = k.split(',').map(Number); return L.g[y][x] !== 'C'; }), ch: L.chips.map(c => !!c.got) }; }
+function advRoomSave() { const A = L && L.adv; if (!A || !A.ready || !ADVS) return; ADVS.rooms[curId] = { it: A.items.map(o => o.got), gt: A.gates.filter(g => g.open).map(g => g.id), en: A.ents.filter(e => e.opened).map(e => e.id), en2: A.ents.filter(e => e.frame != null).map(e => [e.id, e.kind === 'way' ? 0 : e.frame]), c: A.cset.filter(k => { const [x, y] = k.split(',').map(Number); return L.g[y][x] !== 'C'; }), ch: L.chips.map(c => !!c.got) }; }
 function advGo(room, tx, ty) {          // viajar a otra sala de la misma aventura por un transportador
   if (typeof LEVELS[room] !== 'function') return; advRoomSave(); ADVS.go = { room, tx, ty }; const f = $('advFl'); if (f) f.style.opacity = '1'; SFX.portal(); $('advUse').classList.remove('on');
   setTimeout(() => { curId = room; const g = Object.assign({}, G); resetLevel(false); G = g; G.tleft = L.time; preTheme(L.theme); try { startMusic(); } catch (e) {} if (f) setTimeout(() => f.style.opacity = '0', 120); }, 280);
@@ -7078,7 +7078,9 @@ function advInit() {
   if (rs) { A.items.forEach((o, i) => o.got = !!rs.it[i]); rs.gt.forEach(id => { const g = A.gates.find(q => q.id === id); if (g) { g.open = true; g.ot = 9; for (let y = g.y0; y <= g.y1; y++) if (L.g[y][g.tx] === 'G') L.g[y][g.tx] = ' '; } });
     rs.en.forEach(id => { const e = A.ents.find(q => q.id === id); if (e) e.opened = true; }); (rs.en2 || []).forEach(([id, f]) => { const e = A.ents.find(q => q.id === id); if (e) e.frame = f; });
     rs.c.forEach(k => { const [x, y] = k.split(',').map(Number); L.g[y][x] = ' '; }); (rs.ch || []).forEach((g, i) => { if (g && L.chips[i]) L.chips[i].got = true; }); }
-  if (sw) { const go = ADVS.go; ADVS.go = null; P.x = go.tx * T + T / 2 - P.w / 2; P.y = go.ty * T - P.h - 2; P.vx = P.vy = 0; P.safeX = P.x; P.safeY = P.y + 2; cam.x = Math.max(0, Math.min(L.W * T - VW, P.x - VW * 0.4)); cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, P.y + P.h - VHv * 0.7));
+  if (sw) { const go = ADVS.go; ADVS.go = null;
+    for (const e of A.ents) if (e.kind === 'way') { e.frame = 0; if (Math.abs(e.tx - go.tx) <= 2 && Math.abs(e.ty - go.ty) <= 2) { e.frame = 3; [2, 1, 0].forEach((f, i) => setTimeout(() => { e.frame = f; }, 350 + i * 110)); } }          // la puerta por la que sales se cierra detrás de ti
+    P.x = go.tx * T + T / 2 - P.w / 2; P.y = go.ty * T - P.h - 2; P.vx = P.vy = 0; P.safeX = P.x; P.safeY = P.y + 2; cam.x = Math.max(0, Math.min(L.W * T - VW, P.x - VW * 0.4)); cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, P.y + P.h - VHv * 0.7));
     burst(P.x + P.w / 2, P.y + P.h / 2, 40, '#7fe9ff', 300, 0.8, 0, 4); if (A.enter) setTimeout(() => A.enter(A.api), 400); return; }
   if (A.intro) setTimeout(() => { if (state === 'play' && L.adv === A) advSay({ name: 'NARRADOR', img: 'pj-lucas2' }, A.intro, () => A.introDone && A.introDone(A.api)); }, 700);
 }
@@ -7500,7 +7502,7 @@ function advTeles(list) {          // varios teletransportes que se conectan ent
 function advWay(id, tx, ty, room, rx, ry, name, img) {          // puerta o transportador a otra sala
   const tele = img === 'tele';
   return { id, kind: tele ? 'tele' : 'way', tx, ty, h: tele ? 120 : 110, img: tele ? 'adv-teleport' : 'adv-puerta', fr: tele ? undefined : 4, frame: 0, name, lbl: tele ? '✨ VIAJAR' : '🚪 ENTRAR',
-    use: (A, e) => { if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
+    use: (A, e) => { if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
 }
 function advLever(id, tx, ty, gate, txt) { return { id, kind: 'lever', tx, ty, h: 64, name: 'PALANCA', lbl: '✋ TIRAR', use: (A, e) => { if (e.on) return A.say(NR, ['La palanca ya está bajada.']); e.on = true; e.opened = true; A.say(NR, txt || ['¡Has bajado la palanca! La barrera de luz se apaga.'], () => A.open(gate)); } }; }
 function advLaser(id, tx, y0, y1, txt) { return { id, kind: 'laser', tx, y0, y1, use: A => A.say(NR, txt) }; }
