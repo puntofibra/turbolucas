@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.34';
+const VERSION = '1.35';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -487,7 +487,7 @@ function openConsole(fromPad) {
     say(activeTxt(), 'y', 0, true);
   }, 650);
 }
-function conLvl(arg) { const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/), id = m ? m[1] + '-' + m[2] : ''; return id && typeof LEVELS[id] === 'function' && ALLN().some(n => n.id === id) ? id : ''; }
+function conLvl(arg) { { const a = String(arg).toUpperCase().replace(/\s+/g, ''); if (/^A-?\d$/.test(a)) { const id = 'A-' + a.slice(-1); return typeof LEVELS[id] === 'function' ? id : ''; } } const m = String(arg).toUpperCase().replace(/\s+/g, '').match(/^(\d{1,2})[-·.]?([0-9]{1,2}|J|B|C|D)$/), id = m ? m[1] + '-' + m[2] : ''; return id && typeof LEVELS[id] === 'function' && ALLN().some(n => n.id === id) ? id : ''; }
 function conEdit(arg) {        // EDIT 3-5: te lleva a esa fase con el editor de pantallas abierto
   if (!arg) { say('ESCRIBE EL MUNDO Y EL NIVEL: EDIT 3-5', 'y', 12); return; }
   const id = conLvl(arg); if (!id) { say('ERROR · LA FASE "' + String(arg).slice(0, 10) + '" NO EXISTE. Prueba con algo como EDIT 3-5.', 'r', 12); tone(140, 90, 0.3, 'square', 0.08); return; }
@@ -3343,7 +3343,7 @@ LEVELS['10-C'] = function () {
 let GOT = {}; try { GOT = JSON.parse(localStorage.getItem('tl_got') || '{}') || {}; } catch (e) { GOT = {}; }
 const gotOf = id => (GOT[id] = GOT[id] || { c: [], b: [], g: [], r: 0 });
 let gotT = 0; function gotSave() { clearTimeout(gotT); gotT = setTimeout(() => { try { localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {} cloudSave(); }, 400); }
-function gotMark(kind, v) { if (L && L.custom) return; const o = gotOf(curId); if (kind === 'r') o.r = 1; else if (!o[kind].includes(v)) o[kind].push(v); gotSave(); }
+function gotMark(kind, v) { if (L && (L.custom || L.adv)) return; const o = gotOf(curId); if (kind === 'r') o.r = 1; else if (!o[kind].includes(v)) o[kind].push(v); gotSave(); }
 /* ---------- retoques de las pantallas reales (editor del modo pruebas): se guardan en el servidor y les salen a todos ---------- */
 let PATCH = {}, EDRAFT = {}, EDO = null; try { PATCH = JSON.parse(localStorage.getItem('tl_pt') || '{}') || {}; } catch (e) {}
 function patchLoad() { api({ a: 'parches' }).then(r => { if (r.ok && r.p) { PATCH = r.p; try { localStorage.setItem('tl_pt', JSON.stringify(PATCH)); } catch (e) {} } }); }
@@ -3374,17 +3374,17 @@ function applyPatch(l, p) {
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
   { const pp = EDRAFT[curId] || PATCH[curId]; if (pp && !l.custom) try { applyPatch(l, pp); } catch (e) { console.warn('parche', e); } }
-  if (!l.custom) { const o = gotOf(curId), cs = new Set(o.c), gs = new Set(o.g);
+  if (!l.custom && !l.adv) { const o = gotOf(curId), cs = new Set(o.c), gs = new Set(o.g);
     l.chips.forEach((c, i) => { c.i = i; if (cs.has(i)) c.got = true; });
     l.gears.forEach((g, i) => { g.i = i; g.old = gs.has(i); });
     o.b.forEach(k => { const [x, y] = k.split(',').map(Number); if (l.g[y] && (l.g[y][x] === '?' || l.g[y][x] === 'I')) l.g[y][x] = l.g[y][x] === 'I' ? ' ' : 'U'; });
     if (o.r && l.rain) l.rain.st = 2; }
-  if (KID.on && !l.custom) kidEase(l);
+  if (KID.on && !l.custom && !l.adv) kidEase(l);
   l.time = l.time || 180; l.cps = l.cps || [l.checkpoint]; l.pads = l.pads || []; l.lasers = l.lasers || []; l.movers = l.movers || []; l.strips = l.strips || []; l.lifts = l.lifts || []; l.gk = l.gk || 1; l.mets = []; l.icicles = (l.icicles || []).map(c => Object.assign({ x: c.x0, y: c.y0, st: 0, t: 0, vy: 0 }, c)); l.winds = l.winds || []; l.warps = l.warps || []; l.crys = l.crys || []; l.geysers = l.geysers || []; l.cogs = l.cogs || []; l.vines = l.vines || []; l.spores = l.spores || []; l.flyb = l.flyb || []; jungleInit(l); l.keys = l.keys || []; l.pipes = l.pipes || []; l.jumpers = l.jumpers || []; l.guns = l.guns || []; l.sw = 0; if (l.bombs) l.bombs.acc = 0; l.bl = []; if (l.auto) l.auto.x = 0; l.lastCp = null; if (l.bossLvl) bossInit(l);
   return l;
 }
 const tileAt = (tx, ty) => (tx < 0 || tx >= L.W) ? '#' : (ty < 0 || ty >= L.H) ? ' ' : L.g[ty][tx];
-const isSolid = c => c === '#' || c === '?' || c === 'U' || c === 'B' || c === '!' || c === 'C' || c === 'D' || (c === 'X' && !L.sw) || (c === 'Y' && !!L.sw);
+const isSolid = c => c === '#' || c === '?' || c === 'U' || c === 'B' || c === '!' || c === 'C' || c === 'D' || c === 'G' || (c === 'X' && !L.sw) || (c === 'Y' && !!L.sw);
 function collide(o) {
   const x0 = Math.floor(o.x / T), x1 = Math.floor((o.x + o.w - 0.01) / T), y0 = Math.floor(o.y / T), y1 = Math.floor((o.y + o.h - 0.01) / T);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (isSolid(tileAt(tx, ty))) return true;
@@ -3494,6 +3494,7 @@ function knockAbove(tx, ty) {
 
 /* ---------- jugador ---------- */
 function hurt() {
+  if (L.adv) return;
   if (P.inv > 0 || P.dead || P.win || P.tStar > 0 || CHEAT.ghost) return;
   if (P.shield) { P.shield = false; P.inv = 1.6; SFX.hurt(); burst(P.x + P.w / 2, P.y + P.h / 2, 16, '#29a8ff', 220); shake = 0.15;
     if (L.bossLvl && L.arena) { const a = L.arena, far = P.x + P.w / 2 < (a.x0 + a.x1) / 2 ? a.x1 - 3 * T : a.x0 + 3 * T, sx = P.x > a.x0 ? far : Math.max(4 * T, P.x - 8 * T); items.push({ kind: 'escudo', x: sx - 20, y: 10.5 * T, w: 40, h: 40, rise: 1, t: 0, stay: true, mat: 1.4 }); pop(sx, 9 * T, '¡TU ESCUDO!', '#7fe9ff'); }
@@ -3502,6 +3503,7 @@ function hurt() {
   die();
 }
 function die() {
+  if (L.adv) { advSafe(); return; }
   if (P.dead) return;
   P.dead = true; P.deadT = 0; P.vy = -620; P.vx = 0; P.tTurbo = P.tMagnet = P.tStar = 0; P.shield = false; P.power = null;
   if (!CHEAT.live && !KID.on) G.lives--; G.deaths++; SFX.die(); shake = 0.25;
@@ -3594,7 +3596,7 @@ function updatePlayer(dt) {
     if (cand !== undefined) hitBlock(cand, ty);
   }
   if (p.y > L.H * T - 10) { const wp = L.warps.find(w => p.x + p.w / 2 > w.x0 && p.x + p.w / 2 < w.x1); if (wp) { burst(p.x + p.w / 2, L.H * T - 40, 26, '#9ff0ff', 260, 0.6, 0, 4); SFX.portal(); p.x = wp.tox - p.w / 2; p.y = wp.toy - p.h - 200; p.vy = 120; p.vx = 0; p.inv = Math.max(p.inv, 1); pop(wp.tox, wp.toy - 140, '¡ZONA SECRETA!', '#9ff0ff'); } }
-  if (KID.on && L.kid && !p.dead) { const fx = Math.floor((p.x + p.w / 2) / T), fy = Math.floor((p.y + p.h + 2) / T);       // modo niños: si se cae por un hueco, vuelve al último suelo firme
+  if (((KID.on && L.kid) || L.adv) && !p.dead) { const fx = Math.floor((p.x + p.w / 2) / T), fy = Math.floor((p.y + p.h + 2) / T);       // modo niños: si se cae por un hueco, vuelve al último suelo firme
     if (p.onGround && isSolid(tileAt(fx, fy)) && !collide(p)) { p.safeX = p.x; p.safeY = p.y; }
     if (p.y > L.H * T + 60 && p.safeX != null) { p.x = p.safeX; p.y = p.safeY - 4; p.vx = 0; p.vy = 0; p.inv = Math.max(p.inv, 1.4); burst(p.x + p.w / 2, p.y + p.h / 2, 22, '#ffd23c', 220, 0.6, 0, 3); pop(p.x + p.w / 2, p.y - 30, '¡AÚPA!', '#ffd23c'); SFX.portal(); } }
   if (p.y > L.H * T + 120) die();
@@ -3626,7 +3628,7 @@ function updatePlayer(dt) {
     p.x = po.tox - p.w / 2; p.y = po.toy - p.h; p.vx = 0; p.vy = 0; p.tele = 1.2; p.inv = Math.max(p.inv, 0.8);
     burst(po.tox, po.toy - 30, 26, '#29e6ff', 260, 0.6, 0, 4); break;
   }
-  if (cx > L.goal.x - 20 && cx < L.goal.x + 240 && (!L.vert || Math.abs(p.y + p.h - L.goal.y) < 160)) { p.win = true; p.winT = 0; p.vx = 0; p.crouch = false; setSize(p); SFX.win(); for (let i = 0; i < 5; i++) burst(L.goal.x, L.goal.y - 60 - i * 40, 16, ['#29e6ff', '#35ff8a', '#ffd23c', '#c63cff'][i % 4], 300, 1, 300, 4); }
+  if (cx > L.goal.x - 20 && cx < L.goal.x + (L.adv ? 120 : 240) && ((!L.vert && !L.adv) || Math.abs(p.y + p.h - L.goal.y) < 160)) { p.win = true; p.winT = 0; p.vx = 0; p.crouch = false; setSize(p); SFX.win(); for (let i = 0; i < 5; i++) burst(L.goal.x, L.goal.y - 60 - i * 40, 16, ['#29e6ff', '#35ff8a', '#ffd23c', '#c63cff'][i % 4], 300, 1, 300, 4); }
 }
 function onOneWay(p) {
   const ty = Math.floor((p.y + p.h + 2) / T);
@@ -4214,6 +4216,7 @@ function update(dt) {
     if (state !== 'play') return;
     updateEnemies(dt);
     updateStage(dt);
+    if (L.adv) advUpdate(dt);
     if (L.boss) bossUpdate(dt);
     for (const it of items) { it.t += dt; if (it.mat > 0) { it.mat -= dt; for (let k = 0; k < 3; k++) { const aa = Math.random() * 6.283, d = 60 + Math.random() * 50; parts.push({ x: it.x + 20 + Math.cos(aa) * d, y: it.y + 20 + Math.sin(aa) * d, vx: -Math.cos(aa) * d * 2.2, vy: -Math.sin(aa) * d * 2.2, life: 0.45, max: 0.45, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffffff', size: 2.5, grav: 0 }); } continue; } if (it.stay) continue; if (it.rise < 1) { it.rise = Math.min(1, it.rise + dt * 2.5); it.y -= 46 * dt * 2.5; }
       else if (it.t > 0.8 && !P.dead) { const dx = P.x + P.w / 2 - (it.x + 20), dy = P.y + P.h / 2 - (it.y + 20), d = Math.hypot(dx, dy) || 1, v = Math.min(760, 220 + (it.t - 0.8) * 1100); it.x += dx / d * v * dt; it.y += dy / d * v * dt; } }
@@ -4601,8 +4604,10 @@ function drawWorld() {
   // punto de control y meta
   for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 100, 22, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y + 2, 118); ctx.globalAlpha = 1; }
   if (vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y + 2, 250); }
+  if (L.adv && L.adv.interior) advInterior();
   drawCogs(); drawTiles();
   drawStageBack();
+  if (L.adv) advDrawWorld();
   // chips y engranajes
   for (const c of L.chips) if (!c.got && vis(c.x)) { const s = Math.cos(time * 4 + c.t); spr(IMG['obj-chip'], c.x, c.y + Math.sin(time * 3 + c.t) * 3, 26, 0.5, 0.5, false, 0, Math.abs(s) * 0.85 + 0.15, 1); }
   for (const g of L.gears) if (!g.got && vis(g.x)) { ctx.globalAlpha = g.old ? 0.38 : 1; ctx.fillStyle = 'rgba(61,184,255,.22)'; ctx.beginPath(); ctx.arc(g.x, g.y, 30, 0, 6.283); ctx.fill(); spr(IMG['obj-engranaje'], g.x, g.y + Math.sin(time * 2.5) * 4, 40, 0.5, 0.5, false, time * 1.2); ctx.globalAlpha = 1; }
@@ -4688,6 +4693,7 @@ function drawWorld() {
   ctx.restore();
 }
 function drawHUD() {
+  if (L.adv) return advHUD();
   const pad = 14, s = Math.max(1, Math.min(1.25, VW / 900));
   ctx.save(); ctx.scale(s, s);
   const w = VW / s;
@@ -4801,7 +4807,7 @@ function startGame() {
   show('title', false); show('panel', false); show('mapUI', false); show('top', true); show('touch', TOUCH && !padUsed); checkRot();
 }
 function togglePause() {
-  if (state !== 'play' || CON.on) return;
+  if (state !== 'play' || CON.on || ADVT.on) return;
   paused = !paused;
   if (paused) { $('card').classList.remove('tips'); $('card').innerHTML = '<h2 id="pauseT" style="cursor:default;padding:6px 0">PAUSA</h2><div class="row"><button class="btn" id="pc">SEGUIR</button><button class="btn" id="pm">MAPA</button>' + (CHEAT.test && L && !L.custom ? '<button class="btn" id="pEd" style="border-color:#ffd23c">✏️ EDITAR</button>' : '') + '</div>' + (kidCan() && L && !L.custom ? '<div class="row" style="margin-top:10px"><button class="btn" id="pKid" style="border-color:' + (KID.on ? '#35ff8a;background:rgba(20,90,50,.9)' : '#ffd23c') + '">👶 MODO NIÑOS: ' + (KID.on ? 'ACTIVADO' : 'DESACTIVADO') + '</button></div>' : '') + (CHEAT.test ? '<div style="margin-top:12px;color:#ffd23c;font:800 12px system-ui;letter-spacing:.08em">🧪 MODO PRUEBAS · TOCA PARA ACTIVAR O QUITAR</div><div class="row" id="pTest" style="max-width:640px">' + CODES.map(c => '<button class="btn' + (CHEAT[c[0].toLowerCase()] ? ' tOn' : '') + '" data-ck="' + c[0].toLowerCase() + '" style="font-size:12px;padding:8px 11px">' + (c[0] === 'UNLOCK' ? '🔓 SALTAR CANDADOS' : c[1]) + '</button>').join('') + '</div><div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(41,230,255,.3);color:#9ff0ff;font:800 12px system-ui;letter-spacing:.08em">🌍 IR AL MAPA DE CADA PLANETA</div><div class="row" id="pWorlds" style="max-width:640px">' + WORLDS.map((w, i) => '<button class="btn" data-gw="' + i + '" style="font-size:12px;padding:8px 11px' + (i === curW ? ';border-color:#ffd23c' : '') + '">PLANETA ' + w.n + '</button>').join('') + '</div><div class="row" style="margin-top:12px"><button class="btn red" id="pTestX" style="font-size:12px;padding:8px 14px">🚪 SALIR DEL MODO PRUEBAS</button></div>' : ''); show('panel', true);
     if (CHEAT.test) { if (!$('tOnSt')) { const s = document.createElement('style'); s.id = 'tOnSt'; s.textContent = '#pTest .btn.tOn{border-color:#35ff8a;background:rgba(20,90,50,.9);box-shadow:0 0 14px rgba(53,255,138,.7)}'; document.head.appendChild(s); }
@@ -4809,9 +4815,10 @@ function togglePause() {
   else show('panel', false);
 }
 function cheatsOff() { let any = false; for (const c of CODES) { const k = c[0].toLowerCase(); if (CHEAT[k]) any = true; CHEAT[k] = false; } if (any) saveCheats(); }
-function toMenu() { cheatsOff(); setTimeout(updApply, 300);      // volver a la portada apaga los trucos (recargar o actualizarse no)
+function toMenu() { cheatsOff(); setTimeout(updApply, 300); try { advBtnUpd(); } catch (e) {}      // volver a la portada apaga los trucos (recargar o actualizarse no)
   paused = false; state = 'title'; show('panel', false); show('mapUI', false); show('top', false); show('touch', false); show('title', true); checkRot(); }
 function levelDone() {
+  if (L.adv) return advDone();
   state = 'done'; show('touch', false); $('card').classList.remove('tips'); if (!L.custom) evt('superada', curId);
   const stars = 1 + (G.gears === 3 ? 1 : 0) + (G.deaths === 0 ? 1 : 0);
   const secs = Math.floor(G.clock), bonus = Math.ceil(G.tleft) * 10; G.score += bonus;
@@ -5203,6 +5210,7 @@ function openMap() {
   show('title', false); show('panel', false); show('top', false); show('touch', false); show('mapUI', true); mapInfo(); checkRot();
 }
 function toMap(advance) {
+  if (L && L.adv) { advMenu(); return; }
   tmpOff();
   if (L && L.custom) { tallerBack(); return; }
   paused = false; state = 'map';
@@ -5682,7 +5690,7 @@ async function admOp(op, d) {
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
-  const tabs = ['PAGOS', 'AVATARES', 'NIÑOS', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
+  const tabs = ['PAGOS', 'AVATARES', 'NIÑOS', 'AVENTURA', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
   $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · COSMOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
@@ -5749,6 +5757,13 @@ function admPaint() {
     $('kidCp').onclick = () => { try { navigator.clipboard.writeText($('kidC').textContent); admMsg('✔ Copiado'); } catch (e) {} };
     $('kidNw').onclick = () => { if ($('kidNw').dataset.ok !== '1') { $('kidNw').dataset.ok = '1'; $('kidNw').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } admOp('kidNew', {}).then(r => { paintK(r); admMsg('✔ Código nuevo generado'); $('kidNw').textContent = 'GENERAR OTRO CÓDIGO'; $('kidNw').dataset.ok = ''; }).catch(e => admMsg(e.message || String(e), 1)); };
     $('kidMe').onclick = () => { KID.perm = true; KID.av = true; kidSave(); closeAdmin(); kidToggle('admin'); };
+  } else if (admTab === 'AVENTURA') {
+    B.innerHTML = '<h3>🗺️ MODO AVENTURA · CÓDIGO PERMANENTE</h3><div style="color:#8ea3e6">Pásale este código a quien quieras. Lo mete en <b>TALLER › 🔑 CANJEAR CÓDIGO</b> y le aparece el botón <b>🗺️ JUGAR AVENTURA</b> en la portada para siempre (se guarda en su cuenta).<br>El código del modo niños también desbloquea la aventura.</div><div id="advC" style="font:900 34px system-ui;letter-spacing:.3em;color:#ffd23c;margin:14px 0">…</div><div class="arow"><button class="btn" id="advCp">COPIAR</button><button class="btn" id="advNw">GENERAR OTRO CÓDIGO</button><button class="btn" id="advMe">ACTIVAR EN ESTE DISPOSITIVO</button></div><div style="color:#8ea3e6;font-size:12px;margin-top:6px">Si generas otro, el anterior deja de servir para nuevos canjes (quien ya lo tenga lo conserva).</div>';
+    const paintA = r => { if (r && r.code) $('advC').textContent = r.code; };
+    admOp('advCode', {}).then(paintA).catch(e => admMsg(e.message || String(e), 1));
+    $('advCp').onclick = () => { try { navigator.clipboard.writeText($('advC').textContent); admMsg('✔ Copiado'); } catch (e) {} };
+    $('advNw').onclick = () => { if ($('advNw').dataset.ok !== '1') { $('advNw').dataset.ok = '1'; $('advNw').textContent = '¿SEGURO? PULSA OTRA VEZ'; return; } admOp('advNew', {}).then(r => { paintA(r); admMsg('✔ Código nuevo generado'); $('advNw').textContent = 'GENERAR OTRO CÓDIGO'; $('advNw').dataset.ok = ''; }).catch(e => admMsg(e.message || String(e), 1)); };
+    $('advMe').onclick = () => { ADV.perm = true; advSave(); advBtnUpd(); admMsg('✔ Modo aventura activado en este dispositivo'); };
   } else if (admTab === 'AVATARES') { admAvatares(B);
   } else if (admTab === 'RANKING') {
     B.innerHTML = '<div class="amsg" id="amsg">Cargando…</div><div id="rkA"></div>';
@@ -5914,7 +5929,8 @@ function tlAskCode() {
   c.innerHTML = '<h2>🔑 CANJEAR CÓDIGO</h2><div style="color:#cfe0ff;margin:6px 0">Escribe el código de 6 letras y números que te han pasado.<br><span style="color:#8ea3e6;font-size:13px">Sirve para pantallas de otros jugadores, códigos de fase y tu avatar personalizado.</span></div><input id="tlC" maxlength="6" style="font:900 26px system-ui;letter-spacing:.3em;text-transform:uppercase;width:220px;text-align:center;padding:8px;border-radius:10px;border:2px solid #29e6ff;background:#020a1e;color:#fff"><div id="tlM" style="min-height:1.4em;color:#ffd23c;margin-top:6px"></div><div class="row"><button class="btn" id="tlG">CANJEAR</button><button class="btn" id="tlB2">VOLVER</button></div>';
   show('panel', true); $('tlB2').onclick = () => openTaller(); setTimeout(() => $('tlC').focus(), 100);
   $('tlG').onclick = async () => { const code = $('tlC').value.trim().toUpperCase(); if (code.length !== 6) { $('tlM').textContent = 'El código tiene 6 caracteres'; return; } $('tlM').textContent = 'Buscando…';
-    const kc = await api({ a: 'kidCheck', c: code }); if (kc.ok && kc.kid) { $('tlM').textContent = ''; KID.perm = true; KID.av = true; kidSave(); cloudSave(true); SFX.win(); uiDialog({ icon: '👶', tone: 'gold', title: '¡MODO NIÑOS DESBLOQUEADO!', html: 'Ya puedes jugar en <b>modo niños</b>: las mismas fases pero más fáciles, con vidas infinitas y jefes de 2 toques.<br><br>Para activarlo o quitarlo, entra en cualquier fase, pulsa <b>PAUSA</b> y toca <b>👶 MODO NIÑOS</b>.<br><br>Cada modo guarda su propio avance.' }); return; }
+    const kc = await api({ a: 'kidCheck', c: code }); if (kc.ok && kc.adv && !kc.kid) { $('tlM').textContent = ''; ADV.perm = true; advSave(); advBtnUpd(); SFX.win(); uiDialog({ icon: '🗺️', tone: 'gold', title: '¡MODO AVENTURA DESBLOQUEADO!', html: 'Ya tienes el <b>modo aventura</b>: misiones largas donde nada te hace daño.<br><br>Vuelve a la portada y pulsa <b>🗺️ JUGAR AVENTURA</b>.' }); return; }
+    if (kc.ok && kc.kid) { $('tlM').textContent = ''; ADV.perm = true; advSave(); advBtnUpd(); KID.perm = true; KID.av = true; kidSave(); cloudSave(true); SFX.win(); uiDialog({ icon: '👶', tone: 'gold', title: '¡MODO NIÑOS DESBLOQUEADO!', html: 'Ya puedes jugar en <b>modo niños</b>: las mismas fases pero más fáciles, con vidas infinitas y jefes de 2 toques.<br><br>Para activarlo o quitarlo, entra en cualquier fase, pulsa <b>PAUSA</b> y toca <b>👶 MODO NIÑOS</b>.<br><br>Cada modo guarda su propio avance.<br><br>🗺️ ¡Y también tienes el <b>MODO AVENTURA</b>! Búscalo en la portada.' }); return; }
     const lk = await api({ a: 'nivLlave', c: code, ids: ALLN().map(n => n.id) }); if (lk.ok && lk.id) { const nd = ALLN().find(n => n.id === lk.id); $('tlM').textContent = ''; if (nd && await uiConfirm('🔓 CÓDIGO DE NIVEL', 'Tu partida se ajustará a la fase <b>' + lvlName(nd) + '</b>:<br>todas las anteriores quedarán abiertas (conservas tus estrellas) y desde ahí en adelante, con candado.', 'AJUSTAR', 'CANCELAR')) unlockTo(lk.id); return; }
     const av = await api({ a: 'avGet', c: code }); if (av.ok && av.av) { $('tlM').textContent = ''; if (avInstall(av.av)) { SFX.win(); uiDialog({ icon: '🧑‍🚀', tone: 'gold', title: '¡TU AVATAR YA ESTÁ AQUÍ!', html: 'Tu personaje <b>' + esc(av.av.n || '') + '</b> ya está activado. 🚀<br><br>A partir de ahora juegas con tu propio avatar. Puedes volver a Lucas cuando quieras desde <b>⚙️ AJUSTES › SKIN · AVATAR</b>.', buttons: [{ t: '¡A JUGAR!', cls: 'ok', v: 1 }] }); } else $('tlM').textContent = '✖ No se ha podido guardar el avatar en este dispositivo'; return; }
     if (ACC) { const r = await api({ a: 'nivCopiar', ses: ACC.ses, c: code }); if (!r.ok) { $('tlM').textContent = '✖ ' + r.error; return; } SFX.life(); openTaller('✔ «' + esc(r.n) + '» guardado en tu taller con el código ' + r.c); }
@@ -6216,6 +6232,7 @@ function mergeProg(cloud) {
   mergeProg0(cloud);
 }
 function mergeProg0(cloud) {
+  try { const ca = cloud && cloud.adv; if (ca) { if (ca.perm) ADV.perm = true; ADV.done = Object.assign({}, ca.done || {}, ADV.done || {}); try { localStorage.setItem('tl_adv', JSON.stringify(ADV)); } catch (e) {} advBtnUpd(); } } catch (e) {}
   try { const ck = cloud && cloud.kid; if (ck) { if (ck.perm) KID.perm = true; if (ck.av) KID.av = true; KID.prog = KID.prog || {}; for (const id in (ck.prog || {})) if (!KID.prog[id]) KID.prog[id] = ck.prog[id]; if (ck.got && !Object.keys(KID.got || {}).length) KID.got = ck.got; kidSave(); } } catch (e) {}
   try { avCloud(cloud); } catch (e) {}      // junta lo de este dispositivo con lo de la nube: siempre se queda lo mejor (salvo que en la nube se haya reiniciado)
   const cp = (cloud && cloud.prog) || {}, cg = (cloud && cloud.got) || {};
@@ -6239,7 +6256,7 @@ function showAccount() {
 let cloudT = 0;
 function cloudSave(now) {
   if (!ACC) return; clearTimeout(cloudT);
-  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: KID.on && KID.n ? KID.n.prog : PROG, got: KID.on && KID.n ? KID.n.got : GOT, w: KID.on && KID.n ? KID.n.w : curW, kid: { prog: KID.on ? PROG : KID.prog, got: KID.on ? GOT : KID.got, perm: KID.perm, av: KID.av }, rv: PRV, dev: DEV, avc: AVS.list.map(x => x.c), avs: AVS.sel, avx: AVS.del || [] } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
+  cloudT = setTimeout(async () => { const r = await api({ a: 'guardar', ses: ACC.ses, progreso: { prog: KID.on && KID.n ? KID.n.prog : PROG, got: KID.on && KID.n ? KID.n.got : GOT, w: KID.on && KID.n ? KID.n.w : curW, kid: { prog: KID.on ? PROG : KID.prog, got: KID.on ? GOT : KID.got, perm: KID.perm, av: KID.av }, adv: ADV, rv: PRV, dev: DEV, avc: AVS.list.map(x => x.c), avs: AVS.sel, avx: AVS.del || [] } }); if (r.ok && r.stale && r.progreso) { mergeProg(r.progreso); if (state === 'map') { mapSel = mapAt = 0; mapL = { x: MAP[0].x, y: MAP[0].y }; mapCam = null; mapInfo(); } } if (!r.ok && r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, now ? 50 : 3000);
 }
 /* ======================= VENTANAS DEL JUEGO (sustituyen a los avisos nativos del navegador) ======================= */
 (() => { const st = document.createElement('style'); st.textContent = `
@@ -6709,4 +6726,540 @@ window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { 
   });
   $('byeBack').onclick = () => { bye.classList.remove('on'); try { audio(); } catch (e) {} };
 })();
+/* =====================================================================================================
+   MODO AVENTURA · aventura gráfica para niños: nada te hace daño, hablas con personajes, buscas objetos,
+   compras en tiendas y abres puertas. Se desbloquea con un código (o con el del modo niños).
+   ===================================================================================================== */
+let ADV = { perm: false, done: {} }; try { Object.assign(ADV, JSON.parse(localStorage.getItem('tl_adv') || '{}') || {}); } catch (e) {}
+ADV.done = ADV.done || {};
+function advSave() { try { localStorage.setItem('tl_adv', JSON.stringify(ADV)); } catch (e) {} try { cloudSave(true); } catch (e) {} }
+const advCan = () => !!(ADV.perm || KID.perm || CHEAT.test);
+function advBtnUpd() { const b = $('btnAdv'); if (b) b.style.display = advCan() ? '' : 'none'; }
+const ADV_LV = [
+  { id: 'A-1', n: 'LAS TRES PERLAS', img: 'planeta-verde', s: 'Doña Almeja ha perdido las tres perlas de su collar en el fondo del mar. Bucea, habla con los animales y encuéntralas.' },
+  { id: 'A-2', n: 'EL ROBOT ROTO', img: 'planeta-anillo', s: 'Tuercas se ha roto en el desguace. Busca tres herramientas por el desguace, el laboratorio y el invernadero.' },
+  { id: 'A-3', n: 'EL HUEVO MISTERIOSO', img: 'planeta-musgo', s: 'En la selva ha aparecido un huevo robot. Busca cuatro estrellas de energía para que se abra.' }];
+// objetos que se pueden llevar en la mochila
+const ADV_IT = {
+  perla: { n: 'perla', img: 'perla', h: 34 }, llave: { n: 'llave del faro', img: 'obj-llave', h: 46 }, tarjeta: { n: 'tarjeta mágica', img: 'adv-tarjeta', h: 44 },
+  consola: { n: 'consola de juegos', img: 'obj-consola', h: 44 }, llavein: { n: 'llave inglesa', img: 'obj-llave-inglesa', h: 44 }, cable: { n: 'cable', img: 'obj-cable', h: 44 },
+  soldador: { n: 'soldador', img: 'obj-soldador', h: 44 }, destornillador: { n: 'destornillador', img: 'obj-destornillador', h: 44 }, fusible: { n: 'pila', img: 'adv-fusible', h: 44 },
+  estrella: { n: 'estrella', img: 'estrella-chip', h: 44 }, manzana: { n: 'manzana', img: 'adv-manzana', h: 40 }, linterna: { n: 'linterna', img: 'adv-linterna', h: 40 } };
+const advImg = n => 'img/' + TIER + '/' + n + '.webp?v=' + VERSION;
+
+/* ---------- diálogos con bocadillo, foto del que habla y narrador ---------- */
+const ADVT = { on: false, who: null, lines: [], i: 0, shown: 0, then: null, opts: null, sel: 0, tm: 0, pj: 0, pl: 0, pr: 0, pd: 0 };
+function advCss() {
+  if ($('advCss')) return; const s = document.createElement('style'); s.id = 'advCss';
+  s.textContent = '#advDlg{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(860px,94vw);display:none;align-items:center;gap:14px;padding:12px 14px;border-radius:22px;background:linear-gradient(180deg,#fffdf4,#f3ecd6);border:4px solid #1b2350;box-shadow:0 8px 0 rgba(5,8,30,.55),0 0 30px rgba(0,0,0,.4);z-index:60;font-family:system-ui,sans-serif;color:#1b2350;user-select:none;cursor:pointer}' +
+    '#advDlg.on{display:flex;animation:advIn .25s ease-out}@keyframes advIn{from{transform:translate(-50%,30px);opacity:0}to{transform:translate(-50%,0);opacity:1}}' +
+    '#advDlg:after{content:"";position:absolute;left:52px;top:-18px;border:12px solid transparent;border-bottom:16px solid #1b2350}' +
+    '#advPic{width:96px;height:96px;object-fit:contain;flex:none;filter:drop-shadow(0 3px 2px rgba(0,0,0,.25))}' +
+    '#advB{flex:1;min-width:0}#advNm{font:900 15px system-ui;letter-spacing:.08em;color:#c0407a;margin-bottom:3px}' +
+    '#advTx{font:800 clamp(17px,2.6vw,24px)/1.3 system-ui;min-height:2.6em}' +
+    '#advOp{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}#advOp button{font:900 15px system-ui;padding:9px 14px;border-radius:14px;border:3px solid #1b2350;background:#ffe27a;color:#1b2350;cursor:pointer}#advOp button.sel{background:#35ff8a;box-shadow:0 0 0 3px #fff inset}' +
+    '#advDlg .ab{flex:none;width:54px;height:54px;border-radius:50%;border:3px solid #1b2350;background:#29e6ff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center}#advSnd{background:#ffd23c!important}' +
+    '#advUse{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 18px);transform:translateX(-50%);display:none;z-index:55;font:900 20px system-ui;padding:12px 22px;border-radius:30px;border:4px solid #1b2350;background:#ffe27a;color:#1b2350;box-shadow:0 5px 0 rgba(5,8,30,.5);cursor:pointer;animation:advPu 1s ease-in-out infinite}@keyframes advPu{50%{transform:translateX(-50%) scale(1.07)}}' +
+    '#advUse.on{display:block}' +
+    '#advMenu{position:fixed;inset:0;display:none;z-index:50;background:radial-gradient(ellipse at 50% 30%,#1d3a7a,#060b24 75%);overflow:auto;font-family:system-ui;color:#fff;text-align:center;padding:18px 12px 30px}#advMenu.on{display:block}' +
+    '#advMenu h1{font:900 clamp(26px,5vw,44px) system-ui;color:#ffd23c;text-shadow:0 4px 0 #6a3a00;margin:6px 0 2px;letter-spacing:.04em}#advMenu .sub{color:#9fc4ff;font-weight:700;margin-bottom:14px}' +
+    '#advMenu .lvs{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}#advMenu .lv{width:min(260px,88vw);background:rgba(10,20,60,.85);border:3px solid #29e6ff;border-radius:22px;padding:12px;position:relative}' +
+    '#advMenu .lv img{width:150px;height:150px;object-fit:contain;animation:advSp 6s ease-in-out infinite}@keyframes advSp{50%{transform:translateY(-8px) rotate(4deg)}}#advMenu .lv h2{font:900 19px system-ui;margin:6px 0;color:#7fe9ff}' +
+    '#advMenu .lv p{font:600 14px/1.35 system-ui;color:#d8e4ff;min-height:4em}#advMenu .lv.off{opacity:.5;border-color:#55608a}#advMenu .ok{position:absolute;top:8px;right:10px;font:900 14px system-ui;color:#35ff8a}' +
+    '#advFl{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:58;transition:opacity .25s}';
+  document.head.appendChild(s);
+  const d = document.createElement('div'); d.id = 'advDlg';
+  d.innerHTML = '<img id="advPic" alt=""><div id="advB"><div id="advNm"></div><div id="advTx"></div><div id="advOp"></div></div><button class="ab" id="advSnd" title="Escuchar">🔊</button><button class="ab" id="advNx" title="Seguir">▶</button>';
+  document.body.appendChild(d);
+  const u = document.createElement('button'); u.id = 'advUse'; document.body.appendChild(u);
+  const m = document.createElement('div'); m.id = 'advMenu'; document.body.appendChild(m);
+  const f = document.createElement('div'); f.id = 'advFl'; document.body.appendChild(f);
+  d.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; e.preventDefault(); advNext(); });
+  $('advNx').onclick = e => { e.stopPropagation(); advNext(); };
+  $('advSnd').onclick = e => { e.stopPropagation(); advSpeak(ADVT.lines[ADVT.i] || ''); };
+  u.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); advUse(); });
+}
+// narrador: voz de Google en español si la hay (las de Windows a veces fallan); si falla, prueba la siguiente
+let advVoices = [];
+function advVoiceList() { try { const v = speechSynthesis.getVoices().filter(x => /^es/i.test(x.lang)); advVoices = v.filter(x => /google/i.test(x.name)).concat(v.filter(x => !/google/i.test(x.name))); } catch (e) {} }
+try { advVoiceList(); speechSynthesis.onvoiceschanged = advVoiceList; } catch (e) {}
+function advSpeak(t, vi = 0) {
+  try { const s = window.speechSynthesis; if (!s || !t) return; s.cancel(); if (!advVoices.length) advVoiceList();
+    const u = new SpeechSynthesisUtterance(t.replace(/[¡!¿?]/g, m => m === '¡' || m === '¿' ? '' : m)); u.lang = 'es-ES'; u.rate = 0.92; u.pitch = 1.05;
+    if (advVoices[vi]) u.voice = advVoices[vi];
+    u.onerror = e => { if (e && e.error !== 'interrupted' && e.error !== 'canceled' && vi + 1 < advVoices.length) advSpeak(t, vi + 1); };
+    s.speak(u); } catch (e) {}
+}
+function advSay(who, lines, then, opts) {
+  advCss(); ADVT.on = true; ADVT.who = who; ADVT.lines = [].concat(lines); ADVT.i = 0; ADVT.then = then || null; ADVT.opts = opts || null; ADVT.sel = 0;
+  paused = true; $('advUse').classList.remove('on');
+  ADVT.pj = K.jump; ADVT.pl = K.left; ADVT.pr = K.right; ADVT.pd = K.act;
+  $('advPic').src = advPortrait(who); $('advNm').textContent = who.name || ''; $('advDlg').classList.add('on'); advLine(); advLoop();
+}
+function advPortrait(who) {
+  const n = who.pic || who.img, im = IMG[n]; if (!im || !im._n || im._n < 2 || !im.naturalWidth) return advImg(n);
+  try { const fw = im.naturalWidth / im._n, c = document.createElement('canvas'); c.width = fw; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0, fw, im.naturalHeight, 0, 0, fw, im.naturalHeight); return c.toDataURL(); } catch (e) { return advImg(n); }
+}
+function advAsk(who, text, opts) { advSay(who, [text], null, opts); }
+function advLine() {
+  const t = ADVT.lines[ADVT.i] || ''; ADVT.shown = 0; $('advTx').textContent = ''; $('advOp').innerHTML = ''; clearInterval(ADVT.tm);
+  try { speechSynthesis.cancel(); } catch (e) {}
+  ADVT.tm = setInterval(() => { ADVT.shown = Math.min(t.length, ADVT.shown + 1); $('advTx').textContent = t.slice(0, ADVT.shown); if (ADVT.shown % 3 === 0 && t[ADVT.shown - 1] !== ' ') tone(620 + Math.random() * 160, 620, 0.025, 'triangle', 0.025); if (ADVT.shown >= t.length) { clearInterval(ADVT.tm); advOpts(); } }, 26);
+}
+function advOpts() {
+  const last = ADVT.i === ADVT.lines.length - 1; $('advNx').style.visibility = last && ADVT.opts ? 'hidden' : '';
+  if (!last || !ADVT.opts) return;
+  const o = $('advOp'); o.innerHTML = ''; ADVT.opts.forEach((op, k) => { const b = document.createElement('button'); b.textContent = op.t; if (k === ADVT.sel) b.className = 'sel'; b.onclick = e => { e.stopPropagation(); advPick(k); }; o.appendChild(b); });
+}
+function advPick(k) { const op = ADVT.opts && ADVT.opts[k]; if (!op) return; SFX.chip(); advClose(); if (op.f) setTimeout(op.f, 60); }
+function advNext() {
+  if (!ADVT.on) return; const t = ADVT.lines[ADVT.i] || '';
+  if (ADVT.shown < t.length) { clearInterval(ADVT.tm); ADVT.shown = t.length; $('advTx').textContent = t; advOpts(); return; }
+  if (ADVT.i === ADVT.lines.length - 1 && ADVT.opts) return;
+  ADVT.i++; tone(880, 1100, 0.05, 'triangle', 0.05);
+  if (ADVT.i >= ADVT.lines.length) { const th = ADVT.then; advClose(); if (th) setTimeout(th, 60); } else advLine();
+}
+function advClose() {
+  ADVT.on = false; clearInterval(ADVT.tm); $('advDlg').classList.remove('on'); try { speechSynthesis.cancel(); } catch (e) {}
+  paused = false; jumpPressed = false; actPressed = false; K.jump = false; K.act = false; acc = 0;
+}
+function advLoop() {          // mando y teclado mientras se habla (el juego está parado)
+  if (!ADVT.on) return; requestAnimationFrame(advLoop); try { pollPad(); } catch (e) {}
+  const j = K.jump, a = K.act, l = K.left, r = K.right;
+  if ((j && !ADVT.pj) || (a && !ADVT.pd)) { if (ADVT.opts && ADVT.i === ADVT.lines.length - 1 && ADVT.shown >= (ADVT.lines[ADVT.i] || '').length) advPick(ADVT.sel); else advNext(); }
+  if (ADVT.opts && ((l && !ADVT.pl) || (r && !ADVT.pr))) { ADVT.sel = (ADVT.sel + (r ? 1 : -1) + ADVT.opts.length) % ADVT.opts.length; advOpts(); tone(700, 700, 0.04, 'square', 0.04); }
+  ADVT.pj = j; ADVT.pd = a; ADVT.pl = l; ADVT.pr = r;
+}
+addEventListener('keydown', e => {
+  if (!L || !L.adv || (e.target && e.target.tagName === 'INPUT') || CON.on) return;
+  if (ADVT.on) { if (e.code === 'Enter' || e.code === 'KeyE' || e.code === 'Space') { e.preventDefault(); e.stopImmediatePropagation(); if (ADVT.opts && ADVT.i === ADVT.lines.length - 1 && ADVT.shown >= (ADVT.lines[ADVT.i] || '').length) advPick(ADVT.sel); else advNext(); }
+    else if (e.code === 'Escape' || e.code === 'KeyP') { e.preventDefault(); e.stopImmediatePropagation(); }
+    return; }
+  if (state === 'play' && !paused && (e.code === 'KeyE' || e.code === 'Enter')) { e.preventDefault(); e.stopImmediatePropagation(); advUse(); }
+}, true);
+
+/* ---------- la aventura dentro de la fase ---------- */
+const LUCAS_WHO = { name: 'LUCAS', img: 'lucas-quieto' };
+function advApi(A) {
+  return {
+    say: (who, lines, then) => advSay(who, lines, then), ask: (who, t, o) => advAsk(who, t, o),
+    has: (id, n = 1) => (A.inv[id] || 0) >= n, cnt: id => A.inv[id] || 0,
+    give: (id, n = 1) => { A.inv[id] = (A.inv[id] || 0) + n; A.newIt = { id, t: 0 }; [784, 988, 1319].forEach((f, i) => tone(f, f, 0.12, 'triangle', 0.12, i * 0.08)); },
+    take: (id, n = 1) => { A.inv[id] = Math.max(0, (A.inv[id] || 0) - n); if (!A.inv[id]) delete A.inv[id]; },
+    coins: () => G.chips, pay: n => { if (G.chips < n) return false; G.chips -= n; SFX.power(); return true; },
+    addCoins: (n, x, y) => { for (let i = 0; i < n; i++) setTimeout(() => { parts.push({ x, y, vx: (Math.random() - 0.5) * 300, vy: -500 - Math.random() * 300, life: 1, max: 1, col: '#ffd23c', size: 3, grav: 1300, coin: true }); addChip(x, y); }, i * 70); },
+    open: id => advOpenGate(id), go: (r, x, y) => advGo(r, x, y), goal: t => { A.goalTxt = t; A.goalT = 0; if (ADVS) ADVS.goal = t; }, flag: (k, v) => v === undefined ? A.f[k] : (A.f[k] = v), ent: id => A.ents.find(e => e.id === id),
+    tele: (x, y) => advTele(x, y)
+  };
+}
+let ADVS = null;          // partida de aventura en curso: mochila, avisos y lo que ya pasó en cada sala (para viajar entre salas)
+function advRoomSave() { const A = L && L.adv; if (!A || !A.ready || !ADVS) return; ADVS.rooms[curId] = { it: A.items.map(o => o.got), gt: A.gates.filter(g => g.open).map(g => g.id), en: A.ents.filter(e => e.opened).map(e => e.id), en2: A.ents.filter(e => e.frame != null).map(e => [e.id, e.frame]), c: A.cset.filter(k => { const [x, y] = k.split(',').map(Number); return L.g[y][x] !== 'C'; }), ch: L.chips.map(c => !!c.got) }; }
+function advGo(room, tx, ty) {          // viajar a otra sala de la misma aventura por un transportador
+  if (typeof LEVELS[room] !== 'function') return; advRoomSave(); ADVS.go = { room, tx, ty }; const f = $('advFl'); if (f) f.style.opacity = '1'; SFX.portal(); $('advUse').classList.remove('on');
+  setTimeout(() => { curId = room; const g = Object.assign({}, G); resetLevel(false); G = g; G.tleft = L.time; preTheme(L.theme); try { startMusic(); } catch (e) {} if (f) setTimeout(() => f.style.opacity = '0', 120); }, 280);
+}
+function advInit() {
+  const A = L.adv; A.ready = true; A.root = A.root || curId;
+  const sw = ADVS && ADVS.root === A.root && ADVS.go; if (!sw) ADVS = { root: A.root, inv: {}, f: {}, rooms: {} };
+  A.inv = ADVS.inv; A.f = ADVS.f; if (ADVS.goal) A.goalTxt = ADVS.goal; else if (A.goal0) ADVS.goal = A.goal0; A.t = 0; A.tgt = null; A.goalTxt = (ADVS && ADVS.goal) || A.goal0 || ''; A.goalT = 0; A.api = advApi(A);
+  for (const e of A.ents) { e.x = e.tx * T + T / 2; e.y = e.ty * T; e.ph = Math.random() * 6; if (e.img) xi(e.img, e.fr); if (e.img2) xi(e.img2, e.fr2); }
+  for (const o of A.items) { o.x = o.tx * T + T / 2; o.y = o.ty * T + T / 2; o.got = false; xi(ADV_IT[o.id].img); }
+  for (const g of A.gates) { g.open = false; g.ot = 0; g.x = g.tx * T + T / 2; g.y0p = g.y0 * T; g.y1p = (g.y1 + 1) * T; }
+  xi('adv-puerta', 4); xi('adv-rejilla', 2); ['adv-cofre', 'adv-cofre-abierto', 'adv-teleport', 'perla'].forEach(n => xi(n));
+  P.power = 'laser'; L.hadLaser = true;
+  A.cset = []; for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (L.g[y][x] === 'C') A.cset.push(x + ',' + y);
+  const rs = ADVS.rooms[curId];
+  if (rs) { A.items.forEach((o, i) => o.got = !!rs.it[i]); rs.gt.forEach(id => { const g = A.gates.find(q => q.id === id); if (g) { g.open = true; g.ot = 9; for (let y = g.y0; y <= g.y1; y++) if (L.g[y][g.tx] === 'G') L.g[y][g.tx] = ' '; } });
+    rs.en.forEach(id => { const e = A.ents.find(q => q.id === id); if (e) e.opened = true; }); (rs.en2 || []).forEach(([id, f]) => { const e = A.ents.find(q => q.id === id); if (e) e.frame = f; });
+    rs.c.forEach(k => { const [x, y] = k.split(',').map(Number); L.g[y][x] = ' '; }); (rs.ch || []).forEach((g, i) => { if (g && L.chips[i]) L.chips[i].got = true; }); }
+  if (sw) { const go = ADVS.go; ADVS.go = null; P.x = go.tx * T + T / 2 - P.w / 2; P.y = go.ty * T - P.h - 2; P.vx = P.vy = 0; P.safeX = P.x; P.safeY = P.y + 2; cam.x = Math.max(0, Math.min(L.W * T - VW, P.x - VW * 0.4)); cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, P.y + P.h - VHv * 0.7));
+    burst(P.x + P.w / 2, P.y + P.h / 2, 40, '#7fe9ff', 300, 0.8, 0, 4); if (A.enter) setTimeout(() => A.enter(A.api), 400); return; }
+  if (A.intro) setTimeout(() => { if (state === 'play' && L.adv === A) advSay({ name: 'NARRADOR', img: 'lucas-quieto' }, A.intro, () => A.introDone && A.introDone(A.api)); }, 700);
+}
+function advSafe() {          // en la aventura no se pierde nunca: si algo falla, vuelves al último suelo firme
+  const p = P; if (p.safeX == null) { p.safeX = L.spawn.x - p.w / 2; p.safeY = L.spawn.y - p.h; }
+  p.x = p.safeX; p.y = p.safeY - 4; p.vx = 0; p.vy = 0; p.inv = Math.max(p.inv, 1.4); p.dead = false;
+  burst(p.x + p.w / 2, p.y + p.h / 2, 22, '#ffd23c', 220, 0.6, 0, 3); pop(p.x + p.w / 2, p.y - 30, '¡AÚPA!', '#ffd23c'); SFX.portal();
+}
+function advOpenGate(id) {
+  const g = L.adv.gates.find(q => q.id === id); if (!g || g.open) return; g.open = true; g.ot = 0;
+  for (let y = g.y0; y <= g.y1; y++) if (L.g[y] && L.g[y][g.tx] === 'G') L.g[y][g.tx] = ' ';
+  shake = 0.2; SFX.portal(); [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.15, 'triangle', 0.12, i * 0.09));
+  for (let i = 0; i < 40; i++) parts.push({ x: g.x + (Math.random() - 0.5) * 40, y: g.y0p + Math.random() * (g.y1p - g.y0p), vx: (Math.random() - 0.5) * 260, vy: (Math.random() - 0.5) * 260, life: 0.8, max: 0.8, col: g.kind === 'laser' ? '#ff6a8a' : '#ffd23c', size: 3, grav: 0 });
+}
+function advTele(x, y) {          // teletransporte con destello
+  const f = $('advFl'); if (f) f.style.opacity = '1'; SFX.portal();
+  setTimeout(() => { P.x = x * T + T / 2 - P.w / 2; P.y = y * T - P.h - 2; P.vx = P.vy = 0; P.safeX = P.x; P.safeY = P.y + 2; cam.x = Math.max(0, Math.min(L.W * T - VW, P.x - VW * 0.4)); cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, P.y + P.h - VHv * 0.7));
+    burst(P.x + P.w / 2, P.y + P.h / 2, 40, '#7fe9ff', 300, 0.8, 0, 4); if (f) f.style.opacity = '0'; }, 260);
+}
+function advUseLabel(e) { return e.lbl || (e.kind === 'npc' ? '💬 HABLAR' : e.kind === 'tele' ? '✨ VIAJAR' : e.kind === 'chest' ? '🔓 ABRIR' : e.kind === 'way' ? '🚪 ENTRAR' : e.kind === 'gate' ? '🔧 USAR' : '✋ MIRAR'); }
+function advUse() {
+  const A = L && L.adv; if (!A || !A.tgt || ADVT.on || state !== 'play' || paused) return; const e = A.tgt;
+  if (e.use) { tone(660, 990, 0.08, 'triangle', 0.08); e.use(A.api, e); }
+}
+function advUpdate(dt) {
+  const A = L.adv; if (!A.ready) advInit(); A.t += dt; A.goalT += dt; if (A.newIt) A.newIt.t += dt;
+  const p = P; if (p.power !== 'laser') { p.power = 'laser'; setSize(p); } G.tleft = L.time;
+  const pc = p.x + p.w / 2, pf = p.y + p.h;
+  // objetos sueltos: se cogen al tocarlos (si están dentro de una roca, primero hay que romperla)
+  for (const o of A.items) { if (o.got) continue; const c = tileAt(o.tx, o.ty); if (c === 'C' || c === '#') continue;
+    if (Math.abs(pc - o.x) < 40 && o.y > p.y - 24 && o.y < p.y + p.h + 24) { o.got = true; const it = ADV_IT[o.id]; A.api.give(o.id);
+      burst(o.x, o.y, 30, '#fff3a0', 260, 0.7, 0, 4); burst(o.x, o.y, 16, '#7fe9ff', 180, 0.6, 0, 3); shake = 0.08;
+      const msg = o.msg ? o.msg(A.api) : ['¡Has encontrado ' + (/a$/.test(it.n) ? 'una ' : 'un ') + it.n + '!'];
+      setTimeout(() => advSay({ name: '¡NUEVO OBJETO!', img: it.img }, msg, o.then ? () => o.then(A.api) : null), 250); } }
+  // ¿con quién o con qué puedes hablar?
+  let best = null, bd = 1e9;
+  for (const e of A.ents) { if (!e.use || (e.cond && !e.cond(A.api)) || (e.hide && e.hide(A.api)) || (e.kind === 'lever' && e.on)) continue; const ey = e.float ? e.y + (e.fy || 0) : e.y, d = Math.abs(pc - e.x), dy = Math.abs(pf - ey);
+    if (d < (e.r || 80) && dy < (e.ry || 110) && d < bd) { best = e; bd = d; } }
+  for (const g of A.gates) { if (g.open || !g.use) continue; const d = Math.abs(pc - g.x); if (d < 120 && pf > g.y0p - 20 && p.y < g.y1p + 20 && d < bd) { best = g; bd = d; } }
+  if (best !== A.tgt) { A.tgt = best; const u = $('advUse'); if (u) { if (best) { u.textContent = advUseLabel(best); u.classList.add('on'); } else u.classList.remove('on'); } }
+  for (const g of A.gates) if (g.open) g.ot += dt;
+  for (const e of A.ents) { e.ph += dt; if (e.kind === 'npc' && !e.noTurn) e.face = pc > e.x ? 1 : -1; }
+  if (K.down && !A.pd && p.onGround && A.tgt) advUse(); A.pd = K.down;
+  for (const k of A.cset) { const [x, y] = k.split(',').map(Number); if (L.g[y][x] !== 'C') continue;          // las rocas agrietadas se rompen enteras
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => A.cset.includes((x + dx) + ',' + (y + dy)) && L.g[y + dy][x + dx] === ' ')) { L.g[y][x] = ' '; SFX.brk(); burst(x * T + T / 2, y * T + T / 2, 14, '#aab4c4', 240, 0.7, 900, 4); } }
+}
+// dibujo
+function advCB(im) {          // parte visible de una imagen (las tiras de los bichos tienen mucho margen): así todos salen del tamaño pedido
+  if (im._cb) return im._cb; if (!im.naturalWidth) return { t: 0, b: 1 };
+  try { const w = Math.min(400, im.naturalWidth), h = Math.max(1, Math.round(im.naturalHeight * w / im.naturalWidth)), c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data; let t = h, b = 0; for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) if (d[(y * w + i) * 4 + 3] > 40) { if (y < t) t = y; b = y; break; }
+    im._cb = b > t ? { t: t / h, b: (b + 1) / h } : { t: 0, b: 1 }; } catch (e) { im._cb = { t: 0, b: 1 }; } return im._cb;
+}
+function advDrawWorld() {
+  const A = L.adv; if (!A.ready) return; const vis = x => x > cam.x - 200 && x < cam.x + VW + 200;
+  for (const g of A.gates) { if (!vis(g.x)) continue; const h = g.y1p - g.y0p;
+    if (g.kind === 'laser') { const a = g.open ? Math.max(0, 1 - g.ot * 2) : 1;
+      ctx.fillStyle = '#3a4258'; ctx.fillRect(g.x - 10, g.y0p - 14, 20, 16); ctx.fillRect(g.x - 10, g.y1p - 2, 20, 16); ctx.fillStyle = '#ffd23c'; ctx.fillRect(g.x - 10, g.y0p - 6, 20, 4); ctx.fillRect(g.x - 10, g.y1p + 4, 20, 4);
+      ctx.fillStyle = '#ff3a5a'; ctx.beginPath(); ctx.arc(g.x, g.y0p + 2, 6, 0, 6.283); ctx.arc(g.x, g.y1p - 2, 6, 0, 6.283); ctx.fill();
+      if (a > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
+        for (let k = 0; k < 3; k++) { const ox = (k - 1) * 9 + Math.sin(time * 9 + k) * 1.5, w = 5 + Math.sin(time * 20 + k * 2) * 1.5; const gr = ctx.createLinearGradient(g.x + ox - w * 2, 0, g.x + ox + w * 2, 0); gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(0.5, 'rgba(255,90,120,.95)'); gr.addColorStop(1, 'rgba(255,40,80,0)'); ctx.fillStyle = gr; ctx.fillRect(g.x + ox - w * 2, g.y0p + 6, w * 4, h - 12); }
+        ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(g.x - 1.5, g.y0p + 6, 3, h - 12); ctx.restore();
+        if (Math.random() < 0.3) parts.push({ x: g.x + (Math.random() - 0.5) * 20, y: g.y0p + Math.random() * h, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, life: 0.4, max: 0.4, col: '#ff8aa0', size: 2, grav: 0 }); } }
+    else if (g.kind === 'door') { const im = xi('adv-puerta', 4); im._n = 4; im._f = g.open ? Math.min(3, Math.floor(g.ot * 6)) : 0; spr(im, g.x, g.y1p + 2, Math.max(h, 2 * T) + 8, 0.5, 1); }
+    else if (g.kind === 'vent') { const im = xi('adv-rejilla', 2); im._n = 2; im._f = g.open ? 1 : 0; spr(im, g.x, g.y1p, h, 0.5, 1); } }
+  for (const e of A.ents) { if (!vis(e.x) || (e.hide && e.hide(A.api))) continue;
+    if (e.kind === 'lever') { const an = e.on ? 0.7 : -0.7; ctx.fillStyle = '#4a5470'; ctx.fillRect(e.x - 22, e.y - 16, 44, 16); ctx.fillStyle = e.on ? '#35ff8a' : '#ff3a5a'; ctx.beginPath(); ctx.arc(e.x + 14, e.y - 8, 4, 0, 6.283); ctx.fill(); ctx.save(); ctx.translate(e.x - 4, e.y - 14); ctx.rotate(an); ctx.fillStyle = '#c8d0e0'; ctx.fillRect(-3, -40, 6, 40); ctx.fillStyle = '#ffd23c'; ctx.beginPath(); ctx.arc(0, -42, 9, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1b2350'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+      if (A.tgt === e) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, e.y - 70); } continue; }
+    const bob = e.float ? Math.sin(e.ph * 1.8) * 7 : 0, by = e.y + (e.fy || 0) + bob;
+    if (e.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, by - e.h / 2, 4, e.x, by - e.h / 2, e.h * 0.8); gg.addColorStop(0, e.glow); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, by - e.h * 1.4, e.h * 2, e.h * 1.6); ctx.restore(); }
+    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
+    if (im._n > 1) im._f = e.frame != null ? e.frame : Math.floor(e.ph * (e.fps || 5)) % im._n;
+    const fl = e.kind === 'npc' && !e.noTurn ? (e.faceR ? e.face < 0 : e.face > 0) : !!e.flip, br = e.kind === 'npc' ? 1 + Math.sin(e.ph * 2.2) * 0.025 : 1;
+    if (e.kind === 'npc' && !e.float) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 2, e.h * 0.32, 6, 0, 0, 6.283); ctx.fill(); }
+    const cb = advCB(im); spr(im, e.x, by, e.h / (cb.b - cb.t), 0.5, cb.b, fl, e.id === 'huevo' ? Math.sin(e.ph * 7) * 0.025 * (1 + (A.f.st || 0)) : 0, 1, br);
+    if (e.kind === 'tele') { if (Math.random() < 0.4) parts.push({ x: e.x + (Math.random() - 0.5) * e.h * 0.4, y: by - 10, vx: 0, vy: -60 - Math.random() * 60, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffffff', size: 2.2, grav: 0 }); }
+    const mk = e.mark && e.mark(A.api); if (mk && A.tgt !== e) { const yy = by - e.h - 18 + Math.sin(time * 5) * 5; ctx.font = '900 30px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2350'; ctx.fillText('!', e.x + 2, yy + 2); ctx.fillStyle = '#ffd23c'; ctx.fillText('!', e.x, yy); }
+    if (A.tgt === e) { const yy = by - e.h - 14 + Math.sin(time * 4) * 3; ctx.fillStyle = '#fffdf4'; ctx.strokeStyle = '#1b2350'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(e.x - 22, yy - 30, 44, 30, 10) : ctx.rect(e.x - 22, yy - 30, 44, 30); ctx.fill(); ctx.stroke();
+      ctx.font = '20px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2350'; ctx.fillText(e.kind === 'npc' ? '💬' : e.kind === 'tele' ? '✨' : e.kind === 'way' ? '🚪' : '✋', e.x, yy - 8);
+      if (e.name) { ctx.font = '900 13px system-ui'; ctx.fillStyle = '#05071a'; ctx.fillText(e.name, e.x + 1, yy - 37); ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, yy - 38); } } }
+  for (const o of A.items) { if (o.got || !vis(o.x)) continue; const c = tileAt(o.tx, o.ty); if (c === 'C' || c === '#') continue; const it = ADV_IT[o.id], y = o.y + Math.sin(time * 3 + o.x) * 4;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(o.x, y, 3, o.x, y, 44); gg.addColorStop(0, 'rgba(255,250,200,.75)'); gg.addColorStop(1, 'rgba(255,240,150,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(o.x, y, 44, 0, 6.283); ctx.fill(); ctx.restore();
+    spr(xi(it.img), o.x, y, it.h, 0.5, 0.5, false, Math.sin(time * 2 + o.x) * 0.12);
+    if (Math.random() < 0.12) parts.push({ x: o.x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40, vx: 0, vy: -30, life: 0.7, max: 0.7, col: '#ffffff', size: 2, grav: 0 }); }
+}
+function advInterior() {          // pared de nave por dentro: paneles, luces y ojos de buey al mar
+  const A = L.adv, I = A.interior, x0 = Math.max(0, cam.x - 60), x1 = Math.min(L.W * T, cam.x + VW + 60), y0 = 0, y1 = L.H * T;
+  const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, I.c0 || '#2a3552'); g.addColorStop(1, I.c1 || '#151c33'); ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const pw = 3 * T, ph = 2 * T;
+  for (let x = Math.floor(x0 / pw) * pw; x < x1; x += pw) for (let y = 0; y < y1; y += ph) {
+    ctx.fillStyle = ((x / pw + y / ph) % 2) ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.08)'; ctx.fillRect(x + 3, y + 3, pw - 6, ph - 6);
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 2; ctx.strokeRect(x + 3, y + 3, pw - 6, ph - 6);
+    ctx.fillStyle = 'rgba(200,220,255,.25)'; for (const [rx, ry] of [[10, 10], [pw - 10, 10], [10, ph - 10], [pw - 10, ph - 10]]) { ctx.beginPath(); ctx.arc(x + rx, y + ry, 2.5, 0, 6.283); ctx.fill(); } }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; const lc = I.light || '41,230,255';
+  for (const ly of (I.strips || [3])) { const yy = ly * T, a = 0.5 + 0.2 * Math.sin(time * 2); ctx.fillStyle = 'rgba(' + lc + ',' + a + ')'; ctx.fillRect(x0, yy - 3, x1 - x0, 6); const gg = ctx.createLinearGradient(0, yy - 30, 0, yy + 30); gg.addColorStop(0, 'rgba(' + lc + ',0)'); gg.addColorStop(0.5, 'rgba(' + lc + ',.18)'); gg.addColorStop(1, 'rgba(' + lc + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x0, yy - 30, x1 - x0, 60); }
+  ctx.restore();
+  for (const w of (I.win || [])) { const wx = w[0] * T + T / 2, wy = w[1] * T + T / 2, r = (w[2] || 1.1) * T;
+    ctx.fillStyle = '#8a95b0'; ctx.beginPath(); ctx.arc(wx, wy, r + 10, 0, 6.283); ctx.fill(); ctx.fillStyle = '#4a5470'; ctx.beginPath(); ctx.arc(wx, wy, r + 4, 0, 6.283); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(wx, wy, r, 0, 6.283); ctx.clip(); const sg = ctx.createLinearGradient(0, wy - r, 0, wy + r); sg.addColorStop(0, I.sea0 || '#2fb6e8'); sg.addColorStop(1, I.sea1 || '#0b3d78'); ctx.fillStyle = sg; ctx.fillRect(wx - r, wy - r, 2 * r, 2 * r);
+      for (let k = 0; k < 6; k++) { const bx = wx - r + ((k * 37 + time * 20) % (2 * r)), by = wy + r - ((time * 40 + k * 53) % (2 * r)); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(bx, by, 2 + (k % 3), 0, 6.283); ctx.fill(); }
+      const fx = wx - r * 1.5 + ((time * 30 + w[0] * 50) % (3 * r)); ctx.fillStyle = '#ffb84a'; ctx.beginPath(); ctx.ellipse(fx, wy + Math.sin(time + w[0]) * r * 0.3, 10, 6, 0, 0, 6.283); ctx.fill(); ctx.beginPath(); ctx.moveTo(fx - 9, wy + Math.sin(time + w[0]) * r * 0.3); ctx.lineTo(fx - 17, wy - 6 + Math.sin(time + w[0]) * r * 0.3); ctx.lineTo(fx - 17, wy + 6 + Math.sin(time + w[0]) * r * 0.3); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.ellipse(wx - r * 0.35, wy - r * 0.4, r * 0.35, r * 0.15, -0.6, 0, 6.283); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#c8d0e0'; for (let k = 0; k < 8; k++) { const a = k * 0.785; ctx.beginPath(); ctx.arc(wx + Math.cos(a) * (r + 7), wy + Math.sin(a) * (r + 7), 2.5, 0, 6.283); ctx.fill(); } }
+}
+function advHUD() {
+  const A = L.adv, pad = 14, s = Math.max(1, Math.min(1.25, VW / 900)); ctx.save(); ctx.scale(s, s); const w = VW / s;
+  ctx.textBaseline = 'middle'; const txt = (t, x, y, col = '#fff', f = '800 20px system-ui,sans-serif') => { ctx.font = f; ctx.fillStyle = 'rgba(5,7,26,.85)'; ctx.fillText(t, x + 1.5, y + 1.5); ctx.fillStyle = col; ctx.fillText(t, x, y); };
+  ctx.textAlign = 'left'; spr(IMG['obj-chip'], pad + 14, 26, 28, 0.5, 0.5); txt(String(G.chips), pad + 34, 27, '#ffe27a', '900 22px system-ui,sans-serif');
+  ctx.textAlign = 'center'; txt('🗺️ ' + (L.name || ''), w / 2, 20, '#9fe8ff', '900 13px system-ui,sans-serif');
+  if (A.ready && A.goalTxt) { ctx.font = '800 16px system-ui,sans-serif'; const tw = ctx.measureText(A.goalTxt).width + 40, gx = w / 2 - tw / 2, pu = A.goalT < 1.2 ? 1 + 0.12 * Math.sin(A.goalT * 12) * (1.2 - A.goalT) : 1;
+    ctx.save(); ctx.translate(w / 2, 50); ctx.scale(pu, pu); ctx.fillStyle = 'rgba(255,253,244,.94)'; ctx.strokeStyle = '#1b2350'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-tw / 2, -16, tw, 32, 16) : ctx.rect(-tw / 2, -16, tw, 32); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1b2350'; ctx.fillText('⭐ ' + A.goalTxt, 0, 1); ctx.restore(); void gx; }
+  if (A.ready) { const ks = Object.keys(A.inv); let x = pad + 62; if (ks.length) { ctx.textAlign = 'center'; txt('🎒', pad + 18, 76, '#fff', '24px system-ui'); }
+    for (let i = 0; i < ks.length; i++) { const id = ks[i], it = ADV_IT[id], nw = A.newIt && A.newIt.id === id && A.newIt.t < 1 ? 1 + 0.4 * Math.sin(A.newIt.t * Math.PI) : 1;
+      ctx.fillStyle = 'rgba(10,20,60,.75)'; ctx.strokeStyle = '#29e6ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, 76, 22, 0, 6.283); ctx.fill(); ctx.stroke();
+      spr(xi(it.img), x, 76, 32 * nw, 0.5, 0.5); if (A.inv[id] > 1) { ctx.textAlign = 'center'; txt('×' + A.inv[id], x + 15, 96, '#ffe27a', '900 13px system-ui,sans-serif'); } x += 52; } }
+  ctx.restore();
+}
+function advDone() {
+  state = 'done'; show('touch', false); $('advUse').classList.remove('on'); ADV.done[L.adv.root || curId] = true; advSave(); SFX.win(); $('card').classList.remove('tips');
+  const lv = ADV_LV.find(l => l.id === (L.adv.root || curId)) || { n: L.name }, mins = Math.max(1, Math.round(G.clock / 60));
+  $('card').innerHTML = '<h2>🏆 ¡AVENTURA COMPLETADA!</h2><div style="font:900 20px system-ui;color:#7fe9ff;margin:4px 0 8px">' + lv.n + '</div>' + (L.adv.endTxt ? '<div style="color:#fff8d8;font:700 16px/1.4 system-ui;margin:6px 0 10px">' + L.adv.endTxt + '</div>' : '') +
+    '<div class="stat"><span>Monedas</span><b>' + G.chips + '</b></div><div class="stat"><span>Tiempo de aventura</span><b>' + mins + ' min</b></div>' +
+    '<div class="row"><button class="btn" id="pm">MÁS AVENTURAS</button><button class="btn" id="pr">JUGAR OTRA VEZ</button></div>';
+  show('panel', true); $('pr').onclick = () => { ADVS = null; curId = L.adv.root || curId; startGame(); }; $('pm').onclick = () => advMenu();
+  if (L.adv.endTxt) setTimeout(() => advSpeak(L.adv.endTxt.replace(/<[^>]+>/g, '')), 600);
+}
+function advMenu() {
+  advCss(); tmpOff && tmpOff(); paused = false; state = 'advm'; ['panel', 'top', 'touch', 'mapUI', 'title'].forEach(id => show(id, false)); $('advUse').classList.remove('on'); $('advDlg').classList.remove('on'); ADVT.on = false;
+  const m = $('advMenu'); m.innerHTML = '<h1>🗺️ MODO AVENTURA</h1><div class="sub">Habla con todos, busca objetos escondidos y resuelve cada misión. ¡Aquí nadie te hace daño!</div><div class="lvs">' +
+    ADV_LV.map((l, i) => { const ok = typeof LEVELS[l.id] === 'function'; return '<div class="lv' + (ok ? '' : ' off') + '">' + (ADV.done[l.id] ? '<div class="ok">✔ HECHA</div>' : '') + '<img src="' + advImg(l.img) + '" alt=""><h2>NIVEL ' + (i + 1) + ' · ' + l.n + '</h2><p>' + l.s + '</p>' +
+      (ok ? '<button class="btn" data-go="' + l.id + '">¡JUGAR!</button> <button class="btn" data-sp="' + i + '" title="Escuchar">🔊</button>' : '<button class="btn" disabled>PRÓXIMAMENTE</button>') + '</div>'; }).join('') +
+    '</div><div class="row" style="margin-top:18px;justify-content:center"><button class="btn" id="advBk">VOLVER</button></div>';
+  m.classList.add('on');
+  m.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { try { speechSynthesis.cancel(); } catch (e) {} m.classList.remove('on'); curId = b.dataset.go; ADVS = null; startGame(); });
+  m.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { const l = ADV_LV[+b.dataset.sp]; advSpeak(l.n + '. ' + l.s); });
+  $('advBk').onclick = () => { try { speechSynthesis.cancel(); } catch (e) {} m.classList.remove('on'); toMenu(); };
+}
+setTimeout(() => { advCss(); const b = $('btnAdv'); if (b) b.onclick = () => { try { audio(); } catch (e) {} goFull(); advMenu(); }; advBtnUpd(); }, 50);
+
+/* sala · la tienda submarina de Bolita (se baja con el ascensor de la playa) */
+LEVELS['A-1t'] = function () {
+  const W = 26, H = 16, B = LB(W, H);
+  B.block(0, W - 1, 13, H - 1); B.block(0, 0, 0, 12); B.block(W - 1, W - 1, 0, 12); B.block(0, W - 1, 0, 1); B.block(16, 19, 9, 9, '='); B.row(16, 19, 8); B.row(7, 11, 12);
+  const bolita = { name: 'BOLITA', img: 'pj-bolita' };
+  const adv = { root: 'A-1', interior: { strips: [3, 12], win: [[8, 6, 1.4], [21, 5, 1.1]] },
+    enter: A => { if (!A.flag('shop1')) { A.flag('shop1', 1); A.say(bolita, ['¡Bienvenido a mi tienda submarina! Acércate y habla conmigo.']); } },
+    ents: [
+      { id: 'asc', kind: 'way', tx: 3, ty: 13, h: 132, img: 'adv-ascensor', fr: 3, frame: 2, name: 'SUBIR A LA PLAYA', use: (A, e) => { e.frame = 1; setTimeout(() => e.frame = 0, 180); setTimeout(() => A.go('A-1', 29, 11), 420); } },
+      { id: 'poster', kind: 'deco', tx: 12, ty: 8, h: 96, img: 'adv-poster' }, { id: 'reloj', kind: 'deco', tx: 17, ty: 6, h: 64, img: 'adv-reloj' },
+      { id: 'planta', kind: 'deco', tx: 7, ty: 13, h: 66, img: 'adv-planta', fr: 3, frame: 2 }, { id: 'escoba', kind: 'deco', tx: 9, ty: 13, h: 70, img: 'adv-escoba', flip: true },
+      Object.assign({ id: 'bolita', kind: 'npc', tx: 14, ty: 13, h: 104, float: true, fy: -10, noTurn: true, lbl: '🛒 COMPRAR', mark: A => !A.has('tarjeta') && !A.flag('gate'),
+        use: A => {
+          if (A.has('tarjeta') || A.flag('gate')) return A.say(bolita, ['¡Gracias por tu compra! Que tengas mucha suerte.']);
+          A.say(bolita, ['¡Hola! Soy Bolita, el robot de la tienda.', 'Vendo una tarjeta mágica que apaga las barreras de luz. Cuesta 15 monedas.'], () =>
+            A.ask(bolita, '¿Quieres comprar la tarjeta mágica? Tienes ' + A.coins() + ' monedas.', [{ t: '🪙 COMPRAR (15)', f: () => { if (!A.pay(15)) return A.say(bolita, ['Te faltan monedas. Busca más monedas por la playa y por el mar.', 'En mi taquilla del fondo también hay alguna. ¡Ábrela!']); A.give('tarjeta'); A.say(bolita, ['¡Aquí tienes tu tarjeta mágica!', 'La barrera de luz está en la cueva de las medusas, en el fondo del mar.']); } }, { t: 'AHORA NO' }]));
+        } }, bolita),
+      { id: 'taq', kind: 'chest', tx: 22, ty: 13, h: 120, img: 'adv-taquilla', fr: 3, frame: 0, name: 'TAQUILLA', lbl: '🔓 ABRIR',
+        use: (A, e) => { if (e.opened) return A.say({ name: 'TAQUILLA', img: 'adv-taquilla' }, ['La taquilla está vacía.']); e.opened = true; e.frame = 2; A.addCoins(6, e.x, e.y - 60); A.say({ name: 'TAQUILLA', img: 'adv-taquilla' }, ['¡Dentro había 6 monedas!']); } }],
+    items: [], gates: [] };
+  return B.done({ name: 'TIENDA DE BOLITA', adv, time: 99999, noLava: true, spawn: { x: 4 * T, y: 13 * T }, goal: { x: -9999, y: -9999 } });
+};
+/* ======================= NIVEL 2 · EL ROBOT ROTO (desguace + laboratorio + invernadero) ======================= */
+LEVELS['A-2'] = function () {
+  const W = 172, H = 18, B = LB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.ground(0, W - 1); B.block(0, 0, 0, 15); B.block(W - 1, W - 1, 0, 15);
+  B.arc(15, 21, 12, 2); P(16, 19, 13); B.row(26, 30, 15);
+  B.block(32, 36, 13, 15); B.arc(31, 37, 11, 1); B.block(40, 44, 11, 15); B.row(40, 44, 10);
+  B.block(50, 57, 11, 15); B.block(52, 56, 13, 15, ' '); B.block(50, 51, 14, 15, 'C'); B.row(53, 54, 15);          // montaña con roca agrietada
+  P(61, 64, 13); P(66, 69, 10); P(71, 75, 7); B.row(61, 64, 12); B.row(66, 69, 9); B.arc(76, 82, 9, 2);              // escalera hacia el cofre alto
+  B.row(90, 96, 15); B.block(100, 109, 10, 15); B.block(103, 108, 13, 15, ' '); B.fake(100, 102, 13, 15); B.row(103, 104, 15); B.arc(99, 110, 8, 1);   // montaña con pared falsa
+  B.block(114, 122, 0, 11); B.block(118, 118, 12, 15, 'G');                                                        // túnel con barrera de luz
+  B.arc(125, 135, 12, 3); P(138, 142, 12); B.row(138, 142, 11); B.arc(145, 156, 12, 3);
+  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' }, chispas = { name: 'CHISPAS', img: 'pj-chispas' }, tuercas = { name: 'TUERCAS', img: 'robot-roto' }, triste = { name: 'BOLITA', img: 'pj-bolita-triste' };
+  const fixLeft = A => ['llavein', 'cable', 'soldador'].filter(k => !A.flag('fx_' + k));
+  const fixGoal = A => { const f = fixLeft(A); if (!f.length) return; const n = 3 - f.length; A.goal('Busca las 3 herramientas (' + n + ' de 3)'); };
+  const toolMsg = (id, t) => A => [t, 'Llévasela a Tuercas.'];
+  const adv = {
+    goal0: 'Habla con Chispas, el perro robot',
+    intro: ['Lucas ha llegado al Planeta Chatarra, un desguace enorme lleno de robots.', 'Alguien necesita ayuda. Habla con todos y busca bien por todas partes.', 'Los transportadores y las puertas te llevan a otras salas.'],
+    endTxt: 'Lucas encontró las tres herramientas y Tuercas volvió a funcionar.<br>Byte prometió no volver a esconder nada.<br>¡Chispas está feliz!',
+    ents: [
+      Object.assign({ id: 'chispas', kind: 'npc', tx: 7, ty: 16, h: 100, mark: A => !A.flag('m1'),
+        use: A => {
+          if (!A.flag('m1')) return A.say(chispas, ['¡Hola! Soy Chispas, el perro robot.', 'Mi amigo Tuercas se cayó de la montaña de chatarra y se rompió.', 'Para arreglarlo necesitamos tres herramientas: una llave inglesa, un cable y un soldador.', 'Alguien las ha escondido. ¿Me ayudas a buscarlas?'], () => { A.flag('m1', 1); A.goal('Busca las 3 herramientas (0 de 3)'); });
+          if (!fixLeft(A).length) return A.say(chispas, ['¡Tuercas ya está arreglado! ¡Eres el mejor, Lucas!']);
+          const f = fixLeft(A), pista = { llavein: 'La llave inglesa brilla dentro de la primera montaña. Tiene una roca agrietada: ¡dispárale con el láser!', cable: 'El cable lo tiene Hoja, la jardinera del invernadero. Ve por el teletransporte.', soldador: 'El soldador está en el laboratorio de Byte. La puerta está más adelante.' };
+          A.say(chispas, ['Todavía faltan ' + f.length + ' herramientas.', pista[f[0]]]);
+        } }, chispas),
+      { id: 'tuercas', kind: 'npc', tx: 12, ty: 16, h: 96, img: 'robot-roto-suelo', img2: 'robot-roto', alt: A => !!A.flag('fx1'), name: 'TUERCAS', noTurn: true, mark: A => fixLeft(A).some(k => A.has(k)),
+        glow: null,
+        use: (A, e) => {
+          const have = fixLeft(A).filter(k => A.has(k));
+          if (!fixLeft(A).length) return A.say(tuercas, ['¡Gracias, Lucas! Ya he apagado la barrera de luz del túnel.', 'Tu cohete te espera al otro lado.']);
+          if (!have.length) return A.say(tuercas, A.flag('fx1') ? ['Ya estoy de pie, pero me falta alguna herramienta para estar bien del todo.'] : ['Ay, ay. Estoy hecho pedazos.', 'Necesito una llave inglesa, un cable y un soldador.']);
+          have.forEach(k => { A.take(k); A.flag('fx_' + k, 1); }); A.flag('fx1', 1); e.h = 128; shake = 0.2; burst(e.x, e.y - 60, 40, '#ffd23c', 300, 0.8, 0, 4);
+          if (fixLeft(A).length) { fixGoal(A); return A.say(tuercas, ['¡Muy bien! Con esto ya me encuentro mucho mejor.', 'Todavía me faltan ' + fixLeft(A).length + ' herramientas.']); }
+          e.glow = 'rgba(80,255,160,.45)'; A.say(tuercas, ['¡Funciona! ¡Ya puedo andar otra vez!', 'Muchas gracias, Lucas. Voy a apagar la barrera de luz del túnel para que puedas pasar.'], () => { A.open('tunel'); A.goal('Cruza el túnel y vuelve a tu cohete'); });
+        } },
+      { id: 'teleH', kind: 'tele', tx: 24, ty: 16, h: 120, img: 'adv-teleport', name: 'AL INVERNADERO', lbl: '✨ VIAJAR', use: A => A.go('A-2b', 4, 12) },
+      Object.assign({ id: 'chest', kind: 'chest', tx: 73, ty: 7, h: 62, img: 'adv-cofre', name: 'COFRE', use: (A, e) => { if (e.opened) return A.say(NAR, ['El cofre ya está vacío.']); e.opened = true; shake = 0.15; A.addCoins(6, e.x, e.y - 40); A.give('manzana'); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡Dentro había 6 monedas y una manzana muy roja!', 'A lo mejor alguien tiene hambre.']); } }),
+      { id: 'lab', kind: 'way', tx: 86, ty: 16, h: 110, img: 'adv-puerta', fr: 4, frame: 0, name: 'LABORATORIO DE BYTE', use: (A, e) => { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => A.go('A-2a', 4, 12), 450); } },
+      Object.assign({ id: 'triste', kind: 'npc', tx: 94, ty: 16, h: 90, float: true, fy: -6, use: A => A.say(triste, ['Hola, soy Bolita. Estoy un poco triste porque Byte me asusta.', 'Le vi esconder algo en esa montaña de chatarra.', 'Dicen que una de sus paredes es de mentira. ¡Camina hacia ella!']) }, triste)],
+    items: [
+      { id: 'llavein', tx: 55, ty: 15, msg: toolMsg('llavein', '¡Has encontrado la llave inglesa!') },
+      { id: 'fusible', tx: 106, ty: 15, msg: () => ['¡Has encontrado una pila!', 'A lo mejor a alguien le hace falta.'] }],
+    gates: [{ id: 'tunel', kind: 'laser', tx: 118, y0: 12, y1: 15, use: A => A.say(NAR, ['Una barrera de luz cierra el túnel.', 'Tuercas sabe apagarla, pero primero hay que arreglarlo.']) }]
+  };
+  return B.done(LK({ name: 'EL ROBOT ROTO', adv, time: 99999, spawn: { x: 3 * T, y: 16 * T }, goal: { x: 160 * T, y: 16 * T } }));
+};
+/* sala · laboratorio de Byte */
+LEVELS['A-2a'] = function () {
+  const W = 26, H = 14, B = LB(W, H);
+  B.block(0, W - 1, 12, H - 1); B.block(0, 0, 0, 11); B.block(W - 1, W - 1, 0, 11); B.block(0, W - 1, 0, 0); B.block(8, 11, 8, 8, '='); B.row(8, 11, 7); B.row(15, 20, 11);
+  const byte = { name: 'BYTE', img: 'pj-byte' };
+  const adv = { root: 'A-2', interior: { strips: [2, 11], light: '200,80,255', c0: '#2c2348', c1: '#140f28', win: [[19, 5, 1.2]], sea0: '#1a1040', sea1: '#05030f' },
+    enter: A => { if (!A.flag('lab1')) { A.flag('lab1', 1); A.say({ name: 'NARRADOR', img: 'lucas-quieto' }, ['Estás en el laboratorio de Byte. Hay pantallas y luces por todas partes.']); } },
+    ents: [
+      { id: 'door', kind: 'way', tx: 3, ty: 12, h: 110, img: 'adv-puerta', fr: 4, frame: 3, name: 'SALIR', use: (A, e) => { e.frame = 2; setTimeout(() => e.frame = 0, 200); setTimeout(() => A.go('A-2', 86, 16), 380); } },
+      { id: 'o1', kind: 'deco', tx: 7, ty: 6, h: 54, img: 'esfera-formas', float: true }, { id: 'o2', kind: 'deco', tx: 13, ty: 5, h: 54, img: 'esfera-numeros', float: true }, { id: 'o3', kind: 'deco', tx: 22, ty: 9, h: 54, img: 'esfera-roja', float: true },
+      { id: 'cons', kind: 'deco', tx: 9, ty: 8, h: 40, img: 'obj-consola' }, { id: 'usb', kind: 'deco', tx: 20, ty: 12, h: 40, img: 'obj-pendrive' },
+      Object.assign({ id: 'byte', kind: 'npc', tx: 15, ty: 12, h: 132, faceR: true, mark: A => A.has('fusible') || !A.flag('byte0'),
+        use: A => {
+          if (A.flag('byte')) return A.say(byte, ['Ya no voy a esconder nada más, lo prometo.', 'Ahora juego con mi consola sin molestar a nadie.']);
+          if (A.has('fusible')) { A.take('fusible'); return A.say(byte, ['¡Una pila para mi consola! ¡Qué bien!', 'Perdona por esconder las herramientas. Me aburría mucho y no lo pensé.', 'Toma el soldador. Es para Tuercas.'], () => { A.flag('byte', 1); A.give('soldador'); A.say({ name: '¡NUEVO OBJETO!', img: 'obj-soldador' }, ['¡Ya tienes el soldador!', 'Llévaselo a Tuercas.']); }); }
+          A.flag('byte0', 1); A.say(byte, ['Hola. Soy Byte, el robot más listo del desguace.', 'Sí, fui yo quien escondió las herramientas. Es que me aburría.', 'Mi consola se ha quedado sin pila. Si me traes una pila, te devuelvo el soldador.']);
+        } }, byte),
+      Object.assign({ id: 'chestL', kind: 'chest', tx: 22, ty: 12, h: 58, img: 'adv-cofre', name: 'COFRE', use: (A, e) => { if (e.opened) return A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['El cofre ya está vacío.']); e.opened = true; A.addCoins(8, e.x, e.y - 40); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡8 monedas para ti!']); } })],
+    items: [], gates: [] };
+  return B.done({ name: 'LABORATORIO DE BYTE', adv, time: 99999, noLava: true, spawn: { x: 4 * T, y: 12 * T }, goal: { x: -9999, y: -9999 } });
+};
+/* sala · el invernadero de Hoja */
+LEVELS['A-2b'] = function () {
+  const W = 30, H = 14, B = LB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, W - 1, 12, H - 1); B.block(0, 0, 0, 11); B.block(W - 1, W - 1, 0, 11); P(10, 13, 9); P(17, 20, 7); P(23, 26, 9); B.row(10, 13, 8); B.row(17, 20, 6); B.row(23, 26, 8); B.vine(15, 3, 11);
+  const hoja = { name: 'HOJA', img: 'pj-amarillo' };
+  const adv = { root: 'A-2', interior: { strips: [2], light: '120,255,140', c0: '#1d3a2a', c1: '#0c1c14', win: [[6, 5, 1.3], [24, 4, 1.1]], sea0: '#9fe8ff', sea1: '#3a9fd8' },
+    ents: [
+      { id: 'tele', kind: 'tele', tx: 3, ty: 12, h: 120, img: 'adv-teleport', name: 'VOLVER AL DESGUACE', lbl: '✨ VIAJAR', use: A => A.go('A-2', 24, 16) },
+      { id: 'p1', kind: 'deco', tx: 8, ty: 12, h: 70, img: 'adv-planta', fr: 3, frame: 0 }, { id: 'p2', kind: 'deco', tx: 11, ty: 9, h: 70, img: 'adv-planta', fr: 3, frame: 1 }, { id: 'p3', kind: 'deco', tx: 25, ty: 9, h: 80, img: 'adv-planta', fr: 3, frame: 2 },
+      { id: 'p4', kind: 'deco', tx: 21, ty: 12, h: 90, img: 'adv-planta', fr: 3, frame: 2 },
+      Object.assign({ id: 'hoja', kind: 'npc', tx: 17, ty: 12, h: 132, mark: A => A.has('manzana') || !A.flag('hoja0'),
+        use: A => {
+          if (A.flag('hoja')) return A.say(hoja, ['¡Qué manzana tan rica! Gracias otra vez, Lucas.']);
+          if (A.has('manzana')) { A.take('manzana'); return A.say(hoja, ['¡Una manzana! Justo lo que me apetecía.', 'Toma, aquí tienes el cable. Lo encontré enredado entre mis plantas.'], () => { A.flag('hoja', 1); A.give('cable'); A.say({ name: '¡NUEVO OBJETO!', img: 'obj-cable' }, ['¡Ya tienes el cable!', 'Llévaselo a Tuercas.']); }); }
+          A.flag('hoja0', 1); A.say(hoja, ['¡Hola! Soy Hoja y cuido de todas estas plantas.', 'Tengo un cable que se había enredado en mis macetas.', 'Te lo doy encantada, pero tengo mucha hambre. ¿Me traes algo de fruta?', 'Creo que hay una manzana en el cofre alto del desguace.']);
+        } }, hoja)],
+    items: [], gates: [] };
+  return B.done(LJ({ name: 'INVERNADERO DE HOJA', adv, time: 99999, noLava: true, spawn: { x: 4 * T, y: 12 * T }, goal: { x: -9999, y: -9999 } }));
+};
+/* ======================= NIVEL 3 · EL HUEVO MISTERIOSO (selva con lagos + cueva de cristal) ======================= */
+LEVELS['A-3'] = function () {
+  const W = 200, H = 22, B = LB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, 30, 13, H - 1); B.block(0, 0, 0, 12); B.arc(14, 26, 10, 2);
+  B.block(31, 60, 20, H - 1); P(35, 37, 14); P(43, 46, 14); P(52, 54, 14); B.row(35, 37, 13); B.row(52, 54, 13); B.row(38, 50, 18); B.block(40, 41, 18, 19); B.block(49, 50, 17, 19);
+  B.block(61, 90, 12, H - 1); B.block(68, 78, 7, 11); B.block(71, 77, 9, 11, ' '); B.block(68, 70, 10, 11, 'C'); B.row(72, 73, 11); B.arc(62, 67, 9, 1); B.arc(79, 84, 9, 1);
+  B.block(91, 120, 20, H - 1); P(94, 97, 14); P(101, 104, 12); P(108, 111, 14); P(115, 118, 13); B.row(101, 104, 11); B.row(95, 118, 18); B.block(104, 106, 16, 19);
+  B.block(121, W - 1, 12, H - 1); B.block(W - 1, W - 1, 0, 11); B.arc(124, 134, 9, 2); B.row(140, 150, 11); B.block(186, 189, 4, 11); B.block(186, 189, 9, 11, ' '); B.block(187, 187, 9, 11, 'G');
+  B.row(175, 184, 11);
+  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' }, rayo = { name: 'RAYO', img: 'pj-amarillo' }, rojo = { name: 'EXPLORADOR ROJO', img: 'pj-rojo' }, cria = { name: 'CHISPITA', img: 'pj-chispas' };
+  const st = A => A.flag('st') || 0;
+  const giveStars = (A, e) => { const n = A.cnt('estrella'); if (!n) return false; A.take('estrella', n); A.flag('st', st(A) + n); shake = 0.25; burst(e.x, e.y - 50, 50, '#7dff8a', 320, 0.9, 0, 4); [392, 523, 659, 784].forEach((f, i) => tone(f, f, 0.18, 'triangle', 0.12, i * 0.1)); return true; };
+  const adv = {
+    goal0: 'Habla con Rayo',
+    intro: ['Lucas ha llegado a la Selva Verde, un planeta lleno de árboles, lagos y plantas gigantes.', 'En un nido ha aparecido un huevo muy misterioso.', 'Habla con todos y descubre qué hay dentro.'],
+    endTxt: 'Con la energía de las cuatro estrellas, el huevo se abrió.<br>De dentro salió Chispita, un cachorro robot muy cariñoso.<br>¡Ahora tienes un nuevo amigo!',
+    ents: [
+      Object.assign({ id: 'rayo', kind: 'npc', tx: 6, ty: 13, h: 128, faceR: true, mark: A => !A.flag('m1'),
+        use: A => {
+          if (!A.flag('m1')) return A.say(rayo, ['¡Lucas! Soy Rayo. ¡Mira lo que he encontrado en este nido!', 'Es un huevo robot. Está frío y casi no se mueve.', 'Para que se abra necesita cuatro estrellas de energía.', 'Las estrellas están escondidas por la selva. ¡Tráelas y dáselas al huevo!'], () => { A.flag('m1', 1); A.goal('Busca 4 estrellas de energía (0 de 4)'); });
+          if (A.flag('hatch')) return A.say(rayo, ['¡Qué cachorro tan bonito! Síguelo, te enseñará el camino al cohete.']);
+          const pistas = ['Una estrella brilla dentro de la roca agrietada de la colina. Usa tu láser.', 'Otra estrella se cayó al fondo del primer lago. ¡Bucea!', 'El teletransporte de la colina lleva a una cueva de cristal. Allí hay otra.', 'El explorador Rojo tiene una estrella. Vive al otro lado del segundo lago.'];
+          A.say(rayo, ['El huevo ya tiene ' + st(A) + ' de 4 estrellas.', pistas[st(A) % 4]]);
+        } }, rayo),
+      { id: 'huevo', kind: 'npc', tx: 11, ty: 13, h: 92, img: 'huevo-1', name: 'EL HUEVO', noTurn: true, lbl: '🥚 MIRAR', hide: A => !!A.flag('hatch'), mark: A => A.has('estrella'),
+        use: (A, e) => {
+          if (!A.flag('m1')) return A.say({ name: 'EL HUEVO', img: 'huevo-1' }, ['Es un huevo muy raro, con luces por dentro. Rayo sabe algo de él.']);
+          if (!giveStars(A, e)) return A.say({ name: 'EL HUEVO', img: e.img }, ['El huevo tiene ' + st(A) + ' de 4 estrellas.', 'Necesita más energía para abrirse.']);
+          const n = st(A); e.img = 'huevo-' + Math.min(5, 1 + n); e.h = 92 + n * 4;
+          if (n < 4) { A.goal('Busca 4 estrellas de energía (' + n + ' de 4)'); return A.say({ name: 'EL HUEVO', img: e.img }, ['¡El huevo brilla y se mueve un poco!', 'Ya tiene ' + n + ' de 4 estrellas.']); }
+          A.say({ name: 'EL HUEVO', img: 'huevo-5' }, ['¡El huevo se está abriendo!'], () => { shake = 0.5; for (let i = 0; i < 6; i++) setTimeout(() => burst(e.x, e.y - 50, 40, ['#7dff8a', '#ffd23c', '#7fe9ff'][i % 3], 380, 1, 300, 5), i * 120); SFX.win();
+            setTimeout(() => { A.flag('hatch', 1); A.say(cria, ['¡Hola! ¡Hola! Me llamo Chispita.', '¡Gracias por darme tu energía, Lucas!', 'Ven conmigo. Sé dónde está tu cohete: al final de la selva, detrás de la puerta de luz.', 'Ya la he abierto para ti.'], () => { A.open('salida'); A.goal('Ve al final de la selva y sube a tu cohete'); }); }, 900); });
+        } },
+      Object.assign({ id: 'cria', kind: 'npc', tx: 11, ty: 13, h: 70, cond: A => !!A.flag('hatch'), hide: A => !A.flag('hatch'), use: A => A.say(cria, ['¡Guau! Tu cohete está al final de la selva, a la derecha. Usa el teletransporte para llegar antes.']) }, cria),
+      { id: 'teleN', kind: 'tele', tx: 19, ty: 13, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', lbl: '✨ VIAJAR', use: A => A.ask({ name: 'TELETRANSPORTE', img: 'adv-teleport' }, '¿A dónde quieres viajar?', [{ t: '✨ CASA DEL EXPLORADOR', f: () => A.tele(146, 12) }, { t: 'QUEDARME AQUÍ' }]) },
+      { id: 'teleC', kind: 'tele', tx: 85, ty: 12, h: 120, img: 'adv-teleport', name: 'A LA CUEVA DE CRISTAL', lbl: '✨ VIAJAR', use: A => A.go('A-3c', 4, 14) },
+      Object.assign({ id: 'rojo', kind: 'npc', tx: 132, ty: 12, h: 128, faceR: true, mark: A => A.has('linterna'),
+        use: A => {
+          if (A.flag('rojo')) return A.say(rojo, ['¡Qué bien se ve todo con mi linterna! Gracias, Lucas.']);
+          if (A.has('linterna')) { A.take('linterna'); return A.say(rojo, ['¡Mi linterna! La perdí en la cueva de cristal.', 'Toma esta estrella de energía. ¡Te la has ganado!'], () => { A.flag('rojo', 1); A.give('estrella'); A.say({ name: '¡NUEVO OBJETO!', img: 'estrella-chip' }, ['¡Una estrella de energía!', 'Llévasela al huevo del nido.']); }); }
+          A.say(rojo, ['Hola, soy el explorador Rojo. Me encanta descubrir cuevas.', 'Perdí mi linterna en la cueva de cristal. Se llega por el teletransporte de la colina.', 'Si me la traes, te daré una estrella de energía que encontré.']);
+        } }, rojo),
+      { id: 'teleR', kind: 'tele', tx: 146, ty: 12, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', lbl: '✨ VIAJAR', use: A => A.ask({ name: 'TELETRANSPORTE', img: 'adv-teleport' }, '¿A dónde quieres viajar?', [{ t: '✨ EL NIDO DEL HUEVO', f: () => A.tele(17, 13) }, { t: 'QUEDARME AQUÍ' }]) },
+      { id: 'deco1', kind: 'deco', tx: 160, ty: 12, h: 120, img: 'adv-planta', fr: 3, frame: 2 }, { id: 'deco2', kind: 'deco', tx: 66, ty: 12, h: 80, img: 'adv-planta', fr: 3, frame: 1 }],
+    items: [
+      { id: 'estrella', tx: 75, ty: 11, msg: () => ['¡La roca escondía una estrella de energía!', 'Llévasela al huevo del nido.'] },
+      { id: 'estrella', tx: 45, ty: 19, msg: () => ['¡Has encontrado una estrella de energía en el fondo del lago!', 'Llévasela al huevo del nido.'] }],
+    gates: [{ id: 'salida', kind: 'laser', tx: 187, y0: 9, y1: 11, use: A => A.say(NAR, ['Una puerta de luz. Solo se abre cuando el huevo del nido se abra.']) }]
+  };
+  return B.done(LJ({ name: 'EL HUEVO MISTERIOSO', adv, time: 99999, noLava: true, water: { y: 15 * T }, spawn: { x: 3 * T, y: 13 * T }, goal: { x: 192 * T, y: 12 * T } }));
+};
+/* sala · la cueva de cristal (palanca que apaga la barrera) */
+LEVELS['A-3c'] = function () {
+  const W = 34, H = 16, B = LB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  B.block(0, W - 1, 14, H - 1); B.block(0, 0, 0, 13); B.block(W - 1, W - 1, 0, 13); B.block(0, W - 1, 0, 0);
+  P(8, 11, 11); P(13, 16, 8); P(18, 21, 5); B.row(8, 11, 10); B.row(13, 16, 7); B.block(24, 24, 1, 9); B.block(24, 24, 10, 13, 'G'); B.row(26, 31, 13); B.crystal(5, 14, 0, 1); B.crystal(22, 14, 1, 1); B.crystal(29, 14, 2, 1);
+  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' };
+  const adv = { root: 'A-3', interior: { strips: [3], light: '160,240,255', c0: '#1b3a5a', c1: '#0a1a30', win: [[11, 4, 1.1]], sea0: '#d8f6ff', sea1: '#7fc8ff' },
+    enter: A => { if (!A.flag('cue1')) { A.flag('cue1', 1); A.say(NAR, ['Estás en la cueva de cristal. Todo brilla con luz azul.', 'Una barrera de luz protege el fondo. Busca la palanca.']); } },
+    ents: [
+      { id: 'tele', kind: 'tele', tx: 3, ty: 14, h: 120, img: 'adv-teleport', name: 'VOLVER A LA SELVA', lbl: '✨ VIAJAR', use: A => A.go('A-3', 85, 12) },
+      { id: 'lever', kind: 'lever', tx: 19, ty: 5, h: 60, name: 'PALANCA', lbl: '✋ TIRAR', on: false, use: (A, e) => { if (e.on) return A.say(NAR, ['La palanca ya está bajada. La barrera está apagada.']); e.on = true; e.opened = true; A.say(NAR, ['¡Has bajado la palanca! La barrera de luz se apaga.'], () => A.open('fondo')); } }],
+    items: [{ id: 'linterna', tx: 14, ty: 7, msg: () => ['¡Has encontrado una linterna!', 'Seguro que es del explorador Rojo.'] }, { id: 'estrella', tx: 29, ty: 13, msg: () => ['¡Una estrella de energía escondida en la cueva!', 'Llévasela al huevo del nido.'] }],
+    gates: [{ id: 'fondo', kind: 'laser', tx: 24, y0: 10, y1: 13, use: A => A.say(NAR, ['Una barrera de luz. Tiene que haber una palanca en algún sitio. ¡Mira arriba!']) }] };
+  return B.done({ theme: 'ice', name: 'CUEVA DE CRISTAL', adv, time: 99999, noLava: true, spawn: { x: 4 * T, y: 14 * T }, goal: { x: -9999, y: -9999 } });
+};
+window.__TLA = { get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; } };
+/* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
+LEVELS['A-1'] = function () {
+  const W = 240, H = 30, B = SB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
+  // playa del faro (izquierda) con la cueva del cohete detrás de la puerta
+  B.block(0, 32, 11, H - 1); B.block(0, 7, 0, 6); B.block(7, 7, 7, 8); B.block(7, 7, 9, 10, 'G');
+  B.arc(16, 24, 8, 1); B.row(27, 31, 10);
+  // la playa baja hacia el mar
+  B.block(33, 34, 13, H - 1); B.block(35, 36, 15, H - 1); B.block(37, 38, 18, H - 1); B.block(39, 40, 22, H - 1); B.block(41, 192, 27, H - 1);
+  B.row(33, 34, 12); B.row(35, 36, 14); B.row(37, 38, 17); B.row(39, 40, 21);
+  // arrecife de los tres corales
+  B.block(44, 45, 25, 26); B.block(61, 63, 24, 26); B.kelp(50, 27, 3); B.kelp(53, 27, 4); B.kelp(56, 27, 3); B.row(47, 59, 22); B.kelp(43, 27, 2);
+  // isla del cofre (con su escalón en la superficie)
+  P(64, 68, 12); B.block(69, 78, 10, 14); B.arc(69, 78, 7, 2); B.kelp(72, 27, 5); B.kelp(76, 27, 4); B.row(80, 92, 20); B.block(84, 86, 25, 26); B.block(95, 96, 24, 26);
+  // zona de los pulpos: roca agrietada con un hueco dentro
+  B.block(108, 115, 21, 26); B.block(110, 114, 23, 26, ' '); B.block(108, 109, 25, 26, 'C'); B.row(111, 112, 26); B.kelp(101, 27, 3); B.kelp(118, 27, 4); B.row(99, 106, 24);
+  // isla de Rayo
+  P(119, 123, 12); B.block(124, 140, 10, 14); B.arc(125, 139, 7, 2); B.kelp(130, 27, 5); B.row(126, 138, 22);
+  // cueva de las medusas: túnel cerrado con una barrera de luz y una pared falsa al fondo
+  B.block(152, 190, 15, 26); B.block(153, 187, 22, 25, ' '); B.block(152, 152, 22, 25, 'G'); B.fake(182, 183, 22, 25); B.row(156, 178, 23); B.arc(154, 188, 13, 1); B.kelp(146, 27, 4);
+  // playa del capitán (derecha)
+  B.block(193, 194, 22, H - 1); B.block(195, 196, 18, H - 1); B.block(197, 198, 15, H - 1); B.block(199, 200, 13, H - 1); B.block(201, W - 1, 11, H - 1); B.block(W - 1, W - 1, 0, 10);
+  B.row(193, 200, 12); B.arc(204, 216, 8, 1);
+  const almeja = { name: 'DOÑA ALMEJA', img: 'enemigo-almeja', fr: 3, frame: 0 }, cangrejo = { name: 'PINZAS', img: 'enemigo-cangrejo', fr: 4 }, bolita = { name: 'BOLITA', img: 'pj-bolita' },
+    pulpo = { name: 'TINTA', img: 'enemigo-pulpo', fr: 4 }, rayo = { name: 'RAYO', img: 'pj-amarillo' }, medusa = { name: 'MEDI', img: 'enemigo-medusa', fr: 4 }, globo = { name: 'GLOBITO', img: 'enemigo-pezglobo', fr: 4 }, rojo = { name: 'CAPITÁN ROJO', img: 'pj-rojo' };
+  const NAR = { name: 'NARRADOR', img: 'lucas-quieto' };
+  const perlas = A => A.cnt('perla');
+  const teleSpots = [{ t: 'PLAYA DEL FARO', x: 15, y: 11 }, { t: 'ISLA DE RAYO', x: 133, y: 10 }, { t: 'PLAYA DEL CAPITÁN', x: 222, y: 11 }];
+  const teleUse = k => A => A.ask({ name: 'TELETRANSPORTE', img: 'adv-teleport' }, '¿A dónde quieres viajar?', teleSpots.filter((s, i) => i !== k).map(s => ({ t: '✨ ' + s.t, f: () => A.tele(s.x, s.y) })).concat([{ t: 'QUEDARME AQUÍ' }]));
+  const adv = {
+    goal0: 'Habla con Doña Almeja',
+    intro: ['Lucas ha aterrizado en el Planeta Azul, un mundo lleno de playas y de mar.', 'Aquí nada te hace daño. Habla con todos, busca objetos escondidos y ayuda a tus nuevos amigos.', 'Cuando estés cerca de alguien, pulsa el botón HABLAR.'],
+    endTxt: 'Lucas devolvió las tres perlas a Doña Almeja.<br>Su collar vuelve a brillar y todo el mar está de fiesta.<br>¡Muy bien, explorador!',
+    ents: [
+      Object.assign({ id: 'almeja', kind: 'npc', tx: 13, ty: 11, h: 120, noTurn: true, mark: A => !A.flag('m1') || perlas(A) >= 3,
+        use: (A, e) => {
+          if (A.flag('done')) return A.say(almeja, ['Gracias otra vez, Lucas. Abre la puerta del faro y vuelve a tu cohete.']);
+          if (!A.flag('m1')) return A.say(almeja, ['¡Hola, Lucas! Soy Doña Almeja. ¡Qué disgusto tengo!', 'Las olas rompieron mi collar y mis tres perlas mágicas se cayeron al fondo del mar.', '¿Me ayudas a encontrarlas? Si me las traes, te daré la llave del faro. Allí dentro está tu cohete.', 'Pregunta a mis amigos del mar. Ellos te darán pistas.'], () => { A.flag('m1', 1); A.goal('Busca las 3 perlas (0 de 3)'); });
+          const n = perlas(A); if (n < 3) return A.say(almeja, ['Llevas ' + n + ' de 3 perlas. ¡Ánimo, ya queda menos!', 'Recuerda: mis amigos del mar te dan pistas.']);
+          e.frame = 1; A.take('perla', 3);
+          A.say(almeja, ['¡Mis tres perlas! ¡Muchísimas gracias, Lucas!', 'Toma, aquí tienes la llave del faro. Abre la puerta y vuelve a tu cohete.'], () => { e.frame = 2; A.give('llave'); A.flag('done', 1); A.goal('Abre la puerta del faro con la llave'); });
+        } }, almeja),
+      { id: 'tele0', kind: 'tele', tx: 18, ty: 11, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', use: teleUse(0) },
+      Object.assign({ id: 'cangrejo', kind: 'npc', tx: 23, ty: 11, h: 96, use: A => A.say(cangrejo, ['Hola, soy Pinzas el cangrejo.', 'Ayer vi caer una perla en el arrecife de los tres corales. Está bajando por la playa, en el fondo del mar.', 'Para nadar hacia arriba, pulsa el botón de saltar muchas veces.']) }, cangrejo),
+      { id: 'ascensor', kind: 'way', tx: 29, ty: 11, h: 132, img: 'adv-ascensor', fr: 3, frame: 0, name: 'TIENDA DE BOLITA', mark: A => A.flag('m1') && !A.has('tarjeta') && !A.flag('gate'),
+        use: (A, e) => { e.frame = 1; setTimeout(() => e.frame = 2, 180); setTimeout(() => A.go('A-1t', 4, 13), 420); } },
+      Object.assign({ id: 'chest1', kind: 'chest', tx: 74, ty: 10, h: 62, img: 'adv-cofre', name: 'COFRE', cond: () => true,
+        use: (A, e) => { if (e.opened) return A.say(NAR, ['El cofre ya está vacío.']); e.opened = true; shake = 0.15; A.addCoins(10, e.x, e.y - 40); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡El cofre estaba lleno de monedas! Has conseguido 10 monedas.']); } }),
+      Object.assign({ id: 'pulpo', kind: 'npc', tx: 103, ty: 27, h: 112, float: true, use: A => A.say(pulpo, ['Hola, Lucas. Soy Tinta, el pulpo.', 'Aquí, en la zona de los pulpos, hay una roca agrietada que brilla por dentro.', 'Si le disparas con tu láser, se romperá. ¡Seguro que hay algo escondido!']) }, pulpo),
+      { id: 'pulpo2', kind: 'npc', tx: 117, ty: 27, h: 80, float: true, img: 'enemigo-pulpo', fr: 4, name: 'PULPITO', use: A => A.say({ name: 'PULPITO', img: 'enemigo-pulpo' }, ['Soy el hermano pequeño de Tinta. ¡Me encanta jugar al escondite entre las rocas!']) },
+      Object.assign({ id: 'rayo', kind: 'npc', tx: 128, ty: 10, h: 104, faceR: true, use: A => A.say(rayo, ['¡Hola! Me llamo Rayo y vigilo las islas.', 'La cueva de las medusas está cerrada con una barrera de luz.', 'Para pasar necesitas la tarjeta mágica. Bolita la vende en su tienda. Se baja con el ascensor de la playa.', 'Este teletransporte te lleva a otros sitios en un momento. ¡Pruébalo!']) }, rayo),
+      { id: 'tele1', kind: 'tele', tx: 136, ty: 10, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', use: teleUse(1) },
+      Object.assign({ id: 'globo', kind: 'npc', tx: 145, ty: 21, h: 96, float: true, use: A => A.say(globo, ['¡Hola! Soy Globito.', 'Si buscas perlas, mira dentro de la cueva de las medusas. Está aquí al lado.', 'Y no te olvides de la isla del cofre. ¡Dentro hay monedas!']) }, globo),
+      Object.assign({ id: 'medusa', kind: 'npc', tx: 167, ty: 25, h: 100, float: true, fy: -10, glow: 'rgba(255,140,220,.35)', use: A => A.say(medusa, ['Hola, soy Medi la medusa. Brillo en la oscuridad.', 'Al final de esta cueva hay una pared que no es de verdad.', '¡Camina hacia ella y la atravesarás!']) }, medusa),
+      Object.assign({ id: 'rojo', kind: 'npc', tx: 210, ty: 11, h: 104, faceR: true, mark: A => A.has('consola'),
+        use: A => {
+          if (A.flag('rojo')) return A.say(rojo, ['¡Gracias por encontrar mi consola! Ahora juego todos los días.']);
+          if (A.has('consola')) { A.take('consola'); return A.say(rojo, ['¡Mi consola de juegos! ¡Qué alegría!', 'Toma, como te prometí: diez monedas para ti.'], () => { A.flag('rojo', 1); A.addCoins(10, P.x + P.w / 2, P.y); }); }
+          A.say(rojo, ['Hola, soy el capitán Rojo.', 'Se me cayó mi consola de juegos al agua, justo debajo de la isla del cofre.', 'Si me la traes, te daré diez monedas.']);
+        } }, rojo),
+      { id: 'tele2', kind: 'tele', tx: 222, ty: 11, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', use: teleUse(2) }],
+    items: [
+      { id: 'perla', tx: 53, ty: 26, msg: A => ['¡Has encontrado una perla entre los tres corales!', 'Ya tienes ' + A.cnt('perla') + ' de 3.'], then: A => A.goal(A.cnt('perla') >= 3 ? 'Lleva las perlas a Doña Almeja' : 'Busca las 3 perlas (' + A.cnt('perla') + ' de 3)') },
+      { id: 'perla', tx: 113, ty: 26, msg: A => ['¡La roca escondía una perla!', 'Ya tienes ' + A.cnt('perla') + ' de 3.'], then: A => A.goal(A.cnt('perla') >= 3 ? 'Lleva las perlas a Doña Almeja' : 'Busca las 3 perlas (' + A.cnt('perla') + ' de 3)') },
+      { id: 'perla', tx: 186, ty: 25, msg: A => ['¡Detrás de la pared falsa había una perla!', 'Ya tienes ' + A.cnt('perla') + ' de 3.'], then: A => A.goal(A.cnt('perla') >= 3 ? 'Lleva las perlas a Doña Almeja' : 'Busca las 3 perlas (' + A.cnt('perla') + ' de 3)') },
+      { id: 'consola', tx: 73, ty: 26, msg: () => ['¡Has encontrado una consola de juegos!', 'Seguro que es del capitán Rojo. Vive en la playa de la derecha.'] }],
+    gates: [
+      { id: 'faro', kind: 'door', tx: 7, y0: 9, y1: 10, use: A => { if (!A.has('llave')) return A.say(NAR, ['La puerta del faro está cerrada.', 'Necesitas la llave del faro. Doña Almeja la tiene.']); A.take('llave'); A.open('faro'); A.goal('¡Entra en el faro y sube a tu cohete!'); } },
+      { id: 'cueva', kind: 'laser', tx: 152, y0: 22, y1: 25, use: A => { if (!A.has('tarjeta')) return A.say(NAR, ['Es una barrera de luz. No se puede pasar.', 'Necesitas la tarjeta mágica. La vende Bolita en su tienda: baja con el ascensor de la playa.']); A.take('tarjeta'); A.flag('gate', 1); A.say(NAR, ['Usas la tarjeta mágica. ¡La barrera se apaga!'], () => A.open('cueva')); } }]
+  };
+  return B.done(LO({ name: 'LAS TRES PERLAS', adv, time: 99999, depth: 0.05, water: { y: 12 * T }, spawn: { x: 9 * T, y: 11 * T }, goal: { x: 2 * T, y: 11 * T } }));
+};
+
 })();
