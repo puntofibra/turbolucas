@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.46';
+const VERSION = '1.47';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -6841,7 +6841,7 @@ function advCss() {
     '#advMenu h1{font:900 clamp(26px,5vw,44px) system-ui;color:#ffd23c;text-shadow:0 4px 0 #6a3a00;margin:6px 0 2px;letter-spacing:.04em}#advMenu .sub{color:#9fc4ff;font-weight:700;margin-bottom:14px}' +
     '#advMenu .lvs{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}#advMenu .lv{width:min(230px,44vw);background:rgba(10,20,60,.85);border:3px solid #29e6ff;border-radius:22px;padding:12px;position:relative}' +
     '#advMenu .lv .btn.pf{outline:3px solid #fff}#advMenu .lv img{width:110px;height:110px;object-fit:contain;animation:advSp 6s ease-in-out infinite}@keyframes advSp{50%{transform:translateY(-8px) rotate(4deg)}}#advMenu .lv h2{font:900 19px system-ui;margin:6px 0;color:#7fe9ff}' +
-    '#advMenu .lv p{font:600 14px/1.35 system-ui;color:#d8e4ff;min-height:4em}#advMenu .lv.off{opacity:.5;border-color:#55608a}#advMenu .ok{position:absolute;top:8px;right:10px;font:900 14px system-ui;color:#35ff8a}' +
+    '@media (max-height:520px),(max-width:520px){#advMenu .lvs{gap:10px}#advMenu .lv{width:min(150px,30vw);padding:8px;border-radius:16px}#advMenu .lv img{width:60px;height:60px}#advMenu .lv h2{font-size:14px;margin:3px 0}#advMenu .lv p{display:none}#advMenu .lv .btn{padding:6px 8px;font-size:13px}}'+'#advMenu .lv p{font:600 14px/1.35 system-ui;color:#d8e4ff;min-height:4em}#advMenu .lv.off{opacity:.5;border-color:#55608a}#advMenu .ok{position:absolute;top:8px;right:10px;font:900 14px system-ui;color:#35ff8a}' +
     '#advFl{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:58;transition:opacity .25s}';
   document.head.appendChild(s);
   const d = document.createElement('div'); d.id = 'advDlg';
@@ -6849,6 +6849,12 @@ function advCss() {
   document.body.appendChild(d);
   const u = document.createElement('button'); u.id = 'advUse'; document.body.appendChild(u);
   const m = document.createElement('div'); m.id = 'advMenu'; document.body.appendChild(m);
+  { let ty = 0, st = 0, moved = false, vy = 0, lt = 0, ly = 0, raf = 0;          // en el móvil la página no se desliza sola (touch-action:none): la lista se arrastra a mano
+    m.addEventListener('touchstart', e => { cancelAnimationFrame(raf); ty = ly = e.touches[0].clientY; st = m.scrollTop; moved = false; vy = 0; lt = performance.now(); }, { passive: true });
+    m.addEventListener('touchmove', e => { const y = e.touches[0].clientY, now = performance.now(); if (Math.abs(y - ty) > 8) moved = true; m.scrollTop = st - (y - ty); vy = (ly - y) / Math.max(1, now - lt); ly = y; lt = now; e.preventDefault(); }, { passive: false });
+    m.addEventListener('touchend', () => { const step = () => { if (Math.abs(vy) < 0.02) return; m.scrollTop += vy * 16; vy *= 0.94; raf = requestAnimationFrame(step); }; raf = requestAnimationFrame(step); });
+    m.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+    m.addEventListener('wheel', e => { m.scrollTop += e.deltaY; }, { passive: true }); }
   const f = document.createElement('div'); f.id = 'advFl'; document.body.appendChild(f);
   d.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; e.preventDefault(); advNext(); });
   $('advNx').onclick = e => { e.stopPropagation(); advNext(); };
