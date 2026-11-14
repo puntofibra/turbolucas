@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.60';
+const VERSION = '1.61';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7125,7 +7125,9 @@ function advUpdate(dt) {
       setTimeout(() => advSay({ name: '¡NUEVO OBJETO!', img: o.img || it.img }, msg, o.then ? () => o.then(A.api) : null), 250); } }
   // ¿con quién o con qué puedes hablar?
   let best = null, bd = 1e9;
-  for (const e of A.ents) { if (!e.use || (e.cond && !e.cond(A.api)) || (e.hide && e.hide(A.api)) || (e.kind === 'lever' && e.on)) continue; const ey = e.float ? e.y + (e.fy || 0) : e.y, d = Math.abs(pc - e.x), dy = Math.abs(pf - ey);
+  for (const e of A.ents) { if (e.kind !== 'tele' || !e.use || (e.hide && e.hide(A.api))) continue; const py = e.y - 2 * T - 46, inn = Math.hypot(pc - e.x, p.y + p.h / 2 - py) < 50;          // portal flotante: hay que saltar dentro
+    if (inn && !e._in && !ADVT.on) { e._in = true; p.vx = 0; p.vy = Math.min(p.vy, 0) * 0.3; SFX.portal(); burst(e.x, py, 24, '#c63cff', 220, 0.6, 0, 3); e.use(A.api, e); } else if (!inn) e._in = false; }
+  for (const e of A.ents) { if (e.kind === 'tele' || !e.use || (e.cond && !e.cond(A.api)) || (e.hide && e.hide(A.api)) || (e.kind === 'lever' && e.on)) continue; const ey = e.float ? e.y + (e.fy || 0) : e.y, d = Math.abs(pc - e.x), dy = Math.abs(pf - ey);
     if (d < (e.r || 80) && dy < (e.ry || 110) && d < bd) { best = e; bd = d; } }
   for (const g of A.gates) { if (g.open || !g.use) continue; const d = Math.abs(pc - g.x); if (d < 120 && pf > g.y0p - 20 && p.y < g.y1p + 20 && d < bd) { best = g; bd = d; } }
   if (best !== A.tgt) { A.tgt = best; const u = $('advUse'); if (u) { if (best) { u.textContent = advUseLabel(best); u.classList.add('on'); } else u.classList.remove('on'); } }
@@ -7174,6 +7176,11 @@ function advDrawWorld() {
       if (A.tgt === e) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, e.y - 70); } continue; }
     const bob = e.float ? Math.sin(e.ph * 1.8) * 7 : 0, by = e.y + (e.fy || 0) + bob;
     if (e.kind === 'way' && e.id !== 'out') advBuilding(e);
+    if (e.kind === 'tele' && okI(IMG.portal)) { const py = e.y - 2 * T - 46, pu = 0.5 + 0.5 * Math.sin(time * 5), gg = ctx.createRadialGradient(e.x, py, 6, e.x, py, 70); gg.addColorStop(0, 'rgba(198,60,255,' + (0.5 + pu * 0.3) + ')'); gg.addColorStop(1, 'rgba(198,60,255,0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(e.x, py, 70, 0, 6.283); ctx.fill(); spr(IMG.portal, e.x, py, 92, 0.5, 0.5);
+      if (Math.random() < 0.3) parts.push({ x: e.x + (Math.random() - 0.5) * 60, y: py + (Math.random() - 0.5) * 60, vx: 0, vy: -40, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#c63cff' : '#29e6ff', size: 2.5, grav: 0 });
+      const mk = e.name && e.name !== 'TELETRANSPORTE' ? e.name : ''; if (mk) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#05071a'; ctx.fillText(mk, e.x + 1, py - 55); ctx.fillStyle = '#e8c8ff'; ctx.fillText(mk, e.x, py - 56); }
+      continue; }
     const glw = (e.glowIf && e.glowIf(A.api)) || e.glow; if (glw) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, by - e.h / 2, 4, e.x, by - e.h / 2, e.h * 0.8); gg.addColorStop(0, glw); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, by - e.h * 1.4, e.h * 2, e.h * 1.6); ctx.restore(); }
     let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.frameIf) e.frame = e.frameIf(A.api); if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
     let an = e.anim; if (e.anim2 && e.alt && e.alt(A.api)) an = e.anim2; if (e.anim3 && e.glow) an = e.anim3; if (e.img3 && !e.glow && e.name === 'TUERCAS') an = null;
@@ -7509,12 +7516,12 @@ function advChest(id, tx, ty, coins, extra, img) {
 }
 function advTeles(list) {          // varios teletransportes que se conectan entre sí: [[id, tx, ty, nombre], ...]
   return list.map(([id, tx, ty, nm], i) => ({ id, kind: 'tele', tx, ty, h: 120, img: 'adv-teleport', name: 'TELETRANSPORTE', lbl: '✨ VIAJAR',
-    use: A => A.ask({ name: 'TELETRANSPORTE', img: 'adv-teleport' }, '¿A dónde quieres viajar?', list.filter((q, j) => j !== i).map(q => ({ t: '✨ ' + q[3], f: () => A.tele(q[1], q[2]) })).concat([{ t: 'QUEDARME AQUÍ' }])) }));
+    use: A => A.ask({ name: 'PORTAL', img: 'portal' }, '¿A dónde quieres viajar?', list.filter((q, j) => j !== i).map(q => ({ t: '✨ ' + q[3], f: () => A.tele(q[1], q[2]) })).concat([{ t: 'QUEDARME AQUÍ' }])) }));
 }
 function advWay(id, tx, ty, room, rx, ry, name, img) {          // puerta o transportador a otra sala
   const tele = img === 'tele';
   return { id, kind: tele ? 'tele' : 'way', tx, ty, h: tele ? 120 : 110, img: tele ? 'adv-teleport' : 'adv-puerta', fr: tele ? undefined : 4, frame: 0, name, lbl: tele ? '✨ VIAJAR' : '🚪 ENTRAR',
-    use: (A, e) => { if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
+    use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => A.go(room, rx, ry) }, { t: 'QUEDARME AQUÍ' }]); if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
 }
 function advLever(id, tx, ty, gate, txt) { return { id, kind: 'lever', tx, ty, h: 64, name: 'PALANCA', lbl: '✋ TIRAR', use: (A, e) => { if (e.on) return A.say(NR, ['La palanca ya está bajada.']); e.on = true; e.opened = true; A.say(NR, txt || ['¡Has bajado la palanca! La barrera de luz se apaga.'], () => A.open(gate)); } }; }
 function advLaser(id, tx, y0, y1, txt) { return { id, kind: 'laser', tx, y0, y1, use: A => A.say(NR, txt) }; }
