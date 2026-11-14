@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.61';
+const VERSION = '1.62';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -64,13 +64,15 @@ const skyI = n => L && L.theme === 'sky' && okI(IMG[n]) ? IMG[n] : null;
 const preTheme = t => { if (t === 'ice') preIce(); else if (t === 'lava') preLava(); else if (t === 'jungle') preSel(); else if (t === 'ocean') preOce(); else if (t === 'desert') preDes(); else if (t === 'sky') preSky(); else if (t === 'toy') preToy(); else if (t === 'junk') preJnk(); else if (t === 'fort') preFrt(); };
 // imágenes de la fortaleza Señal Cero
 const FRT_SET = ['fondo-lejos-fortaleza', 'fondo-cerca-fortaleza', 'suelo-borde-fortaleza', 'suelo-relleno-fortaleza', 'plataforma-fortaleza'];
-function preFrt() { FRT_SET.forEach(n => xi(n)); }
+function preFrt() { FRT_SET.forEach(n => xi(n)); Object.values(FRT_MAP).forEach(n => xi(n)); for (const k in JFN) xi(JFN[k][0], JFN[k][1]); xi('jefe10'); xi('jefe10-roto'); }
 const frtI = n => L && L.theme === 'fort' && okI(IMG[n]) ? IMG[n] : null;
 // imágenes del cementerio de naves (solo en ese tema; la fortaleza usa las suyas)
 const JNN = { patrulla: ['enemigo-robot-oxidado', 4, 6, 650, 120], alien: ['enemigo-cangrejo-chatarra', 4, 163, 570, 88], erizo: ['enemigo-sierra', 4, 66, 616, 84], dron: ['enemigo-robot-fantasma', 4, 33, 668, 100], torreta: ['enemigo-canon-nave', 3, 2, 705, 110] };
 const JNK_SET = ['fondo-lejos-chatarra', 'fondo-cerca-chatarra', 'suelo-borde-chatarra', 'suelo-relleno-chatarra', 'plataforma-chatarra', 'caja-chatarra', 'plataforma-propulsor', 'plancha-oxidada', 'prensa', 'iman', 'baliza', 'cinta-chatarra', 'pieza-chatarra', 'bala-chatarra', 'jefe9', 'jefe9-roto'];
 function preJnk() { JNK_SET.forEach(n => xi(n)); for (const k in JNN) xi(JNN[k][0], JNN[k][1]); }
-const jnkI = n => L && L.theme === 'junk' && okI(IMG[n]) ? IMG[n] : null;
+const FRT_MAP = { 'caja-chatarra': 'caja-fortaleza', 'plataforma-propulsor': 'plataforma-propulsor-fortaleza', 'plancha-oxidada': 'plancha-fortaleza', 'prensa': 'prensa-fortaleza', 'iman': 'iman-fortaleza', 'baliza': 'baliza-fortaleza', 'cinta-chatarra': 'cinta-fortaleza', 'pieza-chatarra': 'pieza-fortaleza', 'bala-chatarra': 'bala-fortaleza' };          // la fortaleza usa las mismas piezas que la chatarra, con sus propias imágenes
+const JFN = { patrulla: ['enemigo-centinela-f', 4, 0, 724, 112], alien: ['enemigo-alien-f', 4, 0, 724, 80], erizo: ['enemigo-sierra-f', 4, 0, 724, 80], dron: ['enemigo-dron-f', 4, 0, 724, 96], torreta: ['enemigo-torreta-f', 3, 0, 724, 104] };
+const jnkI = n => { if (!L) return null; if (L.theme === 'junk') return okI(IMG[n]) ? IMG[n] : null; const f = L.theme === 'fort' && FRT_MAP[n]; return f && okI(xi(f)) ? IMG[f] : null; };
 // imágenes de la juguetería
 const TYN = { patrulla: ['enemigo-soldadito', 4, 0, 713, 96], alien: ['enemigo-osito', 4, 13, 718, 90], erizo: ['enemigo-pelota', 4, 71, 636, 72], dron: ['enemigo-avioneta', 4, 176, 554, 68], torreta: ['enemigo-canon-corcho', 3, 146, 648, 80] };
 const TOY_SET = ['fondo-lejos-jugueteria', 'fondo-cerca-jugueteria', 'suelo-borde-jugueteria', 'suelo-relleno-jugueteria', 'plataforma-galleta', 'caja-jugueteria', 'vagon', 'bloque-juguete', 'cinta', 'gelatina', 'muneco-sorpresa', 'corcho', 'muelle', 'jefe8', 'jefe8-roto'];
@@ -2888,8 +2890,8 @@ function jkTile(tx, ty, d) {
 function jkPlat(x, y, w) { { const pi = jnkI('plataforma-chatarra'); if (pi) { const pw = w + 10, ph = pw * pi.naturalHeight / pi.naturalWidth; ctx.drawImage(pi, x - 5, y - ph * 0.25, pw, ph); return; } } ctx.fillStyle = '#5a5a6a'; ctx.fillRect(x + 2, y, w - 4, 12); ctx.strokeStyle = '#2a2a38'; ctx.lineWidth = 2; ctx.strokeRect(x + 2, y, w - 4, 12); ctx.strokeStyle = '#8a8a9a'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let xx = x + 4; xx < x + w - 10; xx += 12) { ctx.moveTo(xx, y + 11); ctx.lineTo(xx + 6, y + 1); ctx.lineTo(xx + 12, y + 11); } ctx.stroke(); ctx.fillStyle = 'rgba(80,255,160,.6)'; ctx.fillRect(x + 4, y + 13, w - 8, 2); }
 function jkMover(m) {
   if (m.st === 3) return; const w = m.w, x = m.x, y = m.y;
-  if (m.fall && jnkI('plancha-oxidada')) { const bi = IMG['plancha-oxidada'], jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0, bw = w + 10, bh = bw * bi.naturalHeight / bi.naturalWidth; ctx.drawImage(bi, x - 5 + jx, y - bh * 0.25, bw, bh); return; }
-  if (!m.fall && jnkI('plataforma-propulsor')) { const pi = IMG['plataforma-propulsor'], pw = w + 16, ph = pw * pi.naturalHeight / pi.naturalWidth; ctx.drawImage(pi, x - 8, y - ph * 0.21, pw, ph);
+  if (m.fall && jnkI('plancha-oxidada')) { const bi = jnkI('plancha-oxidada'), jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0, bw = w + 10, bh = bw * bi.naturalHeight / bi.naturalWidth; ctx.drawImage(bi, x - 5 + jx, y - bh * 0.25, bw, bh); return; }
+  if (!m.fall && jnkI('plataforma-propulsor')) { const pi = jnkI('plataforma-propulsor'), pw = w + 16, ph = pw * pi.naturalHeight / pi.naturalWidth; ctx.drawImage(pi, x - 8, y - ph * 0.21, pw, ph);
     ctx.globalCompositeOperation = 'lighter'; for (const fx of [x - 8 + pw * 0.16, x - 8 + pw * 0.84]) { const fl = 12 + Math.random() * 8, fy = y - ph * 0.21 + ph * 0.86, fg = ctx.createLinearGradient(0, fy, 0, fy + fl); fg.addColorStop(0, 'rgba(120,255,200,.9)'); fg.addColorStop(1, 'rgba(120,255,200,0)'); ctx.fillStyle = fg; ctx.fillRect(fx - 7, fy, 14, fl); } ctx.globalCompositeOperation = 'source-over'; return; }
   if (m.fall) { const jx = m.st === 1 ? Math.sin(time * 50) * 2 : 0; ctx.fillStyle = '#7a4a30'; ctx.fillRect(x + jx, y, w, 20); ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 2; ctx.strokeRect(x + jx, y, w, 20); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.moveTo(x + jx + 6, y + 4); ctx.lineTo(x + jx + w - 6, y + 16); ctx.stroke(); if (m.st === 1 && Math.random() < 0.3) parts.push({ x: x + Math.random() * w, y: y + 20, vx: 0, vy: 40, life: 0.5, max: 0.5, col: '#8a5a3a', size: 2, grav: 600, sqr: true }); return; }
   ctx.fillStyle = '#6a6a80'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - 10, y + 20); ctx.lineTo(x + 10, y + 20); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#22222e'; ctx.lineWidth = 2.5; ctx.stroke();
@@ -2925,7 +2927,7 @@ function drawJunkWorld() {
 function jkEnemy(e) {
   const cx = e.x + e.w / 2, by = e.y + e.h, f = e.dir < 0 ? -1 : 1, sq = e.dead && e.how !== 'fly' ? Math.max(0.15, 1 - e.dead * 3) : 1, t = time * 6 + e.x * 0.01;
   ctx.save(); ctx.translate(cx, by); if (e.dead && e.how === 'fly') ctx.rotate(e.dead * 8); ctx.scale(1, sq); ctx.globalAlpha = e.dead ? Math.max(0, 1 - e.dead) : 1; ctx.lineJoin = 'round';
-  { const od = JNN[e.type], oi = od && jnkI(od[0]); if (oi) { const fh = 724, hh = od[4] * fh / (od[3] - od[2]), yo = (fh - od[3]) / fh * hh;
+  { const fo = L.theme === 'fort', od = (fo ? JFN : JNN)[e.type], oi = od && (fo ? (okI(xi(od[0], od[1])) ? IMG[od[0]] : null) : jnkI(od[0])); if (oi) { oi._n = od[1]; const fh = 724, hh = od[4] * fh / (od[3] - od[2]), yo = (fh - od[3]) / fh * hh;
       oi._f = e.type === 'torreta' ? (e.shotT > 0 ? 2 : e.near && e.timer < 0.6 ? 1 : 0) : Math.floor(time * 9 + e.x * 0.013) % od[1];
       if (e.type === 'dron') ctx.globalAlpha *= 0.55 + 0.4 * Math.abs(Math.sin(time * 1.5 + e.x * 0.01));
       spr(oi, 0, yo, hh, 0.5, 1, f < 0); ctx.restore(); return true; } }
@@ -3237,6 +3239,13 @@ function drawEye(b) {
   const ph2 = b.hp <= b.max / 2, st = b.st, stun = st === 'stun', dang = bossDanger(b), gy = 14 * T;
   let x = b.x, y = b.y - 100; if (st === 'aim' || st === 'die' || st === 'intro') { x += (Math.random() - 0.5) * 8; y += (Math.random() - 0.5) * 6; }
   ctx.fillStyle = 'rgba(0,0,0,' + Math.max(0.1, 0.45 - (gy - b.y) / 900) + ')'; ctx.beginPath(); ctx.ellipse(b.x, gy + 2, 100, 12, 0, 0, 6.283); ctx.fill();
+  { const MI = xi(stun || st === 'die' ? 'jefe10-roto' : 'jefe10'); if (okI(MI)) { const mh = 300, mw = mh * MI.naturalWidth / MI.naturalHeight, by = y + Math.sin(time * 2.2) * 6;          // imagen del jefe: flota y brilla en rojo
+      if (dang && st !== 'die') { ctx.globalCompositeOperation = 'lighter'; const ag = ctx.createRadialGradient(x, by, 50, x, by, 220); ag.addColorStop(0, 'rgba(255,30,60,0)'); ag.addColorStop(0.7, 'rgba(255,30,60,' + (0.2 + 0.12 * Math.sin(time * 18)) + ')'); ag.addColorStop(1, 'rgba(255,30,60,0)'); ctx.fillStyle = ag; ctx.fillRect(x - 240, by - 240, 480, 480); ctx.globalCompositeOperation = 'source-over'; }
+      const draw = (src, al) => { ctx.save(); ctx.globalAlpha = al; ctx.translate(x, by); ctx.rotate(Math.sin(time * 1.6) * 0.04); ctx.drawImage(src, -mw / 2, -mh / 2, mw, mh); ctx.restore(); };
+      draw(MI, 1); if (ph2 && !stun) { const t2 = tintOf(MI, 'rgba(255,30,30,1)'); if (t2) draw(t2, 0.15 + 0.12 * (0.5 + 0.5 * Math.sin(time * 8))); }
+      if (b.flash > 0) { const t3 = tintOf(MI, '#fff'); if (t3) draw(t3, Math.min(1, b.flash / 0.15)); }
+      if (stun) { ctx.font = '800 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(time * 10)) + ')'; ctx.fillText('¡AHORA! ¡GOLPÉALE!', x, by - mh / 2 - 16); }
+      return; } }
   if (dang && st !== 'die') { ctx.globalCompositeOperation = 'lighter'; const ag = ctx.createRadialGradient(x, y, 50, x, y, 200); ag.addColorStop(0, 'rgba(255,30,60,0)'); ag.addColorStop(0.7, 'rgba(255,30,60,' + (0.2 + 0.12 * Math.sin(time * 18)) + ')'); ag.addColorStop(1, 'rgba(255,30,60,0)'); ctx.fillStyle = ag; ctx.fillRect(x - 220, y - 220, 440, 440); ctx.globalCompositeOperation = 'source-over'; }
   // cables colgando
   ctx.strokeStyle = '#2a1a2a'; ctx.lineWidth = 6; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x + k * 22, y + 60); ctx.bezierCurveTo(x + k * 30, y + 110, x + k * 18 + Math.sin(time * 3 + k) * 20, y + 130, x + k * 26 + Math.sin(time * 2 + k) * 14, y + 160); ctx.stroke(); ctx.fillStyle = '#ff3a4a'; ctx.beginPath(); ctx.arc(x + k * 26 + Math.sin(time * 2 + k) * 14, y + 160, 4, 0, 6.283); ctx.fill(); }
@@ -4522,7 +4531,7 @@ function drawBoxes(x0, x1, y0, y1) {
     } else if (c === 'B' && iceI('caja-hielo')) spr(IMG['caja-hielo'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && lavaI('caja-lava')) spr(IMG['caja-lava'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && selI('caja-selva')) spr(IMG['caja-selva'], cx, cy, 52, 0.5, 0.5);
-    else if (c === 'B' && jnkI('caja-chatarra')) spr(IMG['caja-chatarra'], cx, cy, 52, 0.5, 0.5);
+    else if (c === 'B' && jnkI('caja-chatarra')) spr(jnkI('caja-chatarra'), cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && toyI('caja-jugueteria')) spr(IMG['caja-jugueteria'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && skyI('caja-cielo')) spr(IMG['caja-cielo'], cx, cy, 52, 0.5, 0.5);
     else if (c === 'B' && desI('caja-desierto')) spr(IMG['caja-desierto'], cx, cy, 52, 0.5, 0.5);
@@ -4647,7 +4656,7 @@ function drawWorld() {
     if (L.theme === 'sky' && skEnemy(e)) continue;
     if (L.theme === 'toy' && tyEnemy(e)) continue;
     if (L.theme === 'junk' && jkEnemy(e)) continue;
-    if (L.theme === 'fort' && ftEnemy(e)) continue;
+    if (L.theme === 'fort' && (JFN[e.type] && okI(xi(JFN[e.type][0], JFN[e.type][1])) ? jkEnemy(e) : ftEnemy(e))) continue;
     const cx = e.x + e.w / 2, by = e.y + e.h, TV = L.theme === 'lava' ? LAVN : L.theme === 'jungle' ? SELN : ICEN, iv = TV[e.type] && (iceI(TV[e.type][0]) || lavaI(TV[e.type][0]) || selI(TV[e.type][0])), eim = iv || IMG[e.d.img], eax = iv ? 0.5 : e.d.ax || 0.5, efl = iv || e.d.faceR ? e.dir < 0 : e.dir > 0, eh = iv ? e.d.h * TV[e.type][2] : e.d.h;
     if (eim._n) eim._f = e.dead ? 0 : e.type === 'torreta' ? (e.shotT > 0 ? 2 : e.near && e.timer < 0.6 ? 1 : 0) : Math.floor(e.t * (e.d.fps || 22));
     if (e.dead) { if (e.how === 'squish') spr(eim, cx, by, eh, eax, 1, efl, 0, 1.25, 0.25); else spr(eim, cx, by - eh / 2, eh, 0.5, 0.5, efl, e.dead * 9); continue; }
@@ -7148,6 +7157,16 @@ function advCB(im) {          // parte visible de una imagen (las tiras de los b
     im._cb = b > t ? { t: t / h, b: (b + 1) / h } : { t: 0, b: 1 }; } catch (e) { im._cb = { t: 0, b: 1 }; } return im._cb;
 }
 // edificio detrás de cada puerta de la aventura, con el nombre de la sala en su cartel
+// cartel luminoso de SALIDA encima de la puerta o el portal para salir de una sala
+function advExitSign(e) {
+  const im = xi('adv-salida'); if (!okI(im)) return; const w = 176, h = w * im.naturalHeight / im.naturalWidth, top = e.kind === 'tele' ? e.y - 2 * T - 46 - 56 : e.y - e.h - 46, x = e.x, y = top - h - 6 + Math.sin(time * 1.5) * 2;
+  const on = 0.55 + 0.45 * Math.abs(Math.sin(time * 2.4)), fl = Math.random() < 0.015 ? 0.3 : 1, a = on * fl;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y + h * 0.55, 6, x, y + h * 0.55, w * 0.9); gg.addColorStop(0, 'rgba(80,255,120,' + 0.35 * a + ')'); gg.addColorStop(1, 'rgba(80,255,120,0)'); ctx.fillStyle = gg; ctx.fillRect(x - w, y - h * 0.4, w * 2, h * 2); ctx.restore();
+  ctx.drawImage(im, x - w / 2, y, w, h);
+  ctx.save(); ctx.font = '900 ' + Math.round(h * 0.3) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(120,255,140,' + a + ')'; ctx.shadowBlur = 14 * a; ctx.fillStyle = 'rgba(200,255,200,' + (0.35 + 0.65 * a) + ')';
+  ctx.fillText('SALIDA', x - h * 0.12, y + h * 0.57); ctx.beginPath(); const ax = x + w * 0.29, ay = y + h * 0.57, s = h * 0.13, k = (time * 2) % 1; ctx.moveTo(ax - s + k * 3, ay - s); ctx.lineTo(ax + s * 0.6 + k * 3, ay); ctx.lineTo(ax - s + k * 3, ay + s); ctx.fill(); ctx.restore(); ctx.textBaseline = 'alphabetic';
+  if (Math.random() < 0.06) parts.push({ x: x + (Math.random() - 0.5) * w * 0.7, y: y + h * 0.6, vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 30, life: 0.6, max: 0.6, col: '#8aff9a', size: 1.8, grav: 0 });
+}
 function advBuilding(e) {
   const im = xi('adv-edificio', 3); if (!okI(im)) return; im._n = 3; let hsh = 0; for (const c of e.id) hsh = (hsh * 31 + c.charCodeAt(0)) % 997; im._f = hsh % 3;
   const H = e.h / 0.543, W = H * (im.naturalWidth / 3) / im.naturalHeight, x0 = e.x - W / 2, y0 = e.y + 4 - H * 0.985;
@@ -7176,6 +7195,7 @@ function advDrawWorld() {
       if (A.tgt === e) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, e.y - 70); } continue; }
     const bob = e.float ? Math.sin(e.ph * 1.8) * 7 : 0, by = e.y + (e.fy || 0) + bob;
     if (e.kind === 'way' && e.id !== 'out') advBuilding(e);
+    if (e.id === 'out') advExitSign(e);
     if (e.kind === 'tele' && okI(IMG.portal)) { const py = e.y - 2 * T - 46, pu = 0.5 + 0.5 * Math.sin(time * 5), gg = ctx.createRadialGradient(e.x, py, 6, e.x, py, 70); gg.addColorStop(0, 'rgba(198,60,255,' + (0.5 + pu * 0.3) + ')'); gg.addColorStop(1, 'rgba(198,60,255,0)');
       ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(e.x, py, 70, 0, 6.283); ctx.fill(); spr(IMG.portal, e.x, py, 92, 0.5, 0.5);
       if (Math.random() < 0.3) parts.push({ x: e.x + (Math.random() - 0.5) * 60, y: py + (Math.random() - 0.5) * 60, vx: 0, vy: -40, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#c63cff' : '#29e6ff', size: 2.5, grav: 0 });
