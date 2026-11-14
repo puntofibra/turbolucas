@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.39';
+const VERSION = '1.40';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4605,7 +4605,7 @@ function drawWorld() {
   // punto de control y meta
   for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 100, 22, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y + 2, 118); ctx.globalAlpha = 1; }
   if (!L.adv && vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y + 2, 250); }
-  if (L.adv && L.adv.interior) advInterior();
+  if (L.adv && (L.adv.interior || ADV_BG[curId])) advInterior();
   drawCogs(); drawTiles();
   drawStageBack();
   if (L.adv) advDrawWorld();
@@ -7007,7 +7007,21 @@ function advDrawWorld() {
     { const oi = xi(oimg); if (o.fr) { oi._n = o.fr; oi._f = o.frame || 0; } spr(oi, o.x, y, it.h, 0.5, 0.5, false, Math.sin(time * 2 + o.x) * 0.12); }
     if (Math.random() < 0.12) parts.push({ x: o.x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40, vx: 0, vy: -30, life: 0.7, max: 0.7, col: '#ffffff', size: 2, grav: 0 }); }
 }
+const ADV_BG = { 'A-1t': 'tienda', 'A-2a': 'laboratorio', 'A-2b': 'invernadero', 'A-3c': 'cueva', 'A-4p': 'piramide', 'A-5t': 'taller', 'A-6c': 'caja', 'A-7c': 'cueva', 'A-8m': 'maquinas', 'A-9t': 'templo',
+  'A-10s': 'sotano', 'A-11b': 'laboratorio', 'A-12': 'estacion', 'A-14c': 'carpa', 'A-15': 'fiesta', 'A-15a': 'tienda', 'A-15b': 'taller', 'A-15c': 'invernadero', 'A-15d': 'piramide' };
+const ADV_BGF = { fiesta: 0.84, estacion: 0.815, carpa: 0.875, sotano: 0.845, templo: 0.845, maquinas: 0.845, caja: 0.865, taller: 0.855, piramide: 0.86, cueva: 0.85, invernadero: 0.875, laboratorio: 0.80, tienda: 0.87 };
+function advRoomBg() {          // fondo dibujado de la sala (se repite por pisos y a lo ancho)
+  const n = ADV_BG[curId]; if (!n) return false; const im = xi('sala-' + n); if (!okI(im)) return false;
+  const every = curId === 'A-12' ? 6 : L.H - 2 - (curId === 'A-15' ? 1 : 0), fr = ADV_BGF[n] || 0.85, h = every * T / fr, w = h * im.naturalWidth / im.naturalHeight;
+  const x0 = Math.max(0, cam.x - 60), x1 = Math.min(L.W * T, cam.x + VW + 60); ctx.fillStyle = '#10142a'; ctx.fillRect(x0, 0, x1 - x0, L.H * T);
+  const ox = (L.W * T - w) / 2, sx = ox - Math.ceil(ox / w) * w;
+  for (let k = 1; k * every <= L.H - 1; k++) { const fy = k * every * T, y = fy - h * fr;
+    for (let x = sx; x < L.W * T; x += w) { if (x + w < x0 || x > x1) continue; const flip = Math.round((x - ox) / w) % 2 !== 0;
+      if (flip) { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(im, 0, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); } }
+  return true;
+}
 function advInterior() {          // pared de nave por dentro: paneles, luces y ojos de buey al mar
+  if (advRoomBg()) return;
   const A = L.adv, I = A.interior, x0 = Math.max(0, cam.x - 60), x1 = Math.min(L.W * T, cam.x + VW + 60), y0 = 0, y1 = L.H * T;
   const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, I.c0 || '#2a3552'); g.addColorStop(1, I.c1 || '#151c33'); ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   const pw = 3 * T, ph = 2 * T;
