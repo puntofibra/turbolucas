@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.48';
+const VERSION = '1.49';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4454,6 +4454,9 @@ const isWallT = c => c === '#' || c === 'F' || c === 'C' || c === 'D';
 function solidTile(tx, ty, G, gOk, gw, gh) {
     const x = tx * T, y = ty * T;
     let d = 0; while (d < 9 && ty - 1 - d >= 0 && isWallT(L.g[ty - 1 - d][tx])) d++;
+    { const sn = SUELO12[L.theme || 'station'], S12 = sn && xi(sn); if (S12 && okI(S12)) {          // hoja nueva de 12 bloques (6 de superficie + 6 de relleno), como hielo, volcán y selva
+      const cw = S12.naturalWidth / 6, th = S12.naturalHeight * 347 / 603, bh = S12.naturalHeight - th, sx = ((tx * 7 + ty * 3) % 6) * cw;
+      if (d === 0) ctx.drawImage(S12, sx, 0, cw, th, x - 0.5, y - T * (th / cw - 1), T + 1, T * th / cw + 0.5); else ctx.drawImage(S12, sx, th, cw, bh, x, y, T + 0.5, T + 0.5); return; } }
     if (L.theme === 'ocean') { seaTile(tx, ty, d); return; }
     if (L.theme === 'desert') { dsTile(tx, ty, d); return; }
     if (L.theme === 'sky') { skTile(tx, ty, d); return; }
@@ -5153,8 +5156,11 @@ function kidSwap(on) {
   try { localStorage.setItem('tl_prog', JSON.stringify(PROG)); localStorage.setItem('tl_got', JSON.stringify(GOT)); } catch (e) {}
   kidSave(); setWorld(WORLDS[nx.w] ? nx.w : 0); mapSel = mapAt = Math.max(0, Math.min(MAP.length - 1, nx.sel || 0)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; cloudSave(true);
 }
+const SUELO12 = { station: 'suelo-estacion', ocean: 'suelo-oceano', desert: 'suelo-desierto', sky: 'suelo-cielo', toy: 'suelo-jugueteria', junk: 'suelo-chatarra', fort: 'suelo-fortaleza' };
 function kidToggle(src) {          // activa o quita el modo niños y vuelve al mapa en la posición de ese modo
-  const on = !KID.on; KID.av = true; kidSwap(on); tmpOff(); paused = false; show('panel', false); openMap();
+  const on = !KID.on, w0 = curW, s0 = Math.max(0, MAP.findIndex(n => n.id === curId)) || mapSel; KID.av = true; kidSwap(on); tmpOff();
+  if (WORLDS[w0]) { setWorld(w0); mapSel = mapAt = Math.max(0, Math.min(MAP.length - 1, s0)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; }
+  paused = false; show('panel', false); openMap();          // se queda en el mismo planeta y en la misma fase del mapa
   mapMsg = { txt: on ? '👶 MODO NIÑOS ACTIVADO' : 'MODO NIÑOS DESACTIVADO', t: 3, ok: on }; on ? SFX.power() : tone(600, 200, 0.3, 'square', 0.06);
 }
 // en modo niños las fases son las mismas pero más fáciles
@@ -5696,7 +5702,7 @@ async function admOp(op, d) {
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function admMsg(t, err) { const m = $('amsg'); if (m) { m.textContent = t; m.className = 'amsg' + (err ? ' err' : ''); } }
 function admPaint() {
-  const tabs = ['PAGOS', 'AVATARES', 'NIÑOS', 'AVENTURA', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
+  const tabs = ['PAGOS', 'AVATARES', 'NIÑOS', 'NIVELES', 'TRUCOS', 'TEMPORALES', 'CÓDIGOS', 'FASES', 'LLAVES', 'ESTADÍSTICAS', 'RANKING', 'RECORDATORIO', 'SISTEMA'];
   $('adm').innerHTML = '<div class="ahead"><h1>▌ PANEL SECRETO · COSMOLUCAS</h1><button class="btn" id="admX">SALIR</button></div><div class="atabs">' + tabs.map(t => '<button class="btn' + (t === admTab ? ' on' : '') + '" data-a="' + t + '">' + t + '</button>').join('') + '</div><div class="abody" id="abody"></div>';
   $('admX').onclick = closeAdmin;
   $('adm').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { admTab = b.dataset.a; tone(900, 900, 0.04, 'square', 0.05); admPaint(); });
@@ -5751,10 +5757,10 @@ function admPaint() {
     const fd = t => t ? new Date(t).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
     const paint = r => { const l = r.lic || [], pend = l.filter(x => x.estado === 'pendiente').length; admMsg(pend ? pend + ' pago(s) pendiente(s) de validar. Comprueba en myPOS que te ha llegado el dinero antes de aceptar.' : 'No hay pagos pendientes. Se guardan en el Sheet, pestaña "licencias".');
       const col = { pendiente: '#ffd23c', activa: '#35ff8a', rechazada: '#ff5a6a' };
-      $('pgA').innerHTML = l.map((x, i) => '<div class="akey arow"><span style="flex:1;min-width:180px"><b>' + esc(x.nombre) + '</b><br><span style="color:#8ea3e6;font-size:12px">' + esc(x.email) + '</span></span><b style="color:' + (col[x.estado] || '#fff') + ';width:100px">' + esc(String(x.estado).toUpperCase()) + '</b><span style="color:#8ea3e6;font-size:12px;width:150px">Pedido ' + fd(x.pedido) + '<br>' + x.fallos + ' fallo(s) · ' + x.intentos + ' intento(s)</span>' +
+      $('pgA').innerHTML = l.map((x, i) => '<div class="akey arow"><span style="flex:1;min-width:180px"><b style="color:' + (x.p === 'adv' ? '#7fe9ff' : '#ffd23c') + '">' + (x.p === 'adv' ? '🗺️ AVENTURA · ' + ADV_PRECIO : '🚀 JUEGO NORMAL · ' + LIC_PRECIO) + '</b><br><b>' + esc(x.nombre) + '</b><br><span style="color:#8ea3e6;font-size:12px">' + esc(x.email) + '</span></span><b style="color:' + (col[x.estado] || '#fff') + ';width:100px">' + esc(String(x.estado).toUpperCase()) + '</b><span style="color:#8ea3e6;font-size:12px;width:150px">Pedido ' + fd(x.pedido) + '<br>' + x.fallos + ' fallo(s) · ' + x.intentos + ' intento(s)</span>' +
         (x.estado !== 'activa' ? '<button class="btn" style="border-color:#35ff8a" data-pok="' + i + '">ACEPTAR</button>' : '') + (x.estado !== 'rechazada' ? '<button class="btn red" data-pno="' + i + '">RECHAZAR</button>' : '') + '</div>').join('') || '<div class="akey">Todavía nadie ha comprado la licencia.</div>';
       $('pgA').querySelectorAll('[data-pok],[data-pno]').forEach(b => b.onclick = async () => { if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = '¿SEGURO?'; return; } const x = l[+(b.dataset.pok || b.dataset.pno)], ok = b.dataset.pok !== undefined;
-        try { paint(await admOp(ok ? 'licOk' : 'licNo', { email: x.email })); admMsg(ok ? '✔ Licencia de ' + x.nombre + ' activada' : '✖ Pago de ' + x.nombre + ' rechazado: se le bloquean las fases desde la 3-2'); } catch (e) { admMsg(e.message, 1); } }); };
+        try { paint(await admOp(ok ? 'licOk' : 'licNo', { email: x.email, p: x.p || '' })); admMsg(x.p === 'adv' ? (ok ? '✔ Modo aventura de ' + x.nombre + ' activado' : '✖ Pago de aventura de ' + x.nombre + ' rechazado: no podrá jugar aventuras nuevas hasta que pague') : ok ? '✔ Licencia de ' + x.nombre + ' activada' : '✖ Pago de ' + x.nombre + ' rechazado: se le bloquean las fases desde la 3-2'); } catch (e) { admMsg(e.message, 1); } }); };
     admOp('licList').then(paint).catch(e => admMsg(e.message, 1));
   } else if (admTab === 'NIÑOS') {
     B.innerHTML = '<h3>👶 MODO NIÑOS · CÓDIGO PERMANENTE</h3><div style="color:#8ea3e6">Pásale este código a quien quieras. Lo mete en <b>TALLER › 🔑 CANJEAR CÓDIGO</b> y se le activa el modo niños para siempre: luego lo pone o lo quita en <b>PAUSA › 👶 MODO NIÑOS</b>.<br>Mismas fases pero más fáciles (menos enemigos, huecos más estrechos, jefes de 2 toques, vidas infinitas y más tiempo). No puntúa en el ranking y cada modo guarda su propio avance.<br>También se activa escribiendo <b>KIDS</b> en la consola.</div><div id="kidC" style="font:900 34px system-ui;letter-spacing:.3em;color:#ffd23c;margin:14px 0">…</div><div class="arow"><button class="btn" id="kidCp">COPIAR</button><button class="btn" id="kidNw">GENERAR OTRO CÓDIGO</button></div><div style="color:#8ea3e6;font-size:12px;margin-top:6px">Si generas otro, el anterior deja de servir para nuevos canjes (quien ya lo metió lo conserva).</div><div class="arow" style="margin-top:12px"><button class="btn' + (KID.on ? ' on' : '') + '" id="kidMe">' + (KID.on ? 'MODO NIÑOS ACTIVADO EN ESTE DISPOSITIVO ✔' : 'ACTIVAR MODO NIÑOS EN ESTE DISPOSITIVO') + '</button></div>';
@@ -6290,11 +6296,11 @@ function mergeProg0(cloud) {
 }
 function accDone(r) {
   ACC = { ses: r.ses, email: r.email, nombre: r.nombre }; GUEST = false; try { localStorage.setItem('tl_acc', JSON.stringify(ACC)); localStorage.removeItem('tl_guest'); } catch (e) {}
-  mergeProg(r.progreso); setLic(r.lic); cloudSave(true); accChip(); SFX.win(); accClose(); openMap(); mapMsg = { txt: '¡HOLA, ' + String(ACC.nombre).toUpperCase() + '! PROGRESO GUARDADO EN LA NUBE', t: 3.2, ok: true };
+  mergeProg(r.progreso); setLic(r.lic, r.licA); cloudSave(true); accChip(); SFX.win(); accClose(); openMap(); mapMsg = { txt: '¡HOLA, ' + String(ACC.nombre).toUpperCase() + '! PROGRESO GUARDADO EN LA NUBE', t: 3.2, ok: true };
 }
 function showAccount() {
   accCard('<h2>👤 ' + esc(ACC.nombre) + '</h2><div style="color:#cfe0ff;font-size:14px;margin:4px 0 10px">' + esc(ACC.email) + '<br>Tu progreso se guarda solo en la nube ☁️</div><div class="amsg2" id="amsg2"></div><div class="row"><button class="btn" id="aSync">SINCRONIZAR AHORA</button><button class="btn" id="aOut2" style="border-color:#ff4a6a">CERRAR SESIÓN</button><button class="btn" id="aSw2">CAMBIAR DE USUARIO</button><button class="btn" id="aX2">VOLVER</button></div>');
-  $('aSync').onclick = async () => { accMsg('Sincronizando…'); const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); setLic(r.lic); cloudSave(true); accMsg('✔ Todo al día'); } else accMsg(r.error === 'SESION' ? 'La sesión ha caducado: vuelve a entrar' : r.error, 1); };
+  $('aSync').onclick = async () => { accMsg('Sincronizando…'); const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); setLic(r.lic, r.licA); cloudSave(true); accMsg('✔ Todo al día'); } else accMsg(r.error === 'SESION' ? 'La sesión ha caducado: vuelve a entrar' : r.error, 1); };
   $('aOut2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; setLic(null); try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); accClose(); };
   $('aSw2').onclick = () => { api({ a: 'salir', ses: ACC.ses }); ACC = null; setLic(null); try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); showLogin(); };
   $('aX2').onclick = accClose;
@@ -6646,12 +6652,25 @@ const LT0 = {
   rej1: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hubo un problema con tu pago y no se ha podido verificar, por eso se han vuelto a bloquear las fases desde el Planeta 3.<br><br>Vuelve a intentarlo: al confirmar tendrás el juego <b>desbloqueado 1 hora</b> mientras comprobamos el pago.<br><br>Pago único de <b>{PRECIO}</b>.' },
   rej2: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hemos intentado verificar tu pago dos veces y no ha llegado, por eso se han vuelto a bloquear las fases desde el Planeta 3.<br><br>Si vuelves a pagar, esta vez la licencia se activará <b>cuando confirmemos el pago</b> (en las próximas horas).<br><br>Pago único de <b>{PRECIO}</b>.' },
   pend1: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Tu hora de juego mientras comprobábamos el pago ha terminado. En cuanto verifiquemos tu pago se desbloqueará todo el juego automáticamente.' },
-  pend2: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Después de dos intentos de pago que no pudimos verificar, tu licencia se activará <b>en cuanto confirmemos que el pago ha llegado</b>. Suele tardar unas horas.<br><br>¡Gracias por tu paciencia!' }
+  pend2: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Después de dos intentos de pago que no pudimos verificar, tu licencia se activará <b>en cuanto confirmemos que el pago ha llegado</b>. Suele tardar unas horas.<br><br>¡Gracias por tu paciencia!' },
+  xn: { t: '¿TAMBIÉN QUIERES EL MODO AVENTURA?', h: 'Este pago es para el <b>juego normal COSMOLUCAS</b>. El <b>MODO AVENTURA</b> para niños se compra aparte por solo <b>{PRECIO_AV}</b>: las 10 primeras aventuras son gratis. Puedes activar los dos modos o solo el que quieras.' },
+  aintro: { t: 'MODO AVENTURA · PARA LOS MÁS PEQUEÑOS', h: 'COSMOLUCAS tiene <b>dos juegos</b>:<br><br>🚀 <b>JUGAR</b>: el juego de plataformas de siempre, con planetas, jefes y retos para toda la familia.<br><br>🗺️ <b>JUGAR AVENTURA</b>: un juego tranquilo pensado para <b>niños de 5 a 8 años</b>. Lucas habla con sus amigos, busca objetos escondidos y resuelve misiones. Aquí <b>nadie le hace daño</b> y un narrador lee todos los textos.<br><br>Si buscas acción y plataformas, vuelve y pulsa <b>JUGAR</b>.' },
+  amain: { t: '¡ENHORABUENA, AVENTURERO!', h: '¡Has completado <b>10 aventuras</b>! 🏆<br>Para seguir jugando a <b>todas las aventuras</b> del modo aventura solo hace falta un <b>pago único de {PRECIO}</b>.' },
+  aguest: { t: '¡ENHORABUENA, AVENTURERO!', h: '¡Has completado <b>10 aventuras gratis</b>! Para desbloquear todas las demás hace falta un <b>pago único de {PRECIO}</b>.<br><br>La compra se guarda en tu cuenta, así que primero <b>entra o crea tu cuenta gratis</b>.' },
+  aconf: { t: '¿HAS COMPLETADO EL PAGO?', h: 'Se ha abierto la página de pago de myPOS. Cuando hayas pagado <b>{PRECIO}</b>, vuelve aquí y confirma tu compra para activar el modo aventura completo.' },
+  aok0: { t: '¡GRACIAS POR TU COMPRA!', h: 'El <b>modo aventura completo</b> ya está guardado en tu cuenta. ¡A por todas las aventuras! 🗺️' },
+  aok1: { t: '¡GRACIAS POR TU COMPRA!', h: 'Hemos recibido tu confirmación. Mientras verificamos el pago puedes jugar <b>2 aventuras más</b>.<br><br>En cuanto el pago esté verificado se desbloquean todas automáticamente.' },
+  aok2: { t: '¡GRACIAS POR TU COMPRA!', h: 'Tu compra se activará <b>en las próximas horas</b>, en cuanto verifiquemos el pago.<br><br>Mientras tanto puedes repetir las aventuras que ya has completado.' },
+  arej1: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hubo un problema con tu pago del modo aventura y no se ha podido verificar.<br><br>Vuelve a intentarlo: al confirmar podrás jugar <b>2 aventuras más</b> mientras comprobamos el pago.<br><br>Pago único de <b>{PRECIO}</b>.' },
+  arej2: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hemos intentado verificar tu pago dos veces y no ha llegado.<br><br>Si vuelves a pagar, esta vez el modo aventura se activará <b>cuando confirmemos el pago</b> (en las próximas horas).<br><br>Pago único de <b>{PRECIO}</b>.' },
+  apend: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Ya has jugado las <b>2 aventuras</b> de cortesía. En cuanto verifiquemos tu pago se desbloquearán <b>todas las aventuras</b> automáticamente.<br><br>Mientras tanto puedes repetir las que ya has completado.' },
+  xa: { t: '¿TAMBIÉN QUIERES EL JUEGO NORMAL?', h: 'Este pago es solo para el <b>MODO AVENTURA</b>. El <b>juego normal COSMOLUCAS</b> (plataformas) se compra aparte por <b>{PRECIO_N}</b>: los planetas 1 y 2 y la primera fase del planeta 3 son gratis. Puedes activar los dos o solo el que quieras.' }
 };
-const LT_NOM = { main: 'Cartel de pago (fase 3-2)', guest: 'Sin cuenta', conf: 'Después de pulsar PAGAR', ok0: 'Gracias (1ª compra)', ok1: 'Gracias (tras 1 rechazo: 1 hora)', ok2: 'Gracias (tras 2 rechazos: espera)', rej1: 'Pago rechazado 1 vez', rej2: 'Pago rechazado 2 veces', pend1: 'Pendiente: hora terminada', pend2: 'Pendiente (3er intento)' };
-const LT_IC = { main: '🚀', guest: '🚀', conf: '💳', ok0: '🎉', ok1: '🎉', ok2: '🙏', rej1: '⚠️', rej2: '⚠️', pend1: '⏳', pend2: '⏳' };
+const LT_NOM = { xn: 'Juego normal: oferta del modo aventura (sale debajo del cartel)', aintro: 'AVENTURA · Al pulsar JUGAR AVENTURA', amain: 'AVENTURA · Cartel de pago (tras 10 aventuras)', aguest: 'AVENTURA · Sin cuenta', aconf: 'AVENTURA · Después de pulsar PAGAR', aok0: 'AVENTURA · Gracias (1ª compra)', aok1: 'AVENTURA · Gracias (2 aventuras de cortesía)', aok2: 'AVENTURA · Gracias (tras 2 rechazos: espera)', arej1: 'AVENTURA · Pago rechazado 1 vez', arej2: 'AVENTURA · Pago rechazado 2 veces', apend: 'AVENTURA · Pendiente: cortesía terminada', xa: 'AVENTURA: oferta del juego normal (sale debajo del cartel)', main: 'Cartel de pago (fase 3-2)', guest: 'Sin cuenta', conf: 'Después de pulsar PAGAR', ok0: 'Gracias (1ª compra)', ok1: 'Gracias (tras 1 rechazo: 1 hora)', ok2: 'Gracias (tras 2 rechazos: espera)', rej1: 'Pago rechazado 1 vez', rej2: 'Pago rechazado 2 veces', pend1: 'Pendiente: hora terminada', pend2: 'Pendiente (3er intento)' };
+const LT_IC = { xn: '🗺️', aintro: '🗺️', amain: '🏆', aguest: '🏆', aconf: '💳', aok0: '🎉', aok1: '🎉', aok2: '🙏', arej1: '⚠️', arej2: '⚠️', apend: '⏳', xa: '🚀', main: '🚀', guest: '🚀', conf: '💳', ok0: '🎉', ok1: '🎉', ok2: '🙏', rej1: '⚠️', rej2: '⚠️', pend1: '⏳', pend2: '⏳' };
 let LTX = {}; try { LTX = JSON.parse(localStorage.getItem('tl_ltx') || '{}') || {}; } catch (e) {}
-const lt = (k, f) => String(((LTX[k] && LTX[k][f]) || LT0[k][f])).replace(/\{PRECIO\}/g, LIC_PRECIO);
+const ADV_PRECIO = '0,99 €', ADV_URL = 'https://mypos.com/@futurmovil/0.99', ADV_FREE = 10;
+const lt = (k, f) => String(((LTX[k] && LTX[k][f]) || LT0[k][f])).replace(/\{PRECIO\}/g, /^a[a-z]/.test(k) ? ADV_PRECIO : LIC_PRECIO).replace(/\{PRECIO_AV\}/g, ADV_PRECIO).replace(/\{PRECIO_N\}/g, LIC_PRECIO);
 setTimeout(() => api({ a: 'cfg' }).then(r => { if (r.ok && typeof r.mapCodes === 'boolean') { MAPC.on = r.mapCodes; try { localStorage.setItem('tl_mapc', r.mapCodes ? '1' : '0'); } catch (e) {} if (!r.mapCodes && MAPC.all) { MAPC.all = false; try { localStorage.setItem('tl_mapall', '0'); } catch (e) {} } } }), 2500);
 setTimeout(() => api({ a: 'licTxt' }).then(r => { if (r.ok && r.txt) { LTX = r.txt; try { localStorage.setItem('tl_ltx', JSON.stringify(LTX)); } catch (e) {} } }), 3000);
 const licGated = id => { const w = +String(id).split('-')[0]; return w >= 4 || (w === 3 && id !== '3-1'); };
@@ -6661,7 +6680,9 @@ function licOk() {
   if (LIC.estado === 'pendiente') { if ((LIC.fallos || 0) === 0) return true; if (LIC.fallos === 1) return Date.now() - (LIC.pedido || 0) < 3600e3; }
   return false;
 }
-function setLic(l) { LIC = l || null; try { if (LIC) localStorage.setItem('tl_lic', JSON.stringify(LIC)); else localStorage.removeItem('tl_lic'); } catch (e) {} licWipe(); }
+let LICA = null; try { LICA = JSON.parse(localStorage.getItem('tl_lica') || 'null'); } catch (e) {}
+function setLicA(l) { LICA = l || null; try { if (LICA) localStorage.setItem('tl_lica', JSON.stringify(LICA)); else localStorage.removeItem('tl_lica'); } catch (e) {} }
+function setLic(l, la) { if (la !== undefined || !l) setLicA(la); LIC = l || null; try { if (LIC) localStorage.setItem('tl_lic', JSON.stringify(LIC)); else localStorage.removeItem('tl_lic'); } catch (e) {} licWipe(); }
 function licWipe() {          // si un pago se rechazó, se pierde lo conseguido desde la fase de pago (en todos los dispositivos)
   if (!ACC || !LIC) return; const f = LIC.fallos || 0; let done = 0; try { done = +(localStorage.getItem('tl_lw_' + ACC.email) || 0); } catch (e) {}
   if (f <= done) return; try { localStorage.setItem('tl_lw_' + ACC.email, String(f)); } catch (e) {}
@@ -6671,7 +6692,7 @@ function licWipe() {          // si un pago se rechazó, se pierde lo conseguido
   if (curW > 2) setWorld(2); if (state === 'map') { const i = MAP.findIndex(n => !PROG[n.id]); mapSel = mapAt = Math.max(0, Math.min(i < 0 ? 0 : i, MAP.length - 1)); mapL = { x: MAP[mapSel].x, y: MAP[mapSel].y }; mapCam = null; mapInfo(); }
   cloudSave(true);
 }
-async function licRefresh(force) { if (!ACC || (!force && Date.now() - licT < 60000)) return; licT = Date.now(); const r = await api({ a: 'licEstado', ses: ACC.ses }); if (r.ok) setLic(r.lic); }
+async function licRefresh(force) { if (!ACC || (!force && Date.now() - licT < 60000)) return; licT = Date.now(); const r = await api({ a: 'licEstado', ses: ACC.ses }); if (r.ok) setLic(r.lic, r.licA); }
 const LIC_PERKS = '<div class="uperks"><div>🔓 <b>Todos los planetas</b> y fases secretas</div><div>☁️ Se guarda en <b>tu cuenta</b></div><div>📱 Móvil, tablet, PC y tele</div><div>🚫 Sin suscripciones ni anuncios</div></div>';
 function licMainHtml(h) { return h + '</div><div class="uprice">' + LIC_PRECIO + '</div>' + LIC_PERKS + '<div>'; }
 function licOpenPay() { try { const a = document.createElement('a'); a.href = LIC_URL; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = LIC_URL; } }
@@ -6686,24 +6707,78 @@ async function showPaywall(retry) {
     return;
   }
   const k = est === 'rechazada' ? (f >= 2 ? 'rej2' : 'rej1') : 'main';
-  const v = await uiDialog({ icon: LT_IC[k], tone: k === 'main' ? 'gold' : 'red', title: lt(k, 't'), html: k === 'main' ? licMainHtml(lt(k, 'h')) : lt(k, 'h'), buttons: [{ t: 'AHORA NO', v: 0 }, { t: '💳 PAGAR ' + LIC_PRECIO, cls: 'pay', v: 1 }], foot: 'Pago seguro con myPOS · ' + esc(ACC.email) });
+  const xs = !(LICA && LICA.estado === 'activa');
+  const v = await uiDialog({ icon: LT_IC[k], tone: k === 'main' ? 'gold' : 'red', title: lt(k, 't'), html: (k === 'main' ? licMainHtml(lt(k, 'h')) : lt(k, 'h')) + (xs ? licCross('xn') : ''), buttons: [{ t: 'AHORA NO', v: 0 }].concat(xs ? [{ t: '🗺️ VER MODO AVENTURA', v: 2 }] : []).concat([{ t: '💳 PAGAR ' + LIC_PRECIO, cls: 'pay', v: 1 }]), foot: 'Pago seguro con myPOS · ' + esc(ACC.email) });
+  if (v === 2) return showAdvPaywall(null, true);
   if (!v) return;
   licOpenPay();
   const ok = await uiDialog({ icon: LT_IC.conf, title: lt('conf', 't'), html: lt('conf', 'h'), buttons: [{ t: 'CANCELAR', v: 0 }, { t: 'ABRIR EL PAGO OTRA VEZ', fn: licOpenPay }, { t: '✔ CONFIRMAR COMPRA', cls: 'ok', v: 1 }] });
   if (!ok) return;
   const r = await api({ a: 'licPagar', ses: ACC.ses }); if (!r.ok) { uiAlert('UPS…', 'No hemos podido registrar tu compra: ' + esc(r.error || 'sin conexión') + '. Inténtalo de nuevo.', '📡'); return; }
-  setLic(r.lic); SFX.win();
+  setLic(r.lic, r.licA); SFX.win();
   const kk = licOk() ? (LIC.fallos === 1 ? 'ok1' : 'ok0') : 'ok2';
   await uiDialog({ icon: LT_IC[kk], tone: kk === 'ok2' ? '' : 'gold', title: lt(kk, 't'), html: lt(kk, 'h'), buttons: [{ t: kk === 'ok2' ? 'ENTENDIDO' : 'SEGUIR JUGANDO', cls: 'ok', v: 1 }] });
   if (kk !== 'ok2' && retry) retry();
 }
+// cuadro de la otra compra (opcional), debajo del cartel de pago
+function licCross(k) { return '<div style="margin-top:14px;padding:10px 12px;border:2px dashed rgba(255,210,60,.55);border-radius:14px;background:rgba(255,210,60,.07);text-align:left"><div style="font:900 14px system-ui;color:#ffd23c;margin-bottom:4px">' + LT_IC[k] + ' ' + lt(k, 't') + ' <span style="font-size:11px;color:#9fb0e6">(OPCIONAL)</span></div><div style="font:600 13px/1.4 system-ui;color:#dfe7ff">' + lt(k, 'h') + '</div></div>'; }
+
+/* ======================= MODO AVENTURA: 10 aventuras gratis y luego pago único de 0,99 € ======================= */
+const advDoneN = () => ADV_LV.filter(l => ADV.done[l.id]).length;
+function licAOk() {
+  if (CHEAT.full) return true;
+  if (!ACC || !LICA) return false; if (LICA.estado === 'activa') return true;
+  if (LICA.estado === 'pendiente' && (LICA.fallos || 0) <= 1) {          // pagado y sin verificar: 2 aventuras nuevas de cortesía
+    if (ADV.pbk !== LICA.pedido) { ADV.pbk = LICA.pedido; ADV.pb = advDoneN(); advSave(); }
+    return advDoneN() < (ADV.pb || 0) + 2;
+  }
+  return false;
+}
+const advNeedPay = id => !ADV.done[id] && advDoneN() >= ADV_FREE && !licAOk();
+async function licARefresh() { if (!ACC) return; const r = await api({ a: 'licEstado', ses: ACC.ses }); if (r.ok) setLic(r.lic, r.licA); }
+function advOpenPay() { try { const a = document.createElement('a'); a.href = ADV_URL; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = ADV_URL; } }
+const ADV_PERKS = '<div class="uperks"><div>🗺️ <b>Todas las aventuras</b></div><div>✨ Y todas las <b>aventuras nuevas</b> que vayan saliendo</div><div>☁️ Se guarda en <b>tu cuenta</b></div><div>🚫 Pago único: sin suscripciones ni anuncios</div></div>';
+async function showAdvPaywall(retry, fromOther) {
+  await licARefresh();
+  if (LICA && LICA.estado === 'activa' || CHEAT.full) { if (fromOther) await uiAlert('YA LO TIENES', 'El <b>modo aventura completo</b> ya está activado en tu cuenta.', '🗺️'); else if (retry) retry(); return; }
+  if (!fromOther && licAOk()) { if (retry) retry(); return; }
+  if (!ACC) { const v = await uiDialog({ icon: LT_IC.aguest, tone: 'gold', title: lt('aguest', 't'), html: lt('aguest', 'h'), buttons: [{ t: 'AHORA NO', v: 0 }, { t: 'ENTRAR / CREAR CUENTA', cls: 'ok', v: 1 }] }); if (v) showLogin(); return; }
+  const f = LICA ? LICA.fallos || 0 : 0, est = LICA ? LICA.estado : '';
+  if (est === 'pendiente') {
+    const v = await uiDialog({ icon: LT_IC.apend, title: lt('apend', 't'), html: lt('apend', 'h'), buttons: [{ t: 'VOLVER', v: 0 }, { t: 'COMPROBAR AHORA', cls: 'ok', v: 1 }] });
+    if (v) { await licARefresh(); if (LICA && LICA.estado === 'activa') { await uiAlert('¡MODO AVENTURA ACTIVADO!', 'Tu pago está verificado. ¡A por todas las aventuras!', '🎉'); if (retry) retry(); } else uiAlert('AÚN NO', 'Todavía no hemos podido verificar tu pago. Vuelve a comprobarlo en un rato.', '⏳'); }
+    return;
+  }
+  const k = est === 'rechazada' ? (f >= 2 ? 'arej2' : 'arej1') : 'amain', xs = !(LIC && LIC.estado === 'activa');
+  const v = await uiDialog({ icon: LT_IC[k], tone: k === 'amain' ? 'gold' : 'red', title: lt(k, 't'), html: (k === 'amain' ? lt(k, 'h') + '</div><div class="uprice">' + ADV_PRECIO + '</div>' + ADV_PERKS + '<div>' : lt(k, 'h')) + (xs ? licCross('xa') : ''),
+    buttons: [{ t: 'AHORA NO', v: 0 }].concat(xs && !fromOther ? [{ t: '🚀 VER JUEGO NORMAL', v: 2 }] : []).concat([{ t: '💳 PAGAR ' + ADV_PRECIO, cls: 'pay', v: 1 }]), foot: 'Pago seguro con myPOS · pago único · ' + esc(ACC.email) });
+  if (v === 2) { await licRefresh(true); if (LIC && LIC.estado === 'activa') return uiAlert('YA LO TIENES', 'El <b>juego normal</b> ya está activado en tu cuenta.', '🚀'); return showPaywall(null); }
+  if (!v) return;
+  advOpenPay();
+  const ok = await uiDialog({ icon: LT_IC.aconf, title: lt('aconf', 't'), html: lt('aconf', 'h'), buttons: [{ t: 'CANCELAR', v: 0 }, { t: 'ABRIR EL PAGO OTRA VEZ', fn: advOpenPay }, { t: '✔ CONFIRMAR COMPRA', cls: 'ok', v: 1 }] });
+  if (!ok) return;
+  const r = await api({ a: 'licPagar', ses: ACC.ses, p: 'adv' }); if (!r.ok) { uiAlert('UPS…', 'No hemos podido registrar tu compra: ' + esc(r.error || 'sin conexión') + '. Inténtalo de nuevo.', '📡'); return; }
+  setLicA(r.lic); if (LICA) { ADV.pbk = LICA.pedido; ADV.pb = advDoneN(); advSave(); } SFX.win();
+  const kk = LICA && LICA.estado === 'activa' ? 'aok0' : licAOk() ? 'aok1' : 'aok2';
+  await uiDialog({ icon: LT_IC[kk], tone: kk === 'aok2' ? '' : 'gold', title: lt(kk, 't'), html: lt(kk, 'h'), buttons: [{ t: kk === 'aok2' ? 'ENTENDIDO' : 'SEGUIR JUGANDO', cls: 'ok', v: 1 }] });
+  if (kk !== 'aok2' && retry) retry();
+}
+// al pulsar JUGAR AVENTURA: cartel que explica que hay dos juegos y que la aventura es para niños
+async function advIntro() {
+  const paid = LICA && LICA.estado === 'activa' || CHEAT.full;
+  const v = await uiDialog({ icon: LT_IC.aintro, tone: 'gold', title: lt('aintro', 't'), html: lt('aintro', 'h') + (paid ? '' : '<div style="margin-top:10px;font:700 13px system-ui;color:#9fb0e6">Las <b>' + ADV_FREE + ' primeras aventuras son gratis</b>. Después, todas las aventuras (y las nuevas que vayan saliendo) por un pago único de ' + ADV_PRECIO + '.</div>'),
+    buttons: [{ t: '🚀 IR AL JUEGO NORMAL', v: 2 }, { t: '🗺️ SEGUIR A LA AVENTURA', cls: 'ok', v: 1 }], x: 0 });
+  if (v === 1) advMenu(); else if (v === 2) { try { $('btnPlay').click(); } catch (e) {} }
+}
+
 // panel de admin: los carteles tal cual salen en el juego, con el título y el texto editables
 function admLicTexts(box) {
-  box.innerHTML = '<h3 style="margin:18px 0 6px">TEXTOS DE LOS CARTELES DE PAGO</h3><div style="color:#8ea3e6;margin-bottom:10px">Toca el título o el texto de cualquier cartel para cambiarlo y pulsa GUARDAR TEXTOS. Escribe {PRECIO} donde quieras que salga el precio.</div><div class="uiw" id="ltBox"></div>' +
+  box.innerHTML = '<h3 style="margin:18px 0 6px">TEXTOS DE LOS CARTELES DE PAGO</h3><div style="color:#8ea3e6;margin-bottom:10px">Toca el título o el texto de cualquier cartel para cambiarlo y pulsa GUARDAR TEXTOS. Escribe {PRECIO} donde quieras que salga el precio de ese juego ({PRECIO_AV} = precio de la aventura, {PRECIO_N} = precio del juego normal).</div><div class="uiw" id="ltBox"></div>' +
     '<div class="row"><button class="btn" id="ltSave" style="border-color:#35ff8a">GUARDAR TEXTOS</button><button class="btn red" id="ltReset">VOLVER A LOS ORIGINALES</button></div><div class="amsg" id="ltMsg"></div>';
   const raw = (k, f) => String((LTX[k] && LTX[k][f]) || LT0[k][f]);
-  $('ltBox').innerHTML = Object.keys(LT0).map(k => '<div style="color:#ffd23c;font-weight:800;margin:10px 0 4px">' + LT_NOM[k] + '</div><div class="ucard pv ' + (k === 'main' || k.startsWith('ok') && k !== 'ok2' || k === 'guest' ? 'gold' : k.startsWith('rej') ? 'red' : '') + '"><div class="uic">' + LT_IC[k] + '</div><h2 contenteditable="true" data-lk="' + k + '" data-lf="t">' + raw(k, 't') + '</h2><div class="utx" contenteditable="true" data-lk="' + k + '" data-lf="h">' + raw(k, 'h') + '</div>' +
-    (k === 'main' ? '<div class="uprice">' + LIC_PRECIO + '</div>' + LIC_PERKS : '') + '<div class="urow">' + (k === 'main' || k.startsWith('rej') ? '<button class="btn">AHORA NO</button><button class="btn pay">💳 PAGAR ' + LIC_PRECIO + '</button>' : k === 'conf' ? '<button class="btn">CANCELAR</button><button class="btn">ABRIR EL PAGO OTRA VEZ</button><button class="btn ok">✔ CONFIRMAR COMPRA</button>' : '<button class="btn ok">' + (k.startsWith('pend') ? 'COMPROBAR AHORA' : k === 'guest' ? 'ENTRAR / CREAR CUENTA' : 'SEGUIR JUGANDO') + '</button>') + '</div></div>').join('');
+  const ord = Object.keys(LT0).filter(k => !/^a[a-z]|^xa$/.test(k)).concat(Object.keys(LT0).filter(k => /^a[a-z]|^xa$/.test(k)));
+  $('ltBox').innerHTML = ord.map(k => (k === 'aintro' ? '<h3 style="margin:22px 0 4px;color:#7fe9ff">🗺️ CARTELES DEL MODO AVENTURA (' + ADV_PRECIO + ' · ' + ADV_FREE + ' aventuras gratis)</h3>' : k === 'main' ? '<h3 style="margin:12px 0 4px;color:#7fe9ff">🚀 CARTELES DEL JUEGO NORMAL (' + LIC_PRECIO + ')</h3>' : '') + '<div style="color:#ffd23c;font-weight:800;margin:10px 0 4px">' + LT_NOM[k] + '</div><div class="ucard pv ' + (/^(main|guest|amain|aguest|aintro|aok0|aok1|ok0|ok1)$/.test(k) ? 'gold' : /^a?rej/.test(k) ? 'red' : '') + '"><div class="uic">' + LT_IC[k] + '</div><h2 contenteditable="true" data-lk="' + k + '" data-lf="t">' + raw(k, 't') + '</h2><div class="utx" contenteditable="true" data-lk="' + k + '" data-lf="h">' + raw(k, 'h') + '</div>' +
+    (k === 'main' ? '<div class="uprice">' + LIC_PRECIO + '</div>' + LIC_PERKS : k === 'amain' ? '<div class="uprice">' + ADV_PRECIO + '</div>' + ADV_PERKS : '') + '<div class="urow">' + (k === 'xn' || k === 'xa' ? '<button class="btn">' + (k === 'xn' ? '🗺️ VER MODO AVENTURA' : '🚀 VER JUEGO NORMAL') + '</button>' : k === 'aintro' ? '<button class="btn">🚀 IR AL JUEGO NORMAL</button><button class="btn ok">🗺️ SEGUIR A LA AVENTURA</button>' : k === 'amain' || k.startsWith('arej') ? '<button class="btn">AHORA NO</button><button class="btn pay">💳 PAGAR ' + ADV_PRECIO + '</button>' : k === 'main' || k.startsWith('rej') ? '<button class="btn">AHORA NO</button><button class="btn pay">💳 PAGAR ' + LIC_PRECIO + '</button>' : k === 'conf' || k === 'aconf' ? '<button class="btn">CANCELAR</button><button class="btn">ABRIR EL PAGO OTRA VEZ</button><button class="btn ok">✔ CONFIRMAR COMPRA</button>' : '<button class="btn ok">' + (k.startsWith('pend') || k === 'apend' ? 'COMPROBAR AHORA' : k === 'guest' || k === 'aguest' ? 'ENTRAR / CREAR CUENTA' : k === 'aok2' ? 'ENTENDIDO' : 'SEGUIR JUGANDO') + '</button>') + '</div></div>').join('');
   const msg = t => { $('ltMsg').textContent = t; };
   $('ltSave').onclick = async () => { const o = {}; $('ltBox').querySelectorAll('[data-lk]').forEach(el => { const k = el.dataset.lk, f = el.dataset.lf, h = el.innerHTML.trim(); if (h && h !== LT0[k][f]) (o[k] = o[k] || {})[f] = h; });
     try { await admOp('licTxtSet', { txt: JSON.stringify(o) }); LTX = o; try { localStorage.setItem('tl_ltx', JSON.stringify(o)); } catch (e) {} msg('✔ Textos guardados: los jugadores verán los nuevos carteles'); } catch (e) { msg(e.message); } };
@@ -6711,7 +6786,7 @@ function admLicTexts(box) {
 }
 
 accChip();
-if (ACC) setTimeout(async () => { const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); setLic(r.lic); cloudSave(); } else if (r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, 2500);
+if (ACC) setTimeout(async () => { const r = await api({ a: 'cargar', ses: ACC.ses }); if (r.ok) { mergeProg(r.progreso); setLic(r.lic, r.licA); cloudSave(); } else if (r.error === 'SESION') { ACC = null; try { localStorage.removeItem('tl_acc'); } catch (e) {} accChip(); } }, 2500);
 
 /* ---------- actualización automática ---------- */
 // Mira cada minuto si hay versión nueva. Nunca recarga en mitad de una partida: espera a que el jugador vuelva al menú.
@@ -6779,7 +6854,7 @@ window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { 
 let ADV = { perm: false, done: {} }; try { Object.assign(ADV, JSON.parse(localStorage.getItem('tl_adv') || '{}') || {}); } catch (e) {}
 ADV.done = ADV.done || {};
 function advSave() { try { localStorage.setItem('tl_adv', JSON.stringify(ADV)); } catch (e) {} try { cloudSave(true); } catch (e) {} }
-const advCan = () => !!(ADV.perm || KID.perm || CHEAT.test);
+const advCan = () => true;          // el modo aventura ya está a la vista de todos
 function advBtnUpd() { const b = $('btnAdv'); if (b) b.style.display = advCan() ? '' : 'none'; }
 const ADV_LV = [
   { id: 'A-1', n: 'LAS TRES PERLAS', img: 'planeta-verde', s: 'Doña Almeja ha perdido las tres perlas de su collar en el fondo del mar. Bucea, habla con los animales y encuéntralas.' },
@@ -7057,12 +7132,12 @@ function advDrawWorld() {
   const A = L.adv; if (!A.ready) return; const vis = x => x > cam.x - 200 && x < cam.x + VW + 200;
   if (A.amb) advAmb(A);
   for (const g of A.gates) { if (!vis(g.x)) continue; const h = g.y1p - g.y0p;
-    if (g.kind === 'laser') { const a = g.open ? Math.max(0, 1 - g.ot * 2) : 1;
-      const po = xi('adv-poste'); if (okI(po)) spr(po, g.x + 14, g.y1p + 8, h + 16, 0.5, 1); else { ctx.fillStyle = '#3a4258'; ctx.fillRect(g.x - 10, g.y0p - 14, 20, 16); ctx.fillRect(g.x - 10, g.y1p - 2, 20, 16); }
-      if (a > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
-        for (let k = 0; k < 3; k++) { const ox = -8 + (k - 1) * 5 + Math.sin(time * 9 + k) * 1.5, w = 5 + Math.sin(time * 20 + k * 2) * 1.5; const gr = ctx.createLinearGradient(g.x + ox - w * 2, 0, g.x + ox + w * 2, 0); gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(0.5, 'rgba(255,90,120,.95)'); gr.addColorStop(1, 'rgba(255,40,80,0)'); ctx.fillStyle = gr; ctx.fillRect(g.x + ox - w * 2, g.y0p + 6, w * 4, h - 12); }
-        ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(g.x - 9.5, g.y0p + 6, 3, h - 12); ctx.restore();
-        if (Math.random() < 0.3) parts.push({ x: g.x + (Math.random() - 0.5) * 20, y: g.y0p + Math.random() * h, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, life: 0.4, max: 0.4, col: '#ff8aa0', size: 2, grav: 0 }); } }
+    if (g.kind === 'laser') { const a = g.open ? Math.max(0, 1 - g.ot * 2) : 1, y0 = g.y0p, y1 = g.y1p, bh = y1 - y0 - 12;          // el mismo láser del juego normal: emisores arriba y abajo y rayo rojo
+      if (okI(xi('obj-laser'))) { const li = IMG['obj-laser'], lw = 40, lh = lw * li.naturalHeight / li.naturalWidth; ctx.drawImage(li, g.x - lw / 2, y0 - 6, lw, lh); ctx.save(); ctx.translate(g.x, y1 + 6); ctx.scale(1, -1); ctx.drawImage(li, -lw / 2, 0, lw, lh); ctx.restore();
+        if (a <= 0) { ctx.fillStyle = 'rgba(20,10,20,.55)'; ctx.beginPath(); ctx.arc(g.x, y0 - 6 + lh * 0.9, lw * 0.2, 0, 6.283); ctx.arc(g.x, y1 + 6 - lh * 0.9, lw * 0.2, 0, 6.283); ctx.fill(); } }
+      else { ctx.fillStyle = '#1a2038'; ctx.fillRect(g.x - 11, y0 - 2, 22, 9); ctx.fillRect(g.x - 11, y1 - 7, 22, 9); }
+      if (a > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; const w = 5 + Math.random() * 3, g2 = ctx.createLinearGradient(g.x - 22, 0, g.x + 22, 0); g2.addColorStop(0, 'rgba(255,40,70,0)'); g2.addColorStop(0.5, 'rgba(255,40,70,.55)'); g2.addColorStop(1, 'rgba(255,40,70,0)');
+        ctx.fillStyle = g2; ctx.fillRect(g.x - 22, y0 + 6, 44, bh); ctx.fillStyle = '#ff5a7a'; ctx.fillRect(g.x - w / 2, y0 + 6, w, bh); ctx.fillStyle = '#fff'; ctx.fillRect(g.x - 1, y0 + 6, 2, bh); ctx.restore(); } }
     else if (g.kind === 'door') { const im = xi('adv-puerta', 4); im._n = 4; im._f = g.open ? Math.min(3, Math.floor(g.ot * 6)) : 0; spr(im, g.x, g.y1p + 2, Math.max(h, 2 * T) + 8, 0.5, 1); }
     else if (g.kind === 'vent') { const im = xi('adv-rejilla', 2); im._n = 2; im._f = g.open ? 1 : 0; spr(im, g.x, g.y1p, h, 0.5, 1); } }
   for (const e of A.ents) { if (!vis(e.x) || e.front || (e.hide && e.hide(A.api))) continue;
@@ -7181,16 +7256,17 @@ function advDone() {
 }
 function advMenu() {
   advCss(); tmpOff && tmpOff(); paused = false; state = 'advm'; ['panel', 'top', 'touch', 'mapUI', 'title'].forEach(id => show(id, false)); $('advUse').classList.remove('on'); $('advDlg').classList.remove('on'); ADVT.on = false;
-  const m = $('advMenu'); m.innerHTML = '<h1>🗺️ MODO AVENTURA</h1><div class="sub">Habla con todos, busca objetos escondidos y resuelve cada misión. ¡Aquí nadie te hace daño!</div><div class="lvs">' +
+  const m = $('advMenu'); m.innerHTML = '<h1>🗺️ MODO AVENTURA</h1><div class="sub">Habla con todos, busca objetos escondidos y resuelve cada misión. ¡Aquí nadie te hace daño!</div>' + (LICA && LICA.estado === 'activa' || CHEAT.full ? '' : '<div class="sub" style="color:#ffd23c">' + (advDoneN() < ADV_FREE ? '🎁 Aventuras gratis: llevas ' + advDoneN() + ' de ' + ADV_FREE + ' completadas' : '🔓 Has completado tus ' + ADV_FREE + ' aventuras gratis') + '</div>') + '<div class="lvs">' +
     ADV_LV.map((l, i) => { const ok = typeof LEVELS[l.id] === 'function'; return '<div class="lv' + (ok ? '' : ' off') + '">' + (ADV.done[l.id] ? '<div class="ok">✔ HECHA</div>' : '') + '<img src="' + advImg(l.img) + '" alt=""><h2>NIVEL ' + (i + 1) + ' · ' + l.n + '</h2><p>' + l.s + '</p>' +
       (ok ? '<button class="btn" data-go="' + l.id + '">¡JUGAR!</button> <button class="btn" data-sp="' + i + '" title="Escuchar">🔊</button>' : '<button class="btn" disabled>PRÓXIMAMENTE</button>') + '</div>'; }).join('') +
     '</div><div class="row" style="margin-top:18px;justify-content:center"><button class="btn" id="advBk">VOLVER</button></div>';
   m.classList.add('on');
-  m.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { try { speechSynthesis.cancel(); } catch (e) {} m.classList.remove('on'); curId = b.dataset.go; ADVS = null; startGame(); });
+  const go = id => { try { speechSynthesis.cancel(); } catch (e) {} m.classList.remove('on'); curId = id; ADVS = null; startGame(); };
+  m.querySelectorAll('[data-go]').forEach(b => { if (advNeedPay(b.dataset.go)) b.textContent = '🔒 ¡JUGAR!'; b.onclick = () => { const id = b.dataset.go; if (advNeedPay(id)) showAdvPaywall(() => go(id)).then(() => { if (state === 'advm') advMenu(); }); else go(id); }; });
   m.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { const l = ADV_LV[+b.dataset.sp]; advSpeak(l.n + '. ' + l.s); });
   $('advBk').onclick = () => { try { speechSynthesis.cancel(); } catch (e) {} m.classList.remove('on'); toMenu(); };
 }
-setTimeout(() => { advCss(); const b = $('btnAdv'); if (b) b.onclick = () => { try { audio(); } catch (e) {} goFull(); advMenu(); }; advBtnUpd(); }, 50);
+setTimeout(() => { advCss(); const b = $('btnAdv'); if (b) b.onclick = () => { try { audio(); } catch (e) {} goFull(); advIntro(); }; advBtnUpd(); }, 50);
 
 /* sala · la tienda submarina de Bolita (se baja con el ascensor de la playa) */
 LEVELS['A-1t'] = function () {
@@ -8266,7 +8342,388 @@ advStarRoom('A-30b', 'EL INVERNADERO', { name: 'HOJA', img: 'pj-amarillo', h: 13
 advStarRoom('A-30c', 'EL SÓTANO', { name: 'TIC-TAC', img: 'enemigo-robot-oxidado', h: 120, ask: ['Hola, Lucas. Encontré esta estrella dentro de un reloj viejo. Toma.'] }, { theme: 'fort' }, [{ id: 'd1', kind: 'deco', tx: 8, ty: 12, h: 150, img: 'deco-reloj-0' }]);
 advStarRoom('A-30d', 'EL CIRCO', { name: 'CASCABEL', img: 'jefe8', h: 140, ask: ['¡Bienvenido! Esta estrella era para el espectáculo, pero Rayo la necesita más.'] }, { theme: 'toy' }, [{ id: 'd1', kind: 'deco', tx: 8, ty: 12, h: 60, img: 'deco-circo-0' }]);
 
-window.__TLA = { get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
+/* ======================= FÁBRICA DE MISIONES MEZCLADAS (niveles 31 a 70) ======================= */
+// Cada misión: una zona grande (con su tema) + salas a las que se entra por puertas o teletransportes
+// (cuarto de juguetes, lago con peces, invernadero, sótano...). Se juntan objetos repartidos por todas partes.
+const ADV_IT3 = { tarta: { n: 'tarta', img: 'adv-tarta', h: 46 }, escoba: { n: 'escoba', img: 'adv-escoba', h: 50 }, chip: { n: 'chip', img: 'obj-chip', h: 40 }, tubo: { n: 'tubo', img: 'obj-tubo', h: 44 },
+  caja: { n: 'caja', img: 'obj-caja', h: 44 }, nido: { n: 'nido', img: 'adv-nido', h: 40 }, rubi: { n: 'cristal rojo', img: 'cristal-lava-0', h: 46 }, cristalv: { n: 'cristal saltarín', img: 'cristal-salto', h: 46 },
+  pieza: { n: 'pieza de puzle', img: 'esfera-formas', h: 40 }, numero: { n: 'bola de números', img: 'esfera-numeros', h: 40 }, flecha: { n: 'bola de flechas', img: 'esfera-flechas', h: 40 },
+  antena: { n: 'antena', img: 'obj-antena5g', h: 48 }, poster: { n: 'póster', img: 'adv-poster', h: 50 }, huevo: { n: 'huevo', img: 'huevo-1', h: 44 }, laser: { n: 'pila de láser', img: 'obj-laser', h: 42 },
+  burbuja: { n: 'burbuja mágica', img: 'adv-burbuja-2', h: 42 }, lazo: { n: 'lazo de fiesta', img: 'adv-burbuja-4', h: 42 }, rueda: { n: 'rueda', img: 'obj-engranaje', h: 44 } };
+Object.assign(ADV_IT, ADV_IT3);
+const QW = {          // quién es quién: [imagen, fotogramas, alto, flota]
+  'RAYO': ['pj-amarillo', 0, 124], 'BOLITA': ['pj-bolita', 0, 92, 1], 'PINZAS': ['enemigo-cangrejo', 4, 96], 'TINTA': ['enemigo-pulpo', 4, 100, 1], 'GLOBITO': ['enemigo-pezglobo', 4, 90, 1],
+  'DIENTES': ['enemigo-tiburon', 4, 80, 1], 'MEDI': ['enemigo-medusa', 4, 84, 1], 'ABUELA CONCHA': ['pj-tortuga', 2, 100, 1], 'PELUSÍN': ['enemigo-osito', 4, 96], 'TAMBOR': ['enemigo-soldadito', 4, 104],
+  'MUELLE': ['muneco-sorpresa', 0, 100], 'HÉLICE': ['enemigo-avioneta', 4, 80, 1], 'CASCABEL': ['jefe8', 0, 140], 'COPITO': ['enemigo-patrulla-hielo', 4, 90], 'BRISA': ['enemigo-alien-hielo', 4, 100],
+  'ESCARCHA': ['jefe2', 0, 150], 'BRASA': ['enemigo-patrulla-lava', 4, 90], 'MAGMA': ['jefe3', 0, 150], 'SALTARÍN': ['enemigo-alien-selva', 4, 100], 'MUSGO': ['jefe4', 0, 150], 'HOJA': ['pj-amarillo', 0, 124],
+  'TIC-TAC': ['enemigo-robot-oxidado', 4, 120], 'CAMPANITA': ['enemigo-robot-fantasma', 4, 100, 1], 'RECICLA': ['enemigo-robot-fantasma', 4, 100, 1], 'PLUMITA': ['enemigo-gaviota', 4, 70, 1],
+  'GIRO': ['enemigo-veleta', 4, 110], 'GATO DE PIEDRA': ['enemigo-estatua', 3, 110], 'DOÑA VENDA': ['enemigo-momia', 4, 110], 'CHISPAZO': ['enemigo-tesla', 3, 110], 'CHISPAS': ['pj-chispas', 0, 110],
+  'CAPITÁN ROJO': ['pj-rojo', 0, 120], 'BYTE': ['pj-byte', 0, 110], 'ARENITA': ['enemigo-escorpion', 4, 80], 'ALGODÓN': ['enemigo-nube', 4, 90, 1], 'PINCHO': ['enemigo-cactus', 4, 110],
+  'TUERCAS': ['robot-arreglado', 0, 120], 'DOÑA ALMEJA': ['enemigo-almeja', 0, 90], 'REINA TENTÁCULA': ['jefe5', 0, 170], 'CHISPITA': ['pj-cachorro', 2, 70], 'SALTITOS': ['enemigo-soldadito', 4, 104], 'BOTI': ['enemigo-pelota', 4, 80] };
+const qw = n => { const d = QW[n] || ['pj-amarillo', 0, 110]; return { name: n, img: d[0], fr: d[1] || undefined, h: d[2], float: !!d[3] }; };
+const QTH = { ST: o => o, LS, LT, LJ, LD, LK, LF, LV, LO, ICE: o => Object.assign({ theme: 'ice' }, o) };
+const QAMB = { cielo: () => AMB_SKY, mar: g => [{ k: 'pez', n: 18, y0: 2, y1: g - 1, sp: 50 }, { img: 'enemigo-medusa', fr: 4, n: 3, y0: 3, y1: g - 2, h: 40, sp: 25 }],
+  estrellas: () => [{ k: 'estrella', n: 4, y0: 0, y1: 6 }], luces: g => [{ k: 'luz', n: 16, y0: 3, y1: g - 1, sp: 30 }], nieve: g => [{ k: 'copo', n: 30, y0: 0, y1: g, sp: 15 }],
+  mariposas: g => [{ k: 'mariposa', n: 7, y0: 5, y1: g - 2, sp: 40 }], aviones: () => [{ img: 'enemigo-avioneta', fr: 4, n: 3, y0: 1, y1: 5, h: 42, sp: 90 }, { k: 'mariposa', n: 5, y0: 6, y1: 12, sp: 40 }],
+  gaviotas: () => [{ img: 'enemigo-gaviota', fr: 4, n: 5, y0: 2, y1: 8, h: 34, sp: 60 }], buitres: () => [{ img: 'enemigo-buitre', fr: 4, n: 3, y0: 1, y1: 6, h: 40, sp: 50 }] };
+function advQuest(id, q) {
+  const fem = q.g !== 'o', una = fem ? 'una' : 'un', otra = fem ? 'otra' : 'otro', las = fem ? 'las' : 'los', la = fem ? 'la' : 'lo';
+  const Cap = t => t.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()), itn = () => ADV_IT[q.need].n;
+  const ROOMS = []; q.plan.forEach(p => { if (p[0] === 'room') ROOMS.push(Object.assign({ rid: id + 'abcdefgh'[ROOMS.length] }, p[1])); });
+  const count = A => cnt(q.need, q._N, q._L1, q._F)(A);
+  const ITQ = (xy, w) => ({ id: q.need, tx: xy[0], ty: xy[1], msg: A => ['¡Has encontrado ' + una + ' ' + itn() + ' ' + w + '!', 'Ya tienes ' + A.cnt(q.need) + ' de ' + q._N + '.'], then: count });
+  // ---- salas interiores ----
+  for (const r of ROOMS) {
+    const who = r.who && qw(r.who), outK = r.door === 'tele' ? 'tele' : undefined;
+    if (r.bg) ADV_BG[r.rid] = r.bg;
+    LEVELS[r.rid] = function () {
+      let B, fl, ex = {}, extra = {}; const ents = [], items = [];
+      if (r.k === 'lake') {
+        B = SB(46, 16); fl = 14; B.block(0, 45, 14, 15); B.block(0, 0, 0, 13); B.block(45, 45, 0, 13); B.block(0, 45, 0, 0);
+        B.block(10, 15, 12, 13); B.kelp(9, 14, 5); B.kelp(20, 14, 6); B.kelp(27, 14, 4); B.block(31, 38, 10, 13); B.block(33, 37, 11, 13, ' '); B.block(31, 32, 12, 13, 'C'); B.kelp(41, 14, 5); B.row(16, 29, 9); B.row(20, 40, 4);
+        ex = { theme: r.th || 'jungle', water: { y: 3 * T + 20 }, depth: 0.15 };
+        items.push(ITQ([35, 13], 'en el fondo'));
+        ents.push({ id: 'pz', kind: 'deco', tx: 23, ty: 14, h: 120, img: 'adv-corales', fr: 3, frame: 1 });
+        if (who) ents.push(advNpc({ id: 'lk' + r.rid, who, tx: 20, ty: 10, h: who.h, float: true, ask: r.ask || ['¡Hola! Bienvenido a ' + r.name.toLowerCase() + '.', 'Ahí abajo, dentro de la roca agrietada, brilla algo. ¡Usa tu láser!'] }));
+        extra = { amb: [{ k: 'pez', n: 14, y0: 5, y1: 13, sp: 45 }, { k: 'mariposa', n: 3, y0: 1, y1: 3, sp: 40 }] };
+      } else if (r.k === 'climb') {
+        B = advBox(32, 16); fl = 14; const P = (a, b, ty) => B.block(a, b, ty, ty, '='); P(6, 9, 11); P(12, 15, 8); P(18, 21, 5); P(24, 28, 3); B.row(6, 9, 10); B.row(12, 15, 7); B.row(18, 21, 4);
+        items.push(ITQ([26, 2], 'en lo más alto'));
+        if (who) ents.push(advNpc({ id: 'cl' + r.rid, who, tx: 22, ty: 14, h: who.h, float: who.float, ask: r.ask || ['¡Hola, Lucas! Lo que buscas está arriba del todo.', 'Sube saltando por las plataformas.'] }));
+      } else {
+        B = advBox(26, 14); fl = 12; const P = (a, b, ty) => B.block(a, b, ty, ty, '='); P(9, 13, 9); B.row(9, 13, 8);
+        const give = A => advGot(A, q.need, r.got || ['¡Ya tienes ' + una + ' ' + itn() + '!'], () => count(A));
+        if (r.k === 'trade') ents.push(advNpc({ id: 'tr' + r.rid, who, tx: 18, ty: 12, h: who.h, float: who.float, need: r.req, ask: r.ask, thanks: r.thanks || ['¡Gracias, Lucas! Toma, esto es para ti.'], wait: r.wait || ['¿Me traes ' + (/a$/.test(ADV_IT[r.req].n) ? 'la ' : 'el ') + ADV_IT[r.req].n + '?'], reward: give }));
+        else ents.push(advNpc({ id: 'gv' + r.rid, who, tx: 18, ty: 12, h: who.h, float: who.float, ask: r.ask, reward: give }));
+      }
+      ents.unshift(advWay('out', 3, fl, id, r.x || 20, q.g0 || 15, 'SALIR', outK));
+      for (const d of r.deco || []) ents.push({ id: 'd' + ents.length, kind: 'deco', tx: d[1], ty: fl, h: d[2], img: d[0] });
+      const adv = Object.assign({ root: id, ents, items, gates: [] }, extra);
+      return advRoom(B, r.name, adv, Object.assign(r.k === 'lake' ? {} : { theme: r.th || 'toy' }, ex));
+    };
+  }
+  // ---- zona principal ----
+  LEVELS[id] = function () {
+    let N = 0, x = 20, ri = 0; const feats = [], ents = [], spots = [], hints = [];
+    const boss = qw(q.boss), sea = q.th === 'LO';
+    for (const p of q.plan) { const k = p[0], o = p[1] || {};
+      if (k === 'hill') { feats.push(['hill', x, o.w || 6, o.h || 2, 'h' + x]); if (o.hold || o.it) spots.push(['h' + x, o, 'en lo alto de la colina']); x += (o.w || 6) + 5; }
+      else if (k === 'plats') { feats.push(['plats', x, 'p' + x]); spots.push(['p' + x, o, 'en lo alto de las plataformas']); x += 17; }
+      else if (k === 'rock') { feats.push(['rock', x, 'r' + x]); spots.push(['r' + x, o, 'dentro de una roca agrietada']); x += 11; }
+      else if (k === 'cave') { x += 6; feats.push(['cave', x, 16, 'c' + x]); spots.push(['c' + x, o, 'en una cueva con una pared de mentira']); x += 22; }
+      else if (k === 'plat') { feats.push(['plat', x, 5, (q.H || 18) - 7, 'f' + x]); spots.push(['f' + x, o, 'encima de una plataforma']); x += 9; }
+      else if (k === 'kelp') { if (sea) feats.push(['kelp', x + 2, o.h || 4]); x += 5; }
+      else if (k === 'chest') { ents.push(advChest('ch' + x, x + 2, 0, o.c || 8)); x += 6; }
+      else if (k === 'deco') { ents.push({ id: 'dc' + x, kind: 'deco', tx: x + 2, ty: 0, h: o.h || 100, img: o.img, fr: o.fr, frame: o.frame, front: o.front }); x += o.w || 6; }
+      else if (k === 'npc') { const w = qw(o.who); ents.push(advNpc({ id: 'n' + x, who: w, tx: x + 3, ty: 0, h: w.h, float: w.float, fy: w.float ? -20 : 0, ask: o.ask })); x += 9; }
+      else if (k === 'shop') { const w = qw(o.who), pr = o.price || 10; ents.push(advShop({ id: 's' + x, who: w, tx: x + 3, ty: 0, h: w.h, float: w.float, fy: w.float ? -10 : 0, noTurn: true, item: q.need, price: pr, hello: o.hello || ['¡Hola, Lucas! Tengo ' + una + ' ' + itn() + '. Cuesta ' + pr + ' monedas.'], got: ['¡Ya tienes ' + una + ' ' + itn() + '!'], then: count }));
+        N++; hints.push(la + ' vende ' + Cap(w.name)); x += 9; }
+      else if (k === 'room') { const r = ROOMS[ri++]; r.x = x + 3; ents.push(advWay('w' + r.rid, x + 3, 0, r.rid, 4, r.k === 'lake' || r.k === 'climb' ? 14 : 12, r.name, r.door === 'tele' ? 'tele' : undefined)); N++;
+        const nm = r.who ? Cap(r.who) : '', rn = r.name.toLowerCase();
+        hints.push(r.k === 'lake' ? 'en el fondo de ' + rn : r.k === 'climb' ? 'en lo más alto de ' + rn : la + ' tiene ' + nm + ', en ' + rn); x += 9; } }
+    const wallX = x + 10, W = wallX + 16, B = advStd({ W, H: q.H || 18, sea, roof: sea || q.roof, feats: feats.concat([['wall', wallX]]) }), S = B.S, g = B.g0;
+    q.g0 = g; for (const e of ents) if (!e.ty) e.ty = g;
+    const items = [];
+    for (const [s, o, w] of spots) { const xy = S[s]; if (!xy) continue;
+      if (o.it) items.push({ id: o.it, tx: xy[0], ty: xy[1], msg: () => o.msg || ['¡Has encontrado ' + (/a$/.test(ADV_IT[o.it].n) ? 'una ' : 'un ') + ADV_IT[o.it].n + '!'] });
+      else { N++; hints.push(o.w || w); items.push(ITQ(xy, o.w || w)); } }
+    q._N = N; q._L1 = 'Busca ' + N + ' ' + q.pl; q._F = 'Lleva ' + las + ' ' + q.pl + ' a ' + Cap(boss.name);
+    const hl = hints.length ? ['Hay ' + una + ' ' + hints[0] + (hints.length > 2 ? ', ' + hints.slice(1, -1).map(h => otra + ' ' + h).join(', ') : '') + (hints.length > 1 ? ' y ' + otra + ' ' + hints[hints.length - 1] : '') + '.'] : [];
+    ents.unshift(advNpc({ id: 'boss', who: boss, tx: 9, ty: g, h: boss.h, float: boss.float, fy: boss.float ? -20 : 0, noTurn: boss.h > 135, need: q.need, n: N, goal: q._L1 + ' (0 de ' + N + ')', ask: q.ask.concat(hl),
+      wait: A => ['Llevas ' + A.cnt(q.need) + ' de ' + N + ' ' + q.pl + '.'].concat(hl), thanks: q.thanks, reward: A => advExit(A, q.exitTxt) }));
+    ents.push(...advTeles([['t1', 15, g, q.t1 || 'LA ENTRADA'], ['t2', wallX - 6, g, q.t2 || 'EL FINAL']]));
+    const adv = { goal0: 'Habla con ' + Cap(boss.name), amb: (q.amb || []).flatMap(a => QAMB[a](g)), intro: q.intro, endTxt: q.end, ents, items, fly: sea,
+      gates: [advLaser('salida', wallX, g - 4, g - 1, [q.laser || 'Una barrera de luz. Se apagará cuando termines la misión.'])] };
+    return advMain(B, QTH[q.th || 'ST'], q.n, adv, wallX + 10, g, Object.assign(sea ? { depth: 0.4 } : {}, q.water ? { water: { y: q.water * T } } : {}));
+  };
+  ADV_LV.push({ id, n: q.n, img: q.img, s: q.s });
+}
+
+/* ---------- 31 a 45 · misiones con temáticas mezcladas ---------- */
+advQuest('A-31', { n: 'LA FIESTA ESPACIAL DE PELUSÍN', img: 'deco-fiesta-2', s: 'Pelusín celebra su cumpleaños en la estación espacial. Busca sus regalos por la estación, el cuarto de los juguetes y el lago de los peces.',
+  th: 'ST', amb: ['estrellas'], boss: 'PELUSÍN', need: 'regalo', g: 'o', pl: 'regalos',
+  intro: ['Lucas ha llegado a una estación espacial muy alegre.', 'Hoy es el cumpleaños de Pelusín, pero sus regalos se han repartido por todas partes.'],
+  ask: ['¡Hola, Lucas! Hoy es mi cumpleaños.', 'Mis regalos se han perdido por la estación. ¿Me ayudas a encontrarlos?'], thanks: ['¡Todos mis regalos! ¡Es el mejor cumpleaños del espacio!'],
+  end: 'Lucas encontró todos los regalos de Pelusín.<br>¡La fiesta espacial duró toda la noche!',
+  plan: [['hill'], ['plats'], ['room', { name: 'EL CUARTO DE LOS JUGUETES', bg: 'caja', who: 'TAMBOR', ask: ['¡Firmes! Soy Tambor.', 'Pelusín se dejó un regalo en mi cuarto. Aquí lo tienes.'] }], ['chest'], ['rock'], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DE LOS PECES', who: 'GLOBITO' }], ['shop', { who: 'BOLITA' }], ['hill', { h: 3 }]] });
+
+advQuest('A-32', { n: 'EL ESTANQUE DE LA ABUELA CONCHA', img: 'adv-burbuja-1', s: 'El estanque de la Abuela Concha se ha secado. Reúne gotas de agua mágica por la selva, el invernadero y el lago.',
+  th: 'LJ', amb: ['luces', 'mariposas'], boss: 'ABUELA CONCHA', need: 'gota', pl: 'gotas mágicas',
+  intro: ['Lucas ha llegado a la Selva Luminosa.', 'El estanque donde vive la Abuela Concha se ha quedado sin agua.'],
+  ask: ['Hola, Lucas. Soy la Abuela Concha.', 'Mi estanque se ha secado y mis peces están tristes.', 'Necesito gotas de agua mágica para llenarlo otra vez.'], thanks: ['¡Ya se llena mi estanque! Mis peces vuelven a nadar.'],
+  end: 'Con las gotas mágicas, el estanque volvió a llenarse.<br>¡Los peces de la Abuela Concha saltaban de alegría!',
+  plan: [['plats'], ['cave', { it: 'semilla', msg: ['¡Un saco de semillas!', 'A Hoja le encantan las semillas.'] }], ['room', { k: 'trade', name: 'EL INVERNADERO', bg: 'invernadero', th: 'jungle', who: 'HOJA', req: 'semilla', ask: ['¡Hola, Lucas! Soy Hoja.', 'Tengo una gota mágica, pero me gustaría plantar algo.', 'Si me traes un saco de semillas, te la doy.'], deco: [['deco-plantas-0', 6, 80], ['deco-jardin-2', 23, 55]] }], ['rock'], ['room', { k: 'lake', name: 'EL LAGO ESCONDIDO', who: 'MEDI' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-33', { n: 'LOS JUGUETES DEL CAPITÁN ROJO', img: 'obj-consola', s: 'El Capitán Rojo ha perdido las piezas de su puzle en el barco y en la playa. Búscalas en el mar, en el camarote y en la tienda.',
+  th: 'LO', H: 20, amb: ['mar'], boss: 'CAPITÁN ROJO', need: 'pieza', pl: 'piezas de puzle',
+  intro: ['Lucas bucea junto a un barco hundido.', 'El Capitán Rojo jugaba con un puzle y las piezas se han caído al mar.'],
+  ask: ['¡Ah del barco, Lucas! Soy el Capitán Rojo.', 'Se me han caído las piezas de mi puzle al fondo del mar.'], thanks: ['¡Mi puzle completo! Es un mapa del tesoro.'],
+  end: 'Lucas encontró todas las piezas del puzle.<br>¡Era el mapa de un tesoro y el capitán lo compartió con todos!',
+  plan: [['kelp'], ['hill', { h: 3 }], ['rock'], ['kelp', { h: 6 }], ['deco', { img: 'adv-barco', h: 240, w: 14, front: true }], ['plats'], ['room', { name: 'EL CAMAROTE', bg: 'taller', th: 'ocean', who: 'TINTA', ask: ['¡Hola! Soy Tinta. Esta pieza flotaba por el camarote.', 'Toma, es para el capitán.'] }], ['cave'], ['chest'], ['shop', { who: 'BOLITA' }], ['kelp']] });
+
+advQuest('A-34', { n: 'EL MUÑECO DE NIEVE DE COPITO', img: 'cristal-0', s: 'Copito quiere hacer el muñeco de nieve más grande. Busca cristales de hielo por la nieve, la cueva y el taller de juguetes.',
+  th: 'ICE', amb: ['nieve'], boss: 'COPITO', need: 'cristal', g: 'o', pl: 'cristales de hielo',
+  intro: ['Lucas ha llegado al Planeta de Cristal.', 'Copito quiere construir un muñeco de nieve gigante, pero le faltan cristales.'],
+  ask: ['¡Hola, Lucas! Soy Copito.', 'Quiero hacer el muñeco de nieve más grande del planeta.', 'Para que brille necesito cristales de hielo.'], thanks: ['¡Qué bonito brilla mi muñeco de nieve!'],
+  end: 'El muñeco de nieve de Copito brilla con todos los cristales.<br>¡Se ve desde el espacio!',
+  plan: [['hill'], ['rock'], ['plats'], ['room', { name: 'LA CUEVA DE HIELO', bg: 'cueva', th: 'ice', who: 'BRISA', ask: ['¡Hola! Soy Brisa. En mi cueva se forman cristales muy bonitos.', 'Toma este para Copito.'], deco: [['deco-hielo-0', 8, 90]] }], ['cave'], ['room', { k: 'climb', name: 'EL TALLER DE JUGUETES', bg: 'taller', who: 'MUELLE' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-35', { n: 'EL CIRCO SUBMARINO', img: 'jefe8', s: 'Cascabel quiere hacer un circo debajo del mar. Busca las pelotas por el fondo marino, la carpa y la cueva.',
+  th: 'LO', H: 20, amb: ['mar'], boss: 'CASCABEL', need: 'pelota', pl: 'pelotas',
+  intro: ['Lucas ha llegado al fondo del mar.', 'Cascabel quiere hacer un circo para los peces, pero las pelotas se han ido rodando.'],
+  ask: ['¡Bienvenido! Soy Cascabel.', 'Hoy hago un circo para los peces, pero se me han perdido las pelotas.'], thanks: ['¡Ya tengo todas las pelotas! ¡Que empiece la función!'],
+  end: 'El circo submarino fue un éxito.<br>¡Los peces aplaudían con las aletas!',
+  plan: [['kelp'], ['plats'], ['rock'], ['room', { name: 'LA CARPA DEL CIRCO', bg: 'carpa', who: 'MUELLE', ask: ['¡Sorpresa! Soy Muelle.', 'Esta pelota rebotó hasta la carpa. ¡Toma!'], deco: [['deco-circo-2', 8, 60]] }], ['kelp', { h: 6 }], ['cave'], ['npc', { who: 'DIENTES', ask: ['¡Hola! Soy Dientes. Busca bien en la cueva: la pared del fondo no es de verdad.'] }], ['hill', { h: 4, hold: true }], ['kelp']] });
+
+advQuest('A-36', { n: 'EL TREN DE JUGUETE PERDIDO', img: 'obj-engranaje', s: 'El tren de juguete de Tambor ha perdido sus ruedas. Búscalas por el desierto, la pirámide y el taller.',
+  th: 'LD', amb: ['buitres'], boss: 'TAMBOR', need: 'rueda', pl: 'ruedas',
+  intro: ['Lucas ha llegado al desierto.', 'El tren de juguete de Tambor se ha quedado parado: ha perdido sus ruedas.'],
+  ask: ['¡Firmes! Soy Tambor.', 'Mi tren de juguete iba por el desierto y se le han caído las ruedas.'], thanks: ['¡Chu, chu! ¡Mi tren vuelve a andar!'],
+  end: 'El tren de juguete de Tambor ya tiene todas sus ruedas.<br>¡Ahora lleva pasajeros por todo el desierto!',
+  plan: [['hill'], ['rock'], ['room', { name: 'LA PIRÁMIDE', bg: 'piramide', th: 'desert', who: 'DOÑA VENDA', ask: ['Hola, cariño. Soy Doña Venda.', 'Encontré esta rueda entre mis plantas. Toma.'], deco: [['deco-egipto-0', 7, 120]] }], ['plats'], ['npc', { who: 'ARENITA', ask: ['Hola, soy Arenita. Vi una rueda dentro de una roca agrietada.'] }], ['room', { name: 'EL TALLER', bg: 'taller', th: 'junk', who: 'TUERCAS', ask: ['¡Hola, Lucas! Soy Tuercas.', 'He arreglado esta rueda. Llévasela a Tambor.'] }], ['cave'], ['hill', { h: 3 }]] });
+
+advQuest('A-37', { n: 'LA MERIENDA EN LA LUNA', img: 'adv-tarta', s: 'Rayo prepara una merienda en la luna. Trae manzanas de la selva, del invernadero y del lago.',
+  th: 'ST', amb: ['estrellas'], boss: 'RAYO', need: 'manzana', pl: 'manzanas',
+  intro: ['Lucas aterriza en una base de la luna.', 'Rayo quiere hacer una merienda para todos los astronautas, pero no tiene fruta.'],
+  ask: ['¡Hola, Lucas! Hoy merendamos en la luna.', 'Me faltan manzanas para todos.'], thanks: ['¡Qué manzanas tan ricas! ¡A merendar!'],
+  end: 'La merienda en la luna fue deliciosa.<br>¡Los astronautas comieron manzanas flotando!',
+  plan: [['plats'], ['room', { k: 'climb', door: 'tele', name: 'EL INVERNADERO', bg: 'invernadero', th: 'jungle', who: 'HOJA' }], ['rock'], ['chest'], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DE LOS PATOS', who: 'GLOBITO' }], ['shop', { who: 'BOLITA' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-38', { n: 'EL VOLCÁN DE LOS GLOBOS', img: 'adv-burbuja-0', s: 'Brasa quiere decorar el volcán para una fiesta. Busca globos por la lava, la sala de máquinas y el circo.',
+  th: 'LV', amb: ['luces'], boss: 'BRASA', need: 'globo', g: 'o', pl: 'globos',
+  intro: ['Lucas ha llegado al Planeta Volcánico.', 'Brasa quiere hacer una fiesta, pero sus globos se han escapado.'],
+  ask: ['¡Hola, Lucas! Soy Brasa.', 'Quería decorar el volcán con globos, pero el viento se los llevó.'], thanks: ['¡Mis globos! El volcán está precioso.'],
+  end: 'El volcán se llenó de globos de colores.<br>¡Fue la fiesta más calentita del universo!',
+  plan: [['hill'], ['plats'], ['room', { name: 'LA SALA DE MÁQUINAS', bg: 'maquinas', th: 'lava', who: 'CHISPAZO', ask: ['¡Hola! Soy Chispazo.', 'Un globo se quedó enganchado en mis máquinas. ¡Toma!'] }], ['rock'], ['room', { name: 'LA CARPA', bg: 'carpa', who: 'CASCABEL', ask: ['¡Bienvenido! Este globo entró volando en mi carpa.', 'Llévaselo a Brasa.'] }], ['cave'], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-39', { n: 'LAS LLAVES DEL CASTILLO', img: 'obj-llave', s: 'Tic-Tac ha perdido las llaves del castillo. Búscalas por la fortaleza, el sótano, la biblioteca y el lago.',
+  th: 'LF', amb: ['gaviotas'], boss: 'TIC-TAC', need: 'llavem', pl: 'llaves',
+  intro: ['Lucas ha llegado a la Fortaleza del Tiempo.', 'Tic-Tac ha perdido todas las llaves del castillo.'],
+  ask: ['Hola, Lucas. Soy Tic-Tac, el relojero.', 'He perdido las llaves del castillo y no puedo abrir las puertas.'], thanks: ['¡Todas mis llaves! Ya puedo abrir el castillo.'],
+  end: 'Lucas encontró todas las llaves del castillo.<br>¡Tic-Tac le hizo un reloj de regalo!',
+  plan: [['plats'], ['room', { name: 'EL SÓTANO', bg: 'sotano', th: 'fort', who: 'CAMPANITA', ask: ['¡Uuuh! Soy Campanita.', 'Encontré una llave en el sótano. Es para Tic-Tac.'], deco: [['deco-reloj-0', 7, 130]] }], ['rock'], ['room', { k: 'lake', name: 'EL FOSO DEL CASTILLO', th: 'ocean', who: 'MEDI' }], ['cave'], ['room', { k: 'climb', name: 'LA TORRE', bg: 'templo', th: 'fort', who: 'GIRO' }], ['hill', { h: 3 }]] });
+
+advQuest('A-40', { n: 'EL ACUARIO DE BYTE', img: 'adv-corales', s: 'Byte construye un acuario en la nave espacial. Busca burbujas mágicas en el mar, el laboratorio y la cueva.',
+  th: 'ST', amb: ['estrellas'], boss: 'BYTE', need: 'burbuja', pl: 'burbujas mágicas',
+  intro: ['Lucas ha llegado a una nave espacial enorme.', 'Byte quiere hacer un acuario para los peces del espacio.'],
+  ask: ['¡Hola, Lucas! Soy Byte.', 'Estoy haciendo un acuario, pero necesito burbujas mágicas para el agua.'], thanks: ['¡Ya funciona mi acuario! Mira qué peces tan bonitos.'],
+  end: 'El acuario de Byte quedó precioso.<br>¡Los peces del espacio tienen una casa nueva!',
+  plan: [['hill'], ['room', { name: 'EL LABORATORIO', bg: 'laboratorio', th: 'ocean', who: 'CHISPAS', ask: ['¡Hola! Soy Chispas. He fabricado una burbuja mágica.', 'Toma, para el acuario de Byte.'] }], ['plats'], ['room', { k: 'lake', door: 'tele', name: 'EL MAR DE LOS PECES', th: 'ocean', who: 'GLOBITO' }], ['rock'], ['room', { k: 'lake', door: 'tele', name: 'LA LAGUNA AZUL', who: 'DIENTES' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-41', { n: 'LA ORQUESTA DE LA SELVA', img: 'deco-selva-1', s: 'Saltarín organiza un concierto en la selva. Recupera los instrumentos perdidos: busca engranajes musicales en el templo y en el cuarto de los juguetes.',
+  th: 'LJ', amb: ['luces'], boss: 'SALTARÍN', need: 'eng', g: 'o', pl: 'engranajes',
+  intro: ['Lucas ha llegado a la Selva Luminosa.', 'Saltarín quiere dar un concierto, pero su caja de música no suena.'],
+  ask: ['¡Hola, Lucas! Soy Saltarín.', 'Mi caja de música ha perdido sus engranajes.'], thanks: ['¡Suena! ¡Que empiece el concierto!'],
+  end: 'La caja de música de Saltarín volvió a sonar.<br>¡Todos los animales de la selva bailaron!',
+  plan: [['plats'], ['rock'], ['room', { name: 'EL TEMPLO', bg: 'templo', th: 'jungle', who: 'GATO DE PIEDRA', ask: ['Hola, Lucas. Soy el Gato de Piedra.', 'Guardo un engranaje desde hace mil años. Tómalo.'], deco: [['deco-selva-1', 6, 80]] }], ['cave'], ['room', { name: 'EL CUARTO DE LOS JUGUETES', bg: 'caja', who: 'PELUSÍN', ask: ['¡Hola, Lucas! Este engranaje estaba en mi caja de juguetes.', 'Es para Saltarín.'] }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-42', { n: 'EL HUEVO DE CHISPITA', img: 'huevo-1', s: 'Chispita ha encontrado nidos vacíos por todas partes. Lleva los huevos perdidos a casa desde la playa, la selva y el invernadero.',
+  th: 'LS', amb: ['cielo'], boss: 'PLUMITA', need: 'huevo', g: 'o', pl: 'huevos',
+  intro: ['Lucas vuela por las Islas del Cielo.', 'Una tormenta ha esparcido los huevos de Plumita por todas partes.'],
+  ask: ['¡Hola, Lucas! Soy Plumita.', 'La tormenta se llevó mis huevos. ¿Me ayudas a traerlos al nido?'], thanks: ['¡Mis huevos! Ya están calentitos en el nido.'],
+  end: 'Todos los huevos volvieron al nido de Plumita.<br>¡Pronto nacerán unos pajaritos preciosos!',
+  plan: [['hill'], ['plats'], ['room', { name: 'EL INVERNADERO', bg: 'invernadero', th: 'jungle', who: 'HOJA', ask: ['¡Hola! Este huevo cayó entre mis flores. Lo he cuidado mucho.', 'Llévaselo a Plumita.'] }], ['rock'], ['room', { k: 'climb', name: 'EL NIDO GRANDE', bg: 'templo', th: 'sky', who: 'HÉLICE' }], ['plat'], ['hill', { h: 4, hold: true }]] });
+
+advQuest('A-43', { n: 'LA NAVE DE CHATARRA', img: 'pieza-chatarra', s: 'Recicla quiere construir una nave con chatarra. Busca chips por el desguace, el laboratorio y el sótano.',
+  th: 'LK', amb: ['gaviotas'], boss: 'RECICLA', need: 'chip', g: 'o', pl: 'chips',
+  intro: ['Lucas ha llegado al Cementerio de Naves.', 'Recicla está construyendo una nave nueva con piezas viejas.'],
+  ask: ['¡Hola, Lucas! Soy Recicla.', 'Mi nave de chatarra está casi lista, pero le faltan chips.'], thanks: ['¡Brrrum! ¡Mi nave ya se enciende!'],
+  end: 'La nave de chatarra de Recicla ya funciona.<br>¡Ahora limpia el espacio de basura!',
+  plan: [['rock'], ['plats'], ['room', { name: 'EL LABORATORIO', bg: 'laboratorio', th: 'junk', who: 'CHISPAS', ask: ['¡Hola! Tenía un chip de sobra en el laboratorio.', 'Toma, para Recicla.'] }], ['chest'], ['room', { k: 'trade', name: 'EL SÓTANO', bg: 'sotano', th: 'junk', who: 'CAMPANITA', req: 'linterna', ask: ['¡Uuuh! Aquí está muy oscuro.', 'Si me traes una linterna, te doy un chip.'] }], ['cave', { it: 'linterna', msg: ['¡Una linterna!', 'A Campanita le da miedo la oscuridad del sótano.'] }], ['shop', { who: 'BOLITA' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-44', { n: 'LA BIBLIOTECA DE LA PIRÁMIDE', img: 'deco-egipto-3', s: 'Doña Venda busca los escarabajos de la suerte. Explora el desierto, la pirámide, el oasis y el templo.',
+  th: 'LD', amb: ['buitres'], boss: 'DOÑA VENDA', need: 'escarabajo', g: 'o', pl: 'escarabajos',
+  intro: ['Lucas ha llegado al Desierto de los Anillos.', 'Doña Venda ha perdido sus escarabajos de la suerte.'],
+  ask: ['Hola, cariño. Soy Doña Venda.', 'Mis escarabajos de la suerte se han escapado.'], thanks: ['¡Mis escarabajos! ¡Qué suerte tengo!'],
+  end: 'Lucas encontró todos los escarabajos de la suerte.<br>¡Doña Venda le regaló una flor del desierto!',
+  plan: [['hill'], ['room', { name: 'LA PIRÁMIDE', bg: 'piramide', th: 'desert', who: 'GATO DE PIEDRA', ask: ['Hola. Soy el Gato de Piedra.', 'Un escarabajo se escondió detrás de mí. Tómalo.'], deco: [['deco-egipto-1', 9, 80]] }], ['rock'], ['room', { k: 'lake', name: 'EL OASIS', who: 'GLOBITO' }], ['plats'], ['room', { k: 'climb', name: 'EL TEMPLO ALTO', bg: 'templo', th: 'desert', who: 'PINCHO' }], ['cave']] });
+
+advQuest('A-45', { n: 'EL GRAN DESFILE', img: 'deco-fiesta-0', s: 'Todos los amigos preparan un gran desfile. Busca lazos de fiesta por la ciudad, el circo, la tienda y el lago.',
+  th: 'LT', amb: ['aviones'], boss: 'CASCABEL', need: 'lazo', g: 'o', pl: 'lazos de fiesta',
+  intro: ['Lucas ha llegado al Mundo de los Juguetes.', 'Hoy hay un gran desfile, pero faltan los lazos para las carrozas.'],
+  ask: ['¡Bienvenido, Lucas! Hoy es el gran desfile.', 'Necesito lazos de fiesta para adornar las carrozas.'], thanks: ['¡Qué carrozas tan bonitas! ¡Empieza el desfile!'],
+  end: 'El gran desfile recorrió todo el Mundo de los Juguetes.<br>¡Lucas fue en la primera carroza!',
+  plan: [['plats'], ['room', { name: 'LA CARPA', bg: 'carpa', who: 'MUELLE', ask: ['¡Sorpresa! Tengo un lazo para el desfile.', '¡Toma!'] }], ['rock'], ['room', { name: 'LA TIENDA', bg: 'tienda', who: 'BOLITA', ask: ['¡Hola, Lucas! Este lazo te lo regalo.', 'Para el desfile.'] }], ['cave'], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DEL PARQUE', who: 'MEDI' }], ['hill', { h: 3, hold: true }]] });
+
+/* ---------- 46 a 70 · más misiones mezcladas ---------- */
+advQuest('A-46', { n: 'LA BIBLIOTECA SUBMARINA', img: 'deco-mar-3', s: 'Doña Almeja ha perdido sus caracolas de cuentos. Búscalas por el mar, la cueva de cristal y el cuarto de lectura.',
+  th: 'LO', H: 20, amb: ['mar'], boss: 'DOÑA ALMEJA', need: 'caracola', pl: 'caracolas',
+  intro: ['Lucas bucea hasta la biblioteca del fondo del mar.', 'Doña Almeja guarda cuentos dentro de caracolas, pero la corriente se las ha llevado.'],
+  ask: ['Hola, Lucas. Soy Doña Almeja.', 'Dentro de mis caracolas se escuchan cuentos preciosos, y se me han perdido.'], thanks: ['¡Mis caracolas! Esta noche contaré cuentos a todos los peces.'],
+  end: 'Las caracolas volvieron a la biblioteca submarina.<br>¡Cada noche se cuenta un cuento nuevo en el fondo del mar!',
+  plan: [['kelp'], ['plats'], ['rock'], ['room', { name: 'EL CUARTO DE LECTURA', bg: 'tienda', th: 'ocean', who: 'ABUELA CONCHA', ask: ['Hola, Lucas. Estaba leyendo con esta caracola.', 'Ya me sé el cuento. Llévasela a Doña Almeja.'] }], ['kelp', { h: 6 }], ['cave'], ['room', { k: 'lake', name: 'LA CUEVA DE CRISTAL', th: 'ocean', who: 'MEDI' }], ['hill', { h: 4, hold: true }], ['kelp']] });
+
+advQuest('A-47', { n: 'EL ROBOT JARDINERO', img: 'deco-jardin-1', s: 'Tuercas quiere plantar un jardín en la nave. Busca sacos de semillas por la nave, el invernadero y el lago.',
+  th: 'ST', amb: ['estrellas'], boss: 'TUERCAS', need: 'semilla', g: 'o', pl: 'sacos de semillas',
+  intro: ['Lucas ha llegado a una nave muy gris.', 'Tuercas quiere llenarla de flores, pero no tiene semillas.'],
+  ask: ['¡Hola, Lucas! Soy Tuercas.', 'Esta nave es muy gris. ¡Quiero plantar un jardín!', 'Necesito sacos de semillas.'], thanks: ['¡Ya puedo plantar! Mi nave va a ser la más bonita.'],
+  end: 'La nave de Tuercas se llenó de flores.<br>¡Ahora huele de maravilla en todo el espacio!',
+  plan: [['hill'], ['plats'], ['room', { name: 'EL INVERNADERO', bg: 'invernadero', th: 'jungle', who: 'HOJA', ask: ['¡Hola! Tengo un saco de semillas de girasol.', 'Para el jardín de Tuercas.'], deco: [['deco-plantas-3', 6, 90]] }], ['rock'], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DE LOS NENÚFARES', who: 'GLOBITO' }], ['chest'], ['shop', { who: 'BOLITA' }], ['cave']] });
+
+advQuest('A-48', { n: 'LA CARRERA DE COCHES', img: 'obj-consola', s: 'Boti organiza una carrera de coches de juguete. Busca las ruedas que faltan por el circuito, el taller y la caja de juguetes.',
+  th: 'LT', amb: ['aviones'], boss: 'BOTI', need: 'rueda', pl: 'ruedas',
+  intro: ['Lucas ha llegado al Mundo de los Juguetes.', 'Hoy hay una gran carrera, pero los coches no tienen ruedas.'],
+  ask: ['¡Hola, Lucas! Soy Boti.', 'La carrera empieza pronto y a los coches les faltan ruedas.'], thanks: ['¡Preparados, listos... ya! ¡Qué carrera!'],
+  end: 'La carrera de coches fue emocionante.<br>¡Y el coche de Lucas llegó el primero!',
+  plan: [['plats'], ['room', { name: 'EL TALLER', bg: 'taller', who: 'TUERCAS', ask: ['¡Hola! He pintado esta rueda de rojo.', 'Para el coche más rápido.'] }], ['rock'], ['room', { k: 'climb', name: 'LA CAJA DE JUGUETES', bg: 'caja', who: 'MUELLE' }], ['cave'], ['npc', { who: 'TAMBOR', ask: ['¡Firmes! He visto una rueda dentro de una caja agrietada.'] }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-49', { n: 'LOS FAROLILLOS DE LA SELVA', img: 'adv-linterna', s: 'Musgo quiere iluminar la selva por la noche. Busca linternas por la selva, el templo y la cueva.',
+  th: 'LJ', amb: ['luces'], boss: 'MUSGO', need: 'linterna', pl: 'linternas',
+  intro: ['Es de noche en la Selva Luminosa.', 'Musgo quiere poner luces para que los animales no se pierdan.'],
+  ask: ['Hola, Lucas. Soy Musgo.', 'De noche la selva está muy oscura y los animales se pierden.', 'Necesito linternas para iluminar el camino.'], thanks: ['¡Qué bonita está la selva con luces!'],
+  end: 'La selva se llenó de luces.<br>¡Ningún animal se volverá a perder de noche!',
+  plan: [['hill'], ['rock'], ['room', { name: 'EL TEMPLO', bg: 'templo', th: 'jungle', who: 'GATO DE PIEDRA', ask: ['Hola, Lucas. Esta linterna alumbra mi templo desde hace siglos.', 'Musgo la necesita más que yo.'] }], ['plats'], ['room', { name: 'LA CUEVA', bg: 'cueva', th: 'jungle', who: 'SALTARÍN', ask: ['¡Hola! Encontré esta linterna en la cueva.', 'Toma, para Musgo.'] }], ['cave'], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-50', { n: 'LA ESTRELLA FUGAZ', img: 'estrella-chip', s: 'Una estrella fugaz se ha roto en pedazos. Busca las estrellas por el cielo, el observatorio y el lago.',
+  th: 'LS', amb: ['estrellas', 'cielo'], boss: 'ALGODÓN', need: 'estrella', pl: 'estrellas',
+  intro: ['Lucas vuela entre las nubes.', 'Una estrella fugaz chocó con una nube y se rompió en pedacitos.'],
+  ask: ['Hola, Lucas. Soy Algodón, la nube.', 'Sin querer choqué con una estrella fugaz y se ha roto.', '¿Me ayudas a juntar los pedacitos?'], thanks: ['¡La estrella vuelve a brillar! Mira cómo vuela.'],
+  end: 'La estrella fugaz volvió a cruzar el cielo.<br>¡Lucas pidió un deseo!',
+  plan: [['plats'], ['plat'], ['room', { name: 'EL OBSERVATORIO', bg: 'laboratorio', th: 'sky', who: 'BYTE', ask: ['¡Hola! Con mi telescopio vi caer un pedazo de estrella.', 'Lo he guardado para ti.'] }], ['hill', { h: 3, hold: true }], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DE LAS NUBES', who: 'PLUMITA' }], ['rock'], ['plat']] });
+
+advQuest('A-51', { n: 'EL TESORO DEL DESIERTO', img: 'esfera-oro', s: 'El Explorador Rojo busca monedas de oro por el desierto, la pirámide, el oasis y la tienda.',
+  th: 'LD', amb: ['buitres'], boss: 'CAPITÁN ROJO', need: 'oro', pl: 'monedas de oro',
+  intro: ['Lucas ha llegado al desierto.', 'El Capitán Rojo ha encontrado un mapa de un tesoro muy antiguo.'],
+  ask: ['¡Hola, Lucas! Este mapa dice que hay monedas de oro escondidas.', 'Con ellas arreglaremos el pozo del pueblo.'], thanks: ['¡El tesoro completo! El pueblo tendrá agua.'],
+  end: 'Con las monedas de oro se arregló el pozo.<br>¡Ahora el pueblo del desierto tiene agua fresca!',
+  plan: [['hill'], ['rock'], ['room', { k: 'climb', name: 'LA PIRÁMIDE', bg: 'piramide', th: 'desert', who: 'DOÑA VENDA' }], ['plats'], ['room', { k: 'lake', name: 'EL OASIS', who: 'GLOBITO' }], ['chest'], ['shop', { who: 'BOLITA', price: 12 }], ['cave']] });
+
+advQuest('A-52', { n: 'LAS BOTAS DE COPITO', img: 'adv-botas', s: 'Copito tiene frío en los pies. Busca cristales de hielo para fabricar unas botas mágicas en la nieve, la tienda y el taller.',
+  th: 'ICE', amb: ['nieve'], boss: 'COPITO', need: 'cristal', g: 'o', pl: 'cristales de hielo',
+  intro: ['Lucas ha llegado a una montaña nevada.', 'Copito quiere unas botas mágicas para patinar sin caerse.'],
+  ask: ['¡Hola, Lucas! Quiero patinar sobre el lago helado.', 'Con cristales de hielo puedo fabricar unas botas mágicas.'], thanks: ['¡Mis botas mágicas! ¡Vamos a patinar!'],
+  end: 'Copito patina sobre el lago con sus botas mágicas.<br>¡Y le enseñó a Lucas a hacer piruetas!',
+  plan: [['plats'], ['room', { name: 'LA TIENDA', bg: 'tienda', th: 'ice', who: 'BOLITA', ask: ['¡Hola! Tengo un cristal de hielo en el escaparate.', 'Te lo regalo para Copito.'] }], ['rock'], ['room', { name: 'EL TALLER', bg: 'taller', th: 'ice', who: 'TUERCAS', ask: ['¡Hola! Estaba puliendo este cristal.', 'Ya brilla mucho. ¡Llévatelo!'] }], ['cave'], ['room', { k: 'lake', name: 'EL LAGO HELADO', th: 'ice', who: 'BRISA' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-53', { n: 'EL PASTEL DE LA REINA', img: 'adv-tarta', s: 'La Reina Tentácula cumple años. Reúne manzanas para el pastel por el mar, el palacio y el jardín.',
+  th: 'LO', H: 20, amb: ['mar'], boss: 'REINA TENTÁCULA', need: 'manzana', pl: 'manzanas',
+  intro: ['Lucas ha llegado a la Ciudad de las Burbujas.', 'Hoy es el cumpleaños de la Reina Tentácula y quieren hacerle un pastel de manzana.'],
+  ask: ['Hola, Lucas. Hoy es mi cumpleaños.', 'Quería un pastel de manzana, pero no quedan manzanas.'], thanks: ['¡Qué pastel tan rico! Gracias, Lucas.'],
+  end: 'El pastel de manzana de la Reina fue un éxito.<br>¡Todos los peces cantaron cumpleaños feliz!',
+  plan: [['kelp'], ['rock'], ['plats'], ['room', { name: 'EL PALACIO', bg: 'fiesta', th: 'ocean', who: 'PINZAS', ask: ['¡Hola! Soy el cocinero del palacio.', 'Guardé esta manzana para el pastel. ¡Toma!'] }], ['kelp', { h: 6 }], ['cave'], ['room', { k: 'climb', name: 'EL JARDÍN DE CORAL', bg: 'invernadero', th: 'ocean', who: 'TINTA' }], ['kelp']] });
+
+advQuest('A-54', { n: 'LA BANDA DE MÚSICA', img: 'deco-circo-1', s: 'Tambor quiere formar una banda. Busca los engranajes de los instrumentos por la fortaleza, el sótano y el circo.',
+  th: 'LF', amb: ['gaviotas'], boss: 'TAMBOR', need: 'eng', g: 'o', pl: 'engranajes',
+  intro: ['Lucas ha llegado a la Fortaleza del Tiempo.', 'Tambor quiere tocar en una banda, pero los instrumentos están rotos.'],
+  ask: ['¡Firmes! Soy Tambor.', 'Quiero formar una banda de música, pero a los instrumentos les faltan engranajes.'], thanks: ['¡Un, dos, tres! ¡Que suene la banda!'],
+  end: 'La banda de Tambor tocó en lo alto de la fortaleza.<br>¡Se escuchaba desde todos los planetas!',
+  plan: [['plats'], ['rock'], ['room', { name: 'EL SÓTANO', bg: 'sotano', th: 'fort', who: 'TIC-TAC', ask: ['Hola, Lucas. Este engranaje es de un reloj viejo.', 'Seguro que sirve para un instrumento.'] }], ['cave'], ['room', { name: 'LA CARPA', bg: 'carpa', who: 'CASCABEL', ask: ['¡Bienvenido! Mi trompeta ya no la uso.', 'Toma su engranaje.'] }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-55', { n: 'EL HOSPITAL DE JUGUETES', img: 'enemigo-osito', s: 'Los juguetes están rotos. Busca las herramientas por la ciudad de juguetes, el taller y el laboratorio.',
+  th: 'LT', amb: ['mariposas'], boss: 'PELUSÍN', need: 'destornillador', g: 'o', pl: 'destornilladores',
+  intro: ['Lucas ha llegado al Mundo de los Juguetes.', 'Pelusín es el médico de los juguetes, pero ha perdido sus herramientas.'],
+  ask: ['¡Hola, Lucas! Soy el doctor Pelusín.', 'Hay muchos juguetes rotos y he perdido mis destornilladores.'], thanks: ['¡Ya puedo curar a todos los juguetes!'],
+  end: 'El doctor Pelusín arregló todos los juguetes.<br>¡Ahora juegan felices en el parque!',
+  plan: [['hill'], ['plats'], ['room', { name: 'EL TALLER', bg: 'taller', who: 'TUERCAS', ask: ['¡Hola! Tengo un destornillador de sobra.', 'Para el doctor Pelusín.'] }], ['rock'], ['room', { name: 'EL LABORATORIO', bg: 'laboratorio', who: 'CHISPAS', ask: ['¡Hola! Este destornillador es mágico: aprieta solo.', '¡Toma!'] }], ['cave'], ['shop', { who: 'BOLITA' }], ['chest']] });
+
+advQuest('A-56', { n: 'LOS VOLCANES DORMIDOS', img: 'cristal-lava-0', s: 'Magma necesita cristales rojos para despertar los volcanes con fuegos artificiales. Búscalos por la lava, las máquinas y la cueva.',
+  th: 'LV', amb: ['luces'], boss: 'MAGMA', need: 'rubi', g: 'o', pl: 'cristales rojos',
+  intro: ['Lucas ha llegado al Planeta Volcánico.', 'Magma quiere hacer fuegos artificiales para la fiesta del planeta.'],
+  ask: ['Hola, Lucas. Soy Magma.', 'Esta noche hay fiesta y quiero lanzar fuegos artificiales desde los volcanes.', 'Para eso necesito cristales rojos.'], thanks: ['¡Mira qué fuegos artificiales tan bonitos!'],
+  end: 'Los volcanes lanzaron fuegos artificiales de colores.<br>¡Fue la fiesta más brillante del Planeta Volcánico!',
+  plan: [['hill'], ['plats'], ['room', { name: 'LA SALA DE MÁQUINAS', bg: 'maquinas', th: 'lava', who: 'BRASA', ask: ['¡Hola! Esta piedra roja calentaba mis máquinas.', 'Llévasela a Magma.'] }], ['rock'], ['room', { k: 'climb', name: 'LA CUEVA DE FUEGO', bg: 'cueva', th: 'lava', who: 'CHISPAZO' }], ['cave'], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-57', { n: 'EL PICNIC EN LA PLAYA', img: 'adv-playa', s: 'Pinzas organiza un picnic en la playa. Busca manzanas por la arena, el chiringuito y el mar.',
+  th: 'LS', amb: ['gaviotas'], boss: 'PINZAS', need: 'manzana', pl: 'manzanas',
+  intro: ['Lucas ha llegado a una playa preciosa.', 'Pinzas quiere hacer un picnic, pero las gaviotas se han llevado las manzanas.'],
+  ask: ['¡Hola, Lucas! Soy Pinzas.', 'Las gaviotas se han llevado las manzanas del picnic.'], thanks: ['¡A comer! El picnic está listo.'],
+  end: 'El picnic en la playa fue genial.<br>¡Hasta las gaviotas pidieron perdón y comieron con todos!',
+  deco: [['adv-playa', 30, 160, 4, 1], ['adv-playa', 70, 110, 4, 3]],
+  plan: [['plats'], ['rock'], ['room', { name: 'EL CHIRINGUITO', bg: 'tienda', th: 'ocean', who: 'BOLITA', ask: ['¡Hola! Una gaviota dejó caer esta manzana en mi chiringuito.', '¡Toma!'] }], ['plat'], ['room', { k: 'lake', name: 'EL MAR', th: 'ocean', who: 'DIENTES' }], ['cave'], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-58', { n: 'EL ROBOT PERDIDO', img: 'robot-arreglado', s: 'Un robot pequeño se ha desmontado. Busca sus chips por el desguace, el taller, el sótano y el lago.',
+  th: 'LK', amb: ['gaviotas'], boss: 'RECICLA', need: 'chip', g: 'o', pl: 'chips',
+  intro: ['Lucas ha llegado al Cementerio de Naves.', 'Recicla ha encontrado un robot pequeño que no se mueve.'],
+  ask: ['¡Hola, Lucas! Este robot pequeño se ha quedado sin chips.', 'Si los encontramos, podrá volver a jugar.'], thanks: ['¡El robot pequeño se despierta! ¡Hola, amigo!'],
+  end: 'El robot pequeño volvió a funcionar.<br>¡Ahora es el ayudante de Recicla!',
+  plan: [['rock'], ['room', { name: 'EL TALLER', bg: 'taller', th: 'junk', who: 'TUERCAS', ask: ['¡Hola! Este chip lo he limpiado yo.', 'Funciona perfecto.'] }], ['plats'], ['room', { k: 'trade', name: 'EL SÓTANO', bg: 'sotano', th: 'junk', who: 'CAMPANITA', req: 'fusible', ask: ['¡Uuuh! Mi luz se ha apagado.', 'Si me traes una pila, te doy un chip.'] }], ['cave', { it: 'fusible', msg: ['¡Una pila!', 'Campanita necesita una pila para su luz.'] }], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DE ACEITE', th: 'ocean', who: 'GLOBITO' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-59', { n: 'LA NOCHE DE LAS LUCIÉRNAGAS', img: 'adv-burbuja-3', s: 'Las luciérnagas no encuentran su casa. Lleva burbujas mágicas a Hoja desde la selva, el invernadero y la cueva.',
+  th: 'LJ', amb: ['luces', 'mariposas'], boss: 'HOJA', need: 'burbuja', pl: 'burbujas mágicas',
+  intro: ['Es de noche en la Selva Luminosa.', 'Las luciérnagas se han perdido y Hoja quiere guiarlas con burbujas mágicas.'],
+  ask: ['¡Hola, Lucas! Soy Hoja.', 'Las luciérnagas se han perdido. Con burbujas mágicas podré hacerles un camino de luz.'], thanks: ['¡Mira! Las luciérnagas ya vuelven a casa.'],
+  end: 'Las luciérnagas siguieron el camino de luz.<br>¡La selva brilla otra vez por la noche!',
+  plan: [['plats'], ['rock'], ['room', { name: 'EL INVERNADERO', bg: 'invernadero', th: 'jungle', who: 'MUSGO', ask: ['Hola, Lucas. Esta burbuja nació en una flor.', 'Llévasela a Hoja.'] }], ['cave'], ['room', { k: 'lake', name: 'EL LAGO DE LAS RANAS', who: 'SALTARÍN' }], ['hill', { h: 3, hold: true }], ['plat']] });
+
+advQuest('A-60', { n: 'LA GRAN EXPEDICIÓN', img: 'adv-cohete', s: 'Rayo prepara la expedición más grande. Trae una antena de cada lugar: el hielo, la selva, el mar y el circo.',
+  th: 'ST', amb: ['estrellas'], boss: 'RAYO', need: 'antena', pl: 'antenas',
+  intro: ['Lucas ha llegado a la Estación del Gran Viaje.', 'Rayo quiere hablar con todos los planetas a la vez, pero necesita antenas.'],
+  ask: ['¡Hola, Lucas! Quiero construir una radio gigante.', 'Necesito antenas. Los teletransportes te llevan a cada sitio.'], thanks: ['¡Hola, planetas! ¿Me escucháis? ¡Funciona!'],
+  end: 'La radio gigante de Rayo ya funciona.<br>¡Ahora todos los amigos de Lucas pueden hablar entre ellos!',
+  plan: [['room', { door: 'tele', name: 'EL PLANETA DE HIELO', bg: 'cueva', th: 'ice', who: 'COPITO', ask: ['¡Hola, Lucas! Esta antena estaba congelada.', 'Ya se ha derretido el hielo. ¡Toma!'] }], ['room', { door: 'tele', name: 'LA SELVA', bg: 'templo', th: 'jungle', who: 'SALTARÍN', ask: ['¡Hola! Usaba esta antena para escuchar a los pájaros.', 'Rayo la necesita más.'] }], ['room', { k: 'lake', door: 'tele', name: 'EL FONDO DEL MAR', th: 'ocean', who: 'MEDI' }], ['room', { door: 'tele', name: 'EL CIRCO', bg: 'carpa', who: 'CASCABEL', ask: ['¡Bienvenido! Esta antena era del altavoz del circo.', '¡Para la radio de Rayo!'] }], ['plats'], ['rock']] });
+
+advQuest('A-61', { n: 'EL FARO DE LA ISLA', img: 'baliza', s: 'El faro de la isla se ha apagado. Busca pilas por la playa, la cueva marina y el faro.',
+  th: 'LS', amb: ['gaviotas'], boss: 'PLUMITA', need: 'fusible', pl: 'pilas',
+  intro: ['Lucas ha llegado a una isla en medio del mar.', 'El faro se ha apagado y los barcos no ven el camino.'],
+  ask: ['¡Hola, Lucas! Soy Plumita.', 'El faro se ha quedado sin pilas y los barcos se pueden perder.'], thanks: ['¡El faro vuelve a brillar! Los barcos ya ven el camino.'],
+  end: 'El faro de la isla brilla toda la noche.<br>¡Los barcos llegan a puerto sin perderse!',
+  plan: [['hill'], ['rock'], ['room', { k: 'climb', name: 'EL FARO', bg: 'templo', th: 'sky', who: 'GIRO' }], ['plats'], ['room', { k: 'lake', name: 'LA CUEVA MARINA', th: 'ocean', who: 'TINTA' }], ['shop', { who: 'BOLITA' }], ['chest'], ['cave']] });
+
+advQuest('A-62', { n: 'LAS MOMIAS BAILARINAS', img: 'enemigo-momia', s: 'Doña Venda organiza un baile en la pirámide. Busca bolas de discoteca por el desierto, la pirámide y el templo.',
+  th: 'LD', amb: ['buitres'], boss: 'DOÑA VENDA', need: 'bola', pl: 'bolas de discoteca',
+  intro: ['Lucas ha llegado a la pirámide.', 'Doña Venda quiere hacer una fiesta de baile para todas las momias.'],
+  ask: ['Hola, cariño. Esta noche hay baile en la pirámide.', 'Pero se me han perdido las bolas de discoteca.'], thanks: ['¡A bailar! ¡Qué luces tan bonitas!'],
+  end: 'El baile de las momias fue divertidísimo.<br>¡Doña Venda bailó toda la noche con Lucas!',
+  plan: [['plats'], ['room', { name: 'LA PIRÁMIDE', bg: 'piramide', th: 'desert', who: 'GATO DE PIEDRA', ask: ['Hola. Esta bola rodó hasta mis patas.', 'A mí no me gusta bailar. Tómala.'] }], ['rock'], ['room', { name: 'LA SALA DE FIESTAS', bg: 'fiesta', th: 'desert', who: 'ARENITA', ask: ['¡Hola! Estaba practicando el baile con esta bola.', 'Llévasela a Doña Venda.'] }], ['cave'], ['room', { k: 'climb', name: 'EL TEMPLO', bg: 'templo', th: 'desert', who: 'PINCHO' }]] });
+
+advQuest('A-63', { n: 'EL ZOO DE LAS ESTRELLAS', img: 'pj-cachorro', s: 'Chispita quiere construir un zoo espacial. Busca nidos para los animales por la nave, el invernadero, el lago y la carpa.',
+  th: 'ST', amb: ['estrellas'], boss: 'CHISPITA', need: 'nido', g: 'o', pl: 'nidos',
+  intro: ['Lucas ha llegado a una nave espacial.', 'Chispita quiere hacer un zoo donde los animales del espacio vivan felices.'],
+  ask: ['¡Guau! ¡Hola, Lucas! Soy Chispita.', 'Quiero hacer un zoo para los animales del espacio.', 'Necesito nidos para que duerman calentitos.'], thanks: ['¡Guau, guau! ¡Ya tenemos zoo!'],
+  end: 'El zoo de las estrellas abrió sus puertas.<br>¡Todos los animales tienen un nido calentito!',
+  plan: [['hill'], ['room', { name: 'EL INVERNADERO', bg: 'invernadero', th: 'jungle', who: 'HOJA', ask: ['¡Hola! He tejido este nido con hojas.', 'Para el zoo de Chispita.'] }], ['plats'], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DEL ZOO', who: 'GLOBITO' }], ['rock'], ['room', { name: 'LA CARPA', bg: 'carpa', who: 'MUELLE', ask: ['¡Sorpresa! Encontré un nido en mi sombrero.', '¡Tómalo!'] }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-64', { n: 'LA TORMENTA DE NIEVE', img: 'deco-hielo-2', s: 'Una tormenta ha esparcido las linternas de Escarcha. Búscalas en la nieve, la cueva helada y la torre.',
+  th: 'ICE', amb: ['nieve'], boss: 'ESCARCHA', need: 'linterna', pl: 'linternas',
+  intro: ['Lucas ha llegado al Planeta de Cristal.', 'Una tormenta de nieve ha esparcido las linternas que alumbran el camino.'],
+  ask: ['Hola, Lucas. Soy Escarcha.', 'La tormenta se llevó mis linternas y ahora nadie ve el camino.'], thanks: ['¡El camino brilla otra vez! Gracias, Lucas.'],
+  end: 'Las linternas alumbran el camino de nieve.<br>¡Ya nadie se pierde en el Planeta de Cristal!',
+  plan: [['hill'], ['plats'], ['room', { name: 'LA CUEVA HELADA', bg: 'cueva', th: 'ice', who: 'COPITO', ask: ['¡Hola! Una linterna entró rodando en mi cueva.', 'Toma, para Escarcha.'] }], ['rock'], ['room', { k: 'climb', name: 'LA TORRE DE HIELO', bg: 'templo', th: 'ice', who: 'BRISA' }], ['cave'], ['hill', { h: 4, hold: true }]] });
+
+advQuest('A-65', { n: 'EL MUSEO DE LOS PLANETAS', img: 'planeta-anillo', s: 'Byte abre un museo. Busca pósters de planetas por la estación, el laboratorio, la pirámide y el sótano.',
+  th: 'ST', amb: ['estrellas'], boss: 'BYTE', need: 'poster', g: 'o', pl: 'pósters',
+  intro: ['Lucas ha llegado a la Estación Orbital.', 'Byte quiere abrir un museo con pósters de todos los planetas.'],
+  ask: ['¡Hola, Lucas! Mañana abro mi museo.', 'Pero los pósters de los planetas se han perdido.'], thanks: ['¡El museo está listo! Pasen, pasen.'],
+  end: 'El Museo de los Planetas abrió sus puertas.<br>¡El póster favorito de todos es el de Lucas!',
+  plan: [['plats'], ['room', { name: 'EL LABORATORIO', bg: 'laboratorio', who: 'CHISPAS', ask: ['¡Hola! Este póster lo usaba para estudiar.', 'Ya me lo sé de memoria. ¡Tómalo!'] }], ['rock'], ['room', { name: 'LA PIRÁMIDE', bg: 'piramide', th: 'desert', who: 'DOÑA VENDA', ask: ['Hola, cariño. Este póster estaba en mi pared.', 'Llévaselo a Byte.'] }], ['cave'], ['room', { k: 'trade', name: 'EL SÓTANO', bg: 'sotano', th: 'fort', who: 'CAMPANITA', req: 'linterna', ask: ['¡Uuuh! Tengo un póster, pero aquí no veo nada.', 'Si me traes una linterna, te lo doy.'] }], ['hill', { it: 'linterna', msg: ['¡Una linterna!', 'Campanita la necesita en el sótano.'] }]] });
+
+advQuest('A-66', { n: 'LOS HUEVOS DE LA TORTUGA', img: 'pj-tortuga', s: 'La Abuela Concha ha perdido sus huevos en la playa. Búscalos por la arena, el mar y la cueva de las rocas.',
+  th: 'LS', amb: ['gaviotas'], boss: 'ABUELA CONCHA', need: 'huevo', g: 'o', pl: 'huevos',
+  intro: ['Lucas ha llegado a la playa de las tortugas.', 'Las olas se han llevado los huevos de la Abuela Concha.'],
+  ask: ['Hola, Lucas. Soy la Abuela Concha.', 'Las olas se llevaron mis huevos. ¡Pronto nacerán mis tortuguitas!'], thanks: ['¡Mis huevos! Ya están a salvo en la arena.'],
+  end: 'Los huevos de la Abuela Concha están a salvo.<br>¡Pronto nacerán unas tortuguitas preciosas!',
+  deco: [['adv-playa', 40, 160, 4, 0], ['adv-playa', 90, 120, 4, 1]],
+  plan: [['hill'], ['plats'], ['room', { k: 'lake', name: 'EL MAR', th: 'ocean', who: 'PINZAS' }], ['rock'], ['room', { name: 'LA CUEVA DE LAS ROCAS', bg: 'cueva', th: 'ocean', who: 'TINTA', ask: ['¡Hola! Un huevo entró en mi cueva con la marea.', 'Lo he cuidado mucho. ¡Toma!'] }], ['cave'], ['plat']] });
+
+advQuest('A-67', { n: 'EL DESPERTAR DEL GIGANTE', img: 'jefe4', s: 'El gigante de piedra no despierta. Busca bolas de números por la selva, el templo, las máquinas y el lago.',
+  th: 'LJ', amb: ['luces'], boss: 'GATO DE PIEDRA', need: 'numero', pl: 'bolas de números',
+  intro: ['Lucas ha llegado a un templo de la selva.', 'Un gigante de piedra duerme desde hace mil años. Para despertarlo hay que juntar las bolas de números.'],
+  ask: ['Hola, Lucas. Soy el Gato de Piedra.', 'Mi amigo el gigante lleva mil años dormido.', 'Con las bolas de números podemos despertarlo.'], thanks: ['¡Mira! El gigante abre los ojos.'],
+  end: 'El gigante de piedra despertó y sonrió.<br>¡Ahora cuida de la selva junto al Gato de Piedra!',
+  plan: [['plats'], ['room', { name: 'EL TEMPLO', bg: 'templo', th: 'jungle', who: 'MUSGO', ask: ['Hola, Lucas. Esta bola estaba en el altar.', 'Llévasela al Gato de Piedra.'] }], ['rock'], ['room', { name: 'LAS MÁQUINAS', bg: 'maquinas', th: 'jungle', who: 'CHISPAZO', ask: ['¡Hola! Mis máquinas encontraron esta bola.', '¡Tómala!'] }], ['cave'], ['room', { k: 'lake', name: 'EL LAGO SAGRADO', who: 'MEDI' }], ['hill', { h: 3, hold: true }]] });
+
+advQuest('A-68', { n: 'EL CASTILLO DE LOS JUGUETES', img: 'muneco-sorpresa', s: 'Muelle construye un castillo de juguete. Busca las cajas de construcción por la ciudad, la torre y el sótano.',
+  th: 'LT', amb: ['aviones'], boss: 'MUELLE', need: 'caja', pl: 'cajas',
+  intro: ['Lucas ha llegado al Mundo de los Juguetes.', 'Muelle quiere construir el castillo más alto de todos.'],
+  ask: ['¡Sorpresa! Soy Muelle.', 'Quiero construir un castillo de juguete enorme.', 'Me faltan cajas de construcción.'], thanks: ['¡Mi castillo está terminado! ¡Es el más alto!'],
+  end: 'El castillo de juguete de Muelle llega hasta las nubes.<br>¡Desde arriba se ve todo el Mundo de los Juguetes!',
+  plan: [['hill'], ['room', { k: 'climb', name: 'LA TORRE', bg: 'caja', who: 'PELUSÍN' }], ['plats'], ['room', { name: 'EL SÓTANO', bg: 'sotano', th: 'toy', who: 'TAMBOR', ask: ['¡Firmes! Esta caja estaba en el sótano.', '¡Para el castillo!'] }], ['rock'], ['shop', { who: 'BOLITA' }], ['chest'], ['cave']] });
+
+advQuest('A-69', { n: 'EL CIRCO VOLADOR', img: 'enemigo-avioneta', s: 'Hélice quiere hacer un circo en el cielo. Busca globos por las nubes, la carpa, el taller y el lago.',
+  th: 'LS', amb: ['cielo'], boss: 'HÉLICE', need: 'globo', g: 'o', pl: 'globos',
+  intro: ['Lucas vuela por las Islas del Cielo.', 'Hélice quiere hacer un circo que vuele, ¡pero necesita globos!'],
+  ask: ['¡Hola, Lucas! Soy Hélice.', 'Quiero que el circo vuele por el cielo.', 'Para eso necesito muchos globos.'], thanks: ['¡El circo despega! ¡Todos a bordo!'],
+  end: 'El circo volador recorrió todo el cielo.<br>¡Los niños de todos los planetas lo saludaban!',
+  plan: [['plats'], ['plat'], ['room', { name: 'LA CARPA', bg: 'carpa', who: 'CASCABEL', ask: ['¡Bienvenido! Este globo es para el circo volador.', '¡Que vuele alto!'] }], ['hill', { h: 3, hold: true }], ['room', { name: 'EL TALLER', bg: 'taller', th: 'sky', who: 'TUERCAS', ask: ['¡Hola! He inflado este globo con mi máquina.', '¡Llévatelo!'] }], ['room', { k: 'lake', door: 'tele', name: 'EL LAGO DE LAS NUBES', who: 'PLUMITA' }], ['rock']] });
+
+advQuest('A-70', { n: 'LA FIESTA DE TODOS LOS AMIGOS', img: 'deco-fiesta-1', s: 'Lucas organiza una gran fiesta para todos sus amigos. Recoge regalos en la estación, el mar, la selva, el hielo y el circo.',
+  th: 'ST', amb: ['estrellas'], boss: 'RAYO', need: 'regalo', g: 'o', pl: 'regalos',
+  intro: ['Lucas ha llegado a la Estación del Gran Viaje.', 'Hoy se celebra la gran fiesta de todos los amigos, y Lucas lleva los regalos.'],
+  ask: ['¡Hola, Lucas! ¡Hoy es la gran fiesta!', 'Cada amigo ha preparado un regalo. Ve a buscarlos con los teletransportes.'], thanks: ['¡Todos los regalos! ¡Que empiece la fiesta!'],
+  end: 'Todos los amigos de Lucas vinieron a la gran fiesta.<br>¡Gracias por jugar, aventurero!',
+  plan: [['room', { k: 'lake', door: 'tele', name: 'EL MAR', th: 'ocean', who: 'GLOBITO' }], ['room', { door: 'tele', name: 'LA SELVA', bg: 'templo', th: 'jungle', who: 'SALTARÍN', ask: ['¡Hola, Lucas! Este regalo es para la fiesta.', '¡Nos vemos allí!'] }], ['room', { door: 'tele', name: 'EL HIELO', bg: 'cueva', th: 'ice', who: 'COPITO', ask: ['¡Hola! He envuelto este regalo con papel de nieve.', '¡Para la fiesta!'] }], ['room', { door: 'tele', name: 'EL CIRCO', bg: 'carpa', who: 'CASCABEL', ask: ['¡Bienvenido! Aquí tienes mi regalo.', '¡Qué gran fiesta va a ser!'] }], ['plats'], ['rock'], ['cave']] });
+
+window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
 LEVELS['A-1'] = function () {
   const W = 240, H = 30, B = SB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
