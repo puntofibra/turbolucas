@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.87';
+const VERSION = '1.88';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7620,8 +7620,17 @@ function advCB(im) {          // parte visible de una imagen (las tiras de los b
 }
 // edificio detrás de cada puerta de la aventura, con el nombre de la sala en su cartel
 // cartel luminoso de SALIDA encima de la puerta o el portal para salir de una sala
+function advExitPad(e) {          // plataforma de luz donde Lucas se coloca para salir
+  e._nodoor = true; e._fac = 1; e.lbl = '✨ SALIR'; const x = e.x, y = e.y - 2, t = time; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const gl = ctx.createRadialGradient(x, y, 4, x, y, 90); gl.addColorStop(0, 'rgba(90,255,160,.55)'); gl.addColorStop(1, 'rgba(60,220,255,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.ellipse(x, y, 90, 22, 0, 0, 6.283); ctx.fill();
+  const col = ctx.createLinearGradient(0, y, 0, y - 150); col.addColorStop(0, 'rgba(110,255,190,' + (0.22 + 0.08 * Math.sin(t * 3)).toFixed(3) + ')'); col.addColorStop(1, 'rgba(110,255,190,0)'); ctx.fillStyle = col; ctx.fillRect(x - 46, y - 150, 92, 150);
+  ctx.lineWidth = 3; for (let r = 0; r < 3; r++) { const k = (t * 0.7 + r / 3) % 1; ctx.strokeStyle = 'rgba(140,255,200,' + (1 - k).toFixed(3) + ')'; ctx.beginPath(); ctx.ellipse(x, y, 20 + k * 62, 5 + k * 15, 0, 0, 6.283); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(120,230,255,.85)'; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 40; ctx.beginPath(); ctx.ellipse(x, y, 66, 16, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+  if (Math.random() < 0.35) parts.push({ x: x + (Math.random() - 0.5) * 80, y: y - 2, vx: 0, vy: -50 - Math.random() * 60, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#8affc0' : '#9fefff', size: 2, grav: 0 });
+}
 function advExitSign(e) {
-  const im = xi('adv-salida'); if (!okI(im)) return; const w = 176, h = w * im.naturalHeight / im.naturalWidth, top = e.kind === 'tele' ? e.y - 2 * T - 46 - 56 : e.y - e.h - 46, x = e.x, y = top - h - 6 + Math.sin(time * 1.5) * 2;
+  if (e.kind === 'way') advExitPad(e);
+  const im = xi('adv-salida'); if (!okI(im)) return; const w = 176, h = w * im.naturalHeight / im.naturalWidth, top = e.kind === 'tele' ? e.y - 2 * T - 46 - 56 : e.y - 182, x = e.x, y = top - h - 6 + Math.sin(time * 1.5) * 2;
   const on = 0.55 + 0.45 * Math.abs(Math.sin(time * 2.4)), fl = Math.random() < 0.015 ? 0.3 : 1, a = on * fl;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y + h * 0.55, 6, x, y + h * 0.55, w * 0.9); gg.addColorStop(0, 'rgba(80,255,120,' + 0.35 * a + ')'); gg.addColorStop(1, 'rgba(80,255,120,0)'); ctx.fillStyle = gg; ctx.fillRect(x - w, y - h * 0.4, w * 2, h * 2); ctx.restore();
   ctx.drawImage(im, x - w / 2, y, w, h);
