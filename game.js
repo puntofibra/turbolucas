@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.85';
+const VERSION = '1.86';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7614,6 +7614,10 @@ function advExitSign(e) {
   if (Math.random() < 0.06) parts.push({ x: x + (Math.random() - 0.5) * w * 0.7, y: y + h * 0.6, vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 30, life: 0.6, max: 0.6, col: '#8aff9a', size: 1.8, grav: 0 });
 }
 function advBuilding(e) {
+  { const bg = ADV_BG[e.room], f = bg && ADV_FAC[bg], fi = f && xi('fac-' + f);
+    if (fi && okI(fi)) { const H = e.h * 2.5, W = H * fi.naturalWidth / fi.naturalHeight; ctx.drawImage(fi, e.x - W / 2, e.y + 6 - H, W, H);
+      const nm = String(e.name || ''); ctx.font = '900 14px system-ui'; ctx.textAlign = 'center'; const tw = ctx.measureText(nm).width + 18, ty = e.y + 6 - H - 10;
+      ctx.fillStyle = 'rgba(10,16,40,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(e.x - tw / 2, ty - 15, tw, 22, 11) : ctx.rect(e.x - tw / 2, ty - 15, tw, 22); ctx.fill(); ctx.fillStyle = '#ffe27a'; ctx.fillText(nm, e.x, ty + 1); e._fac = 1; return; } }
   const im = xi('adv-edificio', 3); if (!okI(im)) return; im._n = 3; let hsh = 0; for (const c of e.id) hsh = (hsh * 31 + c.charCodeAt(0)) % 997; im._f = hsh % 3;
   const H = e.h / 0.543, W = H * (im.naturalWidth / 3) / im.naturalHeight, x0 = e.x - W / 2, y0 = e.y + 4 - H * 0.985;
   ctx.drawImage(im, im._f * im.naturalWidth / 3, 0, im.naturalWidth / 3, im.naturalHeight, x0, y0, W, H);
@@ -8025,7 +8029,7 @@ function advTeles(list) {          // varios teletransportes que se conectan ent
 }
 function advWay(id, tx, ty, room, rx, ry, name, img) {          // puerta o transportador a otra sala
   const tele = img === 'tele';
-  return { id, kind: tele ? 'tele' : 'way', tx, ty, h: tele ? 120 : 110, img: tele ? 'adv-teleport' : 'adv-puerta', fr: tele ? undefined : 4, frame: 0, name, lbl: tele ? '✨ VIAJAR' : '🚪 ENTRAR',
+  return { id, room, kind: tele ? 'tele' : 'way', tx, ty, h: tele ? 120 : 110, img: tele ? 'adv-teleport' : 'adv-puerta', fr: tele ? undefined : 4, frame: 0, name, lbl: tele ? '✨ VIAJAR' : '🚪 ENTRAR',
     use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => A.go(room, rx, ry) }, { t: 'QUEDARME AQUÍ' }]); if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
 }
 function advLever(id, tx, ty, gate, txt) { return { id, kind: 'lever', tx, ty, h: 64, name: 'PALANCA', lbl: '✋ TIRAR', use: (A, e) => { if (e.on) return A.say(NR, ['La palanca ya está bajada.']); e.on = true; e.opened = true; A.say(NR, txt || ['¡Has bajado la palanca! La barrera de luz se apaga.'], () => A.open(gate)); } }; }
@@ -10928,6 +10932,17 @@ Object.assign(ADV_IT, {
 Object.assign(QW, { 'PROFE CHIP': ['anim-profe', 4, 112], 'GRANJERA TRIGO': ['anim-granjera', 4, 112], 'BOMBERA MANGUERA': ['anim-bombera', 4, 112], 'CHEF FOGÓN': ['anim-chef', 4, 112], 'MAGO ESTELAR': ['anim-mago', 4, 114] });
 Object.assign(ADV_ANIM, { 'PROFE CHIP': 'profe', 'GRANJERA TRIGO': 'granjera', 'BOMBERA MANGUERA': 'bombera', 'CHEF FOGÓN': 'chef', 'MAGO ESTELAR': 'mago' });
 ADV_FEM.add('GRANJERA TRIGO'); ADV_FEM.add('BOMBERA MANGUERA'); ADV_FEM.add('PROFE CHIP');
+
+/* ---------- últimos dibujos: personajes propios, objetos que se confundían, máquinas con dos estados y fachadas ---------- */
+Object.assign(ADV_IT.cristalh, { img: 'it-cristal-azul' }); Object.assign(ADV_IT.parabolica, { img: 'it-parabolica' }); Object.assign(ADV_IT.engp, { img: 'it-engranaje-plata' });
+Object.assign(ADV_IT.huevo, { img: 'it-huevo' }); Object.assign(ADV_IT.chatarra, { img: 'it-chatarra' }); Object.assign(ADV_IT.laser, { img: 'it-laser' }); Object.assign(ADV_IT.burbuja, { img: 'it-burbuja' });
+Object.assign(ADV_IT.botas, { img: 'it-botas' }); Object.assign(ADV_IT.pieza, { img: 'it-pieza' }); Object.assign(ADV_IT.llave, { img: 'it-llave-antigua' });
+Object.assign(QW, { 'BOTI': ['anim-boti', 4, 84], 'SALTITOS': ['anim-saltitos', 4, 106], 'CHISPITA': ['anim-chispita', 4, 76], 'PULPITO': ['anim-pulpito', 4, 86, 1] });
+Object.assign(ADV_ANIM, { 'BOTI': 'boti', 'SALTITOS': 'saltitos', 'CHISPITA': 'chispita', 'PULPITO': 'pulpito' });
+AV_MQ.unshift([/MÁQUINA DE PILAS/, 'pilas'], [/TUBERÍA/, 'tuberia'], [/NAVE ABANDONADA|NAVE ROTA/, 'nave', 110], [/GRÚA/, 'grua', 120], [/^RELOJ/, 'reloj', 130], [/MESA DE TRABAJO|SOLDADURA/, 'mesa'],
+  [/^LÁMPARA/, 'lampara', 90], [/CALDERO/, 'caldero', 90], [/TELESCOPIO/, 'telescopio'], [/HELADOS/, 'helados', 120]);
+const ADV_FAC = { granja: 'granja', casaarbol: 'casaarbol', acuario: 'acuario', pociones: 'pociones', forja: 'forja', pasteleria: 'pasteleria', museo: 'museo', mina: 'mina', teatro: 'teatro', carpa: 'teatro',
+  trono: 'trono', fortaleza: 'trono', mazmorra: 'trono', hospital: 'hospital', biblioteca: 'biblioteca', correos: 'correos', escuela: 'escuela', cine: 'cine' };
 // Cada aventura se monta con piezas: personajes del mundo, salas, máquinas que se arreglan con su herramienta y personajes que piden cosas.
 // La cadena se construye hacia atrás desde el objeto final, así que siempre se puede terminar.
 const GZ = {
@@ -11105,6 +11120,9 @@ const GZ_M = [
   { name: 'PANEL DE LA BARRERA LÁSER', img: 'deco-maquinas-0', need: 'tarjeta', look: '¡Unos rayos láser rojos cortan el paso! El panel tiene un lector de tarjetas.', fix: '¡Pip! ¡Los rayos láser se apagan!', f: 1, beams: 1, pre: 'Los rayos láser no dejan pasar. Habrá que apagarlos.', door: '¡Hay rayos láser delante de la puerta! Habrá que apagarlos.' },
   { name: 'CHARCA DE LA RANA DORADA', img: 'esc-rana', fr: 4, f0: 0, f1: 3, h: 80, need: 'caja', look: 'Una charca con dos ojitos dorados asomando. La rana dorada es muy tímida y no quiere salir.', fix: 'Suena la musiquita… ¡la rana dorada salta del agua y croa feliz! Te da algo que guardaba en el fondo.', g: 'any', th: ['LJ', 'LO', 'LS'] },
   { name: 'FARO APAGADO', img: 'esc-faro', fr: 3, f0: 0, f1: 2, h: 140, need: 'bombilla', look: 'Un faro apagado. Sin su luz, nadie encuentra el camino.', fix: 'Enroscas la bombilla… ¡el faro se enciende y lo ilumina todo!', f: 1, pre: 'Está todo tan oscuro que no se ve nada. Habría que encender el faro.', door: 'Está oscurísimo: sin la luz del faro no se encuentra la puerta.', th: ['LS', 'LO', 'ICE'] },
+  { name: 'CALDERO MÁGICO', img: 'deco-maquinas-2', need: 'pocion', look: 'Un caldero frío y vacío. Al lado hay un libro que dice: «Echa una poción y verás».', fix: '¡Glu, glu, plof! El caldero burbujea verde… ¡y de dentro sale algo flotando!', g: ['varita', 'libroh', 'estrella', 'pergamino'], th: ['LF', 'LJ', 'LS'] },
+  { name: 'TELESCOPIO ROTO', img: 'deco-maquinas-2', need: 'cristalh', look: 'Un telescopio con la lente rota. Sin lente no se ve nada.', fix: 'Pones el cristal azul de lente… ¡ves algo brillante en el cielo y cae justo a tus pies!', g: ['estrella', 'meteorito', 'piedralunar', 'mapa'], th: ['ST', 'LS', 'ICE'] },
+  { name: 'MÁQUINA DE HELADOS', img: 'deco-maquinas-2', need: 'cable', look: 'Una máquina de helados apagada. Tiene el cable de la luz roto.', fix: 'Cambias el cable… ¡rrrr! ¡Sale un cucurucho de fresa!', g: ['helado'] },
   { name: 'TUBERÍA ROTA', img: 'deco-maquinas-2', need: 'llavein', look: 'Una tubería que pierde agua por una tuerca floja.', fix: 'Aprietas la tuerca… ¡ya no gotea! El agua vuelve a correr.', f: 1, pre: 'No hay agua. Alguna tubería estará rota.', door: 'La compuerta está atascada: funciona con agua y no llega.' }
 ];
 // ---------- objetos finales: el problema del protagonista y el final feliz ----------
