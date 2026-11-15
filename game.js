@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.80';
+const VERSION = '1.81';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7395,7 +7395,19 @@ const VF = /helena|laura|m[oó]nica|paulina|elvira|lucia|luc[ií]a|carmen|elena|
 function advVoiceList() { try { const v = speechSynthesis.getVoices().filter(x => /^es/i.test(x.lang)); advVoices = v.filter(x => /es-ES/i.test(x.lang)).concat(v.filter(x => !/es-ES/i.test(x.lang))); } catch (e) {} }
 try { advVoiceList(); speechSynthesis.onvoiceschanged = advVoiceList; } catch (e) {}
 const advFem = w => !!w && (ADV_FEM.has(w.name) || w.fem);
-function advSpeak(t, vi = 0, who) {
+// texto para la voz: el que se ve en pantalla no cambia, pero el narrador lee una versión "hablable"
+const ADV_SAY_FIX = [[/\bUf+\b/gi, 'Uuuf'], [/\bUy\b/gi, 'Uuy'], [/\bAy\b/gi, 'Aay'], [/\bAr\b/g, 'Aar'], [/\bEh\b/gi, 'Eeh'], [/\bOh\b/gi, 'Ooh'], [/\bUps\b/gi, 'Uups'], [/\bOk\b/gi, 'vale'], [/\bkm\/h\b/gi, 'kilómetros por hora']];
+function advSpeech(t) {
+  let x = String(t).replace(/<[^>]+>/g, ' ').replace(/[«»"“”()]/g, ' ').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu, ' ');
+  x = x.replace(/[A-ZÁÉÍÓÚÜÑ]{2,}[A-ZÁÉÍÓÚÜÑ\-]*/g, w => w.charAt(0) + w.slice(1).toLowerCase());          // las palabras en mayúsculas no se deletrean
+  x = x.replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+/g, w => /[aeiouáéíóúüAEIOUÁÉÍÓÚÜ]/.test(w) ? w : ' ');          // fuera ruidos sin vocales (brrr, grrr, bzzzt, shhh, mmm, hmpf, zzz…)
+  x = x.replace(/([a-záéíóúñ])\1{2,}/gi, '$1$1');          // «bieeeen» → «bieen»
+  for (const [re, by] of ADV_SAY_FIX) x = x.replace(re, by);
+  x = x.replace(/¡\s*[,.…!]*\s*!/g, ' ').replace(/\s+/g, ' ').trim();
+  for (let k = 0; k < 3; k++) x = x.replace(/^[\s,.…]+/, '').replace(/([.!?…])\s*[,…]+/g, '$1').replace(/,\s*[,…]+/g, ',').replace(/\s+/g, ' ').trim();
+  return x;
+}
+function advSpeak(t, vi = 0, who) { t = advSpeech(t);
   try { const s = window.speechSynthesis; if (!s || !t) return; s.cancel(); if (!advVoices.length) advVoiceList();
     const fem = advFem(who === undefined ? ADVT.who : who), u = new SpeechSynthesisUtterance(t.replace(/[¡!¿?]/g, m => m === '¡' || m === '¿' ? '' : m)); u.lang = 'es-ES'; u.rate = 0.92;
     const pickV = re => advVoices.find(x => re.test(x.name)), vm = pickV(VM), vf = pickV(VF), v = vi ? advVoices[vi] : fem ? (vf || vm || advVoices[0]) : (vm || advVoices[0]);
