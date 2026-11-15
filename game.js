@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.79';
+const VERSION = '1.80';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -10002,6 +10002,172 @@ advAv('B-40', { n: 'EL PRISIONERO DE LA FORTALEZA', img: 'jefe10-roto', th: 'LF'
       ['mach', { name: 'CERRADURA ROJA', img: 'adv-taquilla', fr: 3, f0: 0, f1: 1, h: 110, look: ['La primera cerradura tiene un lector de tarjetas rojo.'], need: 'tarjeta', fix: ['¡Pip! La cerradura roja se abre.'], flag: 'c1', done: ['La cerradura roja está abierta.'] }],
       ['mach', { name: 'CERRADURA DE NÚMEROS', img: 'adv-taquilla', fr: 3, f0: 0, f1: 1, h: 110, pre: 'c1', preTxt: ['Una ruleta de números. Pero no gira: primero hay que abrir la cerradura roja.'], look: ['Una ruleta de números. Sin la combinación es imposible.'], need: 'numero', fix: ['Giras la ruleta… 5… 2… 8… ¡CLIC!'], flag: 'c2', done: ['La cerradura de números está abierta.'] }],
       ['mach', { name: 'CERRADURA SIN AGUJERO', img: 'adv-baul', h: 70, pre: 'c2', preTxt: ['Una caja de hierro sin agujero de llave. Antes hay que abrir las otras cerraduras.'], look: ['Una caja de hierro sin agujero. Dentro se oye algo metálico moverse…'], need: 'iman', fix: ['Pasas el imán por encima… ¡clinc, clinc! El cerrojo de dentro se desliza.', '¡La caja se abre! Dentro está la llave de la celda.'], gives: 'llave', done: ['La caja está vacía.'] }]] } } });
+
+
+/* ---------- 7 años · aventuras 41 a 50 (las más largas) ---------- */
+advAv('B-41', { n: 'EL MUSEO DEL ESPACIO', img: 'planeta-anillo', th: 'ST', amb: ['estrellas'], s: 'El museo del espacio abre mañana, pero la pieza estrella, el cristal de los anillos, está guardada en una vitrina que nadie sabe abrir. ¡Hay que prepararlo todo!',
+  intro: ['Lucas llega al museo del espacio.', 'Mañana es la gran inauguración… y está todo patas arriba.'], hero: 'TIC-TAC', need: 'cristalv',
+  say: ['¡Tic, tac! ¡Lucas! Soy el director del museo.', 'Mañana inauguramos y la pieza estrella, el cristal de los anillos, sigue dentro de su vitrina de seguridad.', 'La vitrina tiene tres sistemas: luz, código y llave. ¡Y nadie recuerda cómo funcionan!'], hint: ['La vitrina… luz, código y llave. Pregunta a los empleados del museo.'],
+  thanks: ['¡EL CRISTAL DE LOS ANILLOS! ¡Qué maravilla!', '¡Mañana el museo abrirá con la pieza más bonita del universo!'], goal0: 'Abre la vitrina de seguridad',
+  end: 'La inauguración del museo fue un éxito total.<br>¡Pusieron una foto de Lucas junto al cristal de los anillos!',
+  main: [['npc', { who: 'BYTE', say: ['¡Hola, Lucas! Soy el informático del museo.', 'El código de la vitrina está en una memoria, dentro del ordenador de la sala de control. Pero el ordenador está apagado: no tiene cable.'], after: ['¡Los ordenadores son lo mío!'] }],
+    ['item', { it: 'cable', at: 'hill' }], ['door', 'control'],
+    ['npc', { who: 'CAMPANITA', say: ['¡Ding! Soy la guía del museo.', 'La llave de la vitrina la tiene el vigilante, pero se ha quedado dormido en la sala de los dinosaurios robot.', 'Y no hay quien lo despierte… ¡salvo con música!'], after: ['¡Bienvenidos al museo! Ay, perdón, aún no está abierto.'] }],
+    ['item', { it: 'caja', at: 'plats', msg: ['¡Una caja de música!', 'Si le das cuerda, suena una melodía preciosa.'] }], ['door', 'dinos'],
+    ['item', { it: 'fusible', at: 'cave' }], ['door', 'sala'], ['hill', { h: 3 }]],
+  rooms: {
+    control: { name: 'LA SALA DE CONTROL', bg: 'laboratorio', list: [
+      ['mach', { name: 'ORDENADOR', img: 'deco-laboratorio-0', h: 110, look: ['El ordenador de control está apagado. No tiene cable de corriente.'], need: 'cable', fix: ['¡Bip, bip! El ordenador se enciende…', '¡Clac! Sale una memoria con el código de la vitrina.'], gives: 'pendrive', done: ['El ordenador funciona.'] }],
+      ['mach', { name: 'INTERRUPTOR DE LA VITRINA', img: 'adv-palanca', fr: 2, f0: 0, f1: 1, h: 80, look: ['El interruptor de la luz de seguridad de la vitrina. No tiene pila.'], need: 'fusible', fix: ['Pones la pila y bajas el interruptor… ¡la luz de la vitrina se enciende!'], flag: 'v1', done: ['La luz de la vitrina está encendida.'] }]] },
+    dinos: { name: 'LA SALA DE LOS DINOSAURIOS ROBOT', bg: 'maquinas', list: [['npc', { who: 'TAMBOR', say: ['Zzzzz… zzzzz… (El vigilante duerme como un tronco.)'], hint: ['Zzzzz… (Ronca tan fuerte que tiemblan los dinosaurios.)'], wants: 'caja', thanks: ['¡Eh! ¿Qué? ¡Qué música más bonita! ¡Estoy despierto, estoy despierto!', 'Gracias por despertarme, Lucas. Toma la llave de la vitrina.'], gives: 'llavem', after: ['¡Ar! ¡Ya no me duermo más!'] }], ['deco', { img: 'robot-roto', h: 110 }]] },
+    sala: { name: 'LA SALA PRINCIPAL', bg: 'estacion', list: [
+      ['mach', { name: 'VITRINA: CÓDIGO', img: 'adv-taquilla', fr: 3, f0: 0, f1: 1, h: 110, pre: 'v1', preTxt: ['La vitrina está a oscuras. Primero hay que encender su luz de seguridad.'], look: ['La vitrina tiene una ranura para una memoria con el código.'], need: 'pendrive', fix: ['Metes la memoria… ¡pip, pip! ¡Código correcto!'], flag: 'v2', done: ['El código ya está puesto.'] }],
+      ['mach', { name: 'VITRINA: LLAVE', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, pre: 'v2', preTxt: ['La cerradura de la vitrina está bloqueada. Primero hace falta el código.'], look: ['Solo falta la llave de la vitrina.'], need: 'llavem', fix: ['Giras la llave… ¡la vitrina se abre!', 'Dentro brilla el cristal de los anillos.'], gives: 'cristalv', done: ['La vitrina está abierta.'] }]] } } });
+
+advAv('B-42', { n: 'LA PERLA NEGRA', img: 'perla', th: 'LO', amb: ['mar'], s: 'La perla negra, la más rara del océano, ha desaparecido del palacio. La reina sospecha de todos. ¿Quién la tiene y por qué?',
+  intro: ['Lucas bucea hasta el palacio de la Reina Tentácula.', 'Hay guardias por todas partes: ¡han robado la perla negra!'], hero: 'REINA TENTÁCULA', need: 'perlab',
+  say: ['¡Lucas! ¡Han robado la perla negra de mi palacio!', 'Es la perla más rara del océano. Sospecho de todo el mundo… ¡hasta de mi propia sombra!', 'Investiga y tráemela, por favor.'], hint: ['¿Has descubierto quién tiene mi perla negra?'],
+  thanks: ['¡MI PERLA NEGRA! ¡Has resuelto el misterio!', '¡Que todo el océano sepa que Lucas es el mejor detective del mar!'], goal0: 'Investiga el robo de la perla negra',
+  end: 'La perla negra volvió al palacio de la reina.<br>¡Y Dientes prometió no volver a coger nada sin permiso!',
+  main: [['npc', { who: 'PINZAS', say: ['¡Clac! ¡Yo no he sido!', 'Pero anoche vi a Dientes nadando con algo negro en la boca… ¡iba hacia el barco hundido!'], after: ['¡Clac, clac! ¡Inocente!'] }],
+    ['npc', { who: 'DIENTES', say: ['¡GRRR! ¿Yo? ¡No sé de qué me hablas!', 'Bueno… a lo mejor cogí algo negro y brillante. ¡Creía que era una aceituna gigante!', 'La escondí en el cofre del barco. Pero el cofre tiene una cerradura que se abre con… ¡uy, no me acuerdo!'], hint: ['¡GRRR! No me acuerdo de cómo se abre el cofre. Pregunta a Tinta, ella lo sabe todo del barco.'], flag: 'dientes', after: ['Perdón, perdón… ¡creía que era una aceituna!'] }],
+    ['item', { it: 'burbuja', at: 'plats' }], ['door', 'casa'], ['item', { it: 'perla', at: 'rock', msg: ['¡Una perla blanca!', 'Bonita, pero no es la negra.'] }], ['door', 'joyeria'], ['door', 'barco'], ['hill', { h: 3 }]],
+  rooms: {
+    casa: { name: 'LA CASA DE TINTA', bg: 'cueva', list: [['npc', { who: 'TINTA', pre: 'dientes', preTxt: ['¡Hola, Lucas! ¿Un robo? ¡Qué emoción! Pero no sé nada… pregunta a los de fuera.'], say: ['¡Hola, Lucas! ¿El cofre del barco?', 'Sí, se abre con una llave con forma de caracola. La tiene Doña Almeja en su joyería.', 'Yo te ayudo si me haces un favor: ¡quiero una burbuja mágica para jugar!'], hint: ['¡Una burbuja mágica! ¡Por fa!'], wants: 'burbuja', thanks: ['¡Una burbuja mágica! ¡Qué divertida!', 'Toma, un dibujo que hice de la llave para que Doña Almeja sepa cuál es.'], gives: 'poster', after: ['¡Burbujitas!'] }]] },
+    joyeria: { name: 'LA JOYERÍA', bg: 'tienda', list: [['npc', { who: 'DOÑA ALMEJA', say: ['¡Hmpf! ¿Una llave con forma de caracola? Tengo cien llaves, ¿cuál quieres?', 'Si no me dices exactamente cuál es, no te doy ninguna.'], hint: ['¡Hmpf! Sin saber cuál es, no hay llave.'], wants: 'poster', thanks: ['¡Ah, esta llave! ¿Por qué no lo dijiste antes?', 'Pero no te la doy gratis: ¡quiero una perla para mi colección!'], flag: 'dibujo', after: ['¡Hmpf!'] }],
+      ['mach', { name: 'VITRINA DE LLAVES', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, lbl: '✋ MIRAR', pre: 'dibujo', preTxt: ['Una vitrina llena de llaves de todas las formas. Doña Almeja te vigila muy seria.'], look: ['Doña Almeja señala la vitrina: «Una perla y la llave es tuya».'], need: 'perla', fix: ['Le das la perla blanca a Doña Almeja… ¡sonríe!', 'Te da la llave con forma de caracola.'], gives: 'llavem', done: ['¡Hmpf! Ya tienes tu llave.'] }]] },
+    barco: { name: 'EL BARCO HUNDIDO', bg: 'cueva', list: [['deco', { img: 'deco-mar-0', h: 80 }],
+      ['mach', { name: 'COFRE DEL BARCO', img: 'adv-cofre', h: 60, lbl: '🔓 ABRIR', look: ['Un cofre con una cerradura con forma de caracola.'], need: 'llavem', fix: ['La llave encaja… ¡clac!', '¡Dentro está la perla negra!'], gives: 'perlab', done: ['El cofre está vacío.'] }]] } } });
+
+advAv('B-43', { n: 'EL ÁRBOL DE LOS DESEOS', img: 'deco-jardin-3', th: 'LJ', amb: ['luces', 'mariposas'], s: 'El árbol de los deseos de la selva se está secando. Para salvarlo hacen falta agua de la fuente sagrada, luz de la luciérnaga reina y una semilla de estrella.',
+  intro: ['Lucas llega al centro de la Selva Luminosa.', 'El árbol más grande y antiguo está perdiendo sus hojas.'], hero: 'MUSGO', need: 'estrella',
+  say: ['Hola, pequeño robot. Soy Musgo.', 'El árbol de los deseos se muere. Dicen que solo una estrella colocada en su copa puede salvarlo.', 'Pero las estrellas no caen del cielo así como así…'], hint: ['Una estrella para el árbol… ¿quién en la selva sabrá de estrellas?'],
+  thanks: ['¡Una estrella! La coloco en la copa…', '¡Mira! ¡Le salen hojas nuevas! ¡El árbol de los deseos vive!'], goal0: 'Busca una estrella para el árbol',
+  end: 'El árbol de los deseos volvió a florecer.<br>¡Y Lucas pidió un deseo secreto que nadie sabe!',
+  main: [['npc', { who: 'HOJA', say: ['¡Hola, Lucas!', 'El búho sabio del templo sabe dónde caen las estrellas. Pero solo habla con quien le lleva un regalo.', '¡Y le encantan las cosas brillantes!'], after: ['¡Ojalá se salve el árbol!'] }],
+    ['item', { it: 'valvula', at: 'rock' }],
+    ['mach', { name: 'FUENTE SAGRADA', img: 'adv-fuente', h: 110, look: ['La fuente sagrada de la selva está seca. Le falta la válvula.'], need: 'valvula', fix: ['¡El agua sagrada vuelve a brotar! Coges una gota.'], gives: 'gota', done: ['La fuente canta.'] }],
+    ['npc', { who: 'SALTARÍN', say: ['¡Salto! Me he hecho daño en la pata saltando. ¡Ay!', 'Dicen que el agua sagrada lo cura todo…'], hint: ['¡Ay, mi pata! Agua sagrada…'], wants: 'gota', thanks: ['¡Me ha curado! ¡Salto, salto!', 'Toma, encontré esta cosa brillante. No sé qué es.'], gives: 'cristal', after: ['¡Salto de alegría!'] }],
+    ['door', 'templo'], ['item', { it: 'linterna', at: 'plats' }], ['door', 'cueva'], ['hill', { h: 3 }]],
+  rooms: {
+    templo: { name: 'EL TEMPLO DEL BÚHO', bg: 'templo', list: [['npc', { who: 'GIRO', say: ['Uhu, uhu. Soy el búho sabio.', '¿Una estrella? Uhu. Te diré dónde cayó la última… si me traes algo brillante para mi colección.'], hint: ['Uhu. Algo brillante…'], wants: 'cristal', thanks: ['¡Uhu! ¡Qué cristal más brillante!', 'La última estrella cayó en la cueva de las luciérnagas. Pero solo la luciérnaga reina sabe dónde está. Y vive en la oscuridad.'], flag: 'buho', after: ['Uhu, uhu.'] }]] },
+    cueva: { name: 'LA CUEVA DE LAS LUCIÉRNAGAS', bg: 'cueva', lock: { need: 'linterna', keep: true, txt: ['La cueva está negra como la noche.'], ok: ['Enciendes la linterna… ¡miles de luciérnagas se iluminan!'] }, list: [
+      ['npc', { who: 'CAMPANITA', pre: 'buho', preTxt: ['¡Hola! Soy la luciérnaga reina. ¿Qué buscas en mi cueva? (Parece que no se fía de ti.)'], say: ['¡Hola! Soy la luciérnaga reina. ¿Te envía el búho?', 'La estrella está en la repisa más alta de la cueva. ¡Sube con cuidado!'], flag: 'reina', after: ['¡Brillamos para ti, Lucas!'] }],
+      ['door', 'repisa']] },
+    repisa: { name: 'LA REPISA DE LA ESTRELLA', bg: 'cueva', door: 'tele', lock: { flag: 'reina', txt: ['Hay un pasadizo, pero las luciérnagas no te dejan pasar.'] }, list: [['item', { it: 'estrella', at: 'high', msg: ['¡La estrella!', 'Brilla con una luz dorada y calentita.'] }]] } } });
+
+advAv('B-44', { n: 'EL RELOJ DE ARENA', img: 'deco-egipto-3', th: 'LD', amb: ['buitres'], s: 'El gran reloj de arena del desierto controla el día y la noche. Se ha atascado y lleva tres días siendo de noche. ¡Hay que arreglarlo!',
+  intro: ['Lucas llega a un desierto donde es de noche… a mediodía.', 'Todo el mundo bosteza y tiene frío.'], hero: 'DOÑA VENDA', need: 'eng',
+  say: ['Uuuuh… hola, Lucas. ¡Qué sueño!', 'El gran reloj de arena se ha atascado y ya no sale el sol.', 'Le falta un engranaje de oro. Lo guardaban en la pirámide del faraón, pero se perdió la llave.'], hint: ['El engranaje de oro… la pirámide del faraón.'],
+  thanks: ['¡El engranaje de oro! Lo coloco…', '¡Mira! ¡La arena vuelve a caer! ¡Sale el sol!'], goal0: 'Busca el engranaje de oro',
+  end: 'El gran reloj de arena volvió a funcionar y salió el sol.<br>¡Todo el desierto se puso a bailar!',
+  main: [['npc', { who: 'GATO DE PIEDRA', say: ['Miau… Yo guardo la pirámide.', 'La puerta se abre con el escarabajo de oro. Lo tenía Arenita.'], after: ['Miau… ¡qué ganas de sol!'] }],
+    ['npc', { who: 'ARENITA', say: ['¡Hola! ¿El escarabajo de oro? Se lo cambié a Pincho por una sombrilla.', '¡Es que hace tanto sol! Bueno… hacía.'], after: ['¡Ojalá vuelva el sol!'] }],
+    ['item', { it: 'globo', at: 'plats' }],
+    ['npc', { who: 'PINCHO', say: ['¡Eh! Sí, tengo el escarabajo.', 'Pero solo te lo doy si me traes algo para no aburrirme en la oscuridad. ¡Algo que flote!'], hint: ['¡Algo que flote! ¡Me aburro!'], wants: 'globo', thanks: ['¡Un globo! ¡Qué divertido!', 'Toma el escarabajo de oro.'], gives: 'escarabajo', after: ['¡Mi globo y yo somos amigos!'] }],
+    ['item', { it: 'martillo', at: 'cave' }], ['door', 'piramide'], ['hill', { h: 3 }]],
+  rooms: {
+    piramide: { name: 'LA PIRÁMIDE DEL FARAÓN', bg: 'piramide', lock: { need: 'escarabajo', txt: ['La puerta tiene un hueco con forma de escarabajo.'], ok: ['¡La puerta se abre!'] }, list: [
+      ['mach', { name: 'MURO AGRIETADO', img: 'deco-egipto-0', h: 100, look: ['Un muro con una grieta. Detrás se oye el viento: ¡hay una sala secreta!'], need: 'martillo', keep: true, fix: ['¡PAM! ¡CRASH! El muro se derrumba.', '¡Hay un pasadizo secreto!'], flag: 'muro', done: ['El pasadizo está abierto.'] }],
+      ['npc', { who: 'DOÑA VENDA', say: ['¡Uuuh! (Es la estatua de Doña Venda… ¡no, es Doña Venda de verdad, que se ha colado!)', 'La sala del tesoro está detrás de ese muro, uuuh.'] }],
+      ['door', 'tesoro']] },
+    tesoro: { name: 'LA SALA DEL TESORO', bg: 'piramide', lock: { flag: 'muro', txt: ['No hay ninguna puerta… solo un muro agrietado.'] }, list: [['deco', { img: 'deco-egipto-1', h: 90 }], ['item', { it: 'eng', at: 'high', msg: ['¡El engranaje de oro!', 'Pesa mucho y brilla como el sol.'] }]] } } });
+
+advAv('B-45', { n: 'EL CASTILLO DE LAS NUBES', img: 'adv-burbuja-4', th: 'LS', amb: ['aviones'], s: 'En lo alto del cielo flota el castillo de las nubes. Su princesa ha perdido su corona… y el castillo empieza a bajar. ¡Si toca el suelo, se deshará!',
+  intro: ['Lucas vuela hasta el castillo de las nubes.', 'Cada minuto el castillo baja un poquito más…'], hero: 'ALGODÓN', need: 'collar',
+  say: ['¡Lucas! ¡El castillo está bajando!', 'Sin mi collar mágico, el castillo pierde su magia y se hunde.', 'Se me cayó al jugar y no sé dónde fue a parar.'], hint: ['¡Mi collar! ¡El castillo baja cada vez más!'],
+  thanks: ['¡MI COLLAR MÁGICO! ¡Me lo pongo!', '¡Mira! ¡El castillo vuelve a subir! ¡Estamos salvados!'], goal0: 'Busca el collar mágico',
+  end: 'El castillo de las nubes volvió a lo más alto del cielo.<br>¡Y Algodón le dio a Lucas la llave de la ciudad!',
+  main: [['npc', { who: 'PLUMITA', say: ['¡Hola, Lucas!', 'Vi caer el collar… ¡y una urraca se lo llevó a su nido en la torre!', 'Las urracas adoran las cosas brillantes. Pero la torre está cerrada.'], after: ['¡Pío! ¡Rápido!'] }],
+    ['item', { it: 'oro', at: 'cave' }], ['door', 'tienda'], ['item', { it: 'escoba', at: 'plats' }],
+    ['npc', { who: 'GIRO', say: ['¡Hola! Soy el guardián de la torre.', 'Te dejaría pasar, pero la escalera está llena de plumas de urraca. ¡No se puede ni subir!'], hint: ['¡Plumas, plumas por todas partes! Algo para barrer…'], wants: 'escoba', thanks: ['¡Una escoba! Fsss, fsss… ¡escalera limpia!', 'Ya puedes subir a la torre.'], flag: 'escalera', after: ['¡Qué limpia está mi torre!'] }],
+    ['door', 'torre'], ['hill', { h: 3 }]],
+  rooms: {
+    tienda: { name: 'LA JOYERÍA DE LAS NUBES', bg: 'tienda', list: [['npc', { who: 'BOLITA', say: ['¡Hola, Lucas! Vendo cosas brillantes.', 'Hoy tengo un cristal precioso, a una moneda de oro. ¡A las urracas les vuelven locas!'], hint: ['Una moneda de oro y el cristal es tuyo.'], wants: 'oro', thanks: ['¡Gracias por tu compra!', 'Toma el cristal más brillante del cielo.'], gives: 'cristal', after: ['¡Vuelve pronto!'] }]] },
+    torre: { name: 'LA TORRE DE LA URRACA', bg: 'estacion', lock: { flag: 'escalera', txt: ['La escalera está tan llena de plumas que no se puede subir.'] }, list: [
+      ['mach', { name: 'NIDO DE LA URRACA', img: 'adv-nido', h: 60, lbl: '✋ MIRAR', look: ['Un nido lleno de cosas brillantes. Ahí está el collar… y la urraca te mira fijamente, protegiéndolo.', 'Quizá acepte un cambio por algo todavía más brillante.'], need: 'cristal', fix: ['La urraca coge el cristal con el pico… ¡y suelta el collar!', '¡Tienes el collar mágico!'], gives: 'collar', done: ['La urraca está feliz con su cristal.'] }]] } } });
+
+advAv('B-46', { n: 'EL TÚNEL DE LAVA', img: 'cristal-lava-2', th: 'LV', amb: [], s: 'Los mineros del volcán han quedado atrapados al otro lado del túnel de lava. Para rescatarlos hay que encender el puente de cristal… y le faltan piezas.',
+  intro: ['Lucas llega al gran túnel de lava.', 'Al otro lado se oye a los mineros pidiendo ayuda.'], hero: 'BRASA', need: 'laser',
+  say: ['¡Lucas! ¡Los mineros están atrapados!', 'El puente de cristal que cruza el río de lava se apagó. Se enciende con una pila de láser.', 'La última pila de láser la tiene el ingeniero… y el ingeniero está atrapado al otro lado. ¡Qué lío!'], hint: ['Una pila de láser… alguien del pueblo tendrá otra escondida.'],
+  thanks: ['¡UNA PILA DE LÁSER! La pongo en el puente…', '¡El puente de cristal brilla! ¡Los mineros cruzan! ¡Hurra!'], goal0: 'Busca una pila de láser',
+  end: 'Los mineros cruzaron el puente de cristal sanos y salvos.<br>¡Y prepararon un banquete en honor de Lucas!',
+  main: [['npc', { who: 'CHISPAS', say: ['¡Hola, Lucas!', 'El ingeniero tenía otra pila de láser de repuesto en su caja fuerte, en su casa.', 'La combinación… la apuntó en un papel que se le cayó en el huerto.'], after: ['¡Ánimo, Lucas!'] }],
+    ['door', 'huerto'], ['item', { it: 'botas', at: 'plats', msg: ['¡Unas botas que no se queman!', 'Con ellas se puede pisar suelo muy caliente.'] }],
+    ['npc', { who: 'MAGMA', say: ['¡Hola, Lucas!', 'La casa del ingeniero está pasando el campo de brasas. ¡Quema muchísimo!', 'Ah, y la casa está cerrada. La llave la guardo yo… si me haces un favor: ¡quiero una tarta!'], hint: ['¡Una tarta! ¡Con una tarta te doy la llave!'], wants: 'tarta', thanks: ['¡Una tarta! ¡Ñam!', 'Toma la llave de la casa del ingeniero.'], gives: 'llavem', after: ['¡Qué rica!'] }],
+    ['door', 'cocina'], ['door', 'brasas'], ['hill', { h: 3 }]],
+  rooms: {
+    huerto: { name: 'EL HUERTO DE FUEGO', bg: 'invernadero', list: [['npc', { who: 'HOJA', say: ['¡Hola, Lucas! Este es mi huerto de fuego.', 'Encontré un papel con números entre mis manzanos. Y arriba del todo hay una manzana madura.'], gives: 'numero', givesTxt: ['¡Ya tienes la bola de números con la combinación!'], after: ['¡Cuida mi huerto!'] }], ['item', { it: 'manzana', at: 'high' }]] },
+    cocina: { name: 'LA COCINA DEL PUEBLO', bg: 'tienda', list: [['npc', { who: 'BOLITA', say: ['¡Hola, Lucas! Soy la cocinera.', 'Con una manzana te hago una tarta de lava riquísima.'], hint: ['Una manzana y te hago la tarta.'], wants: 'manzana', thanks: ['¡Una manzana! ¡Al horno!', '¡Tachán! Una tarta de lava.'], gives: 'tarta', after: ['¡Que aproveche!'] }]] },
+    brasas: { name: 'EL CAMPO DE BRASAS', bg: 'cueva', lock: { need: 'botas', keep: true, txt: ['El suelo está lleno de brasas ardiendo. ¡Te quemarías los pies!'], ok: ['Te pones las botas… ¡ni notas el calor!'] }, list: [['deco', { img: 'cristal-lava-0', h: 60 }], ['door', 'casa']] },
+    casa: { name: 'LA CASA DEL INGENIERO', bg: 'taller', lock: { need: 'llavem', txt: ['La casa del ingeniero está cerrada con llave.'], ok: ['¡Clic!'] }, list: [
+      ['mach', { name: 'CAJA FUERTE', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, lbl: '🔓 ABRIR', look: ['La caja fuerte del ingeniero. Tiene una ruleta de números.'], need: 'numero', fix: ['Giras la ruleta… ¡CLAC!', 'Dentro está la pila de láser de repuesto.'], gives: 'laser', done: ['La caja fuerte está vacía.'] }]] } } });
+
+advAv('B-47', { n: 'LA ESTATUA DE HIELO', img: 'jefe2', th: 'ICE', amb: ['nieve'], s: 'Un hechizo ha convertido al alcalde del pueblo de hielo en una estatua. Solo el agua de la fuente caliente puede descongelarlo… pero la fuente lleva años escondida.',
+  intro: ['Lucas llega al pueblo de hielo.', 'En la plaza hay una estatua de hielo… ¡que parpadea!'], hero: 'COPITO', need: 'gota',
+  say: ['¡Lucas! ¡Han congelado al alcalde!', 'Un hechizo lo convirtió en estatua de hielo. Solo el agua de la fuente caliente puede descongelarlo.', 'Pero la fuente caliente lleva años escondida y nadie recuerda dónde está.'], hint: ['¿Y el agua de la fuente caliente? ¡El alcalde tiene frío!'],
+  thanks: ['¡Agua de la fuente caliente! La echo sobre la estatua…', '¡El hielo se derrite! ¡El alcalde se mueve! ¡Brrr, qué frío ha pasado!'], goal0: 'Busca la fuente caliente',
+  end: 'El alcalde se descongeló y volvió a dirigir el pueblo.<br>¡Lo primero que hizo fue darle una medalla a Lucas!',
+  main: [['deco', { img: 'enemigo-estatua', h: 110 }],
+    ['npc', { who: 'BRISA', say: ['¡Hola, Lucas!', 'Mi abuela decía que la fuente caliente está en la cueva de la montaña, detrás de una puerta de hielo.', 'Esa puerta solo se derrite con un cristal de fuego. Y aquí no hay ninguno… salvo en el museo.'], after: ['¡Pobre alcalde!'] }],
+    ['door', 'museo'], ['item', { it: 'fusible', at: 'plats' }], ['item', { it: 'valvula', at: 'rock', msg: ['¡Una válvula antigua!', 'Está cubierta de escarcha.'] }], ['door', 'cueva'], ['hill', { h: 3 }]],
+  rooms: {
+    museo: { name: 'EL MUSEO DE HIELO', bg: 'laboratorio', list: [['npc', { who: 'ESCARCHA', say: ['Brrr… Soy el director del museo.', 'El cristal de fuego está en la vitrina. Pero la vitrina funciona con electricidad… y se fue la luz.'], after: ['Brrr…'] }],
+      ['mach', { name: 'VITRINA ELÉCTRICA', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, look: ['La vitrina del cristal de fuego. Está apagada: le falta una pila.'], need: 'fusible', fix: ['Pones la pila… ¡la vitrina se abre!', 'Coges el cristal de fuego. Está calentito.'], gives: 'rubi', done: ['La vitrina está vacía.'] }]] },
+    cueva: { name: 'LA CUEVA DE LA MONTAÑA', bg: 'cueva', list: [
+      ['mach', { name: 'PUERTA DE HIELO', img: 'deco-hielo-0', h: 110, look: ['Una puerta de hielo gruesísima. Detrás se oye correr agua.'], need: 'rubi', fix: ['Acercas el cristal de fuego… ¡el hielo se derrite!'], flag: 'puertah', done: ['La puerta está derretida.'] }], ['door', 'fuente']] },
+    fuente: { name: 'LA FUENTE CALIENTE', bg: 'cueva', lock: { flag: 'puertah', txt: ['Una puerta de hielo tapa el paso.'] }, list: [
+      ['mach', { name: 'FUENTE CALIENTE', img: 'adv-fuente', h: 110, look: ['¡La fuente caliente! Pero está cerrada: le falta la válvula.'], need: 'valvula', fix: ['Enroscas la válvula… ¡sale agua calentita!', 'Coges una gota de agua caliente.'], gives: 'gota', done: ['La fuente echa vapor.'] }]] } } });
+
+advAv('B-48', { n: 'LA GRAN JUGUETERÍA', img: 'deco-circo-2', th: 'LT', amb: [], s: 'La gran juguetería abre sus puertas mañana, pero el juguete estrella, el robot bailarín, no funciona. Hay que conseguir sus piezas por toda la tienda.',
+  intro: ['Lucas llega a la juguetería más grande del universo.', 'Mañana es la inauguración y todos corren de un lado a otro.'], hero: 'CASCABEL', need: 'chip',
+  say: ['¡Hola, Lucas! Soy el dueño de la juguetería.', 'Mañana inauguramos y el robot bailarín, el juguete estrella, no funciona.', 'Le falta su chip del baile. Lo tiene el fabricante… pero hace días que no sale de su taller.'], hint: ['¿Y el chip del baile? ¡Mañana inauguramos!'],
+  thanks: ['¡EL CHIP DEL BAILE! Lo coloco…', '¡El robot bailarín baila! ¡Chachachá! ¡La inauguración será un éxito!'], goal0: 'Busca el chip del baile',
+  end: 'La gran juguetería abrió con el robot bailarín en el escaparate.<br>¡Había colas de niños hasta la esquina!',
+  main: [['npc', { who: 'MUELLE', say: ['¡BOING! El fabricante es Tic-Tac. Se encerró en su taller porque está triste.', 'Su caja de música favorita se rompió y dice que sin música no puede trabajar.'], after: ['¡Boing!'] }],
+    ['item', { it: 'eng', at: 'plats' }], ['door', 'muñecas'], ['item', { it: 'pelota', at: 'hill' }],
+    ['npc', { who: 'BOTI', say: ['¡Bote! Hola, Lucas.', 'Tengo la llave del taller de Tic-Tac. Pero estoy aburridísimo… ¡he perdido mi pelota favorita!'], hint: ['¡Mi pelota! ¡Bote, bote!'], wants: 'pelota', thanks: ['¡Mi pelota! ¡Bote, bote!', 'Toma la llave del taller de Tic-Tac.'], gives: 'llavem', after: ['¡Bote!'] }],
+    ['door', 'taller'], ['hill', { h: 3 }]],
+  rooms: {
+    muñecas: { name: 'LA SECCIÓN DE MÚSICA', bg: 'caja', list: [['npc', { who: 'PELUSÍN', say: ['¡Hola, Lucas! Aquí vendemos instrumentos.', 'Puedo arreglar cajas de música, pero me falta un engranaje pequeñito.'], hint: ['Un engranaje pequeñito… y arreglo cualquier caja de música.'], wants: 'eng', thanks: ['¡Un engranaje! Clinc, clinc…', '¡Toma, una caja de música como nueva!'], gives: 'caja', after: ['¡Tirorí!'] }]] },
+    taller: { name: 'EL TALLER DE TIC-TAC', bg: 'taller', lock: { need: 'llavem', txt: ['El taller de Tic-Tac está cerrado. Se le oye suspirar dentro.'], ok: ['¡Clic!'] }, list: [['npc', { who: 'TIC-TAC', say: ['Snif… tic… tac… Hola, Lucas.', 'Mi caja de música se rompió y sin música no puedo fabricar el chip del baile.'], hint: ['Snif… música… necesito música.'], wants: 'caja', thanks: ['¡Una caja de música! ¡Tirorí, tirorá! ¡Ya me siento mejor!', '¡Manos a la obra! Clinc, clanc… ¡Toma el chip del baile!'], gives: 'chip', after: ['¡Tic, tac, tirorí!'] }]] } } });
+
+advAv('B-49', { n: 'EL TREN DE LA CHATARRA', img: 'deco-taller-2', th: 'LK', amb: [], s: 'El tren de la chatarra lleva todos los inventos del planeta a la gran feria. Pero la locomotora se ha averiado en mitad del desguace. ¡Hay que arreglarla!',
+  intro: ['Lucas llega al desguace.', 'Una locomotora vieja echa humo negro y no se mueve.'], hero: 'TUERCAS', need: 'valvula',
+  say: ['¡Hola, Lucas! Soy el maquinista del tren de la chatarra.', 'La locomotora tiene una fuga de vapor: ¡se ha roto la válvula de la caldera!', 'Sin válvula no podemos llegar a la gran feria de inventos.'], hint: ['¿Y la válvula? ¡La feria empieza pronto!'],
+  thanks: ['¡UNA VÁLVULA! La coloco en la caldera…', '¡PIIII! ¡CHU-CHUUU! ¡Rumbo a la gran feria!'], goal0: 'Busca una válvula para la caldera',
+  end: 'El tren de la chatarra llegó a tiempo a la gran feria.<br>¡Y Lucas viajó en la cabina con el maquinista!',
+  main: [['npc', { who: 'RECICLA', say: ['¡Hola, Lucas!', 'Hay válvulas en la fábrica abandonada. Pero la puerta está atascada con una plancha de hierro muy pesada.', 'Solo el imán gigante de la grúa podría moverla.'], after: ['¡Reciclar es lo más!'] }],
+    ['item', { it: 'cable', at: 'cave' }],
+    ['mach', { name: 'GRÚA CON IMÁN', img: 'deco-maquinas-3', h: 120, look: ['Una grúa enorme con un imán gigante. Está apagada: no tiene cable de corriente.'], need: 'cable', fix: ['Conectas el cable… ¡la grúa se enciende!', 'El imán levanta la plancha de hierro de la puerta de la fábrica. ¡CLONK!'], flag: 'grua', done: ['La grúa zumba.'] }],
+    ['door', 'fabrica'], ['item', { it: 'destornillador', at: 'plats' }], ['door', 'oficina'], ['hill', { h: 3 }]],
+  rooms: {
+    fabrica: { name: 'LA FÁBRICA ABANDONADA', bg: 'maquinas', lock: { flag: 'grua', txt: ['Una plancha de hierro enorme bloquea la puerta.'] }, list: [
+      ['npc', { who: 'CHISPAZO', say: ['¡Bzzzt! ¿Válvulas? Están en ese armario.', 'Pero el armario tiene una cerradura electrónica. El código está en el ordenador de la oficina.'], after: ['¡Bzzzt!'] }],
+      ['mach', { name: 'ARMARIO ELECTRÓNICO', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, lbl: '🔓 ABRIR', look: ['Un armario con una ranura para una memoria con el código.'], need: 'pendrive', fix: ['Metes la memoria… ¡pip, pip! ¡CLAC!', '¡Dentro hay una válvula nuevecita!'], gives: 'valvula', done: ['El armario está vacío.'] }]] },
+    oficina: { name: 'LA OFICINA DEL DESGUACE', bg: 'laboratorio', list: [['npc', { who: 'BYTE', say: ['¡Hola, Lucas!', 'El ordenador de la oficina tiene el código del armario. Pero la tapa está atornillada y la memoria se quedó dentro.'], after: ['¡Ánimo!'] }],
+      ['mach', { name: 'ORDENADOR ATORNILLADO', img: 'deco-laboratorio-0', h: 110, look: ['Un ordenador con la tapa sujeta por tornillos. Dentro se ve una memoria.'], need: 'destornillador', keep: true, fix: ['Quitas los tornillos… ¡ya puedes sacar la memoria!'], gives: 'pendrive', done: ['El ordenador ya no tiene memoria.'] }]] } } });
+
+advAv('B-50', { n: 'LA GRAN AVENTURA FINAL', img: 'adv-cohete', th: 'LF', amb: [], s: '¡La aventura más grande de todas! Señal Cero quiere apagar el sol con su máquina oscura. Recorre su fortaleza, reúne a tus amigos y detén la máquina antes de que sea tarde.',
+  intro: ['Lucas llega a la fortaleza de Señal Cero para la aventura más importante de todas.', 'En lo más alto, una máquina oscura apunta hacia el sol.'], hero: 'CAPITÁN ROJO', need: 'chip',
+  say: ['¡Lucas! ¡Ha llegado la hora!', 'Señal Cero va a apagar el sol con su máquina oscura. Solo se puede detener cambiando su chip por uno de la luz.', 'El chip de la luz se fabrica en el laboratorio secreto… pero para llegar hay que cruzar toda la fortaleza. ¡Nuestros amigos te ayudarán!'], hint: ['El chip de la luz se fabrica en el laboratorio secreto. ¡Ánimo, Lucas!'],
+  thanks: ['¡EL CHIP DE LA LUZ! ¡Lo cambio en la máquina oscura!', '¡ZAS! ¡La máquina se apaga! ¡El sol brilla más que nunca! ¡LO HAS CONSEGUIDO, LUCAS!'], goal0: 'Busca el chip de la luz',
+  end: '¡Lucas detuvo la máquina oscura y salvó el sol!<br>Todos sus amigos de las cincuenta aventuras vinieron a darle las gracias.<br>¡Eres el mejor aventurero del universo!',
+  main: [['npc', { who: 'BYTE', say: ['¡Lucas! ¡Te ayudaremos todos!', 'La puerta de la fortaleza se abre con la tarjeta del guardia. Tambor era guardia… ¡pero se ha pasado a nuestro bando!'], after: ['¡Vamos, Lucas!'] }],
+    ['npc', { who: 'TAMBOR', say: ['¡Ar! ¡Hola, Lucas! ¡Yo te ayudo!', 'Tengo la tarjeta del guardia… pero tengo tanta hambre que no recuerdo dónde la guardé. ¡Algo de comer me refrescaría la memoria!'], hint: ['¡Algo de comer! ¡Me ruge la tripa!'], wants: 'manzana', thanks: ['¡Una manzana! ¡Ñam! ¡Ya me acuerdo!', '¡Aquí está la tarjeta, en mi bolsillo! Je, je.'], gives: 'tarjeta', after: ['¡Ar! ¡Adelante!'] }],
+    ['item', { it: 'manzana', at: 'hill' }], ['item', { it: 'fusible', at: 'plats' }], ['item', { it: 'iman', at: 'rock', msg: ['¡Un imán!', 'Fuerte y brillante.'] }], ['door', 'entrada'], ['hill', { h: 3 }]],
+  rooms: {
+    entrada: { name: 'LA ENTRADA DE LA FORTALEZA', bg: 'maquinas', lock: { need: 'tarjeta', txt: ['Una puerta blindada con un lector rojo.'], ok: ['¡Pip! ¡ACCESO PERMITIDO!'] }, list: [
+      ['npc', { who: 'CHISPAZO', say: ['¡Bzzzt! ¡Lucas! Yo vigilo la sala de máquinas, pero me he cambiado de bando.', 'Para llegar al laboratorio hay que bajar por el ascensor. Pero no tiene corriente.'], after: ['¡Bzzzt! ¡A por ellos!'] }],
+      ['mach', { name: 'CUADRO DEL ASCENSOR', img: 'deco-maquinas-0', h: 110, look: ['El cuadro eléctrico del ascensor. Le falta una pila.'], need: 'fusible', fix: ['Pones la pila… ¡el ascensor se ilumina!'], flag: 'asc', done: ['El ascensor tiene corriente.'] }],
+      ['door', 'almacen'], ['door', 'sotano']] },
+    almacen: { name: 'EL ALMACÉN DE SEÑAL CERO', bg: 'sotano', list: [['npc', { who: 'CHISPAS', say: ['¡Lucas! Estaba escondido aquí.', 'El laboratorio secreto se abre con una llave que Señal Cero tiró por la rejilla del suelo. ¡Yo no llego!'], after: ['¡Tú puedes!'] }],
+      ['mach', { name: 'REJILLA DEL SUELO', img: 'adv-rejilla', fr: 2, f0: 0, f1: 1, h: 70, look: ['Una rejilla estrecha. Al fondo brilla una llave de metal.'], need: 'iman', keep: true, fix: ['Bajas el imán… ¡clinc!', '¡Has sacado la llave del laboratorio!'], gives: 'llavem', done: ['La rejilla está vacía.'] }]] },
+    sotano: { name: 'LOS SÓTANOS', bg: 'sotano', door: 'tele', lock: { flag: 'asc', txt: ['El ascensor no tiene corriente.'] }, list: [
+      ['npc', { who: 'TIC-TAC', say: ['¡Tic, tac! ¡Lucas! Señal Cero me obligaba a trabajar aquí.', 'El chip de la luz se fabrica con un engranaje de oro, pero se me cayó en lo alto de esas tuberías.'], after: ['¡Tic, tac! ¡Rápido!'] }],
+      ['item', { it: 'eng', at: 'high', msg: ['¡El engranaje de oro!', 'Brilla como un pequeño sol.'] }], ['door', 'lab']] },
+    lab: { name: 'EL LABORATORIO SECRETO', bg: 'laboratorio', lock: { need: 'llavem', txt: ['La puerta del laboratorio secreto está cerrada con llave.'], ok: ['¡CLAC! ¡La puerta se abre!'] }, list: [['deco', { img: 'deco-laboratorio-2', h: 90 }],
+      ['mach', { name: 'FÁBRICA DE CHIPS', img: 'deco-laboratorio-0', h: 110, look: ['La máquina que fabrica chips. Tiene un hueco para un engranaje de oro.'], need: 'eng', fix: ['Colocas el engranaje de oro… ¡brrrum, bip, bip!', '¡Sale el chip de la luz! ¡Brilla como el sol!'], gives: 'chip', done: ['La máquina descansa.'] }]] } } });
 
 window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get lines() { return ADVT.lines; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), editHere: () => { CHEAT.test = true; openEditOff(); }, get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
