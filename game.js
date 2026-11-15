@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.86';
+const VERSION = '1.87';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4970,7 +4970,23 @@ function flame(x, y, len, w, seed) {
   layer(w * 1.1, ll, 'rgba(255,74,24,.82)', sway); layer(w * 0.82, ll * 0.76, 'rgba(255,176,44,.95)', sway * 0.7); layer(w * 0.48, ll * 0.5, 'rgba(255,248,214,.98)', sway * 0.4);
 }
 const ANCH = { 'lucas-quieto': 0.5, 'lucas-avanzando': 0.47, 'lucas-saltando': 0.44, 'lucas-cayendo': 0.5, 'lucas-golpeado': 0.5, 'lucas-celebrando': 0.5, 'lucas-agachado': 0.5 };
+const ADV_WARP = { t: -9, inT: -9, x: 0 };
+function advWarp() { ADV_WARP.t = performance.now() / 1000; ADV_WARP.x = P.x; try { SFX.portal(); } catch (e) {} [392, 523, 659, 880, 1175].forEach((f, i) => tone(f, f * 1.5, 0.09, 'sine', 0.06, i * 0.06)); }
 function drawPlayer() {
+  const now = performance.now() / 1000, ko = (now - ADV_WARP.t) / 0.6, ki = (now - ADV_WARP.inT) / 0.5;
+  if (!L.adv || !P || (ko > 1.15 && (ki < 0 || ki > 1))) return drawPlayer0();
+  const p = P, cx = p.x + p.w / 2, by = p.y + p.h, out = ko <= 1.15, k = out ? Math.min(1, ko) : 1 - ki;
+  if (out) { p.x = ADV_WARP.x; p.vx = 0; }
+  if (k < 1) { const wob = 1 + 0.18 * Math.sin(now * 45) * k, sxw = Math.max(0.04, (1 - k * 0.92) * wob), syw = 1 + k * 0.7;
+    ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k * k); ctx.translate(cx, by); ctx.scale(sxw, syw); ctx.translate(-cx, -by); drawPlayer0(); ctx.restore(); }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; const a = Math.sin(Math.min(1, k) * Math.PI), top = by - 260, gg = ctx.createLinearGradient(0, by, 0, top);
+  gg.addColorStop(0, 'rgba(120,240,255,' + (0.75 * a).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(198,60,255,0)'); ctx.fillStyle = gg; const bw = 70 * (1 - 0.6 * k) + 10; ctx.fillRect(cx - bw / 2, top, bw, by - top);
+  for (let r = 0; r < 3; r++) { const rr = ((now * 1.8 + r / 3) % 1); ctx.strokeStyle = 'rgba(160,250,255,' + ((1 - rr) * a).toFixed(3) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, by - 4 - rr * 120, 46 * (1 - rr * 0.5), 10 * (1 - rr * 0.5), 0, 0, 6.283); ctx.stroke(); }
+  if (k > 0.85 && out) { const fl = (k - 0.85) / 0.15, fg = ctx.createRadialGradient(cx, by - 60, 2, cx, by - 60, 140); fg.addColorStop(0, 'rgba(255,255,255,' + (0.9 * fl).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = fg; ctx.fillRect(cx - 140, by - 200, 280, 280); }
+  ctx.restore();
+  for (let i = 0; i < 4; i++) { const an = Math.random() * 6.283, rad = 70 + Math.random() * 40; parts.push({ x: cx + Math.cos(an) * rad, y: by - 60 + Math.sin(an) * rad * 0.8, vx: -Math.cos(an) * rad * (out ? 2.2 : -1.2), vy: -Math.sin(an) * rad * 1.6 * (out ? 1 : -1) - 30, life: 0.45, max: 0.45, col: Math.random() < 0.5 ? '#7fe9ff' : (Math.random() < 0.5 ? '#ffffff' : '#c63cff'), size: 2.6, grav: 0 }); }
+}
+function drawPlayer0() {
   if (L.adv && P.win && P.winT > 0.45) return;
   const p = P; if (!p) return;
   if (p.inv > 0 && !p.dead && Math.floor(time * 18) % 2) return;
@@ -7615,8 +7631,9 @@ function advExitSign(e) {
 }
 function advBuilding(e) {
   { const bg = ADV_BG[e.room], f = bg && ADV_FAC[bg], fi = f && xi('fac-' + f);
-    if (fi && okI(fi)) { const H = e.h * 2.5, W = H * fi.naturalWidth / fi.naturalHeight; ctx.drawImage(fi, e.x - W / 2, e.y + 6 - H, W, H);
-      const nm = String(e.name || ''); ctx.font = '900 14px system-ui'; ctx.textAlign = 'center'; const tw = ctx.measureText(nm).width + 18, ty = e.y + 6 - H - 10;
+    if (fi && okI(fi)) { const H = 330, W = H * fi.naturalWidth / fi.naturalHeight, db = ADV_FACDOOR[f] || [0.4, 0.75, 0.6, 0.97], x0 = e.x - W * (db[0] + db[2]) / 2, y0 = e.y + 4 - H * db[3]; e._nodoor = true;
+      ctx.drawImage(fi, x0, y0, W, H);
+      const nm = String(e.name || ''); ctx.font = '900 14px system-ui'; ctx.textAlign = 'center'; const tw = ctx.measureText(nm).width + 18, ty = y0 - 10;
       ctx.fillStyle = 'rgba(10,16,40,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(e.x - tw / 2, ty - 15, tw, 22, 11) : ctx.rect(e.x - tw / 2, ty - 15, tw, 22); ctx.fill(); ctx.fillStyle = '#ffe27a'; ctx.fillText(nm, e.x, ty + 1); e._fac = 1; return; } }
   const im = xi('adv-edificio', 3); if (!okI(im)) return; im._n = 3; let hsh = 0; for (const c of e.id) hsh = (hsh * 31 + c.charCodeAt(0)) % 997; im._f = hsh % 3;
   const H = e.h / 0.543, W = H * (im.naturalWidth / 3) / im.naturalHeight, x0 = e.x - W / 2, y0 = e.y + 4 - H * 0.985;
@@ -7659,7 +7676,7 @@ function advDrawWorld() {
     else if (im._n > 1) im._f = e.frame != null ? e.frame : Math.floor(e.ph * (e.fps || 5)) % im._n;
     const fl = e.kind === 'npc' && !e.noTurn ? (e.faceR ? e.face < 0 : e.face > 0) : !!e.flip, br = e.kind === 'npc' ? 1 + Math.sin(e.ph * 2.2) * 0.025 : 1;
     if (e.kind === 'npc' && !e.float) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 2, e.h * 0.32, 6, 0, 0, 6.283); ctx.fill(); }
-    const cb = advCB(im); spr(im, e.x, by, e.h / (cb.b - cb.t), 0.5, cb.b, fl, e.id === 'huevo' ? Math.sin(e.ph * 7) * 0.025 * (1 + (A.f.st || 0)) : 0, 1, br);
+    const cb = advCB(im); if (!e._nodoor) spr(im, e.x, by, (e._dh || e.h) / (cb.b - cb.t), 0.5, cb.b, fl, e.id === 'huevo' ? Math.sin(e.ph * 7) * 0.025 * (1 + (A.f.st || 0)) : 0, 1, br);
     { const fx = e.fx && e.fx(A.api); if (fx) advFx(fx, e.x, by - e.h * (e.fxy || 0.6)); }
     if (e.kind === 'tele') { if (Math.random() < 0.4) parts.push({ x: e.x + (Math.random() - 0.5) * e.h * 0.4, y: by - 10, vx: 0, vy: -60 - Math.random() * 60, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffffff', size: 2.2, grav: 0 }); }
     const mk = e.mark && e.mark(A.api); if (mk && A.tgt !== e) { const yy = by - e.h - 18 + Math.sin(time * 5) * 5; ctx.font = '900 30px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2350'; ctx.fillText('!', e.x + 2, yy + 2); ctx.fillStyle = '#ffd23c'; ctx.fillText('!', e.x, yy); }
@@ -8030,7 +8047,7 @@ function advTeles(list) {          // varios teletransportes que se conectan ent
 function advWay(id, tx, ty, room, rx, ry, name, img) {          // puerta o transportador a otra sala
   const tele = img === 'tele';
   return { id, room, kind: tele ? 'tele' : 'way', tx, ty, h: tele ? 120 : 110, img: tele ? 'adv-teleport' : 'adv-puerta', fr: tele ? undefined : 4, frame: 0, name, lbl: tele ? '✨ VIAJAR' : '🚪 ENTRAR',
-    use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => A.go(room, rx, ry) }, { t: 'QUEDARME AQUÍ' }]); if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
+    use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => A.go(room, rx, ry) }, { t: 'QUEDARME AQUÍ' }]); if (!tele && e._fac) { advWarp(); return setTimeout(() => { ADV_WARP.inT = performance.now() / 1000; A.go(room, rx, ry); }, 620); } if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
 }
 function advLever(id, tx, ty, gate, txt) { return { id, kind: 'lever', tx, ty, h: 64, name: 'PALANCA', lbl: '✋ TIRAR', use: (A, e) => { if (e.on) return A.say(NR, ['La palanca ya está bajada.']); e.on = true; e.opened = true; A.say(NR, txt || ['¡Has bajado la palanca! La barrera de luz se apaga.'], () => A.open(gate)); } }; }
 function advLaser(id, tx, y0, y1, txt) { return { id, kind: 'laser', tx, y0, y1, use: A => A.say(NR, txt) }; }
@@ -10941,6 +10958,9 @@ Object.assign(QW, { 'BOTI': ['anim-boti', 4, 84], 'SALTITOS': ['anim-saltitos', 
 Object.assign(ADV_ANIM, { 'BOTI': 'boti', 'SALTITOS': 'saltitos', 'CHISPITA': 'chispita', 'PULPITO': 'pulpito' });
 AV_MQ.unshift([/MÁQUINA DE PILAS/, 'pilas'], [/TUBERÍA/, 'tuberia'], [/NAVE ABANDONADA|NAVE ROTA/, 'nave', 110], [/GRÚA/, 'grua', 120], [/^RELOJ/, 'reloj', 130], [/MESA DE TRABAJO|SOLDADURA/, 'mesa'],
   [/^LÁMPARA/, 'lampara', 90], [/CALDERO/, 'caldero', 90], [/TELESCOPIO/, 'telescopio'], [/HELADOS/, 'helados', 120]);
+const ADV_FACDOOR = { granja: [0.40, 0.69, 0.60, 0.973], casaarbol: [0.477, 0.40, 0.647, 0.55], acuario: [0.43, 0.72, 0.58, 0.973], pociones: [0.359, 0.75, 0.651, 0.98], forja: [0.376, 0.777, 0.629, 0.98],
+  pasteleria: [0.375, 0.77, 0.625, 0.977], museo: [0.433, 0.763, 0.624, 0.933], mina: [0.38, 0.70, 0.62, 0.967], teatro: [0.379, 0.737, 0.632, 0.973], trono: [0.373, 0.743, 0.631, 0.973],
+  hospital: [0.40, 0.75, 0.60, 0.97], biblioteca: [0.366, 0.703, 0.641, 0.953], correos: [0.40, 0.723, 0.60, 0.953], escuela: [0.385, 0.767, 0.619, 0.967], cine: [0.395, 0.767, 0.605, 0.97] };
 const ADV_FAC = { granja: 'granja', casaarbol: 'casaarbol', acuario: 'acuario', pociones: 'pociones', forja: 'forja', pasteleria: 'pasteleria', museo: 'museo', mina: 'mina', teatro: 'teatro', carpa: 'teatro',
   trono: 'trono', fortaleza: 'trono', mazmorra: 'trono', hospital: 'hospital', biblioteca: 'biblioteca', correos: 'correos', escuela: 'escuela', cine: 'cine' };
 // Cada aventura se monta con piezas: personajes del mundo, salas, máquinas que se arreglan con su herramienta y personajes que piden cosas.
