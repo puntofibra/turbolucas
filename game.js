@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.67';
+const VERSION = '1.68';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3992,15 +3992,47 @@ function updateStage(dt) {
 }
 // líquidos con imagen: superficie animada (4 fotogramas que se desplazan) y relleno que fluye por debajo
 const LIQ = { agua: [40, 6], acido: [26, 5], pantano: [12, 4], lava: [18, 5], choco: [22, 5] };
+// silueta de cada fotograma de la superficie: la parte de abajo de la superficie y el arranque del relleno siguen la misma ola (no una raya recta)
+const LIQC = {};
+function liqPrep(k, S) {
+  if (LIQC[k]) return LIQC[k];
+  const fh = S.naturalHeight / 4, fw = S.naturalWidth, cx = Math.round(fw * 0.025), cw = Math.round(fw - cx * 2), ch = Math.round(fh * 0.8), st = 4, band = Math.round(fh * 0.4);
+  const out = { cw, ch, st, band, cont: [], fr: [] };
+  try {
+    for (let f = 0; f < 4; f++) {
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch; const g = c.getContext('2d');
+      g.drawImage(S, cx, f * fh, cw, ch, 0, 0, cw, ch);
+      const d = g.getImageData(0, 0, cw, ch).data, raw = [], op = (x, y) => d[(y * cw + x) * 4 + 3] > 120;
+      for (let x = 0; x < cw; x += st) { let y = 0; while (y < ch - 14) { let ok = true; for (let q = 0; q < 12; q++) if (!op(x, y + q)) { ok = false; break; } if (ok) break; y++; } raw.push(y); }          // ignora gotas sueltas: busca donde empieza el líquido de verdad
+      const sm = raw.map((v, i) => { let a = 0, n = 0; for (let q = -3; q <= 3; q++) { const r = raw[i + q]; if (r != null) { a += r; n++; } } return a / n; });
+      out.cont.push(sm);
+      const poly = dy => { g.beginPath(); g.moveTo(0, ch + 5); for (let i = 0; i < sm.length; i++) g.lineTo(i * st, Math.min(ch + 2, sm[i] + dy)); g.lineTo(cw, Math.min(ch + 2, sm[sm.length - 1] + dy)); g.lineTo(cw, ch + 5); g.closePath(); g.fill(); };
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; poly(band);
+      g.fillStyle = 'rgba(0,0,0,.22)'; for (let i = 1; i <= 7; i++) poly(band - i * 2);          // borde suave
+      out.fr.push(c);
+    }
+  } catch (e) { out.fail = true; }
+  return LIQC[k] = out;
+}
 function liq(k, x0, w, y, dep, al) {
   const S = xi('liq-' + k + '-sup'), C = xi('liq-' + k + '-cuerpo'); if (!okI(S) || !okI(C)) return false;
-  const [sp, fps] = LIQ[k], fh = S.naturalHeight / 4, fw = S.naturalWidth, hs = 58, s = hs / fh, tw = fw * s, top = y - hs * 0.39, f = Math.floor(time * fps) % 4;
+  const [sp, fps] = LIQ[k], fh = S.naturalHeight / 4, fw = S.naturalWidth, hs = 58, s = hs / fh, top = y - hs * 0.39, f = Math.floor(time * fps) % 4, Pq = liqPrep(k, S), wave = !Pq.fail;
+  const cx = fw * 0.025, cw = wave ? Pq.cw : fw - cx * 2, ch = wave ? Pq.ch : fh * 0.8, hh = ch * s, tw2 = cw * s, off = (time * sp) % (tw2 * 2);
+  const ia = Math.floor((x0 + off) / tw2) - 1;
   ctx.save(); if (al != null) ctx.globalAlpha = al; ctx.beginPath(); ctx.rect(x0, top - 30, w, dep + hs + 40); ctx.clip();
-  if (dep > 0) { const ts = 192, oy = top + hs * 0.6, ox = (time * sp * 0.4) % (ts * 2), i0 = Math.floor((x0 + ox) / ts) - 1;          // relleno: mosaico en espejo (sin cortes) que fluye despacio
-    for (let i = i0; i * ts - ox < x0 + w; i++) for (let j = 0; j * ts < dep; j++) { const xx = i * ts - ox, yy = oy + j * ts; ctx.save(); ctx.translate(xx + (i & 1 ? ts : 0), yy + (j & 1 ? ts : 0)); ctx.scale(i & 1 ? -1 : 1, j & 1 ? -1 : 1); ctx.drawImage(C, 0, 0, ts + 0.5, ts + 0.5); ctx.restore(); } }
-  const off = (time * sp) % (tw * 2), i0 = Math.floor((x0 + off) / tw) - 1;          // superficie: tiras en espejo para que encajen, que avanzan y cambian de fotograma
-  const cx = fw * 0.025, cw = fw - cx * 2, ch = fh * 0.8, hh = hs * 0.8, tw2 = cw * s;          // sin los bordes de la tira ni la raya de abajo
-  for (let i = Math.floor((x0 + off) / tw2) - 1; i * tw2 - off < x0 + w; i++) { const xx = i * tw2 - off; if (i & 1) { ctx.save(); ctx.translate(xx + tw2, 0); ctx.scale(-1, 1); ctx.drawImage(S, cx, f * fh, cw, ch, 0, top, tw2 + 1, hh); ctx.restore(); } else ctx.drawImage(S, cx, f * fh, cw, ch, xx, top, tw2 + 1, hh); }
+  if (dep > 0) { const ts = 192, ox = (time * sp * 0.4) % (ts * 2), i0 = Math.floor((x0 + ox) / ts) - 1;          // relleno: mosaico en espejo (sin cortes) que fluye despacio
+    let oy = top + hs * 0.6;
+    if (wave) {          // el relleno empieza siguiendo la ola de la superficie
+      const ct = Pq.cont[f], n = ct.length, yb = top + hh + dep + 20; ctx.save(); ctx.beginPath(); let first = true;
+      for (let i = ia; i * tw2 - off < x0 + w + tw2; i++) { const xx = i * tw2 - off, m = i & 1;
+        for (let q = 0; q < n; q++) { const qq = m ? n - 1 - q : q, px = m ? xx + tw2 - qq * Pq.st * s : xx + qq * Pq.st * s, py = top + (ct[qq] + Pq.band * 0.55) * s; if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); } }
+      ctx.lineTo(x0 + w + 2 * tw2, yb); ctx.lineTo(ia * tw2 - off - 10, yb); ctx.closePath(); ctx.clip(); oy = top;
+    }
+    for (let i = i0; i * ts - ox < x0 + w; i++) for (let j = 0; j * ts < dep + hs; j++) { const xx = i * ts - ox, yy = oy + j * ts; ctx.save(); ctx.translate(xx + (i & 1 ? ts : 0), yy + (j & 1 ? ts : 0)); ctx.scale(i & 1 ? -1 : 1, j & 1 ? -1 : 1); ctx.drawImage(C, 0, 0, ts + 0.5, ts + 0.5); ctx.restore(); }
+    if (wave) ctx.restore(); }
+  for (let i = ia; i * tw2 - off < x0 + w; i++) { const xx = i * tw2 - off;          // superficie: tiras en espejo que avanzan y cambian de fotograma
+    const draw = (dx) => wave ? ctx.drawImage(Pq.fr[f], 0, 0, cw, ch, dx, top, tw2 + 1, hh) : ctx.drawImage(S, cx, f * fh, cw, ch, dx, top, tw2 + 1, hh);
+    if (i & 1) { ctx.save(); ctx.translate(xx + tw2, 0); ctx.scale(-1, 1); draw(0); ctx.restore(); } else draw(xx); }
   ctx.restore(); return true;
 }
 // tira de fotogramas apilados (uno debajo de otro) repetida a lo ancho
