@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.68';
+const VERSION = '1.69';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -2555,7 +2555,7 @@ function tyMover(m) {                 // vagón del tren de juguete (o bloque qu
   for (const wx of [x + 14, x + w - 14]) { ctx.fillStyle = '#2a2a3a'; ctx.beginPath(); ctx.arc(wx, y + 26, 9, 0, 6.283); ctx.fill(); ctx.save(); ctx.translate(wx, y + 26); ctx.rotate(m.x / 9); ctx.fillStyle = '#ffd040'; ctx.fillRect(-2, -7, 4, 14); ctx.restore(); } }
 function drawToyWorld() {
   const vis = x => x > cam.x - 200 && x < cam.x + VW + 200;
-  for (const b of (L.belts || [])) { if (!vis(b.x0) && !vis(b.x1)) continue; { const ci = toyI('cinta'); if (ci) { const ih = ci.naturalHeight, iw = ci.naturalWidth, sc = 26 / (ih * 342 / 724), tw = iw * sc, off = ((time * 150 * b.dir) % tw + tw) % tw; ctx.save(); ctx.beginPath(); ctx.rect(b.x0, b.y - 14, b.x1 - b.x0, 40); ctx.clip(); ctx.translate(b.x0 + (b.dir < 0 ? b.x1 - b.x0 : 0), 0); if (b.dir < 0) ctx.scale(-1, 1); for (let xx = -tw + off; xx < b.x1 - b.x0; xx += tw - 1) ctx.drawImage(ci, xx, b.y - 12 - ih * (200 / 724) * sc, tw, ih * sc); ctx.restore(); continue; } } ctx.fillStyle = '#3a3a4a'; ctx.fillRect(b.x0, b.y - 10, b.x1 - b.x0, 14); ctx.strokeStyle = '#ffd040'; ctx.lineWidth = 2; const off = (time * 150 * b.dir) % 24;
+  for (const b of (L.belts || [])) { if (!vis(b.x0) && !vis(b.x1)) continue; { const ci = toyI('cinta'); if (ci) { const ih = ci.naturalHeight, iw = ci.naturalWidth, sc = 26 / (ih * 342 / 724), tw = iw * sc, off = ((time * 150 * Math.abs(b.dir)) % tw + tw) % tw; ctx.save(); ctx.beginPath(); ctx.rect(b.x0, b.y - 14, b.x1 - b.x0, 40); ctx.clip(); ctx.translate(b.x0 + (b.dir < 0 ? b.x1 - b.x0 : 0), 0); if (b.dir < 0) ctx.scale(-1, 1); for (let xx = -tw + off; xx < b.x1 - b.x0; xx += tw - 1) ctx.drawImage(ci, xx, b.y - 12 - ih * (200 / 724) * sc, tw, ih * sc); ctx.restore(); continue; } } ctx.fillStyle = '#3a3a4a'; ctx.fillRect(b.x0, b.y - 10, b.x1 - b.x0, 14); ctx.strokeStyle = '#ffd040'; ctx.lineWidth = 2; const off = (time * 150 * b.dir) % 24;
     for (let x = b.x0 + ((off % 24) + 24) % 24; x < b.x1; x += 24) { ctx.beginPath(); ctx.moveTo(x, b.y - 8); ctx.lineTo(x + 8 * b.dir, b.y - 3); ctx.lineTo(x, b.y + 2); ctx.stroke(); }
     for (const ex of [b.x0, b.x1]) { ctx.fillStyle = '#6a6a7a'; ctx.beginPath(); ctx.arc(ex, b.y - 3, 9, 0, 6.283); ctx.fill(); } }
   for (const z of (L.chocs || [])) { if (!vis(z.x0) && !vis(z.x1)) continue; if (liq('choco', z.x0, z.x1 - z.x0, z.y0 + 8, z.y1 - z.y0 - 8)) continue; const g = ctx.createLinearGradient(0, z.y0, 0, z.y1); g.addColorStop(0, '#8a4a28'); g.addColorStop(1, '#3a1808'); ctx.fillStyle = g; ctx.fillRect(z.x0, z.y0 + 6, z.x1 - z.x0, z.y1 - z.y0 - 6);
@@ -2904,7 +2904,7 @@ function jkMover(m) {
 }
 function drawJunkWorld() {
   const vis = x => x > cam.x - 300 && x < cam.x + VW + 300;
-  for (const b of (L.belts || [])) { if (!vis(b.x0) && !vis(b.x1)) continue; { const ci = jnkI('cinta-chatarra'); if (ci) { const ih = ci.naturalHeight, iw = ci.naturalWidth, sc = 26 / (ih * 402 / 724), tw = iw * sc, off = ((time * 150 * b.dir) % tw + tw) % tw; ctx.save(); ctx.beginPath(); ctx.rect(b.x0, b.y - 14, b.x1 - b.x0, 40); ctx.clip(); ctx.translate(b.x0 + (b.dir < 0 ? b.x1 - b.x0 : 0), 0); if (b.dir < 0) ctx.scale(-1, 1); for (let xx = -tw + off; xx < b.x1 - b.x0; xx += tw - 1) ctx.drawImage(ci, xx, b.y - 12 - ih * (180 / 724) * sc, tw, ih * sc); ctx.restore(); continue; } } ctx.fillStyle = '#2a2a34'; ctx.fillRect(b.x0, b.y - 10, b.x1 - b.x0, 14); ctx.strokeStyle = '#ff9a30'; ctx.lineWidth = 2; const off = (time * 150 * b.dir) % 24;
+  for (const b of (L.belts || [])) { if (!vis(b.x0) && !vis(b.x1)) continue; { const ci = jnkI('cinta-chatarra'); if (ci) { const ih = ci.naturalHeight, iw = ci.naturalWidth, sc = 26 / (ih * 402 / 724), tw = iw * sc, off = ((time * 150 * Math.abs(b.dir)) % tw + tw) % tw; ctx.save(); ctx.beginPath(); ctx.rect(b.x0, b.y - 14, b.x1 - b.x0, 40); ctx.clip(); ctx.translate(b.x0 + (b.dir < 0 ? b.x1 - b.x0 : 0), 0); if (b.dir < 0) ctx.scale(-1, 1); for (let xx = -tw + off; xx < b.x1 - b.x0; xx += tw - 1) ctx.drawImage(ci, xx, b.y - 12 - ih * (180 / 724) * sc, tw, ih * sc); ctx.restore(); continue; } } ctx.fillStyle = '#2a2a34'; ctx.fillRect(b.x0, b.y - 10, b.x1 - b.x0, 14); ctx.strokeStyle = '#ff9a30'; ctx.lineWidth = 2; const off = (time * 150 * b.dir) % 24;
     for (let x = b.x0 + ((off % 24) + 24) % 24; x < b.x1; x += 24) { ctx.beginPath(); ctx.moveTo(x, b.y - 8); ctx.lineTo(x + 8 * b.dir, b.y - 3); ctx.lineTo(x, b.y + 2); ctx.stroke(); }
     for (const ex of [b.x0, b.x1]) { ctx.fillStyle = '#5a5a6a'; ctx.beginPath(); ctx.arc(ex, b.y - 3, 9, 0, 6.283); ctx.fill(); } }
   for (const m of (L.mags || [])) { if (!vis(m.x0) && !vis(m.x1)) continue; const cx = (m.x0 + m.x1) / 2, top = m.y0 - 100, R = Math.min(64, Math.max(40, (m.x1 - m.x0) * 0.22));
