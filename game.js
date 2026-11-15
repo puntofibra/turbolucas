@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.83';
+const VERSION = '1.84';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7666,13 +7666,40 @@ function advDrawWorld() {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(o.x, y, 3, o.x, y, 44); gg.addColorStop(0, 'rgba(255,250,200,.75)'); gg.addColorStop(1, 'rgba(255,240,150,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(o.x, y, 44, 0, 6.283); ctx.fill(); ctx.restore();
     { const oi = xi(oimg); if (o.fr) { oi._n = o.fr; oi._f = o.frame || 0; } spr(oi, o.x, y, it.h, 0.5, 0.5, false, Math.sin(time * 2 + o.x) * 0.12); }
     if (Math.random() < 0.12) parts.push({ x: o.x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40, vx: 0, vy: -30, life: 0.7, max: 0.7, col: '#ffffff', size: 2, grav: 0 }); }
+  advFxPro(A);
+}
+/* ---------- efectos pro de la aventura: motas de luz, rayos de luz en las salas, rayos láser y luz al arreglar algo ---------- */
+// fondos de salas que aún no tienen dibujo propio: usan otro parecido hasta que lleguen los nuevos
+const ADV_BG_ALIAS = { hospital: 'laboratorio', biblioteca: 'sotano', correos: 'estacion', cocina: 'tienda', dormitorio: 'caja', observatorio: 'estacion', escuela: 'caja', cine: 'fiesta', pasteleria: 'tienda',
+  faro: 'cielo', teatro: 'carpa', granja: 'invernadero', casaarbol: 'selva', museo: 'templo', mercado: 'tienda', mina: 'cueva', trono: 'fortaleza', mazmorra: 'sotano', pociones: 'laboratorio', forja: 'volcan', acuario: 'oceano', barco: 'cueva' };
+function advFxPro(A) {
+  const x0 = cam.x - 40, y0 = cam.y || 0; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 22; i++) { const sp = 6 + (i % 5) * 4, px = x0 + ((i * 397.3 + time * sp) % (VW + 80)), py = y0 + ((i * 211.7 + time * (3 + i % 4)) % VHv) + Math.sin(time * 0.7 + i) * 18;
+    const a = 0.18 + 0.18 * Math.sin(time * 2 + i * 1.7), rr = 2 + (i % 3) * 1.5, gg = ctx.createRadialGradient(px, py, 0, px, py, rr * 4);
+    gg.addColorStop(0, 'rgba(255,246,210,' + a.toFixed(3) + ')'); gg.addColorStop(1, 'rgba(255,246,210,0)'); ctx.fillStyle = gg; ctx.fillRect(px - rr * 4, py - rr * 4, rr * 8, rr * 8); }
+  if (ADV_BG[curId]) for (let k = 0; k < 3; k++) { const bx = cam.x + VW * (0.18 + 0.32 * k) + Math.sin(time * 0.25 + k * 2) * 50, a = 0.05 + 0.03 * Math.sin(time * 0.7 + k * 2.3), top = y0 - 20, bot = y0 + VHv;
+    const gg = ctx.createLinearGradient(0, top, 0, bot); gg.addColorStop(0, 'rgba(255,240,200,' + (a * 1.6).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(255,240,200,0)'); ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.moveTo(bx - 26, top); ctx.lineTo(bx + 34, top); ctx.lineTo(bx + 190, bot); ctx.lineTo(bx + 40, bot); ctx.closePath(); ctx.fill(); }
+  for (const e of A.ents) {
+    if (e.beams && !(e.alt && e.alt(A.api)) && e.x > cam.x - 200 && e.x < cam.x + VW + 200) {
+      for (let j = 0; j < 3; j++) { const lx = e.x + 78 + j * 26, top = e.y - 160, f = 0.65 + 0.35 * Math.sin(time * 28 + j * 2.1);
+        ctx.strokeStyle = 'rgba(255,30,70,' + (0.22 * f).toFixed(3) + ')'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(lx, top); ctx.lineTo(lx, e.y); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,120,150,' + (0.9 * f).toFixed(3) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(lx, top); ctx.lineTo(lx, e.y); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,60,90,.9)'; ctx.beginPath(); ctx.arc(lx, top, 5, 0, 6.283); ctx.arc(lx, e.y - 2, 5, 0, 6.283); ctx.fill();
+        if (Math.random() < 0.08) parts.push({ x: lx, y: top + Math.random() * 160, vx: (Math.random() - 0.5) * 80, vy: -20, life: 0.4, max: 0.4, col: '#ff5a7a', size: 2, grav: 0 }); } }
+    if (e._fx && time - e._fx < 1.8) { const t = (time - e._fx) / 1.8, a = 1 - t, hh = 420 * (0.35 + t), ww = 90 * (1 - t * 0.5), gg = ctx.createLinearGradient(0, e.y, 0, e.y - hh);
+      gg.addColorStop(0, 'rgba(127,233,255,' + (0.55 * a).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(127,233,255,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - ww / 2, e.y - hh, ww, hh);
+      ctx.strokeStyle = 'rgba(160,255,220,' + (0.8 * a).toFixed(3) + ')'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(e.x, e.y - 4, 30 + t * 150, 8 + t * 30, 0, 0, 6.283); ctx.stroke();
+      if (Math.random() < 0.5) parts.push({ x: e.x + (Math.random() - 0.5) * ww, y: e.y - Math.random() * 60, vx: 0, vy: -120 - Math.random() * 120, life: 0.8, max: 0.8, col: Math.random() < 0.5 ? '#7fe9ff' : '#fff6a0', size: 2.6, grav: 0 }); }
+  }
+  ctx.restore();
 }
 const ADV_BG = { 'A-1t': 'tienda', 'A-2a': 'laboratorio', 'A-2b': 'invernadero', 'A-3c': 'cueva', 'A-4p': 'piramide', 'A-5t': 'taller', 'A-6c': 'caja', 'A-7c': 'cueva', 'A-8m': 'maquinas', 'A-9t': 'templo',
   'A-10s': 'sotano', 'A-11b': 'laboratorio', 'A-12': 'estacion', 'A-14c': 'carpa', 'A-15': 'fiesta', 'A-15a': 'tienda', 'A-15b': 'taller', 'A-15c': 'invernadero', 'A-15d': 'piramide',
   'A-17c': 'caja', 'A-18t': 'taller', 'A-19i': 'invernadero', 'A-22b': 'laboratorio', 'A-23t': 'templo', 'A-25m': 'maquinas', 'A-26s': 'sotano', 'A-30': 'estacion', 'A-30a': 'tienda', 'A-30b': 'invernadero', 'A-30c': 'sotano', 'A-30d': 'carpa' };
 const ADV_BGF = { fiesta: 0.84, estacion: 0.815, carpa: 0.875, sotano: 0.845, templo: 0.845, maquinas: 0.845, caja: 0.865, taller: 0.855, piramide: 0.86, cueva: 0.85, invernadero: 0.875, laboratorio: 0.80, tienda: 0.87 };
 function advRoomBg() {          // fondo dibujado de la sala (se repite por pisos y a lo ancho)
-  const n = ADV_BG[curId]; if (!n) return false; const im = xi('sala-' + n); if (!okI(im)) return false;
+  const n0 = ADV_BG[curId], n = n0 && (ADV_BG_ALIAS[n0] || n0); if (!n) return false; const im = xi('sala-' + n); if (!okI(im)) return false;
   const every = curId === 'A-12' ? 6 : L.H - 2 - (curId === 'A-15' ? 1 : 0), fr = ADV_BGF[n] || 0.85, h = every * T / fr, w = h * im.naturalWidth / im.naturalHeight;
   const x0 = Math.max(0, cam.x - 60), x1 = Math.min(L.W * T, cam.x + VW + 60); ctx.fillStyle = '#10142a'; ctx.fillRect(x0, 0, x1 - x0, L.H * T);
   const ox = (L.W * T - w) / 2, sx = ox - Math.ceil(ox / w) * w;
@@ -9329,12 +9356,12 @@ function avNpc(id, o) {
 // máquina, cofre cerrado, puerta atascada…: la miras, y si tienes la herramienta buena se arregla y a veces suelta algo
 function avMach(id, o) {
   o = avMQ(o); const k = 'av_' + (o._k || id), nm = o.name || 'MÁQUINA', me = { name: nm, img: o.img };
-  return { id, kind: 'gate', name: nm, img: o.img, fr: o.fr, frame: o.f0 || 0, h: o.h || 100, lbl: o.lbl || '🔧 USAR', img2: o.img2, alt: A => A.flag(k), glowIf: A => A.flag(k) ? 'rgba(80,255,160,.35)' : null,
+  return { id, kind: 'gate', name: nm, img: o.img, fr: o.fr, frame: o.f0 || 0, h: o.h || 100, lbl: o.lbl || '🔧 USAR', img2: o.img2, beams: o.beams, alt: A => A.flag(k), glowIf: A => A.flag(k) ? 'rgba(80,255,160,.35)' : null,
     mark: A => !A.flag(k) && A.has(o.need),
     use: (A, e) => {
       if (A.flag(k)) return A.say(me, o.done || ['Ya funciona perfectamente.']);
       if (o.pre && !A.flag(o.pre)) return A.say(NR, o.preTxt || o.look);
-      A.say(NR, o.look, () => avPicker(A, me, o.q || '¿Qué quieres usar?', o.need, it => { if (o.keep === false || o.keep === undefined) A.take(it); A.flag(k, 1); if (o.f1 != null) e.frame = o.f1; shake = 0.15; burst(e.x, e.y - (o.h || 100) / 2, 30, '#7fe9ff', 240, 0.7, 0, 4);
+      A.say(NR, o.look, () => avPicker(A, me, o.q || '¿Qué quieres usar?', o.need, it => { if (o.keep === false || o.keep === undefined) A.take(it); A.flag(k, 1); e._fx = time; if (o.f1 != null) e.frame = o.f1; shake = 0.15; burst(e.x, e.y - (o.h || 100) / 2, 30, '#7fe9ff', 240, 0.7, 0, 4);
         [523, 659, 784, 1046].forEach((f, i) => tone(f, f, 0.12, 'square', 0.08, i * 0.08)); A.say(NR, o.fix, () => avReward(A, o, e)); }, it => A.say(NR, [advRnd(AV_NO_MACH)(avArt(it))])));
     } };
 }
@@ -10868,7 +10895,320 @@ advQuest('A-90', { n: 'LAS CORONAS DEL REINO', img: 'it-corona', s: 'Hoy es la g
   end: 'El desfile de las coronas fue precioso.<br>¡Gracias por jugar, gran aventurero!',
   plan: [['room', { door: 'tele', name: 'EL MAR', bg: 'oceano', th: 'ocean', who: 'SIRENITA', ask: ['¡Hola, Lucas! Mi corona de conchas es para el desfile.', '¡Toma!'] }], ['room', { door: 'tele', name: 'LA BIBLIOTECA', bg: 'sotano', who: 'BÚHO SABIO', ask: ['Uuuh. Aquí tienes mi corona de sabio.', '¡Para el desfile!'] }], ['room', { door: 'tele', name: 'EL HOSPITAL', bg: 'laboratorio', who: 'DOCTORA PILA', ask: ['¡Hola, Lucas! Mi corona es para el desfile.', '¡Que te diviertas!'] }], ['room', { door: 'tele', name: 'CORREOS', bg: 'estacion', who: 'CARTERO VELOZ', ask: ['¡Rrrrum! ¡Corona entregada!', '¡Firma aquí! Es broma, ¡tómala!'] }], ['plats'], ['rock']] });
 
-window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get lines() { return ADVT.lines; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), editHere: () => { CHEAT.test = true; openEditOff(); }, get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
+/* ======================= FÁBRICA DE AVENTURAS 2: hasta 120 aventuras por edad ======================= */
+// Cada aventura se monta con piezas: personajes del mundo, salas, máquinas que se arreglan con su herramienta y personajes que piden cosas.
+// La cadena se construye hacia atrás desde el objeto final, así que siempre se puede terminar.
+const GZ = {
+  rng(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); let a = h >>> 0;
+    return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; },
+  pick: (r, a) => a[Math.floor(r() * a.length)],
+  mix: (r, a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; },
+  cap: t => t.charAt(0).toUpperCase() + t.slice(1),
+  nm: n => n.charAt(0) + n.slice(1).toLowerCase().replace(/ (\S)/g, (m, c) => ' ' + c.toUpperCase())
+};
+// ---------- mundos: personajes, salas (nombre, fondo, tema) y textos de llegada ----------
+const GZ_W = {
+  ST: { amb: ['estrellas'], intro: ['Lucas aterriza en una estación espacial llena de luces.', 'Algo no va bien: todo el mundo corre de un lado para otro.'], deco: ['m-planta', 'm-lampara', 'm-buzon'],
+    chars: ['RAYO', 'BYTE', 'CHISPAS', 'TUERCAS', 'BOTI', 'DOCTORA PILA', 'CARTERO VELOZ', 'CHISPAZO', 'PELUSÍN', 'CHISPITA'],
+    rooms: [['EL HOSPITAL', 'hospital'], ['LA BIBLIOTECA', 'biblioteca'], ['EL TALLER', 'taller'], ['LA SALA DE MÁQUINAS', 'maquinas'], ['EL LABORATORIO', 'laboratorio'], ['CORREOS', 'correos'], ['LA COCINA', 'cocina'], ['EL DORMITORIO', 'dormitorio'], ['EL OBSERVATORIO', 'observatorio'], ['LA ESCUELA', 'escuela'], ['EL CINE', 'cine']] },
+  LS: { amb: ['aviones'], intro: ['Lucas vuela hasta un reino de nubes esponjosas.', 'Desde arriba se ve a todos muy preocupados.'], deco: ['deco-fiesta-0', 'm-planta'],
+    chars: ['PLUMITA', 'HÉLICE', 'GIRO', 'ALGODÓN', 'BOLITA', 'CARTERO VELOZ', 'BÚHO SABIO'],
+    rooms: [['LA TORRE DE LAS NUBES', 'cielo', 'sky'], ['LA PASTELERÍA', 'pasteleria'], ['EL FARO', 'faro', 'sky'], ['EL OBSERVATORIO', 'observatorio'], ['LA BIBLIOTECA', 'biblioteca'], ['EL DORMITORIO', 'dormitorio']] },
+  LT: { amb: [], intro: ['Lucas llega a la ciudad de los juguetes.', 'Hay música, colores… y un problema muy gordo.'], deco: ['deco-circo-0', 'deco-tienda-3'],
+    chars: ['TAMBOR', 'MUELLE', 'PELUSÍN', 'SALTITOS', 'CASCABEL', 'BOLITA', 'CARTERO VELOZ'],
+    rooms: [['LA JUGUETERÍA', 'jugueteria'], ['EL TEATRO', 'teatro'], ['LA PASTELERÍA', 'pasteleria'], ['EL DORMITORIO', 'dormitorio'], ['LA ESCUELA', 'escuela'], ['EL CINE', 'cine'], ['LA CARPA', 'carpa']] },
+  LJ: { amb: ['luces', 'mariposas'], intro: ['Lucas se adentra en una selva enorme.', 'Se oyen pájaros, ranas… y a alguien pidiendo ayuda.'], deco: ['deco-selva-1', 'seta-0', 'deco-plantas-2'],
+    chars: ['SALTARÍN', 'MUSGO', 'HOJA', 'PINCHO', 'MEDI', 'BÚHO SABIO', 'DOCTORA PILA'],
+    rooms: [['EL INVERNADERO', 'invernadero', 'jungle'], ['EL TEMPLO', 'templo', 'jungle'], ['EL POBLADO', 'selva', 'jungle'], ['LA GRANJA', 'granja', 'jungle'], ['LA CASA DEL ÁRBOL', 'casaarbol', 'jungle'], ['LA CUEVA', 'cueva', 'jungle']] },
+  LD: { amb: ['buitres'], intro: ['Lucas cruza las dunas de un desierto dorado.', 'Entre la arena asoman pirámides y templos antiguos.'], deco: ['deco-egipto-0', 'deco-egipto-3'],
+    chars: ['GATO DE PIEDRA', 'DOÑA VENDA', 'ARENITA', 'PINCHO', 'CAPITÁN ROJO'],
+    rooms: [['LA PIRÁMIDE', 'piramide'], ['EL TEMPLO DEL SOL', 'templo'], ['EL MUSEO', 'museo'], ['EL MERCADO', 'mercado'], ['LA CÁMARA SECRETA', 'mazmorra']] },
+  LK: { amb: [], intro: ['Lucas llega a la ciudad de la chatarra.', 'Hay montañas de piezas, grúas y robots trabajando.'], deco: ['deco-maquinas-2', 'deco-taller-2'],
+    chars: ['RECICLA', 'TUERCAS', 'TIC-TAC', 'CHISPAZO', 'BOTI', 'BYTE'],
+    rooms: [['EL TALLER', 'taller'], ['LA CHATARRERÍA', 'chatarra'], ['LA MINA', 'mina'], ['LA SALA DE MÁQUINAS', 'maquinas'], ['LA COCINA', 'cocina']] },
+  LF: { amb: [], intro: ['Lucas llega a un castillo enorme con torres y banderas.', 'Dentro, todos están muy nerviosos.'], deco: ['m-cuadro', 'deco-reloj-0'],
+    chars: ['TAMBOR', 'CAMPANITA', 'TIC-TAC', 'BÚHO SABIO', 'CAPITÁN ROJO', 'DOCTORA PILA'],
+    rooms: [['LA BIBLIOTECA', 'biblioteca'], ['EL SALÓN DEL TRONO', 'trono'], ['LA MAZMORRA', 'mazmorra'], ['EL MUSEO', 'museo'], ['LA TORRE', 'fortaleza'], ['LA COCINA DEL CASTILLO', 'cocina'], ['LA SALA DE POCIONES', 'pociones']] },
+  LV: { amb: [], intro: ['Lucas llega a una montaña de fuego.', 'La lava burbujea y el suelo tiembla un poquito.'], deco: ['cristal-lava-1', 'deco-maquinas-1'],
+    chars: ['BRASA', 'MAGMA', 'CHISPAZO', 'TUERCAS'],
+    rooms: [['LA CUEVA CALIENTE', 'volcan', 'lava'], ['LA FORJA', 'forja', 'lava'], ['LA SALA DE MÁQUINAS', 'maquinas'], ['LA MINA', 'mina', 'lava']] },
+  LO: { amb: ['mar'], intro: ['Lucas se sumerge en un mar azul y brillante.', 'Los peces nadan nerviosos de un lado a otro.'], deco: ['adv-corales', 'deco-mar-1'],
+    chars: ['SIRENITA', 'PINZAS', 'TINTA', 'GLOBITO', 'DIENTES', 'MEDI', 'ABUELA CONCHA', 'DOÑA ALMEJA', 'CAPITÁN ROJO'],
+    rooms: [['EL ACUARIO', 'acuario', 'ocean'], ['EL BARCO PIRATA', 'barco', 'ocean'], ['EL PALACIO DE CORAL', 'oceano', 'ocean'], ['LA CUEVA SUBMARINA', 'cueva', 'ocean'], ['EL FARO', 'faro']] },
+  ICE: { amb: ['nieve'], intro: ['Lucas llega a un reino de hielo y nieve.', '¡Brrr! Hace un frío que pela.'], deco: ['deco-hielo-1', 'deco-hielo-3'],
+    chars: ['COPITO', 'BRISA', 'ESCARCHA', 'PELUSÍN', 'BRASA'],
+    rooms: [['LA CUEVA HELADA', 'hielo', 'ice'], ['EL CASTILLO DE HIELO', 'hielo', 'ice'], ['LA PISTA DE PATINAJE', 'hielo', 'ice'], ['LA COCINA', 'cocina'], ['EL DORMITORIO', 'dormitorio']] }
+};
+const GZ_FURN = { hospital: ['m-cama', 'm-planta'], biblioteca: ['m-estanteria', 'm-lampara'], taller: ['m-banco'], correos: ['m-buzon', 'm-estanteria'], cocina: ['deco-tienda-1'], dormitorio: ['m-cama', 'm-lampara', 'm-tele'],
+  observatorio: ['m-cuadro'], escuela: ['m-cuadro', 'm-reloj'], cine: ['m-sofa', 'm-tele'], pasteleria: ['deco-tienda-1'], museo: ['m-cuadro'], trono: ['m-cuadro'], laboratorio: ['m-estanteria'], jugueteria: ['deco-tienda-3'] };
+// ---------- lo que un personaje puede pedir: por qué lo quiere, pista y gracias ----------
+const GZ_WANT = {
+  manzana: ['Tengo un hambre que me comería un asteroide.', 'Algo de fruta… roja, redonda y crujiente…', '¡Ñam! ¡Qué manzana tan rica!'],
+  galleta: ['Me apetece muchísimo algo dulce y crujiente para merendar.', 'Algo redondo, crujiente y con trocitos de chocolate…', '¡Una galleta! ¡Ñam, ñam!'],
+  caramelo: ['Estoy sin fuerzas. Necesito algo dulce para recuperar energía.', 'Algo dulce, de colores, envuelto en papel brillante…', '¡Un caramelo! ¡Ya tengo energía!'],
+  tarta: ['Hoy es mi cumpleaños y no tengo nada para soplar las velas.', 'Algo con velas para soplar… ¡y chocolate!', '¡Una tarta! ¡Es el mejor cumpleaños!'],
+  pelota: ['Me aburro muchísimo. ¡Quiero jugar a algo!', 'Algo redondo y de colores para jugar…', '¡Una pelota! ¡Vamos a jugar!'],
+  globo: ['Mi fiesta está muy sosa sin decoración.', 'Algo que flote y sea de colores…', '¡Un globo! ¡Qué bonito queda!'],
+  flor: ['Quiero hacerle un regalo bonito a mi abuela.', 'Algo que huela bien y tenga pétalos de colores…', '¡Una flor! ¡A mi abuela le va a encantar!'],
+  regalo: ['Hoy es el cumpleaños de mi mejor amigo y no tengo regalo.', 'Algo envuelto con un lazo…', '¡Un regalo! ¡Mi amigo se pondrá contentísimo!'],
+  lazo: ['Tengo un regalo preparado, pero sin adorno queda muy feo.', 'Algo rosa para atar el regalo…', '¡Un lazo! ¡Ahora sí que queda precioso!'],
+  caja: ['Aquí no hay nada de música y me aburro un montón.', 'Algo que haga tirorí, tirorá…', '¡Una caja de música! ¡Tirorí, tirorá!'],
+  bola: ['Quiero montar una discoteca, pero falta algo que brille al girar.', 'Algo redondo hecho de espejitos…', '¡Una bola de discoteca! ¡A bailar!'],
+  paraguas: ['Va a llover y si me mojo me oxido.', 'Algo para taparse de la lluvia…', '¡Un paraguas! ¡Ya no me oxidaré!'],
+  gafas: ['Quiero bucear, pero debajo del agua no veo nada.', 'Algo para ponerse en los ojos debajo del agua…', '¡Una máscara de buceo! ¡Ahora lo veo todo!'],
+  botasf: ['Se me congelan los pies con este frío.', 'Algo calentito para los pies…', '¡Una bota de fuego! ¡Qué gustito!'],
+  cubo: ['Mis plantas tienen muchísima sed.', 'Algo para llevar agua…', '¡Un cubo de agua! ¡Mis plantas te lo agradecen!'],
+  gota: ['Tengo una sed tremenda.', 'Algo fresquito para beber…', '¡Glu, glu! ¡Qué fresquita!'],
+  linterna: ['Le tengo un poquito de miedo a la oscuridad.', 'Algo que dé luz…', '¡Una linterna! ¡Ya no tengo miedo!'],
+  bombilla: ['Se me ha fundido la luz de casa y no veo nada.', 'Algo de cristal que da luz…', '¡Una bombilla! ¡Clic! ¡Luz!'],
+  fusible: ['Mi juguete favorito se ha quedado sin energía.', 'Algo que da energía a los aparatos…', '¡Una pila! ¡Mi juguete funciona otra vez!'],
+  cable: ['Mi radio no suena: tiene un cable roto.', 'Algo largo para conectar cosas…', '¡Un cable! ¡Mi radio vuelve a sonar!'],
+  tornillo: ['Se me ha soltado una pieza y me tambaleo.', 'Algo pequeñito de metal que se enrosca…', '¡Un tornillo! ¡Ya no me tambaleo!'],
+  iman: ['Se me han caído unas tuercas por un agujero y no las alcanzo.', 'Algo que atrae el metal…', '¡Un imán! ¡Mira cómo suben las tuercas!'],
+  estrellamar: ['Quiero decorar mi casa con algo bonito del mar.', 'Algo del mar con cinco puntas…', '¡Una estrella de mar! ¡Qué preciosidad!'],
+  caracola: ['Echo de menos el sonido del mar.', 'Algo del mar en forma de espiral…', '¡Una caracola! ¡Se oye el mar!'],
+  perla: ['A mi collar le falta una pieza blanca y brillante.', 'Algo blanco, redondo y brillante del mar…', '¡Una perla! ¡Mi collar está completo!'],
+  perlan: ['Me encantan las cosas raras que brillan.', 'Algo redondo, oscuro y muy brillante…', '¡Una perla negra! ¡Ooooh!'],
+  seta: ['Quiero hacer sopa para cenar, pero me falta lo más importante.', 'Algo del bosque, rojo con puntitos…', '¡Una seta! ¡Qué sopa tan rica voy a hacer!'],
+  semilla: ['Quiero plantar un árbol nuevo en mi jardín.', 'Algo pequeñito de lo que crecen las plantas…', '¡Una semilla mágica! ¡Voy a plantarla ahora mismo!'],
+  nido: ['El viento se llevó la casita de mis pollitos.', 'Algo hecho de ramitas…', '¡Un nido! ¡Mis pollitos ya tienen casa!'],
+  mapa: ['Quiero encontrar un tesoro, pero no sé por dónde empezar.', 'Algo de papel con una equis roja…', '¡Un mapa del tesoro! ¡Allá voy!'],
+  brujula: ['Me he perdido y no sé dónde está el norte.', 'Algo que siempre señala el norte…', '¡Una brújula! ¡Ya sé volver a casa!'],
+  cuerda: ['Quiero hacer un columpio, pero me falta algo para colgarlo.', 'Algo largo y fuerte para atar…', '¡Una cuerda! ¡A columpiarse!'],
+  muelle: ['Quiero saltar más alto que nadie.', 'Algo que hace boing, boing…', '¡Un muelle saltarín! ¡Boing!'],
+  mando: ['Quiero ver mis dibujos favoritos, pero no puedo encender la tele.', 'Algo con botones para la tele…', '¡El mando! ¡Empiezan mis dibujos!'],
+  escoba: ['Mi casa está llena de polvo.', 'Algo para barrer…', '¡Una escoba! ¡A barrer!'],
+  invitacion: ['Quiero ir a la gran fiesta, pero no me dejan entrar sin una carta especial.', 'Algo de papel con un sello rojo…', '¡Una invitación! ¡Me voy a la fiesta!'],
+  oro: ['Quiero comprar un regalo, pero no tengo dinero.', 'Algo redondo y dorado que vale mucho…', '¡Una moneda de oro! ¡Gracias!'],
+  cristal: ['Quiero hacer un castillo de hielo y me falta la pieza más bonita.', 'Algo frío, transparente y con puntas…', '¡Un cristal de hielo! ¡Qué bonito!'],
+  rubi: ['Tengo muchísimo frío y necesito algo que dé calor.', 'Algo rojo y brillante que da calorcito…', '¡Un cristal de fuego! ¡Qué calentito!'],
+  cristalh: ['Hace demasiado calor aquí. Necesito algo fresquito.', 'Algo azul y frío como el hielo…', '¡Un cristal azul! ¡Qué fresquito!'],
+  martillo: ['Quiero colgar un cuadro, pero no tengo con qué clavar el clavo.', 'Algo para dar golpes…', '¡Un martillo! ¡Pam, pam!'],
+  destornillador: ['Tengo que apretar unos tornillos y con los dedos no puedo.', 'Una herramienta para tornillos…', '¡Un destornillador! ¡Perfecto!'],
+  llavein: ['Una tuerca de mi bici está muy floja.', 'Una herramienta para apretar tuercas…', '¡Una llave inglesa! ¡Bici arreglada!'],
+  alicate: ['Tengo que cortar un cable y no tengo con qué.', 'Una herramienta que corta…', '¡Un alicate! ¡Ris, ras!'],
+  soldador: ['Se me ha partido un juguete de metal.', 'Algo que pega el metal con calor…', '¡Un soldador! ¡Juguete arreglado!'],
+  llavem: ['Me he quedado fuera de casa.', 'Algo pequeño y dorado para abrir puertas…', '¡Una llave! ¡Ya puedo entrar en casa!'],
+  pendrive: ['Quiero guardar mis fotos y no tengo dónde.', 'Algo pequeñito que guarda cosas de ordenador…', '¡Una memoria! ¡Fotos guardadas!'],
+  eng: ['Mi reloj se ha parado y no sé qué hora es.', 'Una pieza dorada con dientes…', '¡Un engranaje! ¡Tic, tac, mi reloj funciona!'],
+  engp: ['Mi bici ha perdido una pieza y no avanza.', 'Una pieza plateada con dientes…', '¡Un engranaje de plata! ¡Bici arreglada!'],
+  pieza: ['Me falta una pieza para terminar mi puzle.', 'Algo con forma rara que encaja…', '¡La pieza que me faltaba!'],
+  hoja: ['Mi libro mágico ha perdido una página dorada.', 'Algo dorado con forma de hoja…', '¡Una hoja dorada! ¡Mi libro está completo!'],
+  corona: ['Hoy hago de rey en la obra de teatro y no tengo disfraz.', 'Algo dorado para la cabeza…', '¡Una corona! ¡Soy el rey!'],
+  collar: ['Quiero ir guapísima a la fiesta.', 'Algo para el cuello, con perlas…', '¡Un collar! ¡Qué elegante!'],
+  estrella: ['Mi árbol no tiene nada en la punta.', 'Algo amarillo con cinco puntas que brilla…', '¡Una estrella! ¡Mi árbol está precioso!']
+};
+// ---------- máquinas: qué necesitan, qué se ve y qué pasa al arreglarlas (g: lo que pueden soltar; 'any' = guardan cualquier cosa; f = solo abren o encienden algo) ----------
+const GZ_M = [
+  { name: 'CAJA FUERTE', img: 'adv-taquilla', need: 'llavep', look: 'Una caja fuerte muy pesada con una cerradura de plata.', fix: '¡Clic, clonc! La caja fuerte se abre despacito.', g: 'any' },
+  { name: 'ARMARIO', img: 'adv-taquilla', need: 'llavem', look: 'Un armario cerrado con llave.', fix: '¡Clic! El armario se abre.', g: 'any' },
+  { name: 'COFRE', img: 'adv-cofre', h: 70, need: 'llavem', look: 'Un cofre antiguo con un candado dorado.', fix: '¡Clic! El cofre se abre con un crujido.', g: 'any' },
+  { name: 'VITRINA ELÉCTRICA', img: 'adv-taquilla', need: 'tarjeta', look: 'Una vitrina de cristal con un lector de tarjetas.', fix: '¡Pip! La vitrina se abre.', g: 'any' },
+  { name: 'CAJA DE HIELO', img: 'adv-baul', need: 'soldador', look: 'Un cofre de hielo con la cerradura congelada.', fix: 'Calientas la cerradura poquito a poquito… ¡ssssss! ¡Se abre!', g: 'any', th: ['ICE', 'LV', 'ST', 'LF'] },
+  { name: 'REJA OXIDADA', img: 'adv-rejilla', need: 'martillo', look: 'Una reja tan oxidada que no se mueve nada. Detrás brilla algo.', fix: '¡PAM, PAM! El óxido salta y la reja se abre.', g: 'any' },
+  { name: 'PANEL ATORNILLADO', img: 'deco-maquinas-0', need: 'destornillador', look: 'Un panel con la tapa atornillada. Dentro se oye algo.', fix: 'Quitas los tornillos uno a uno… ¡la tapa se abre!', g: 'any' },
+  { name: 'GRÚA SIN IMÁN', img: 'deco-maquinas-3', need: 'iman', look: 'Una grúa que ha perdido su imán. Abajo, entre la chatarra, brilla algo.', fix: 'Pones el imán… ¡la grúa baja, coge algo y lo sube!', g: 'any', th: ['LK', 'ST', 'LV'] },
+  { name: 'RELOJ VIEJO', img: 'deco-reloj-2', h: 110, need: 'eng', look: 'Un reloj enorme y parado. Detrás se esconde algo, pero las agujas no dejan llegar.', fix: 'Pones el engranaje… ¡tic, tac! Las agujas se apartan.', g: 'any' },
+  { name: 'NAVE ABANDONADA', img: 'adv-cohete', h: 120, need: 'fusible', look: 'Una nave pequeñita sin energía. La compuerta está cerrada.', fix: 'Pones la pila… ¡fiuuu! La compuerta se abre.', g: 'any', th: ['ST', 'LS', 'LK'] },
+  { name: 'HORNO', img: 'deco-tienda-2', need: 'fusible', look: 'Un horno apagado con masa preparada dentro. No tiene pila.', fix: 'Pones la pila… ¡el horno se calienta! ¡Ding!', g: ['tarta', 'galleta'] },
+  { name: 'FUENTE DE PIEDRA', img: 'adv-fuente', h: 110, need: 'valvula', look: 'Una fuente seca. Le falta la pieza que abre el agua.', fix: 'Enroscas la válvula… ¡fsssh! ¡Sale agua!', g: ['gota', 'cubo'] },
+  { name: 'MACETA MÁGICA', img: 'adv-planta', h: 80, need: 'semilla', look: 'Una maceta con tierra mágica, pero sin nada plantado.', fix: 'Plantas la semilla… ¡crece en un segundo!', g: ['flor', 'manzana', 'seta'] },
+  { name: 'POLEA DEL POZO', img: 'adv-poste', need: 'cuerda', look: 'Un pozo con su polea, pero sin cuerda para bajar el cubo.', fix: 'Pasas la cuerda por la polea y tiras… ¡sube algo del fondo!', g: ['cubo', 'gota', 'oro'] },
+  { name: 'MÁQUINA DE BURBUJAS', img: 'deco-maquinas-3', need: 'pieza', look: 'La máquina de burbujas no funciona. Tiene un hueco con forma rara.', fix: 'Encajas la pieza… ¡plof, plof! ¡Burbujas por todas partes!', g: ['globo', 'burbuja', 'caramelo'] },
+  { name: 'ORDENADOR VIEJO', img: 'deco-laboratorio-0', need: 'pendrive', look: 'Un ordenador apagado que pone: «SIN MEMORIA».', fix: 'Metes la memoria… ¡pip, pip! La impresora suelta algo.', g: ['tarjeta', 'mapa', 'invitacion'] },
+  { name: 'PANEL DE CHIPS', img: 'deco-laboratorio-1', need: 'alicate', look: 'Una máquina de chips con los cables enredados.', fix: 'Cortas y empalmas los cables… ¡la máquina fabrica algo!', g: ['chip', 'fusible', 'bombilla'] },
+  // estas no sueltan nada: encienden algo, abren una puerta o hacen que funcione otra máquina
+  { name: 'GENERADOR', img: 'deco-maquinas-1', need: 'cable', look: 'Un generador enorme con un cable roto que echa chispitas.', fix: '¡BRRRUM! ¡El generador arranca!', f: 1, pre: 'Está apagado: no le llega energía. Habrá que encender el generador.', door: 'La puerta no se abre: no tiene electricidad.' },
+  { name: 'CUADRO DE LUCES', img: 'deco-maquinas-0', need: 'bombilla', look: 'El cuadro de luces tiene un hueco vacío en el centro. Todo está a oscuras.', fix: '¡Clic! ¡Se encienden todas las luces!', f: 1, pre: 'Está todo tan oscuro que no se ve nada. Primero habrá que dar la luz.', door: 'Está oscurísimo. Sin luz no se puede entrar.' },
+  { name: 'PALANCA ATASCADA', img: 'adv-palanca', fr: 2, f0: 0, f1: 1, h: 80, need: 'martillo', look: 'Una palanca muy atascada. No se mueve ni empujando fuerte.', fix: '¡PAM! ¡La palanca baja de golpe! Se oye algo que se abre a lo lejos.', f: 1, pre: 'No se puede abrir. Quizá una palanca tenga algo que ver.', door: 'Una puerta de hierro bien cerrada. Quizá una palanca la abra.' },
+  { name: 'ALTAR DEL SOL', img: 'deco-egipto-1', need: 'rubi', look: 'Un altar de piedra con un hueco rojo en el centro.', fix: 'Pones el cristal de fuego… ¡el altar se ilumina!', f: 1, pre: 'Está dormido. Dicen que despierta cuando se enciende el altar.', door: 'Una puerta de piedra con dibujos de un sol. No se mueve.', th: ['LD', 'LJ', 'LF', 'LV'] },
+  { name: 'ALTAR DE LA LUNA', img: 'deco-egipto-2', need: 'cristalh', look: 'Un altar con un hueco azul con forma de cristal.', fix: 'Pones el cristal azul… ¡una luz azul lo llena todo!', f: 1, pre: 'Está dormido. Dicen que despierta con la luz del altar de la luna.', door: 'Una puerta de piedra con una luna dibujada. No se mueve.', th: ['LD', 'LJ', 'LF', 'ICE'] },
+  { name: 'PANEL DE LA BARRERA LÁSER', img: 'deco-maquinas-0', need: 'tarjeta', look: '¡Unos rayos láser rojos cortan el paso! El panel tiene un lector de tarjetas.', fix: '¡Pip! ¡Los rayos láser se apagan!', f: 1, beams: 1, pre: 'Los rayos láser no dejan pasar. Habrá que apagarlos.', door: '¡Hay rayos láser delante de la puerta! Habrá que apagarlos.' },
+  { name: 'TUBERÍA ROTA', img: 'deco-maquinas-2', need: 'llavein', look: 'Una tubería que pierde agua por una tuerca floja.', fix: 'Aprietas la tuerca… ¡ya no gotea! El agua vuelve a correr.', f: 1, pre: 'No hay agua. Alguna tubería estará rota.', door: 'La compuerta está atascada: funciona con agua y no llega.' }
+];
+// ---------- objetos finales: el problema del protagonista y el final feliz ----------
+const GZ_GOAL = {
+  corona: ['Hoy es la gran fiesta y ha desaparecido mi corona.', '¡Mi corona! ¡Que empiece la fiesta!', ['LA CORONA DE {H}', 'EL MISTERIO DE LA CORONA', 'LA CORONA ESCONDIDA']],
+  mapa: ['Tenía un mapa del tesoro y lo he perdido.', '¡Mi mapa! ¡Vamos a buscar el tesoro!', ['EL MAPA DE {H}', 'EL MAPA PERDIDO', 'LA PISTA DEL TESORO']],
+  tarta: ['Hoy es la fiesta y nos hemos quedado sin tarta.', '¡Una tarta riquísima! ¡A celebrarlo!', ['LA TARTA DE {H}', 'LA FIESTA SIN TARTA', 'EL PASTEL MISTERIOSO']],
+  flor: ['Mi jardín está triste. Solo una flor mágica lo puede alegrar.', '¡Mira cómo brilla mi jardín!', ['LA FLOR DE {H}', 'EL JARDÍN TRISTE', 'LA FLOR DE LOS COLORES']],
+  regalo: ['Mañana es el cumpleaños de mi amiga y su regalo ha desaparecido.', '¡El regalo! ¡Mi amiga se pondrá contentísima!', ['EL REGALO DE {H}', 'EL REGALO PERDIDO', 'LA SORPRESA']],
+  collar: ['Se me ha perdido mi collar de perlas favorito.', '¡Mi collar! ¡Qué alegría!', ['EL COLLAR DE {H}', 'EL COLLAR DESAPARECIDO']],
+  escarabajo: ['El escarabajo de la suerte ha desaparecido y todo sale al revés.', '¡El escarabajo! ¡Vuelve la buena suerte!', ['EL ESCARABAJO DE {H}', 'LA SUERTE PERDIDA']],
+  estrella: ['La estrella que alumbra nuestra casa se ha apagado y se ha caído.', '¡La estrella! ¡Vuelve a brillar!', ['LA ESTRELLA DE {H}', 'LA ESTRELLA CAÍDA', 'LA NOCHE SIN ESTRELLA']],
+  cristalh: ['Hace un calor terrible y solo un cristal azul puede enfriarlo todo.', '¡Qué fresquito! ¡Gracias, Lucas!', ['EL CRISTAL AZUL DE {H}', 'EL GRAN CALOR']],
+  rubi: ['Hace tanto frío que se ha apagado el fuego de mi casa.', '¡Qué calentito! ¡Ya no tengo frío!', ['EL FUEGO DE {H}', 'EL CRISTAL DE FUEGO', 'LA CASA HELADA']],
+  perla: ['La perla más bonita del mar ha desaparecido.', '¡La perla! ¡Brilla como nunca!', ['LA PERLA DE {H}', 'LA PERLA PERDIDA']],
+  perlan: ['Alguien se ha llevado mi perla negra, la más rara del mundo.', '¡Mi perla negra! ¡Qué maravilla!', ['LA PERLA NEGRA DE {H}', 'EL SECRETO DE LA PERLA NEGRA']],
+  invitacion: ['Esta noche es el gran baile y no encuentro mi invitación.', '¡Mi invitación! ¡Nos vamos al baile!', ['LA INVITACIÓN DE {H}', 'EL GRAN BAILE']],
+  oro: ['El tesoro del reino ha desaparecido. ¡Solo queda una moneda en algún sitio!', '¡Una moneda de oro del tesoro! ¡Está salvado!', ['EL TESORO DE {H}', 'LA MONEDA DORADA']],
+  bola: ['Esta noche hay discoteca y la bola de luces no está.', '¡La bola de discoteca! ¡A bailar todos!', ['LA DISCOTECA DE {H}', 'LA NOCHE DE BAILE']],
+  caja: ['Mi caja de música era un regalo de mi abuelo y la he perdido.', '¡Tirorí, tirorá! ¡Mi caja de música!', ['LA MÚSICA DE {H}', 'LA CAJA DE MÚSICA PERDIDA']],
+  globo: ['Mi globo favorito se ha escapado volando.', '¡Mi globo! ¡Ahora lo ato bien fuerte!', ['EL GLOBO DE {H}', 'EL GLOBO VIAJERO']],
+  galleta: ['Prometí galletas a todos mis amigos y no me queda ni una.', '¡Galletas para todos! ¡A merendar!', ['LAS GALLETAS DE {H}', 'LA MERIENDA']],
+  parabolica: ['Mi antena se ha roto y no puedo hablar con mis amigos de las estrellas.', '¡Ya puedo hablar con las estrellas!', ['LA ANTENA DE {H}', 'MENSAJE A LAS ESTRELLAS']],
+  muelle: ['Mañana es la gran carrera de saltos y he perdido mi muelle saltarín.', '¡Boing, boing! ¡Voy a ganar la carrera!', ['EL SALTO DE {H}', 'LA CARRERA DE SALTOS']],
+  hoja: ['A mi libro mágico le falta su hoja dorada.', '¡Mi libro está completo! ¡Qué historias tan bonitas!', ['EL LIBRO DE {H}', 'LA HOJA DORADA']],
+  brujula: ['Sin mi brújula no sé volver a casa.', '¡Mi brújula! ¡Ya sé el camino!', ['LA BRÚJULA DE {H}', 'EL CAMINO A CASA']],
+  chip: ['Mi amigo robot se ha quedado dormido y solo despierta con un chip de energía.', '¡El chip funciona! ¡Mi amigo despierta!', ['EL CHIP DE {H}', 'EL ROBOT DORMIDO', 'ENERGÍA PARA MI AMIGO']],
+  linterna: ['Se ha ido la luz y estamos todos a oscuras.', '¡Luz! ¡Ya vemos todo!', ['LA LUZ DE {H}', 'LA GRAN OSCURIDAD']],
+  caracola: ['Mi caracola mágica guarda las canciones del mar y la he perdido.', '¡Mi caracola! ¡Se oyen las canciones del mar!', ['LA CARACOLA DE {H}', 'LAS CANCIONES DEL MAR']],
+  estrellamar: ['La estrella de mar que adorna mi casa se ha ido de paseo.', '¡Mi estrella de mar! ¡Qué bonita!', ['LA ESTRELLA DE MAR DE {H}']],
+  semilla: ['Quiero plantar el árbol más grande del mundo, pero me falta la semilla mágica.', '¡Ya está plantada! ¡Crecerá enorme!', ['EL ÁRBOL DE {H}', 'LA SEMILLA MÁGICA']],
+  bombilla: ['El faro se ha quedado sin luz y los barcos se pierden.', '¡El faro brilla otra vez!', ['EL FARO DE {H}', 'LA LUZ DEL FARO']]
+};
+const GZ_GOALS_BY = { ST: ['chip', 'parabolica', 'tarta', 'invitacion', 'regalo', 'mapa', 'bola', 'linterna', 'estrella', 'caja', 'hoja'], LS: ['globo', 'estrella', 'galleta', 'bombilla', 'invitacion', 'regalo', 'caja', 'brujula'],
+  LT: ['muelle', 'regalo', 'tarta', 'bola', 'caja', 'globo', 'corona', 'galleta'], LJ: ['flor', 'semilla', 'hoja', 'brujula', 'mapa', 'estrella', 'collar'], LD: ['escarabajo', 'corona', 'oro', 'mapa', 'collar', 'cristalh'],
+  LK: ['chip', 'parabolica', 'bombilla', 'linterna', 'caja', 'regalo'], LF: ['corona', 'collar', 'hoja', 'invitacion', 'mapa', 'oro', 'caja'], LV: ['cristalh', 'rubi', 'chip', 'oro', 'linterna'],
+  LO: ['perla', 'perlan', 'caracola', 'estrellamar', 'mapa', 'oro', 'collar', 'corona'], ICE: ['rubi', 'cristalh', 'estrella', 'galleta', 'regalo', 'linterna'] };
+const GZ_HI = ['¡Hola, Lucas!', '¡Anda, un visitante! Hola.', '¡Hola, hola! ¿Qué tal?', 'Ah, hola, Lucas. Qué bien que pases por aquí.', '¡Lucas! ¡Cuánto tiempo!', '¡Hombre, Lucas! ¡Hola!'];
+const GZ_TAKEN = new Set();
+const GZ_ART = { 'DOCTORA PILA': 'LA ', 'CAPITÁN ROJO': 'EL ', 'GATO DE PIEDRA': 'EL ', 'BÚHO SABIO': 'EL ', 'CARTERO VELOZ': 'EL ', 'ABUELA CONCHA': 'LA ', 'DOÑA VENDA': '', 'DOÑA ALMEJA': '' };
+const gzDe = h => (' DE ' + (GZ_ART[h] || '') + h).replace(' DE EL ', ' DEL ');
+// monta la cadena hacia atrás: cada paso da el objeto que pide el siguiente
+function gzChain(r, w, goal, depth, used, mUsed, out, allowF) {
+  used.add(goal);
+  if (depth <= 0) { out.push({ k: 'item', it: goal }); return; }
+  const ms = GZ_M.filter(m => !m.f && !mUsed.has(m.name) && !used.has(m.need) && (m.g === 'any' || m.g.includes(goal)) && (!m.th || m.th.includes(w)) && ADV_IT[m.need]);
+  const ws = Object.keys(GZ_WANT).filter(k => !used.has(k) && ADV_IT[k] && k !== 'chip');
+  const st = { gives: goal };
+  if (ms.length && (r() < 0.5 || !ws.length)) {
+    const m = GZ.pick(r, ms); mUsed.add(m.name); st.k = 'mach'; st.m = m; out.push(st);
+    if (allowF && depth >= 2 && r() < 0.55) {          // a veces la máquina además necesita que antes funcione otra (generador, luces, altar…)
+      const fs = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need]);
+      if (fs.length) { const f = GZ.pick(r, fs); mUsed.add(f.name); const fl = 'gz' + out.length; st.pre = fl; st.preTxt = f.pre; out.push({ k: 'mach', m: f, flag: fl });
+        gzChain(r, w, f.need, depth - 2, used, mUsed, out, false); }
+    }
+    gzChain(r, w, m.need, depth - 1, used, mUsed, out, allowF);
+  } else {
+    const k = GZ.pick(r, ws); st.k = 'npc'; st.wants = k; out.push(st); gzChain(r, w, k, depth - 1, used, mUsed, out, allowF);
+  }
+}
+function gzTitle(r, goal, hero) {
+  const gen = [hero + ' Y ' + avArt(goal).toUpperCase(), 'EL GRAN LÍO DE {H}', '¡SOCORRO, {H}!', 'UN DÍA CON {H}', 'EL SECRETO DE {H}', 'LA MISIÓN DE {H}', 'EL MISTERIO DE {H}', 'LA SORPRESA DE {H}', 'EL DESPISTE DE {H}'];
+  const opts = GZ.mix(r, GZ_GOAL[goal][2]).concat(GZ.mix(r, gen)).map(t => t.replace(' DE {H}', gzDe(hero)).replace('{H}', hero));
+  for (const t of opts) if (!GZ_TAKEN.has(t)) { GZ_TAKEN.add(t); return t; }
+  const t = 'LA AVENTURA DE ' + hero + ' ' + (GZ_TAKEN.size % 9 + 2); GZ_TAKEN.add(t); return t;
+}
+const gzRoom = (rw, i) => ({ name: rw[0], bg: rw[1], th: rw[2], list: [] });
+// ---------- 7 años: aventura grande (3 o 4 salas, una cerrada, máquinas que dependen de otras, personajes que dan pistas) ----------
+function gzBig(id, w, goal, hero, depth) {
+  const r = GZ.rng(id), W = GZ_W[w], used = new Set(), mUsed = new Set(), steps = [];
+  gzChain(r, w, goal, depth, used, mUsed, steps, true);
+  // la sala cerrada guarda el último paso; se abre con una llave/tarjeta o con una máquina (láser, palanca, altar…)
+  const rws = GZ.mix(r, W.rooms).slice(0, 3 + (r() < 0.4 ? 1 : 0)), rooms = {}, keys = [];
+  rws.forEach((rw, i) => { const k = 's' + i; rooms[k] = gzRoom(rw); keys.push(k); });
+  const lockK = keys[keys.length - 1], lockSteps = [];
+  const lockF = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need]);
+  if (lockF.length && r() < 0.5) { const f = GZ.pick(r, lockF); mUsed.add(f.name); rooms[lockK].lock = { flag: 'gzl', txt: [f.door] }; lockSteps.push({ k: 'mach', m: f, flag: 'gzl' }); gzChain(r, w, f.need, 1 + (r() < 0.5 ? 1 : 0), used, mUsed, lockSteps, false); }
+  else { const kk = GZ.pick(r, ['llavem', 'tarjeta', 'llavep'].filter(x => !used.has(x))) || 'llavem'; rooms[lockK].lock = { need: kk, txt: [kk === 'tarjeta' ? 'Una puerta con un lector de tarjetas.' : 'La puerta está cerrada con llave.'], ok: ['¡Se ha abierto!'] }; gzChain(r, w, kk, 1 + (r() < 0.6 ? 1 : 0), used, mUsed, lockSteps, false); }
+  // personajes
+  const pool = GZ.mix(r, W.chars.filter(c => c !== hero)).concat(GZ.mix(r, ['RAYO', 'BYTE', 'CHISPAS', 'TUERCAS', 'PELUSÍN', 'BOLITA', 'HOJA', 'TAMBOR'].filter(c => c !== hero && !W.chars.includes(c))));
+  let pi = 0; const who = () => pool[pi++ % pool.length];
+  const ent = st => {
+    if (st.k === 'item') return ['item', { it: st.it }];
+    if (st.k === 'npc') { const nm = who(); st.who = nm; const W2 = GZ_WANT[st.wants]; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), W2[0], GZ.pick(r, ['Si alguien me ayudara, le daría algo que tengo guardado.', '¿Tú podrías ayudarme?', 'Tengo algo que a lo mejor te sirve… si me ayudas.'])],
+      hint: [W2[1]], wants: st.wants, thanks: [W2[2], 'Toma, ' + avUn(st.gives) + '. Seguro que te sirve para algo.'], gives: st.gives, after: [GZ.pick(r, ['¡Gracias otra vez, Lucas!', '¡Eres el mejor, Lucas!', 'Si necesitas algo, aquí estoy.'])] }]; }
+    const m = st.m, o = { name: m.name, img: m.img, h: m.h, fr: m.fr, f0: m.f0, f1: m.f1, beams: m.beams, look: [m.look], need: m.need, fix: [m.fix] };
+    if (st.gives) { o.gives = st.gives; o.fix.push('¡Has conseguido ' + avUn(st.gives) + '!'); o.done = ['Ya no queda nada dentro.']; } else { o.flag = st.flag; o.done = ['Ya funciona perfectamente.']; }
+    if (st.pre) { o.pre = st.pre; o.preTxt = [st.preTxt]; }
+    return ['mach', o];
+  };
+  const main = [], last = steps[0];
+  rooms[lockK].list.push(ent(last));
+  const open = keys.filter(k => k !== lockK);
+  const place = (st, preferMain) => { const e = ent(st), tgt = preferMain || r() < 0.4 ? null : GZ.pick(r, open);
+    if (e[0] === 'item') e[1].at = tgt ? GZ.pick(r, ['high', 'rock', 'floor']) : GZ.pick(r, ['hill', 'plats', 'rock', 'cave', 'plat']);
+    (tgt ? rooms[tgt].list : main).push(e); };
+  for (const st of steps.slice(1)) place(st);
+  for (const st of lockSteps) place(st);
+  // pistas: alguien cuenta algo útil sin dar la solución
+  const hintAbout = GZ.mix(r, steps.concat(lockSteps).filter(s => s.k !== 'item')).slice(0, 2);
+  for (const s of hintAbout) { const nm = who(); let t;
+    if (s.k === 'npc') t = ['¿Conoces a ' + GZ.nm(s.who) + '? Dicen que anda buscando algo…', 'Si lo ayudas, seguro que te da algo a cambio.'];
+    else t = ['¿Has visto ' + (/^(LA|EL) /.test(s.m.name) ? '' : avFem(s.m.name.toLowerCase()) ? 'la ' : 'el ') + s.m.name.toLowerCase() + '? No funciona desde hace días.', GZ.pick(r, s.gives ? ['Seguro que con la herramienta adecuada se arregla.', 'Quizá dentro haya algo interesante.', 'Hay que mirarlo bien de cerca.'] : ['Seguro que con la herramienta adecuada se arregla.', 'Dicen que cuando funcione, se abrirá algo importante.'])];
+    (r() < 0.5 ? main : rooms[GZ.pick(r, open)].list).push(['npc', { who: nm, say: [GZ.pick(r, GZ_HI)].concat(t) }]); }
+  rooms[lockK].list.unshift(['deco', { img: (GZ_FURN[rooms[lockK].bg] || [GZ.pick(r, W.deco)])[0], h: 90 }]);
+  for (const k of open) { const fu = GZ_FURN[rooms[k].bg]; if (fu) rooms[k].list.splice(Math.floor(r() * (rooms[k].list.length + 1)), 0, ['deco', { img: GZ.pick(r, fu), h: 90 }]); }
+  // zona principal: mezclamos todo y metemos las puertas
+  const mm = GZ.mix(r, main); keys.forEach(k => mm.splice(Math.floor(r() * (mm.length + 1)), 0, ['door', k]));
+  mm.unshift(['deco', { img: GZ.pick(r, W.deco), h: 100 }]); mm.push(['hill', { h: 3 }]);
+  const G = GZ_GOAL[goal], H = GZ.nm(hero);
+  advAv(id, { n: gzTitle(r, goal, hero), img: ADV_IT[goal].img, th: w, amb: W.amb, s: H + ': «' + G[0] + '» Investiga, habla con todos y usa bien lo que encuentres.',
+    intro: W.intro, hero, need: goal, say: [GZ.pick(r, GZ_HI), G[0], 'Pregunta a todo el mundo y mira bien en cada sala. Seguro que alguien sabe algo.'],
+    hint: ['¿Has hablado con todos? Mira bien lo que llevas en la mochila.'], thanks: [GZ.cap(avArt(goal)) + '! ¡Lo has conseguido!', G[1]], goal0: 'Habla con todos y descubre qué pasó',
+    end: G[1] + '<br>¡Gracias, Lucas!', main: mm, rooms });
+}
+// ---------- 6 años: lo mismo pero más corto y diciendo claro qué necesita cada uno ----------
+function gzMid(id, w, goal, hero, depth) {
+  const r = GZ.rng(id), W = GZ_W[w], used = new Set(), mUsed = new Set(), steps = [];
+  gzChain(r, w, goal, depth, used, mUsed, steps, false);
+  const rws = GZ.mix(r, W.rooms).slice(0, 2), out = [], pool = GZ.mix(r, W.chars.filter(c => c !== hero)); let pi = 0;
+  const lockIt = r() < 0.4 && !used.has('llavem') ? 'llavem' : null; if (lockIt) gzChain(r, w, 'llavem', 1, used, mUsed, [], false);
+  const roomOf = i => (i === 0 ? 'r1' : r() < 0.4 ? 'r0' : null);
+  const S = [];
+  steps.slice().reverse().forEach((st, idx, arr) => { const isLast = idx === arr.length - 1, w2 = isLast ? 'r1' : idx === arr.length - 2 ? 'r0' : roomOf(1);
+    if (st.k === 'item') S.push(['it', st.it, w2 ? GZ.pick(r, ['high', 'rock', 'floor']) : GZ.pick(r, ['hill', 'plats', 'rock', 'cave']), w2]);
+    else if (st.k === 'npc') { st.who = pool[pi++ % pool.length]; S.push(['npc', st.who, st.wants, st.gives, GZ_WANT[st.wants][0], w2]); }
+    else S.push(['fix', st.m.name, st.m.img, st.m.need, st.gives, st.m.look, w2]); });
+  out.push(['room', 'r0', rws[0][0], rws[0][1]]);
+  if (lockIt) out.push(['it', 'llavem', GZ.pick(r, ['plats', 'cave', 'rock'])]);
+  out.push(['room', 'r1', rws[1][0], rws[1][1], lockIt]);
+  const talker = pool[pi++ % pool.length], last = steps[0];
+  out.push(['talk', talker, ['¡Hola, Lucas! ' + (last.k === 'npc' ? GZ.nm(last.who) + ' tiene algo muy importante. ¡Ve a verlo!' : 'He visto ' + (last.k === 'mach' ? 'algo raro en ' + rws[1][0].toLowerCase() + '.' : 'algo brillante por ahí.')), lockIt ? 'Ojo: ' + rws[1][0].toLowerCase() + ' está cerrada con llave.' : '¡Mucha suerte!']]);
+  S.forEach(s => out.push(s));
+  const fu = GZ_FURN[rws[0][1]]; if (fu) out.push(['deco', GZ.pick(r, fu), 'r0']);
+  out.unshift(['deco', GZ.pick(r, W.deco)]);
+  const G = GZ_GOAL[goal];
+  KA(id, gzTitle(r, goal, hero), ADV_IT[goal].img, w, hero, goal, G[0], G[1], out);
+}
+// ---------- 5 años: misiones de recoger cosas ----------
+const GZ_COL = { estrella: ['estrellas', 'f', 'Se han caído las estrellas del cielo y la noche está muy oscura.'], manzana: ['manzanas', 'f', 'Quiero hacer zumo para todos, pero el viento ha tirado las manzanas.'],
+  galleta: ['galletas', 'f', 'He horneado galletas para la merienda y se han desperdigado.'], caramelo: ['caramelos', 'o', 'Se me ha roto la bolsa de los caramelos de la fiesta.'], globo: ['globos', 'o', 'Se me han escapado los globos de la fiesta.'],
+  regalo: ['regalos', 'o', 'Mis regalos se han perdido por todas partes.'], flor: ['flores mágicas', 'f', 'Quiero plantar un jardín de flores mágicas.'], seta: ['setas', 'f', 'Quiero hacer sopa de setas para mis amigos.'],
+  perla: ['perlas', 'f', 'Se me ha roto el collar y las perlas han rodado por todas partes.'], caracola: ['caracolas', 'f', 'Colecciono caracolas y quiero las más bonitas.'], estrellamar: ['estrellas de mar', 'f', 'Quiero decorar mi casa con estrellas de mar.'],
+  hoja: ['hojas doradas', 'f', 'A mi libro mágico se le han caído las hojas doradas.'], cristal: ['cristales de hielo', 'o', 'Quiero construir un castillo de hielo.'], gota: ['gotas mágicas', 'f', 'Mi estanque se ha secado y necesito gotas mágicas.'],
+  oro: ['monedas de oro', 'f', 'Se me ha roto el saco del tesoro.'], bombilla: ['bombillas', 'f', 'Se ha ido la luz y necesito bombillas nuevas.'], tornillo: ['tornillos', 'o', 'Me he caído y se me han soltado los tornillos.'],
+  fusible: ['pilas', 'f', 'Mis robots están cansados y necesitan pilas.'], lazo: ['lazos', 'o', 'Quiero adornar mi casa con lazos para la fiesta.'], pelota: ['pelotas', 'f', 'Se me han escapado las pelotas del partido.'],
+  tarta: ['tartas', 'f', 'Hoy hay concurso de tartas y las he perdido todas.'], muelle: ['muelles saltarines', 'o', 'Mis muelles saltarines han salido rebotando.'], semilla: ['semillas mágicas', 'f', 'Quiero plantar un bosque mágico.'],
+  invitacion: ['cartas', 'f', '¡El viento se ha llevado mis cartas!'], eng: ['engranajes', 'o', 'Mi máquina ha perdido sus engranajes.'], caja: ['cajas de música', 'f', 'Quiero montar un concierto con cajas de música.'],
+  corona: ['coronas', 'f', 'Hoy es el desfile de las coronas y se han perdido.'], cubo: ['cubos de agua', 'o', 'Hay que apagar un fuego pequeñito y necesito agua.'], linterna: ['linternas', 'f', 'Esta noche hay excursión y necesitamos linternas.'] };
+function gzSmall(id, w, need, boss) {
+  const r = GZ.rng(id), W = GZ_W[w], C = GZ_COL[need], g = C[1], las = g === 'o' ? 'los' : 'las', pool = GZ.mix(r, W.chars.filter(c => c !== boss)); let pi = 0;
+  const rws = GZ.mix(r, W.rooms), sea = w === 'LO', plan = [], feats = GZ.mix(r, ['hill', 'plats', 'rock', 'cave', 'chest', sea ? 'kelp' : 'plat']);
+  const roomE = (rw, k) => { const nm = pool[pi++ % pool.length], fu = GZ_FURN[rw[1]];
+    const o = { name: rw[0], bg: rw[1], th: rw[2], who: nm, deco: fu ? [[GZ.pick(r, fu), 23, 90]] : undefined };
+    if (k) { o.k = k; delete o.bg; if (k === 'lake') o.th = rw[2] || (sea ? 'ocean' : 'jungle'); } else o.ask = [GZ.pick(r, GZ_HI), 'Esto apareció por aquí. ¡Es para ' + GZ.nm(boss) + '!'];
+    if (r() < 0.25 && !k) o.door = 'tele';
+    return ['room', o]; };
+  plan.push(['hill']); plan.push(['deco', { img: GZ.pick(r, W.deco), h: 100 }]);
+  plan.push(roomE(rws[0])); plan.push([feats[0]]); plan.push([feats[1]]);
+  plan.push(roomE(rws[1], GZ.pick(r, sea ? ['lake', 'climb'] : ['climb', 'lake', null]))); plan.push([feats[2]]);
+  if (r() < 0.5) plan.push(['shop', { who: pool[pi++ % pool.length], price: 6 + Math.floor(r() * 3) }]); else plan.push(roomE(rws[2]));
+  plan.push([feats[3]]); plan.push(['hill', { h: 3 }]);
+  const H = GZ.nm(boss), n = (() => { const t = 'LAS ' + C[0].toUpperCase() + gzDe(boss); const t2 = (g === 'o' ? 'LOS ' : 'LAS ') + C[0].toUpperCase() + gzDe(boss); const tt = g === 'o' ? t2 : t; if (!GZ_TAKEN.has(tt)) { GZ_TAKEN.add(tt); return tt; } const t3 = 'LA BÚSQUEDA DE ' + boss; GZ_TAKEN.add(t3); return t3; })();
+  advQuest(id, { n, img: ADV_IT[need].img, s: H + ' necesita tu ayuda: ' + C[2].charAt(0).toLowerCase() + C[2].slice(1) + ' Busca ' + las + ' ' + C[0] + '.', th: w, amb: W.amb, boss, need, g: g === 'o' ? 'o' : undefined, pl: C[0],
+    intro: W.intro.slice(0, 1).concat([H + ' necesita ayuda.']), ask: [GZ.pick(r, GZ_HI) + ' Soy ' + H + '.', C[2], '¿Me ayudas a buscar ' + las + ' ' + C[0] + '?'],
+    thanks: ['¡Ya están todas! ¡Muchísimas gracias, Lucas!'.replace('todas', g === 'o' ? 'todos' : 'todas')], end: H + ' consiguió ' + las + ' ' + C[0] + ' gracias a Lucas.<br>¡Qué gran aventura!', plan });
+}
+// ---------- el reparto: qué aventuras se crean ----------
+(() => {
+  for (const l of ADV_LV) GZ_TAKEN.add(l.n);
+  const WS = ['ST', 'LJ', 'LO', 'LT', 'LF', 'LS', 'LD', 'ICE', 'LK', 'LV'];
+  const heroFor = (r, w) => GZ.pick(r, GZ_W[w].chars);
+  // 7 años: B-71 a B-120 (cadenas de 5 a 7 pasos)
+  for (let i = 71; i <= 120; i++) { const id = 'B-' + i, r = GZ.rng(id + 'x'), w = WS[i % WS.length], goal = GZ.pick(r, GZ_GOALS_BY[w]); gzBig(id, w, goal, heroFor(r, w), 3 + (i > 95 ? 1 : 0) + (r() < 0.4 ? 1 : 0)); }
+  // 6 años: C-71 a C-120 (2 o 3 pasos)
+  for (let i = 71; i <= 120; i++) { const id = 'C-' + i, r = GZ.rng(id + 'x'), w = WS[(i + 3) % WS.length], goal = GZ.pick(r, GZ_GOALS_BY[w]); gzMid(id, w, goal, heroFor(r, w), 2 + (i > 95 && r() < 0.6 ? 1 : 0)); }
+  // 5 años: A-91 a A-120
+  const COLS = { ST: ['estrella', 'bombilla', 'fusible', 'tornillo', 'regalo', 'invitacion', 'linterna', 'eng'], LS: ['globo', 'estrella', 'galleta', 'caramelo', 'lazo', 'invitacion'],
+    LT: ['pelota', 'globo', 'caramelo', 'regalo', 'muelle', 'caja', 'tarta', 'lazo'], LJ: ['flor', 'seta', 'manzana', 'semilla', 'hoja', 'gota'], LD: ['oro', 'corona', 'gota', 'hoja'],
+    LK: ['tornillo', 'eng', 'fusible', 'bombilla', 'linterna'], LF: ['corona', 'oro', 'hoja', 'caja', 'linterna', 'invitacion'], LV: ['gota', 'cubo', 'oro', 'linterna', 'eng'],
+    LO: ['perla', 'caracola', 'estrellamar', 'oro', 'corona'], ICE: ['cristal', 'galleta', 'regalo', 'linterna', 'estrella'] };
+  for (let i = 91; i <= 120; i++) { const id = 'A-' + i, r = GZ.rng(id + 'x'), w = WS[(i + 7) % WS.length], cs = COLS[w]; gzSmall(id, w, cs[Math.floor(i / WS.length) % cs.length], heroFor(r, w)); }
+})();
+
+window.__TLA = { get AV() { return AV; }, get LV() { return ADV_LV; }, menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get lines() { return ADVT.lines; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), editHere: () => { CHEAT.test = true; openEditOff(); }, get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
 LEVELS['A-1'] = function () {
   const W = 240, H = 30, B = SB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
