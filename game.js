@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.88';
+const VERSION = '1.89';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4971,7 +4971,29 @@ function flame(x, y, len, w, seed) {
 }
 const ANCH = { 'lucas-quieto': 0.5, 'lucas-avanzando': 0.47, 'lucas-saltando': 0.44, 'lucas-cayendo': 0.5, 'lucas-golpeado': 0.5, 'lucas-celebrando': 0.5, 'lucas-agachado': 0.5 };
 const ADV_WARP = { t: -9, inT: -9, x: 0 };
-function advWarp() { ADV_WARP.t = performance.now() / 1000; ADV_WARP.x = P.x; try { SFX.portal(); } catch (e) {} [392, 523, 659, 880, 1175].forEach((f, i) => tone(f, f * 1.5, 0.09, 'sine', 0.06, i * 0.06)); }
+function advTeleSnd(out) {          // sonido de teletransporte: carga supersónica, zumbido, ráfaga y chispazo final
+  if (!AC || !sndOn) return; try {
+    const t0 = AC.currentTime + 0.01, D = out ? 0.62 : 0.5, bus = AC.createGain(); bus.gain.value = 0.9; bus.connect(master);
+    const dl = AC.createDelay(); dl.delayTime.value = 0.11; const fb = AC.createGain(); fb.gain.value = 0.32; dl.connect(fb); fb.connect(dl); const wet = AC.createGain(); wet.gain.value = 0.35; dl.connect(wet); wet.connect(master); bus.connect(dl);
+    const env = (node, a, peak, end) => { const gg = AC.createGain(); gg.gain.setValueAtTime(0.0001, t0); gg.gain.exponentialRampToValueAtTime(peak, t0 + a); gg.gain.exponentialRampToValueAtTime(0.0001, t0 + end); node.connect(gg); gg.connect(bus); return gg; };
+    // 1) barrido principal con filtro que se abre y temblor rápido
+    const f0 = out ? 110 : 1600, f1 = out ? 1900 : 90, o = AC.createOscillator(), lp = AC.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + D);
+    lp.type = 'lowpass'; lp.Q.value = 9; lp.frequency.setValueAtTime(out ? 400 : 5000, t0); lp.frequency.exponentialRampToValueAtTime(out ? 6000 : 300, t0 + D); o.connect(lp);
+    const trem = AC.createGain(), lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.setValueAtTime(10, t0); lfo.frequency.linearRampToValueAtTime(38, t0 + D); lg.gain.value = 0.5; lfo.connect(lg); lg.connect(trem.gain); trem.gain.value = 0.5; lp.connect(trem);
+    env(trem, 0.05, 0.16, D + 0.05); o.start(t0); o.stop(t0 + D + 0.1); lfo.start(t0); lfo.stop(t0 + D + 0.1);
+    // 2) brillo: varias ondas finas desafinadas que suben a la vez
+    [1, 1.5, 2.01, 3.02].forEach((m, i) => { const s = AC.createOscillator(); s.type = 'sine'; s.detune.value = (i - 1.5) * 14; s.frequency.setValueAtTime((out ? 300 : 2400) * m, t0); s.frequency.exponentialRampToValueAtTime((out ? 2600 : 260) * m, t0 + D); env(s, 0.08, 0.035, D + 0.08); s.start(t0); s.stop(t0 + D + 0.12); });
+    // 3) ráfaga de aire (ruido) que sube
+    const len = Math.floor(AC.sampleRate * (D + 0.3)), buf = AC.createBuffer(1, len, AC.sampleRate), dd = buf.getChannelData(0); for (let i = 0; i < len; i++) dd[i] = Math.random() * 2 - 1;
+    const nz = AC.createBufferSource(); nz.buffer = buf; const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.5; bp.frequency.setValueAtTime(out ? 500 : 7000, t0); bp.frequency.exponentialRampToValueAtTime(out ? 8000 : 400, t0 + D); nz.connect(bp); env(bp, out ? 0.4 : 0.05, 0.22, D + 0.12); nz.start(t0); nz.stop(t0 + D + 0.3);
+    // 4) chispazo final: golpe que cae + crujido + campanitas
+    const tz = t0 + (out ? D - 0.04 : 0.02), z = AC.createOscillator(), zg = AC.createGain(); z.type = 'square'; z.frequency.setValueAtTime(out ? 2800 : 900, tz); z.frequency.exponentialRampToValueAtTime(out ? 60 : 2200, tz + 0.22);
+    zg.gain.setValueAtTime(0.0001, tz); zg.gain.exponentialRampToValueAtTime(0.13, tz + 0.01); zg.gain.exponentialRampToValueAtTime(0.0001, tz + 0.25); z.connect(zg); zg.connect(bus); z.start(tz); z.stop(tz + 0.3);
+    const cr = AC.createBufferSource(); cr.buffer = buf; const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000; const cg = AC.createGain(); cg.gain.setValueAtTime(0.0001, tz); cg.gain.exponentialRampToValueAtTime(0.25, tz + 0.005); cg.gain.exponentialRampToValueAtTime(0.0001, tz + 0.16); cr.connect(hp); hp.connect(cg); cg.connect(bus); cr.start(tz); cr.stop(tz + 0.2);
+    (out ? [1568, 2093, 2637, 3136] : [3136, 2637, 2093, 1568]).forEach((f, i) => tone(f, f, 0.18, 'sine', 0.05, (tz - AC.currentTime) + 0.03 + i * 0.045));
+  } catch (e) {}
+}
+function advWarp() { ADV_WARP.t = performance.now() / 1000; ADV_WARP.x = P.x; advTeleSnd(true); }
 function drawPlayer() {
   const now = performance.now() / 1000, ko = (now - ADV_WARP.t) / 0.6, ki = (now - ADV_WARP.inT) / 0.5;
   if (!L.adv || !P || (ko > 1.15 && (ki < 0 || ki > 1))) return drawPlayer0();
@@ -8056,7 +8078,7 @@ function advTeles(list) {          // varios teletransportes que se conectan ent
 function advWay(id, tx, ty, room, rx, ry, name, img) {          // puerta o transportador a otra sala
   const tele = img === 'tele';
   return { id, room, kind: tele ? 'tele' : 'way', tx, ty, h: tele ? 120 : 110, img: tele ? 'adv-teleport' : 'adv-puerta', fr: tele ? undefined : 4, frame: 0, name, lbl: tele ? '✨ VIAJAR' : '🚪 ENTRAR',
-    use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => A.go(room, rx, ry) }, { t: 'QUEDARME AQUÍ' }]); if (!tele && e._fac) { advWarp(); return setTimeout(() => { ADV_WARP.inT = performance.now() / 1000; A.go(room, rx, ry); }, 620); } if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
+    use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => A.go(room, rx, ry) }, { t: 'QUEDARME AQUÍ' }]); if (!tele && e._fac) { advWarp(); return setTimeout(() => { ADV_WARP.inT = performance.now() / 1000; A.go(room, rx, ry); setTimeout(() => advTeleSnd(false), 60); }, 620); } if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
 }
 function advLever(id, tx, ty, gate, txt) { return { id, kind: 'lever', tx, ty, h: 64, name: 'PALANCA', lbl: '✋ TIRAR', use: (A, e) => { if (e.on) return A.say(NR, ['La palanca ya está bajada.']); e.on = true; e.opened = true; A.say(NR, txt || ['¡Has bajado la palanca! La barrera de luz se apaga.'], () => A.open(gate)); } }; }
 function advLaser(id, tx, y0, y1, txt) { return { id, kind: 'laser', tx, y0, y1, use: A => A.say(NR, txt) }; }
