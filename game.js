@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.76';
+const VERSION = '1.77';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -9233,21 +9233,45 @@ function avPicker(A, w, q, okId, onOk, wrong) {          // elegir un objeto de 
   if (!ids.length) return A.say(NR, ['Tu mochila está vacía. Sigue explorando: seguro que encuentras algo útil.']);
   A.ask(w, q, ids.slice(0, 6).map(id => ({ t: '🎒 ' + ADV_IT[id].n.toUpperCase(), f: () => id === okId ? onOk(id) : wrong(id) })).concat([{ t: 'NADA' }]));
 }
+// pistas solo si el niño está perdido de verdad: más de 4 minutos sin avanzar y hablando con unos y otros sin saber qué hacer
+const avProg = A => { A.flag('av_lp', G.clock); A.flag('av_tk', 0); A.flag('av_hl', 0); };
+const AV_AT = { hill: 'en lo alto de una colina', plats: 'subiendo por unas plataformas', rock: 'dentro de una roca agrietada (¡dispárale con el láser!)', cave: 'en una cueva, detrás de una pared que no es de verdad', plat: 'encima de una plataforma', high: 'arriba del todo, subiendo por las plataformas', floor: 'en el suelo' };
+function avNext(q, A) {          // el siguiente paso que el niño podría dar ahora mismo
+  const R = q._rooms, cands = [], placeOf = w => w ? 'en ' + R[w].name.toLowerCase() : 'por el camino';
+  if (A.has(q.need)) return { p: 0, t: 'hero' };
+  const walk = (list, w) => { for (const p of list) { const k = p[0], o = p[1] || {};
+    if (k === 'item') { if (!A.flag('it_' + o._k)) cands.push({ p: 3, t: 'item', o, w }); }
+    else if (k === 'npc' || k === 'mach') { if (A.flag('av_' + o._k) || (o.pre && !A.flag(o.pre))) continue; const need = o.wants || o.need;
+      if (need && A.has(need)) cands.push({ p: 1, t: 'use', o, w, need }); else if (k === 'npc' && (!need || !A.flag('av_' + o._k + 's'))) cands.push({ p: need ? 4 : 2, t: 'talk', o, w }); }
+    else if (k === 'door') { const r = R[p[1]], lk = r.lock; if (!lk || A.flag('dr_' + r.rid)) walk(r.list, p[1]); else if ((lk.need && A.has(lk.need)) || (lk.flag && A.flag(lk.flag))) cands.push({ p: 1, t: 'door', r, need: lk.need }); } } };
+  walk(q.main, null); cands.sort((a, b) => a.p - b.p); const c = cands[0]; if (c) c.place = c.w !== undefined ? placeOf(c.w) : ''; return c;
+}
+function avHint(A, q) {
+  const now = G.clock; if (A.flag('av_lp') == null) { A.flag('av_lp', now); return []; }
+  A.flag('av_tk', (A.flag('av_tk') || 0) + 1);
+  if (now - A.flag('av_lp') < 240 || A.flag('av_tk') < 3) return [];
+  const c = avNext(q, A); if (!c) return []; const lv = A.flag('av_hl') || 0, nm = o => o.who ? o.who.charAt(0) + o.who.slice(1).toLowerCase() : (o.name || 'la máquina').toLowerCase();
+  A.flag('av_hl', lv + 1); A.flag('av_lp', now - 120); A.flag('av_tk', 0);
+  const intro = advRnd(['Oye, Lucas… te veo un poco despistado.', 'Psst, Lucas… ¿quieres una pista?', 'Hmm, pareces un poco perdido, amigo.']);
+  if (c.t === 'hero') return [intro, '¡Creo que ya tienes lo que buscabas! Vuelve con ' + nm({ who: q.hero }) + '.'];
+  if (lv === 0) return [intro, c.t === 'use' ? '¿Te has fijado bien en lo que llevas en la mochila? Algo podría servir ' + c.place + '.' : c.t === 'door' ? 'Hay una puerta que a lo mejor ya puedes abrir: la de ' + c.r.name.toLowerCase() + '.' : c.t === 'item' ? 'Me han dicho que queda algo escondido ' + c.place + '.' : '¿Has hablado con todo el mundo ' + c.place + '?'];
+  return [intro, c.t === 'use' ? '¿Has probado a usar ' + avArt(c.need) + ' con ' + nm(c.o) + ' ' + c.place + '?' : c.t === 'door' ? (c.need ? '¡Prueba a abrir la puerta de ' + c.r.name.toLowerCase() + ' con ' + avArt(c.need) + '!' : '¡La puerta de ' + c.r.name.toLowerCase() + ' ya se puede abrir!') : c.t === 'item' ? 'Busca bien ' + c.place + ': hay algo ' + (AV_AT[c.o.at || 'hill'] || '') + '.' : 'Ve a hablar con ' + nm(c.o) + ' ' + c.place + '.'];
+}
 const avGive = (A, it, lines, then) => advGot(A, it, lines || ['¡Ya tienes ' + avUn(it) + '!'], then);
 function avReward(A, o, e, after) {          // lo que pasa al dar el objeto bueno o arreglar algo
-  const fin = () => { if (o.flag) A.flag(o.flag, 1); if (o.goal) A.goal(o.goal); if (o.final) advExit(A, o.exitTxt); if (after) after(); };
+  avProg(A); const fin = () => { if (o.flag) A.flag(o.flag, 1); if (o.goal) A.goal(o.goal); if (o.final) advExit(A, o.exitTxt); if (after) after(); };
   if (o.gives) avGive(A, o.gives, o.givesTxt, fin); else fin();
 }
 // personaje: habla, a veces pide algo (sin decir siempre qué), y al dárselo lo agradece y te da un objeto o una pista
 function avNpc(id, o) {
-  const w = qw(o.who), k = 'av_' + id, said = k + 's';
+  const w = qw(o.who), k = 'av_' + (o._k || id), said = k + 's', hint = A => o._q ? avHint(A, o._q) : [];
   return { id, kind: 'npc', name: w.name, img: w.img, fr: w.fr, h: w.h, float: w.float, fy: w.float ? -20 : 0, noTurn: w.h > 135,
     mark: A => !A.flag(said) || (o.wants && !A.flag(k) && A.has(o.wants)) || (!o.wants && o.gives && !A.flag(k)),
     use: (A, e) => {
       if (o.pre && !A.flag(o.pre)) return A.say(w, o.preTxt || ['Ahora estoy muy ocupado. Vuelve más tarde.']);
-      if (A.flag(k)) return A.say(w, o.after ? (typeof o.after === 'function' ? o.after(A) : o.after) : [advRnd(ADV_DONE)]);
+      if (A.flag(k)) return A.say(w, (o.after ? (typeof o.after === 'function' ? o.after(A) : o.after) : [advRnd(ADV_DONE)]).concat(hint(A)));
       const first = !A.flag(said); A.flag(said, 1);
-      const talk = first ? (typeof o.say === 'function' ? o.say(A) : o.say) : (o.hint || o.say);
+      const talk = (first ? (typeof o.say === 'function' ? o.say(A) : o.say) : (o.hint || o.say)).concat(o.wants && A.has(o.wants) ? [] : hint(A));
       if (!o.wants) return A.say(w, talk, () => { A.flag(k, 1); if (first && o.goal0) A.goal(o.goal0); avReward(A, o, e); });
       A.say(w, talk, () => { if (first && o.goal0) A.goal(o.goal0);
         if (!Object.keys(A.inv || {}).length) return;
@@ -9257,7 +9281,7 @@ function avNpc(id, o) {
 }
 // máquina, cofre cerrado, puerta atascada…: la miras, y si tienes la herramienta buena se arregla y a veces suelta algo
 function avMach(id, o) {
-  const k = 'av_' + id, nm = o.name || 'MÁQUINA', me = { name: nm, img: o.img };
+  const k = 'av_' + (o._k || id), nm = o.name || 'MÁQUINA', me = { name: nm, img: o.img };
   return { id, kind: 'gate', name: nm, img: o.img, fr: o.fr, frame: o.f0 || 0, h: o.h || 100, lbl: o.lbl || '🔧 USAR', img2: o.img2, alt: A => A.flag(k), glowIf: A => A.flag(k) ? 'rgba(80,255,160,.35)' : null,
     mark: A => !A.flag(k) && A.has(o.need),
     use: (A, e) => {
@@ -9273,19 +9297,20 @@ function avDoor(id, tx, ty, r, rx, ry) {
   if (!lk) return wy;
   wy.use = (A, e) => {
     if (A.flag('dr_' + r.rid)) return go(A, e);
-    if (lk.flag) { if (A.flag(lk.flag)) { A.flag('dr_' + r.rid, 1); return go(A, e); } return A.say(NR, lk.txt || ['La puerta está cerrada. Alguien tendrá que abrirla.']); }
-    A.say(NR, lk.txt || ['La puerta está cerrada con llave.'], () => avPicker(A, { name: r.name, img: 'adv-puerta' }, '¿Qué usas para abrirla?', lk.need, it => { if (lk.keep !== true) A.take(it); A.flag('dr_' + r.rid, 1); SFX.portal(); A.say(NR, lk.ok || ['¡Clic! La puerta se ha abierto.'], () => go(A, e)); },
+    if (lk.flag) { if (A.flag(lk.flag)) { A.flag('dr_' + r.rid, 1); avProg(A); return go(A, e); } return A.say(NR, lk.txt || ['La puerta está cerrada. Alguien tendrá que abrirla.']); }
+    A.say(NR, lk.txt || ['La puerta está cerrada con llave.'], () => avPicker(A, { name: r.name, img: 'adv-puerta' }, '¿Qué usas para abrirla?', lk.need, it => { if (lk.keep !== true) A.take(it); A.flag('dr_' + r.rid, 1); avProg(A); SFX.portal(); A.say(NR, lk.ok || ['¡Clic! La puerta se ha abierto.'], () => go(A, e)); },
       it => A.say(NR, [advRnd(AV_NO_MACH)(avArt(it))])));
   };
   wy.mark = A => !A.flag('dr_' + r.rid) && (lk.need ? A.has(lk.need) : A.flag(lk.flag));
   return wy;
 }
 // objeto suelto en el suelo o escondido
-const avItem = (it, tx, ty, msg) => ({ id: it, tx, ty, msg: () => msg || ['¡Has encontrado ' + avUn(it) + '!', 'Lo guardas en la mochila. Seguro que sirve para algo…'] });
+const avItem = (it, tx, ty, msg, key) => ({ id: it, tx, ty, msg: A => { if (key) A.flag('it_' + key, 1); avProg(A); return msg || ['¡Has encontrado ' + avUn(it) + '!', 'Lo guardas en la mochila. Seguro que sirve para algo…']; } });
 
 function advAv(id, q) {
   AV[id] = q; const rooms = {};
   Object.keys(q.rooms || {}).forEach((key, i) => { rooms[key] = Object.assign({ rid: id + '-' + key, key }, q.rooms[key]); });
+  q._rooms = rooms; let nk = 0; const tag = list => list.forEach(p => { if (p[1] && typeof p[1] === 'object') { p[1]._k = id + '#' + (nk++); p[1]._q = q; } }); tag(q.main); Object.values(rooms).forEach(r => tag(r.list));
   const parentOf = {};          // en qué sala está la puerta de cada sala
   const scan = (list, where) => list.forEach(p => { if (p[0] === 'door') parentOf[p[1]] = where; });
   scan(q.main, null); Object.values(rooms).forEach(r => scan(r.list, r.key));
@@ -9301,7 +9326,7 @@ function advAv(id, q) {
         if (k === 'npc') ents.push(avNpc(r.rid + 'n' + lx, o)), ents[ents.length - 1].tx = lx + 2, ents[ents.length - 1].ty = fl;
         else if (k === 'mach') { const e = avMach(r.rid + 'm' + lx, o); e.tx = lx + 2; e.ty = fl; ents.push(e); }
         else if (k === 'door') { const sr = rooms[p1(o)]; DPOS[id + '/' + sr.key] = lx + 2; ents.push(avDoor('d' + sr.rid, lx + 2, fl, sr, 4, 12)); }
-        else if (k === 'item') { if (o.at === 'high') { P(lx, lx + 2, fl - 3); P(lx + 4, lx + 6, fl - 6); B.row(lx, lx + 2, fl - 4); items.push(avItem(o.it, lx + 5, fl - 7, o.msg)); } else if (o.at === 'rock') { B.block(lx, lx + 4, fl - 3, fl - 1); B.block(lx + 1, lx + 3, fl - 2, fl - 1, ' '); B.block(lx, lx, fl - 2, fl - 1, 'C'); items.push(avItem(o.it, lx + 2, fl - 1, o.msg)); } else items.push(avItem(o.it, lx + 1, fl - 1, o.msg)); }
+        else if (k === 'item') { if (o.at === 'high') { P(lx, lx + 2, fl - 3); P(lx + 4, lx + 6, fl - 6); B.row(lx, lx + 2, fl - 4); items.push(avItem(o.it, lx + 5, fl - 7, o.msg, o._k)); } else if (o.at === 'rock') { B.block(lx, lx + 4, fl - 3, fl - 1); B.block(lx + 1, lx + 3, fl - 2, fl - 1, ' '); B.block(lx, lx, fl - 2, fl - 1, 'C'); items.push(avItem(o.it, lx + 2, fl - 1, o.msg, o._k)); } else items.push(avItem(o.it, lx + 1, fl - 1, o.msg, o._k)); }
         else if (k === 'deco') ents.push({ id: 'dc' + lx, kind: 'deco', tx: lx + 1, ty: fl, h: o.h || 90, img: o.img, fr: o.fr, frame: o.frame });
       }
       const par = parentOf[r.key], back = par ? rooms[par].rid : id, by = par ? 12 : (q._g || 15);
@@ -9334,8 +9359,8 @@ function advAv(id, q) {
     const wallX = x + 10, W = wallX + 16, sea = q.th === 'LO', B = advStd({ W, H: q.H || 18, sea, roof: sea, feats: feats.concat([['wall', wallX]]) }), S = B.S, g = B.g0;
     q._g = g; for (const e of ents) if (!e.ty) e.ty = g;
     const items = [];
-    for (const [s, o, fx] of spots) { const xy = s ? S[s] : [fx, g - 1]; if (xy) items.push(avItem(o.it, xy[0], xy[1], o.msg)); }
-    ents.unshift(Object.assign(avNpc(id + 'hero', { who: q.hero, say: q.say, hint: q.hint, wants: q.need, thanks: q.thanks, goal0: q.goal0, final: true, exitTxt: q.exitTxt, after: ['¡Gracias por todo, Lucas! Tu cohete te espera al final del camino.'] }), { tx: 9, ty: g }));
+    for (const [s, o, fx] of spots) { const xy = s ? S[s] : [fx, g - 1]; if (xy) items.push(avItem(o.it, xy[0], xy[1], o.msg, o._k)); }
+    ents.unshift(Object.assign(avNpc(id + 'hero', { who: q.hero, _q: q, _k: id + '#hero', say: q.say, hint: q.hint, wants: q.need, thanks: q.thanks, goal0: q.goal0, final: true, exitTxt: q.exitTxt, after: ['¡Gracias por todo, Lucas! Tu cohete te espera al final del camino.'] }), { tx: 9, ty: g }));
     ents.push(...advTeles([['t1', 15, g, q.t1 || 'LA ENTRADA'], ['t2', wallX - 6, g, q.t2 || 'EL FINAL']]));
     const adv = { goal0: 'Habla con ' + hero.name.charAt(0) + hero.name.slice(1).toLowerCase(), amb: (q.amb || []).flatMap(a => QAMB[a](g)), intro: q.intro, endTxt: q.end, ents, items, fly: sea,
       gates: [advLaser('salida', wallX, g - 4, g - 1, [q.laser || 'Una barrera de luz. Se apagará cuando termines la misión.'])] };
@@ -9496,7 +9521,179 @@ advAv('B-10', { n: 'LA ANTENA DE CHISPITA', img: 'obj-antena5g', th: 'ST', amb: 
     azotea: { name: 'LA AZOTEA', bg: 'estacion', door: 'tele', lock: { flag: 'asc', txt: ['El ascensor está roto. No hay manera de subir a la azotea.'] }, list: [['deco', { img: 'baliza', h: 90 }],
       ['mach', { name: 'CAJA FUERTE', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, lbl: '🔓 ABRIR', look: ['Una caja fuerte con una pantallita: «INTRODUZCA LA MEMORIA CON LA CLAVE».'], need: 'pendrive', fix: ['Metes la memoria… pip, pip, pip… ¡CLAC!', '¡La caja fuerte se abre! Dentro está la antena.'], gives: 'antena', done: ['La caja fuerte está vacía.'] }]] } } });
 
-window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), editHere: () => { CHEAT.test = true; openEditOff(); }, get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
+
+/* ---------- 7 años · aventuras 11 a 20 (más largas) ---------- */
+advAv('B-11', { n: 'LA NAVE SIN MOTOR', img: 'adv-cohete', th: 'ST', amb: ['estrellas'], s: 'La nave de Tuercas no arranca y mañana sale de viaje. Hay que encontrar una pieza muy especial… escondida en un hangar cerrado a cal y canto.',
+  intro: ['Lucas llega al puerto espacial.', 'Todas las naves despegan… menos una, que hace «puf, puf, pof».'], hero: 'TUERCAS', need: 'tubo',
+  say: ['¡Lucas! ¡Qué bien que estés aquí!', 'Mi nave no arranca y mañana me voy de vacaciones a Saturno.', 'El mecánico dice que el tubo del motor está roto. Necesito uno nuevo… ¡o uno viejo que funcione!'], hint: ['¿Has encontrado un tubo para mi motor? Byte sabe mucho de naves viejas.'],
+  thanks: ['¡UN TUBO! ¡Y en perfecto estado!', 'Lo coloco… ¡BRRRUMMM! ¡Mi nave ruge como un león!'], goal0: 'Busca un tubo para el motor de la nave',
+  end: 'La nave de Tuercas despegó rumbo a Saturno.<br>¡Y desde la ventanilla saludaba a Lucas!',
+  main: [['npc', { who: 'BYTE', say: ['¡Hola, Lucas!', 'Un tubo de motor… En el hangar viejo hay una nave abandonada que tiene uno.', 'Pero el hangar está cerrado y la tarjeta la tiene Campanita, en el parque.'], after: ['El hangar viejo… cuidado, que dentro siempre está oscuro.'] }],
+    ['item', { it: 'globo', at: 'plats', msg: ['¡Un globo!', 'Flota solito. A alguien le hará ilusión.'] }], ['door', 'parque'],
+    ['item', { it: 'chatarra', at: 'rock', msg: ['¡Chatarra!', 'Hierros viejos. A Recicla le encanta reciclar estas cosas.'] }],
+    ['npc', { who: 'RECICLA', say: ['¡Hola, Lucas! Soy Recicla y reciclo todo lo que encuentro.', 'Hoy no he encontrado nada de nada… ¡qué aburrimiento!'], hint: ['Si ves chatarra por ahí, ¡tráemela! Te daré algo a cambio.'], wants: 'chatarra', thanks: ['¡Chatarra de la buena!', 'Toma esta llave pequeñita. La encontré en la basura y no sé de qué es.'], gives: 'llavem', after: ['¡Reciclar es lo más!'] }],
+    ['item', { it: 'oro', at: 'cave', msg: ['¡Una moneda de oro!', 'Con esto se pueden comprar cosas.'] }], ['door', 'tienda'], ['door', 'hangar'], ['hill', { h: 3 }]],
+  rooms: {
+    parque: { name: 'EL PARQUE', bg: 'invernadero', list: [['npc', { who: 'CAMPANITA', say: ['¡Ding, ding! ¡Hola, Lucas!', 'Hoy es mi santo y nadie me ha regalado nada… ¡ni un triste globo!'], hint: ['Un globo… me encantan los globos. ¡Ding!'], wants: 'globo', thanks: ['¡UN GLOBO! ¡Es el mejor regalo del mundo!', 'Toma la tarjeta del hangar viejo. Yo ya no trabajo allí.'], gives: 'tarjeta', after: ['¡Mi globo vuela altísimo!'] }], ['deco', { img: 'deco-jardin-0', h: 80 }]] },
+    tienda: { name: 'LA TIENDA ESPACIAL', bg: 'tienda', list: [['npc', { who: 'BOLITA', say: ['¡Bienvenido a mi tienda, Lucas!', 'Vendo pilas, tornillos, caramelos espaciales… Todo a una moneda de oro.'], hint: ['¿Quieres comprar algo? Solo acepto monedas de oro.'], wants: 'oro', thanks: ['¡Una moneda de oro! ¡Gracias por tu compra!', 'Te doy una pila. Es lo que más se vende.'], gives: 'fusible', after: ['¡Vuelve cuando quieras!'] }], ['deco', { img: 'deco-tienda-0', h: 80 }]] },
+    hangar: { name: 'EL HANGAR VIEJO', bg: 'maquinas', lock: { need: 'tarjeta', txt: ['Un lector de tarjetas: «HANGAR CERRADO».'], ok: ['¡Pip! La puerta del hangar se abre con un chirrido.'] }, list: [
+      ['mach', { name: 'INTERRUPTOR DE LA LUZ', img: 'adv-palanca', fr: 2, f0: 0, f1: 1, h: 80, look: ['El interruptor de la luz del almacén. Tiene una tapa abierta… y le falta la pila.'], need: 'fusible', fix: ['Pones la pila y bajas el interruptor…', '¡Clac! Se enciende la luz del almacén.'], flag: 'luzh', done: ['La luz está encendida.'] }],
+      ['door', 'almacen'],
+      ['mach', { name: 'NAVE ABANDONADA', img: 'adv-cohete', h: 130, look: ['Una nave vieja y polvorienta. Su tubo del motor parece nuevo… pero está sujeto con tuercas enormes.'], need: 'llavein', keep: true, fix: ['Aflojas las tuercas una a una… ¡crac, crac!', '¡Ya tienes el tubo del motor!'], gives: 'tubo', done: ['A la nave vieja ya no le queda nada útil.'] }]] },
+    almacen: { name: 'EL ALMACÉN', bg: 'sotano', lock: { flag: 'luzh', txt: ['El almacén está oscurísimo. No ves ni tus propios pies.'] }, list: [['deco', { img: 'deco-taller-1', h: 80 }],
+      ['mach', { name: 'ARMARIO', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, lbl: '🔓 ABRIR', look: ['Un armario de herramientas cerrado con llave.'], need: 'llavem', fix: ['¡Clic! El armario se abre.', 'Dentro hay una llave inglesa enorme.'], gives: 'llavein', done: ['El armario está vacío.'] }]] } } });
+
+advAv('B-12', { n: 'EL COLLAR DE LA REINA', img: 'jefe5', th: 'LO', amb: ['mar'], s: 'La Reina Tentácula ha perdido su collar el día de su gran baile. Solo la joyera del mar puede hacerle uno nuevo… si consigue una perla.',
+  intro: ['Lucas bucea hasta el palacio de la Reina Tentácula.', 'Hoy hay baile real… pero la reina está llorando.'], hero: 'REINA TENTÁCULA', need: 'collar',
+  say: ['Snif… Hola, Lucas.', 'Esta noche es mi gran baile y he perdido mi collar. ¡No puedo bailar sin él!', 'Doña Almeja, la joyera, podría hacerme uno nuevo.'], hint: ['¿Hablaste con Doña Almeja? Su joyería está más adelante.'],
+  thanks: ['¡UN COLLAR NUEVO! ¡Es todavía más bonito que el que perdí!', '¡Que empiece el baile real!'], goal0: 'Habla con Doña Almeja, la joyera',
+  end: 'La Reina Tentácula bailó toda la noche con su collar nuevo.<br>¡Y sacó a bailar a Lucas!',
+  main: [['npc', { who: 'GLOBITO', say: ['¡Hola, Lucas! ¡Me inflo de alegría al verte!', 'Dicen que en la gruta oscura vive Medi, que guarda una perla preciosa.', 'Pero Medi solo hace tratos con quien le trae algo que suene a mar.'], after: ['¡Glub, glub!'] }],
+    ['item', { it: 'burbuja', at: 'plats', msg: ['¡Una burbuja mágica!', 'No se rompe nunca. ¡Qué divertida!'] }],
+    ['npc', { who: 'TINTA', say: ['¡Hola, Lucas! Estoy aburridísima.', 'Me encantaría jugar con burbujas… pero las mías siempre explotan. ¡Pof!'], hint: ['Una burbuja que no explote… ¡eso sí que sería divertido!'], wants: 'burbuja', thanks: ['¡Una burbuja mágica! ¡No explota! ¡Jajaja!', 'Toma, esta caracola la encontré ayer. Si te la pones en la oreja, se oye el mar.'], gives: 'caracola', after: ['¡Burbujas para todos!'] }],
+    ['door', 'barco'], ['item', { it: 'manzana', at: 'rock', msg: ['¡Una manzana!', '¿Qué hace una manzana en el fondo del mar? Alguien estará buscándola…'] }],
+    ['npc', { who: 'DIENTES', say: ['¡GRRR! ¡Hola, Lucas!', 'No te asustes, que estoy a dieta. Ahora solo como fruta… ¡y en el mar no hay fruta!'], hint: ['¡Fruta! ¡Quiero fruta! ¡GRRR… por favor!'], wants: 'manzana', thanks: ['¡Una manzana! ¡Ñam! ¡Qué rica!', 'Toma esta llave vieja. La tenía clavada entre los dientes desde hace años.'], gives: 'llavem', after: ['¡Viva la fruta!'] }],
+    ['door', 'gruta'], ['door', 'joyeria'], ['hill', { h: 3 }]],
+  rooms: {
+    barco: { name: 'EL BARCO HUNDIDO', bg: 'cueva', list: [['npc', { who: 'PINZAS', say: ['¡Clac, clac! Este barco es mío ahora.', 'En el cofre hay una linterna que no se moja… pero el cofre está cerrado y no tengo la llave.'] }],
+      ['mach', { name: 'COFRE DEL BARCO', img: 'adv-cofre', h: 60, lbl: '🔓 ABRIR', look: ['Un cofre con una cerradura muy oxidada.'], need: 'llavem', fix: ['La llave vieja gira con un «criiic»…', '¡Dentro hay una linterna sumergible!'], gives: 'linterna', done: ['El cofre está vacío.'] }]] },
+    gruta: { name: 'LA GRUTA OSCURA', bg: 'cueva', lock: { need: 'linterna', keep: true, txt: ['La gruta está tan oscura que da un poco de miedo.'], ok: ['La linterna ilumina la gruta… ¡qué peces más raros!'] }, list: [
+      ['npc', { who: 'MEDI', say: ['¡Hola! Soy Medi. Vivo aquí, en la oscuridad.', 'Tengo una perla preciosa. Pero solo la cambio por algo que me recuerde el sonido del mar…'], hint: ['Algo que suene a mar… ¡eso es lo que quiero!'], wants: 'caracola', thanks: ['¡Una caracola! Shhh… ¡se oye el mar!', 'Toma mi perla. Prometido.'], gives: 'perla', after: ['Shhh… escucho el mar.'] }], ['deco', { img: 'deco-mar-2', h: 80 }]] },
+    joyeria: { name: 'LA JOYERÍA DEL MAR', bg: 'tienda', list: [['npc', { who: 'DOÑA ALMEJA', say: ['¡Hola, Lucas! Soy la joyera del mar.', '¿Un collar para la reina? ¡Claro! Pero necesito una perla de verdad, y no me queda ninguna.'], hint: ['Sin perla no hay collar, cariño.'], wants: 'perla', thanks: ['¡Qué perla tan bonita!', 'Tilín, tilán… ¡Tachán! Un collar digno de una reina.'], gives: 'collar', after: ['¡Llévaselo a la reina, rápido!'] }]] } } });
+
+advAv('B-13', { n: 'LAS PUERTAS DEL TEMPLO', img: 'deco-selva-1', th: 'LJ', amb: ['luces', 'mariposas'], s: 'En el corazón del templo de Musgo brilla la estrella de la selva. Para llegar hasta ella hay que abrir puertas antiguas… y resolver sus misterios.',
+  intro: ['Lucas se adentra en la parte más profunda de la selva.', 'Allí se alza un templo cubierto de lianas.'], hero: 'MUSGO', need: 'estrella',
+  say: ['Bienvenido, pequeño robot.', 'La estrella de la selva se apagó y la guardaron en el corazón del templo. Si alguien la saca a la luz, volverá a brillar.', 'Pero el templo tiene puertas antiguas. Cada una esconde un secreto.'], hint: ['Las puertas del templo… Hoja conoce algunas historias.'],
+  thanks: ['¡La estrella de la selva! Mira cómo vuelve a brillar…', '¡Toda la selva se ilumina! Gracias, valiente Lucas.'], goal0: 'Entra en el templo',
+  end: 'La estrella volvió a brillar en lo alto del templo.<br>¡Y la selva entera lo celebró con luciérnagas!',
+  main: [['item', { it: 'valvula', at: 'hill', msg: ['¡Una válvula!', 'Para abrir y cerrar agua. ¿Habrá una fuente cerca?'] }],
+    ['mach', { name: 'FUENTE DE PIEDRA', img: 'adv-fuente', h: 110, look: ['Una fuente seca, con forma de rana. Le falta la pieza para abrir el agua.'], need: 'valvula', fix: ['Enroscas la válvula…', '¡La rana escupe agua mágica! Coges una gota.'], gives: 'gota', done: ['¡Croac! Dice la fuente.'] }],
+    ['mach', { name: 'PLANTA DORMIDA', img: 'adv-planta', h: 90, look: ['Una planta enorme, toda mustia. Parece que lleva días sin beber.'], need: 'gota', fix: ['Le echas la gota de agua mágica…', '¡La planta se despierta, se estira y deja caer una semilla!'], gives: 'semilla', done: ['La planta baila con el viento.'] }],
+    ['npc', { who: 'SALTARÍN', say: ['¡Salto, salto! Soy el guardián de la llave del templo.', 'Pero tengo hambre de pájaro… quiero decir, ¡me apetece una semilla!'], hint: ['Una semillita… ¡salto si me la das!'], wants: 'semilla', thanks: ['¡Una semilla! ¡Ñam!', 'Toma la llave del templo. Te la has ganado.'], gives: 'llavem', after: ['¡Salto de alegría!'] }],
+    ['item', { it: 'nido', at: 'plats' }], ['door', 'cabana'], ['item', { it: 'cristalv', at: 'cave', msg: ['¡Un cristal saltarín!', 'Brilla con una luz rosa. Tiene forma de… ¿de llave? ¡Qué raro!'] }], ['door', 'templo'], ['hill', { h: 3 }]],
+  rooms: {
+    cabana: { name: 'LA CABAÑA DE HOJA', bg: 'invernadero', list: [['npc', { who: 'HOJA', say: ['¡Hola, Lucas!', 'La puerta de piedra del templo solo se abre si encajas la pieza que le falta. Yo tengo esa pieza…', '…pero hoy estoy triste: los pájaros del árbol perdieron su nido.'], hint: ['Si los pájaros tuvieran su nido, yo estaría tan contenta que te daría cualquier cosa.'], wants: 'nido', thanks: ['¡El nido! ¡Los pájaros ya tienen casa!', 'Toma la pieza de la puerta de piedra. ¡Suerte en el templo!'], gives: 'pieza', after: ['¡Pío, pío!'] }]] },
+    templo: { name: 'EL TEMPLO DE MUSGO', bg: 'templo', lock: { need: 'llavem', txt: ['La entrada del templo tiene un candado enorme.'], ok: ['¡Clic! El candado se abre.'] }, list: [['deco', { img: 'deco-selva-3', h: 90 }],
+      ['mach', { name: 'PUERTA DE PIEDRA', img: 'deco-selva-0', h: 110, look: ['Una puerta de piedra con dibujos. En el centro hay un hueco con forma de pieza de puzle.'], need: 'pieza', fix: ['Encajas la pieza… ¡clonc!', 'La puerta de piedra se hunde en el suelo. ¡Se ha abierto un pasadizo!'], flag: 'puzle', done: ['El pasadizo está abierto.'] }],
+      ['door', 'corazon']] },
+    corazon: { name: 'EL CORAZÓN DEL TEMPLO', bg: 'templo', lock: { flag: 'puzle', txt: ['Hay una puerta de piedra que no se mueve. Habrá que abrirla de alguna forma.'] }, list: [
+      ['mach', { name: 'ALTAR', img: 'adv-cristales', h: 100, look: ['Un altar antiguo. Encima hay una estrella apagada encerrada en una jaula de cristal. Tiene un hueco con forma de cristal.'], need: 'cristalv', fix: ['Colocas el cristal saltarín en el hueco…', '¡La jaula se abre y la estrella cae en tus manos!'], gives: 'estrella', done: ['El altar está vacío.'] }]] } } });
+
+advAv('B-14', { n: 'LA BRÚJULA DEL DESIERTO', img: 'esfera-flechas', th: 'LD', amb: ['buitres'], s: 'Doña Venda se ha perdido en el desierto. Solo la bola de flechas, que siempre señala el camino a casa, puede ayudarla. Está escondida en una tumba antigua.',
+  intro: ['Lucas aterriza en un desierto inmenso.', 'Sentada en una piedra hay una momia muy despistada.'], hero: 'DOÑA VENDA', need: 'flecha',
+  say: ['Uuuuh… hola, jovencito.', 'Me he perdido. Llevo tantas vendas que no veo por dónde voy.', 'Mi abuelo guardaba una bola de flechas que siempre señala el camino a casa. Está en su tumba, dentro de la pirámide.'], hint: ['La pirámide se abre con un escarabajo… o eso decía mi abuelo, uuuh.'],
+  thanks: ['¡La bola de flechas! ¡Mira, señala hacia allí!', '¡Ya sé volver a casa! Uuuh… ¡qué alegría!'], goal0: 'Busca la manera de entrar en la pirámide',
+  end: 'Doña Venda volvió a casa siguiendo la bola de flechas.<br>¡Y nunca más se perdió!',
+  main: [['item', { it: 'lazo', at: 'hill', msg: ['¡Un lazo de fiesta!', 'Muy elegante. Seguro que a alguien presumido le encanta.'] }],
+    ['npc', { who: 'PINCHO', say: ['¡Eh! Soy Pincho, el cactus más guapo del desierto.', 'Bueno… sería más guapo con algo elegante. Un sombrero, una pajarita, un lazo…'], hint: ['¡Algo elegante! ¡Quiero estar guapísimo!'], wants: 'lazo', thanks: ['¡Un lazo! ¡Estoy guapísimo!', 'Toma esto que encontré enterrado. Es una válvula de algo, creo.'], gives: 'valvula', after: ['¿A que estoy guapo?'] }],
+    ['mach', { name: 'FUENTE DEL OASIS', img: 'adv-fuente', h: 110, look: ['La fuente del oasis está seca. Falta la pieza para abrir el agua.'], need: 'valvula', fix: ['Enroscas la válvula…', '¡El agua vuelve a salir! Coges una gota de agua mágica.'], gives: 'gota', done: ['La fuente salpica fresquita.'] }],
+    ['npc', { who: 'ARENITA', say: ['¡Hola! ¡Qué calor!', 'Esta mañana encontré un escarabajo de piedra muy bonito. Pero tengo tanta sed que no puedo ni pensar.'], hint: ['¡Agua! ¡Por favor, agua!'], wants: 'gota', thanks: ['¡Agua fresquita! ¡Glu, glu!', 'Toma el escarabajo de piedra. ¿Será la llave de algo?'], gives: 'escarabajo', after: ['¡Qué rica estaba el agua!'] }],
+    ['item', { it: 'oro', at: 'cave', msg: ['¡Una moneda de oro!', 'Es muy antigua. Tiene dibujada una balanza.'] }], ['door', 'piramide'], ['hill', { h: 3 }]],
+  rooms: {
+    piramide: { name: 'LA GRAN PIRÁMIDE', bg: 'piramide', lock: { need: 'escarabajo', txt: ['La puerta de la pirámide tiene un hueco con forma de escarabajo.'], ok: ['Colocas el escarabajo… ¡la puerta se abre con un estruendo!'] }, list: [
+      ['npc', { who: 'GATO DE PIEDRA', say: ['Miaaau… ¿Quién anda ahí?', 'La tumba del abuelo de Doña Venda está ahí al fondo. Pero está tan oscura que hasta yo me pierdo.', 'Arriba del todo dejaron una linterna, por si acaso.'] }], ['item', { it: 'linterna', at: 'high' }], ['door', 'tumba']] },
+    tumba: { name: 'LA TUMBA ANTIGUA', bg: 'piramide', lock: { need: 'linterna', keep: true, txt: ['La tumba está completamente a oscuras.'], ok: ['Enciendes la linterna… ¡qué dibujos más bonitos hay en las paredes!'] }, list: [['deco', { img: 'deco-egipto-3', h: 80 }],
+      ['mach', { name: 'BALANZA DORADA', img: 'deco-egipto-2', h: 100, look: ['Una balanza dorada. En un plato hay una bola de flechas; el otro plato está vacío.', 'Hay un letrero: «PARA LLEVARTE ALGO, DEBES DEJAR ALGO DE ORO».'], need: 'oro', fix: ['Pones la moneda de oro en el plato vacío…', '¡La balanza se equilibra! Ya puedes coger la bola de flechas.'], gives: 'flecha', done: ['La balanza está en equilibrio.'] }]] } } });
+
+advAv('B-15', { n: 'EL HUEVO DE LAS NUBES', img: 'huevo-1', th: 'LS', amb: ['aviones'], s: 'Un huevo del pájaro de las nubes se ha caído del nido. Algodón quiere devolverlo antes de que se enfríe… pero el viento no deja llegar a la torre.',
+  intro: ['Lucas vuela entre nubes de algodón.', 'Sopla un viento tremendo que lo mueve todo.'], hero: 'ALGODÓN', need: 'huevo',
+  say: ['¡Lucas! ¡Qué susto!', 'Un huevo del pájaro de las nubes se cayó del nido y el viento se lo llevó rodando hasta la torre del viento.', 'Si no vuelve pronto a su nido, ¡se enfriará!'], hint: ['¿Y el huevo? ¡Que se enfría!'],
+  thanks: ['¡El huevo! ¡Y está calentito!', '¡Mira, mira! ¡Se mueve! ¡Va a nacer un pajarito de las nubes!'], goal0: 'Ve a la torre del viento',
+  end: 'Del huevo nació un pajarito de las nubes precioso.<br>¡Y lo primero que vio fue a Lucas!',
+  main: [['npc', { who: 'PLUMITA', say: ['¡Hola, Lucas!', 'La torre del viento tiene un molino que sopla y sopla. Mientras gire, nadie puede entrar.', 'El molino solo para si le cambias el engranaje… Hélice tiene engranajes de sobra.'], after: ['¡El viento me despeina las plumas!'] }],
+    ['item', { it: 'tubo', at: 'cave', msg: ['¡Un tubo!', 'Parece de un motor. A un avión le vendría genial.'] }],
+    ['npc', { who: 'HÉLICE', say: ['¡Brrrum! ¡Hola, Lucas!', 'Mi motor hace un ruido rarísimo. Creo que se me ha roto un tubo.'], hint: ['Si tuviera un tubo nuevo, volvería a volar como un rayo.'], wants: 'tubo', thanks: ['¡Un tubo nuevo! ¡BRRRUUUM! ¡Como nuevo!', 'Toma este engranaje que me sobraba.'], gives: 'eng', after: ['¡Ahora vuelo más rápido que nadie!'] }],
+    ['plats'],
+    ['mach', { name: 'MOLINO DEL VIENTO', img: 'adv-poste', h: 130, look: ['Un molino enorme que sopla sin parar hacia la torre. Tiene una tapa con un engranaje roto.'], need: 'eng', fix: ['Cambias el engranaje roto…', 'El molino se para poco a poco. ¡Ya no sopla el viento!'], flag: 'viento', done: ['El molino está tranquilo.'] }],
+    ['door', 'arbol'], ['door', 'torre'], ['hill', { h: 3 }]],
+  rooms: {
+    arbol: { name: 'EL ÁRBOL DE LAS NUBES', bg: 'invernadero', list: [['npc', { who: 'BOLITA', say: ['¡Hola, Lucas! Vivo en este árbol.', 'Arriba del todo hay un nido vacío. Los pájaros se mudaron y lo dejaron ahí.'] }], ['item', { it: 'nido', at: 'high' }]] },
+    torre: { name: 'LA TORRE DEL VIENTO', bg: 'estacion', lock: { flag: 'viento', txt: ['¡FIUUUUU! El viento sopla tan fuerte que te empuja hacia atrás. Así no hay quien entre.'] }, list: [
+      ['npc', { who: 'GIRO', say: ['¡Hola, Lucas! Soy Giro, el guardián de la torre.', 'El huevo llegó rodando y lo estoy protegiendo. Pero aquí hace frío… necesita un nido calentito.'], hint: ['Un nido calentito para el huevo… ¡eso es lo más importante!'], wants: 'nido', thanks: ['¡Un nido! El huevo ya está calentito.', 'Toma, llévaselo a Algodón con mucho cuidado.'], gives: 'huevo', after: ['¡Cuida bien de ese huevo!'] }]] } } });
+
+advAv('B-16', { n: 'EL TREN DE LOS JUGUETES', img: 'vagon', th: 'LT', amb: [], s: 'El tren de los juguetes no puede salir: el revisor ha perdido la bola de números que lo pone en marcha. ¿Dónde habrá ido a parar?',
+  intro: ['Lucas llega a la estación de los juguetes.', 'El tren está lleno de viajeros… pero no se mueve.'], hero: 'TAMBOR', need: 'numero',
+  say: ['¡Firmes! ¡Ar! Soy el revisor del tren.', 'El tren solo arranca con la bola de números… ¡y la he perdido! ¡Qué vergüenza!', 'La última vez que la vi estaba en la taquilla. Pero la taquilla está cerrada.'], hint: ['¡La bola de números! ¡Los viajeros se impacientan! ¡Ar!'],
+  thanks: ['¡LA BOLA DE NÚMEROS! ¡Ar!', '¡Pasajeros al tren! ¡Chu-chuuu!'], goal0: 'Busca la bola de números',
+  end: 'El tren de los juguetes salió puntual con todos los viajeros.<br>¡Y Lucas viajó en la locomotora!',
+  main: [['npc', { who: 'BOTI', say: ['¡Bote, bote! Hola, Lucas.', 'La llave de la taquilla la tiene Pelusín. Siempre se lleva las llaves sin querer.'], after: ['¡Bote, bote!'] }],
+    ['door', 'cafe'], ['door', 'estacion'],
+    ['mach', { name: 'TAQUILLA', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, lbl: '🔓 ABRIR', look: ['La taquilla de los billetes está cerrada con llave.'], need: 'llavem', fix: ['¡Clic! La taquilla se abre.', 'No está la bola de números… pero hay una tarjeta que pone «ALMACÉN».'], gives: 'tarjeta', done: ['La taquilla está vacía.'] }],
+    ['item', { it: 'iman', at: 'plats', msg: ['¡Un imán!', 'Atrae las cosas de metal. ¡Hasta se pega a la nevera!'] }], ['item', { it: 'pelota', at: 'hill', msg: ['¡Una pelota!', 'Rebota un montón.'] }], ['door', 'almacen'], ['hill', { h: 3 }]],
+  rooms: {
+    cafe: { name: 'LA CAFETERÍA', bg: 'tienda', list: [['npc', { who: 'BOLITA', say: ['¡Hola, Lucas! Soy la cocinera de la estación.', 'Quiero hacer una tarta de manzana, pero se me ha caído la manzana detrás de la estantería… ¡arriba del todo!'], hint: ['Sin manzana no hay tarta…'], wants: 'manzana', thanks: ['¡Mi manzana! Un momentito…', '¡Tachán! Una tarta de manzana para ti.'], gives: 'tarta', after: ['¡Que aproveche!'] }], ['item', { it: 'manzana', at: 'high' }]] },
+    estacion: { name: 'LA SALA DE ESPERA', bg: 'caja', list: [['npc', { who: 'PELUSÍN', say: ['¡Hola, Lucas!', '¿La llave de la taquilla? Ups… sí, la tengo yo. ¡Siempre me llevo las llaves sin querer!', 'Te la doy… pero es que tengo un hambre…'], hint: ['¡Tengo hambre de algo dulce! ¡Muy dulce!'], wants: 'tarta', thanks: ['¡UNA TARTA! ¡Ñam, ñam!', 'Toma la llave de la taquilla. ¡Perdón por llevármela!'], gives: 'llavem', after: ['¡Qué tarta tan rica!'] }]] },
+    almacen: { name: 'EL ALMACÉN', bg: 'sotano', lock: { need: 'tarjeta', txt: ['La puerta del almacén tiene un lector de tarjetas.'], ok: ['¡Pip! Se abre la puerta.'] }, list: [
+      ['npc', { who: 'MUELLE', say: ['¡BOING! ¡Te he asustado!', 'La bola de números cayó por esa rejilla. Es de metal, pero la rejilla es tan estrecha que no cabe la mano.'] }],
+      ['mach', { name: 'REJILLA', img: 'adv-rejilla', fr: 2, f0: 0, f1: 1, h: 70, look: ['Una rejilla muy estrecha. Al fondo se ve brillar la bola de números.'], need: 'iman', keep: true, fix: ['Bajas el imán por la rejilla… ¡clinc!', '¡La bola de números se ha pegado al imán!'], gives: 'numero', done: ['Ya no queda nada en la rejilla.'] }]] } } });
+
+advAv('B-17', { n: 'LA FÁBRICA DE CHATARRA', img: 'pieza-chatarra', th: 'LK', amb: [], s: 'Chispazo quiere arreglar a su mejor amigo, un robot que se rompió en la fábrica. Para eso necesita un soldador… guardado en el taller más vigilado.',
+  intro: ['Lucas llega a una fábrica enorme llena de chatarra.', 'Junto a un robot roto hay alguien echando chispas… de pena.'], hero: 'CHISPAZO', need: 'soldador',
+  say: ['Bzzzt… Hola, Lucas.', 'Este es mi mejor amigo. Se le soltó un cable del corazón y ya no se mueve.', 'Con un soldador podría arreglarlo. Hay uno en el taller de la fábrica… pero solo entra el personal.'], hint: ['¿Has conseguido el soldador? Byte tiene tarjeta del taller, creo.'],
+  thanks: ['¡UN SOLDADOR! Bzzzt… sueldo por aquí…', '¡Se mueve! ¡Mi amigo abre los ojos! ¡Bzzzt de alegría!'], goal0: 'Busca un soldador',
+  end: 'Chispazo arregló a su mejor amigo con el soldador.<br>¡Y los dos le dieron a Lucas un abrazo eléctrico!',
+  main: [['deco', { img: 'robot-roto-suelo', h: 70 }],
+    ['npc', { who: 'BYTE', say: ['¡Hola, Lucas! Soy Byte.', 'Te dejaría mi tarjeta del taller, pero estoy de los nervios: perdí la memoria con todos mis juegos.', 'Creo que la dejé dentro del ordenador viejo de la oficina.'], hint: ['¡Mi memoria! ¡Mis juegos! ¡Ay, ay, ay!'], wants: 'pendrive', thanks: ['¡Mi memoria! ¡Mis partidas guardadas están a salvo!', 'Toma mi tarjeta del taller. Te la has ganado.'], gives: 'tarjeta', after: ['¡Nivel 50 superado!'] }],
+    ['item', { it: 'chatarra', at: 'cave', msg: ['¡Un montón de chatarra!', 'Ideal para alguien que recicle.'] }],
+    ['npc', { who: 'RECICLA', say: ['¡Hola, Lucas!', 'Me paso el día reciclando… y hoy no he encontrado ni un tornillo.'], hint: ['Si me traes chatarra, te doy algo a cambio.'], wants: 'chatarra', thanks: ['¡Chatarra! ¡Qué maravilla!', 'Toma, una pila que saqué de un juguete viejo.'], gives: 'fusible', after: ['¡Reciclar mola!'] }],
+    ['mach', { name: 'CUADRO ELÉCTRICO', img: 'deco-maquinas-0', h: 110, look: ['El cuadro de la luz de la oficina. Está apagado: falta una pila en el hueco.'], need: 'fusible', fix: ['Pones la pila…', '¡Clic! Se encienden las luces de la oficina.'], flag: 'luzo', done: ['Las luces de la oficina están encendidas.'] }],
+    ['item', { it: 'cable', at: 'rock', msg: ['¡Un cable!', 'Con enchufe y todo.'] }], ['item', { it: 'destornillador', at: 'hill', msg: ['¡Un destornillador!', 'Para tornillos de todos los tamaños.'] }],
+    ['door', 'oficina'], ['door', 'taller'], ['hill', { h: 3 }]],
+  rooms: {
+    oficina: { name: 'LA OFICINA', bg: 'laboratorio', lock: { flag: 'luzo', txt: ['La oficina está a oscuras. Sin luz no encontrarás nada.'] }, list: [['deco', { img: 'deco-laboratorio-3', h: 80 }],
+      ['mach', { name: 'ORDENADOR VIEJO', img: 'deco-laboratorio-0', h: 110, look: ['Un ordenador viejísimo. Está apagado y no tiene cable de corriente.'], need: 'cable', fix: ['Conectas el cable… ¡bip, bip! El ordenador se enciende.', '¡Clac! Sale una memoria por la ranura.'], gives: 'pendrive', done: ['El ordenador hace «bip, bip».'] }]] },
+    taller: { name: 'EL TALLER', bg: 'taller', lock: { need: 'tarjeta', txt: ['Cartel: «TALLER. SOLO PERSONAL DE LA FÁBRICA».'], ok: ['¡Pip! Acceso permitido.'] }, list: [
+      ['npc', { who: 'TIC-TAC', say: ['¡Tic, tac! Hola, Lucas.', 'El soldador está en ese armario. Pero lo cerraron con tornillos para que nadie se lo lleve.'] }],
+      ['mach', { name: 'ARMARIO ATORNILLADO', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, look: ['Un armario cerrado con cuatro tornillos gordos.'], need: 'destornillador', keep: true, fix: ['Quitas los tornillos… ¡crac, crac, crac, crac!', '¡El armario se abre! Dentro está el soldador.'], gives: 'soldador', done: ['El armario está vacío.'] }]] } } });
+
+advAv('B-18', { n: 'EL REGALO DE COPITO', img: 'deco-hielo-2', th: 'ICE', amb: ['nieve'], s: 'Copito quiere hacerle un regalo muy especial a su mejor amiga. Brisa sabe hacer regalos de hielo… pero necesita un cristal muy difícil de conseguir.',
+  intro: ['Lucas llega a un pueblo de hielo.', 'Copito da vueltas sin parar, muy nervioso.'], hero: 'COPITO', need: 'regalo',
+  say: ['¡Hola, Lucas! ¡Estoy nerviosísimo!', 'Mañana es el cumpleaños de mi mejor amiga y no tengo regalo.', 'Brisa hace regalos de hielo preciosos… ¿me ayudas?'], hint: ['¿Hablaste con Brisa? ¡Mañana es el cumpleaños!'],
+  thanks: ['¡QUÉ REGALO TAN BONITO!', '¡Le va a encantar! ¡Eres el mejor amigo del mundo, Lucas!'], goal0: 'Habla con Brisa',
+  end: 'La amiga de Copito lloró de alegría con su regalo de hielo.<br>¡Y Lucas fue el invitado de honor!',
+  main: [['npc', { who: 'BRISA', say: ['¡Hola, Lucas! Soy Brisa.', '¿Un regalo para Copito? Claro. Pero para hacerlo necesito un cristal de hielo eterno.', 'Están dentro de los bloques de hielo gigantes… y son durísimos.'], hint: ['Un cristal de hielo… está dentro de los bloques gigantes. ¡Hace falta algo duro para romperlos!'], wants: 'cristal', thanks: ['¡Un cristal de hielo eterno! Un momentito…', '¡Tachán! El regalo más bonito del Planeta de Hielo.'], gives: 'regalo', after: ['¡Seguro que le encanta!'] }],
+    ['mach', { name: 'BLOQUE DE HIELO GIGANTE', img: 'deco-hielo-0', h: 110, look: ['Un bloque de hielo enorme. Dentro brilla un cristal… pero el hielo es durísimo.'], need: 'martillo', keep: true, fix: ['¡PAM! ¡PAM! ¡CRASH!', '¡El bloque se rompe y sale un cristal de hielo eterno!'], gives: 'cristal', done: ['Solo quedan trocitos de hielo.'] }],
+    ['item', { it: 'oro', at: 'cave', msg: ['¡Una moneda de oro!', 'Brilla un montón con la nieve.'] }], ['door', 'tienda'],
+    ['npc', { who: 'ESCARCHA', say: ['Brrr… Hola, pequeño.', 'Tengo la llave de la cabaña de herramientas, pero no salgo de casa: en invierno anochece tan pronto que me da miedo la oscuridad.'], hint: ['Si tuviera algo para alumbrarme… brrr.'], wants: 'linterna', thanks: ['¡Una linterna! ¡Ya no tengo miedo!', 'Toma la llave de la cabaña. ¡Brrrillante!'], gives: 'llavem', after: ['Con mi linterna voy a todas partes.'] }],
+    ['door', 'cabana'], ['hill', { h: 3 }]],
+  rooms: {
+    tienda: { name: 'LA TIENDA DE CHISPAS', bg: 'tienda', th: 'ice', list: [['npc', { who: 'CHISPAS', say: ['¡Hola, Lucas! Bienvenido a mi tienda.', 'Hoy vendo linternas a una moneda de oro. ¡Ideales para las noches de invierno!'], hint: ['¿Quieres una linterna? Una moneda de oro.'], wants: 'oro', thanks: ['¡Una moneda de oro! ¡Gracias por tu compra!', 'Aquí tienes tu linterna.'], gives: 'linterna', after: ['¡Vuelve pronto!'] }], ['deco', { img: 'deco-tienda-3', h: 80 }]] },
+    cabana: { name: 'LA CABAÑA DE HERRAMIENTAS', bg: 'taller', th: 'ice', lock: { need: 'llavem', txt: ['La cabaña está cerrada con llave.'], ok: ['¡Clic! La puerta se abre.'] }, list: [['deco', { img: 'deco-taller-2', h: 80 }], ['item', { it: 'martillo', at: 'high', msg: ['¡Un martillo!', 'Pesado y fuerte. ¡Puede romper lo que sea!'] }]] } } });
+
+advAv('B-19', { n: 'EL ESCUDO DE FUEGO', img: 'cristal-lava-0', th: 'LV', amb: [], s: 'El escudo que protege el pueblo del volcán se ha apagado. Para encenderlo hace falta una pila de láser guardada en la cámara de lava, donde el suelo quema.',
+  intro: ['Lucas llega a un pueblo junto a un volcán.', 'Las lluvias de chispas caen cada vez más cerca…'], hero: 'BRASA', need: 'laser',
+  say: ['¡Lucas! ¡Menos mal!', 'El escudo de fuego que protege nuestro pueblo se ha apagado. Necesita una pila de láser nueva.', 'La guardan en la caja de seguridad de la cámara de lava. Pero allí el suelo quema tanto que nadie puede entrar.'], hint: ['¿Tienes la pila de láser? Para entrar en la cámara hará falta algo para los pies…'],
+  thanks: ['¡La pila de láser! ¡La pongo en el escudo!', '¡ZUUUM! ¡El escudo vuelve a brillar! ¡El pueblo está a salvo!'], goal0: 'Busca la manera de entrar en la cámara de lava',
+  end: 'El escudo de fuego volvió a proteger el pueblo.<br>¡Y ya nunca más llovieron chispas!',
+  main: [['item', { it: 'rubi', at: 'rock', msg: ['¡Un cristal rojo!', 'Está calentito. Un herrero sabría qué hacer con él.'] }], ['door', 'forja'],
+    ['npc', { who: 'MAGMA', say: ['¡Hola, Lucas!', 'Conozco la combinación de la caja de seguridad: está en la bola de números. ¡Es mía!', 'Te la dejo… pero antes, ¡tengo un antojo! Me encantan las manzanas asadas en la lava.'], hint: ['¡Una manzana! ¡Una manzana para asar!'], wants: 'manzana', thanks: ['¡Una manzana! La aso en la lava… ¡Ñam! ¡Deliciosa!', 'Toma la bola de números. Ahí está la combinación.'], gives: 'numero', after: ['¡Qué rica estaba esa manzana asada!'] }],
+    ['door', 'invernadero'], ['door', 'camara'], ['hill', { h: 3 }]],
+  rooms: {
+    forja: { name: 'LA FORJA DE CHISPAS', bg: 'taller', list: [['npc', { who: 'CHISPAS', say: ['¡Hola, Lucas! Soy el herrero.', 'Sé fabricar botas que no se queman, pero me falta un cristal de fuego para calentar la forja.'], hint: ['Un cristal rojo y calentito… ¡con eso te hago unas botas!'], wants: 'rubi', thanks: ['¡Un cristal de fuego! ¡Fuuush!', 'Clinc, clanc… ¡Tachán! Unas botas que no se queman.'], gives: 'botas', after: ['¡Esas botas aguantan hasta la lava!'] }]] },
+    invernadero: { name: 'EL INVERNADERO CALENTITO', bg: 'invernadero', list: [['npc', { who: 'HOJA', say: ['¡Hola, Lucas! Con el calor del volcán mis manzanos crecen muy rápido.', 'Arriba del todo hay una manzana. Si la quieres, ¡salta!'] }], ['item', { it: 'manzana', at: 'high' }]] },
+    camara: { name: 'LA CÁMARA DE LAVA', bg: 'cueva', lock: { need: 'botas', keep: true, txt: ['El suelo de la cámara está al rojo vivo. ¡Te quemarías los pies!'], ok: ['Te pones las botas… ¡ni te enteras del calor!'] }, list: [['deco', { img: 'cristal-lava-2', h: 60 }],
+      ['mach', { name: 'CAJA DE SEGURIDAD', img: 'adv-taquilla', fr: 3, f0: 0, f1: 2, h: 110, lbl: '🔓 ABRIR', look: ['Una caja de seguridad con una ruleta de números. Sin la combinación no se abre.'], need: 'numero', fix: ['Giras la ruleta con los números de la bola… 3… 7… 1…', '¡CLAC! ¡La caja se abre! Dentro está la pila de láser.'], gives: 'laser', done: ['La caja de seguridad está vacía.'] }]] } } });
+
+advAv('B-20', { n: 'EL CONCURSO DE INVENTOS', img: 'obj-aspiradora', th: 'ST', amb: ['estrellas'], s: 'Rayo se presenta al gran concurso de inventos con su aspiradora espacial, ¡pero está a medio terminar! Ayúdale a conseguir todo lo que le falta antes de que empiece.',
+  intro: ['Lucas llega a la estación del Gran Concurso de Inventos.', 'Hay robots con inventos por todas partes… y uno que corre de un lado a otro.'], hero: 'RAYO', need: 'aspiradora',
+  say: ['¡Lucas! ¡Socorro! ¡El concurso empieza dentro de nada!', 'Mi invento es una aspiradora espacial. Chispas me la está montando en su taller…', '…pero le falta un engranaje, ¡y el taller está a oscuras porque se fundió la luz!'], hint: ['¡El concurso! ¿Cómo va mi aspiradora? Chispas está en su taller.'],
+  thanks: ['¡MI ASPIRADORA ESPACIAL! ¡Está terminada!', '¡FIUUUUU! ¡Aspira hasta el polvo de estrellas! ¡Vamos a ganar!'], goal0: 'Ayuda a Rayo con su invento',
+  end: 'La aspiradora espacial de Rayo ganó el primer premio del concurso.<br>¡Y Rayo le regaló a Lucas la medalla de ayudante de oro!',
+  main: [['npc', { who: 'CAMPANITA', say: ['¡Ding, ding! Hola, Lucas.', 'Soy la jueza del concurso. Tengo la tarjeta del cuarto de juegos, pero hoy estoy un poco tristona: no tengo globo para animar el concurso.'], hint: ['¡Un concurso sin globos no es un concurso!'], wants: 'globo', thanks: ['¡Un globo! ¡Qué alegría! ¡Ding, ding!', 'Toma la tarjeta del cuarto de juegos.'], gives: 'tarjeta', after: ['¡Que gane el mejor invento!'] }],
+    ['item', { it: 'globo', at: 'plats' }],
+    ['npc', { who: 'BYTE', say: ['Hola, Lucas. Snif…', 'Me dejé mi consola en el cuarto de juegos y está cerrado. Sin mi consola no soy nadie.', 'Si me la traes, te doy mi destornillador de inventor.'], hint: ['¡Mi consola! ¿La has encontrado?'], wants: 'consola', thanks: ['¡Mi consola! ¡Mi preciosa consola!', 'Toma mi destornillador de inventor. Prometido.'], gives: 'destornillador', after: ['¡A jugar!'] }],
+    ['item', { it: 'fusible', at: 'cave', msg: ['¡Una pila!', 'Cargadita. ¿Qué aparato se habrá quedado sin pilas?'] }], ['door', 'cocina'], ['door', 'juegos'], ['door', 'relojeria'], ['door', 'taller'], ['hill', { h: 3 }]],
+  rooms: {
+    cocina: { name: 'LA CAFETERÍA DEL CONCURSO', bg: 'tienda', list: [
+      ['mach', { name: 'HORNO', img: 'deco-tienda-2', h: 90, look: ['Un horno con una tarta dentro a medio hacer. Está apagado: le faltan las pilas.'], need: 'fusible', fix: ['Pones la pila… ¡ding!', '¡Una tarta recién hecha!'], gives: 'tarta', done: ['El horno está vacío.'] }],
+      ['npc', { who: 'BOLITA', say: ['¡Hola, Lucas! Llevo todo el día sin comer, organizando el concurso.', 'Tengo una linterna que me sobra, por si alguien la necesita… pero ahora mismo solo pienso en comer.'], hint: ['¡Algo dulce! ¡Por favor, algo dulce!'], wants: 'tarta', thanks: ['¡Una tarta! ¡Ñam, ñam!', 'Toma mi linterna. ¡Gracias por la merienda!'], gives: 'linterna', after: ['¡Qué tarta más rica!'] }]] },
+    juegos: { name: 'EL CUARTO DE JUEGOS', bg: 'fiesta', lock: { need: 'tarjeta', txt: ['Lector de tarjetas: «CUARTO DE JUEGOS. CERRADO DURANTE EL CONCURSO».'], ok: ['¡Pip! ¡Abierto!'] }, list: [['deco', { img: 'deco-fiesta-0', h: 80 }], ['item', { it: 'consola', at: 'high', msg: ['¡Una consola!', 'Tiene una pegatina que pone «BYTE».'] }]] },
+    relojeria: { name: 'LA RELOJERÍA', bg: 'maquinas', list: [['npc', { who: 'TIC-TAC', say: ['¡Tic, tac! Hola, Lucas.', 'Ese reloj viejo tiene un engranaje perfecto dentro. Te lo regalo, pero tendrás que abrirlo tú: tiene la tapa atornillada.'] }],
+      ['mach', { name: 'RELOJ VIEJO', img: 'deco-reloj-2', h: 110, look: ['Un reloj de pared viejo. La tapa de atrás está sujeta con tornillos.'], need: 'destornillador', keep: true, fix: ['Quitas los tornillos de la tapa…', '¡Dentro hay un engranaje brillante!'], gives: 'eng', done: ['El reloj ya no tiene nada dentro.'] }]] },
+    taller: { name: 'EL TALLER DE CHISPAS', bg: 'taller', lock: { need: 'linterna', keep: true, txt: ['El taller está a oscuras: se fundió la luz.'], ok: ['Enciendes la linterna y entras.'] }, list: [
+      ['npc', { who: 'CHISPAS', say: ['¡Lucas! ¡Qué susto! No veía nada.', 'La aspiradora de Rayo está casi lista. Solo le falta un engranaje para el motor.'], hint: ['Un engranaje, un engranaje… ¡y el invento estará listo!'], wants: 'eng', thanks: ['¡Un engranaje! Clinc, clanc…', '¡Terminada! Llévale la aspiradora a Rayo, ¡corre!'], gives: 'aspiradora', after: ['¡Suerte en el concurso!'] }]] } } });
+
+window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get lines() { return ADVT.lines; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), editHere: () => { CHEAT.test = true; openEditOff(); }, get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
 LEVELS['A-1'] = function () {
   const W = 240, H = 30, B = SB(W, H), P = (a, b, ty) => B.block(a, b, ty, ty, '=');
