@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.74';
+const VERSION = '1.75';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4809,6 +4809,25 @@ function drawBackground() {
   const fg = ctx.createLinearGradient(0, VHv * 0.55, 0, VHv); fg.addColorStop(0, 'rgba(60,30,120,0)'); fg.addColorStop(1, 'rgba(70,40,150,.38)');
   ctx.fillStyle = fg; ctx.fillRect(0, VHv * 0.55, VW, VHv * 0.45);
 }
+// setas de decoración: halo de su color pegado a la silueta (calculado una vez), que palpita, brillo por dentro y esporas de luz que suben
+const SETA_G = {};
+function setaGlow(im, col) {
+  const k = im.src + col; if (SETA_G[k]) return SETA_G[k];
+  const pad = 46, c = document.createElement('canvas'); c.width = im.naturalWidth + pad * 2; c.height = im.naturalHeight + pad * 2; const g = c.getContext('2d');
+  g.shadowColor = 'rgba(' + col + ',1)'; g.shadowOffsetX = 10000;
+  for (const b of [34, 16, 6]) { g.shadowBlur = b; g.drawImage(im, pad - 10000, pad); }
+  return SETA_G[k] = { c, pad };
+}
+function setaDraw(im, x, y, h, col) {
+  const G = setaGlow(im, col), k = h / im.naturalHeight, w = im.naturalWidth * k, pu = 0.5 + 0.5 * Math.sin(time * 2.2 + x * 0.013);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const rg = ctx.createRadialGradient(x, y - h * 0.62, 4, x, y - h * 0.62, h * 1.05); rg.addColorStop(0, 'rgba(' + col + ',' + (0.22 + 0.16 * pu) + ')'); rg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = rg; ctx.fillRect(x - h * 1.05, y - h * 1.67, h * 2.1, h * 2.1);
+  ctx.globalAlpha = 0.55 + 0.4 * pu; ctx.drawImage(G.c, x - w / 2 - G.pad * k, y - h - G.pad * k, G.c.width * k, G.c.height * k);
+  ctx.restore();
+  ctx.drawImage(im, x - w / 2, y - h, w, h);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.12 + 0.14 * pu; ctx.drawImage(im, x - w / 2, y - h, w, h); ctx.restore();          // brillo por dentro
+  if (Math.random() < 0.06 * h / 60) parts.push({ x: x + (Math.random() - 0.5) * w * 0.8, y: y - h * (0.35 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 12, vy: -20 - Math.random() * 25, life: 1.6, max: 1.6, col: 'rgb(' + col + ')', size: 2 + Math.random() * 1.6, grav: -4 });
+}
 function drawTiles() {
   const x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1);
   const y0 = Math.max(0, Math.floor(cam.y / T) - 1), y1 = Math.min(L.H - 1, Math.floor((cam.y + VHv) / T));
@@ -4904,7 +4923,7 @@ function iceDeco(x0, x1, y0, y1) {
   for (const c of L.crys) { if (c.x < cam.x - 80 || c.x > cam.x + VW + 80) continue; drawCrystal(c.x, c.y, c.c, c.h); }
 }
 function drawCrystal(x, y, c, h) {
-  { const ci = c >= 4 ? selI('seta-' + (c - 4) % 3) : c < 3 ? iceI('cristal-' + (c % 3)) : lavaI('cristal-lava-' + (Math.floor(x / T) % 3)); if (ci) { const col = ['41,200,255', '198,90,255', '53,255,190', '255,80,40', '60,170,255', '255,80,210', '110,255,110'][c % 7], s2 = 30 * h; ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over'; spr(ci, x, y + 3, 60 * h, 0.5, 1); return; } }
+  { const ci = c >= 4 ? selI('seta-' + (c - 4) % 3) : c < 3 ? iceI('cristal-' + (c % 3)) : lavaI('cristal-lava-' + (Math.floor(x / T) % 3)); if (ci) { const col = ['41,200,255', '198,90,255', '53,255,190', '255,80,40', '60,170,255', '255,80,210', '110,255,110'][c % 7], s2 = 30 * h; ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over'; if (c >= 4) { setaDraw(ci, x, y + 3, 60 * h, col); return; } spr(ci, x, y + 3, 60 * h, 0.5, 1); return; } }
   const col = [['#1f8fd0', '#d8f8ff', '#5fd0ff', '41,200,255'], ['#7a2ad8', '#f0c8ff', '#b070ff', '198,90,255'], ['#1aa088', '#d0fff0', '#40e0b0', '53,255,190'], ['#a01828', '#ffd8c8', '#ff5a4a', '255,70,50']][c % 4], s2 = 30 * h;
   ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - s2, 2, x, y - s2, s2 * 1.6); gg.addColorStop(0, 'rgba(' + col[3] + ',' + (0.28 + 0.12 * Math.sin(time * 2 + x)) + ')'); gg.addColorStop(1, 'rgba(' + col[3] + ',0)'); ctx.fillStyle = gg; ctx.fillRect(x - s2 * 1.6, y - s2 * 2.6, s2 * 3.2, s2 * 3.2); ctx.globalCompositeOperation = 'source-over';
   for (const [dx, hh, ww, rr] of [[-10, 1.1, 7, -0.25], [11, 1.25, 7, 0.22], [0, 1.9, 10, 0]]) { ctx.save(); ctx.translate(x + dx * h, y); ctx.rotate(rr); const H2 = s2 * hh, W2 = ww * h, g2 = ctx.createLinearGradient(-W2, 0, W2, 0); g2.addColorStop(0, col[0]); g2.addColorStop(0.5, col[1]); g2.addColorStop(1, col[2]); ctx.fillStyle = g2;
