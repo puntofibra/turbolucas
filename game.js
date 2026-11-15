@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.66';
+const VERSION = '1.67';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -3387,11 +3387,219 @@ function applyPatch(l, p) {
   if (p.s) l.spawn = { x: p.s[0] * T + T / 2, y: (p.s[1] + 1) * T }; if (p.e) l.goal = { x: p.e[0] * T + T / 2, y: (p.e[1] + 1) * T };
   l.plats = calcPlats(l.g, l.W, l.H);
 }
+/* ======================= PORTALES SECRETOS: en 1 de cada 2-3 fases (30 % a la vista, 30 % en un interrogante, 40 % en cajas invisibles) ======================= */
+// el portal siempre va en la 3ª altura sobre el suelo (2 huecos libres debajo): se pasa por debajo y hay que saltar para entrar
+const PS_SALA = { station: 'sala-estacion', ice: 'sala-hielo', lava: 'sala-volcan', jungle: 'sala-selva', ocean: 'sala-oceano', desert: 'sala-desierto', sky: 'sala-cielo', toy: 'sala-jugueteria', junk: 'sala-chatarra', fort: 'sala-fortaleza' };
+const PS_PREMIOS = ['vidas1', 'vidas2', 'vidas3', 'laser', 'mini', 'vuelo', 'estrella'];
+const PS_TIPOS = 'vbhvhbhvbh';          // v = a la vista · b = sale de un interrogante · h = caja invisible (con una moneda solitaria debajo de pista)
+const PS_RW = 30;                         // ancho de cada sala secreta (casillas)
+function psPlan(id, l) {
+  const m = /^(\d+)-(\d+)$/.exec(id); if (!m || l.custom || l.adv) return null;
+  const w = +m[1], n = +m[2];
+  if (!psOk(l)) return null;
+  if (n % 5 !== 1 && n % 5 !== 3) { if (n % 5 === 0) return null; const pv = LEVELS[w + '-' + (n - 1)]; let pl = null; try { pl = pv && pv(); } catch (e) {} if (pl && psOk(pl)) return null; }          // si la fase que tocaba no admite portales, los lleva la siguiente
+  const k = w * 7 + n, f = [{ t: PS_TIPOS[k % 10], at: 0.36 + (k % 3) * 0.06 }];
+  if (l.W >= 260) f.push({ t: PS_TIPOS[(k + 1) % 10], at: 0.7 });
+  return { w, n, k, f };
+}
+function psOk(l) { return !(l.custom || l.adv || l.vert || l.auto || l.chase || l.rise || l.boss || l.bossLvl || l.meteors || l.bombs || (l.water && l.theme !== 'ocean')) && psSpots(l).length > 0; }
+function psSpots(l) {
+  const W = l.W, H = l.H, g = l.g, at = (x, y) => (x < 0 || x >= W || y < 0 || y >= H) ? '#' : g[y][x];
+  const bad = new Uint8Array(W + 2), ban = (px, r) => { if (px == null || isNaN(px)) return; const t = Math.floor(px / T); for (let i = Math.max(0, t - r); i <= Math.min(W, t + r); i++) bad[i] = 1; };
+  ban(l.spawn.x, 14); ban(l.goal.x, 14);
+  (l.cps || [l.checkpoint]).forEach(c => c && ban(c.x, 4));
+  (l.portals || []).forEach(p => { ban(p.x, 6); ban(p.tox, 6); });
+  (l.pipes || []).forEach(p => { ban(p.x + T, 5); ban(p.tox, 5); });
+  (l.pads || []).forEach(p => ban(p.x + p.w / 2, 3));
+  (l.lasers || []).forEach(p => ban(p.x, 4));
+  (l.movers || []).forEach(o => { for (let x = o.bx - Math.abs(o.ax || 0) - T; x <= o.bx + o.w + Math.abs(o.ax || 0) + T; x += T) ban(x, 1); });
+  ['lifts', 'strips', 'winds', 'warps', 'mags'].forEach(k => (l[k] || []).forEach(o => { for (let x = o.x0; x <= o.x1; x += T) ban(x, 2); }));
+  ['geysers', 'jumpers', 'guns', 'icicles', 'spores', 'vines', 'crys', 'keys', 'kitP', 'flyb', 'cogs', 'bl'].forEach(k => (l[k] || []).forEach(o => ban(o.x != null ? o.x : o.x0, 3)));
+  (l.ents || []).forEach(e => ban(e.tx * T, 1));
+  const out = [];
+  for (let x = 12; x < W - 14; x++) {
+    let nb = false; for (let dx = -1; dx <= 4; dx++) if (bad[x + dx]) { nb = true; break; } if (nb) continue;
+    for (let gy = 7; gy < H; gy++) {
+      let ok = true;
+      for (let dx = -1; dx <= 4 && ok; dx++) { if (at(x + dx, gy) !== '#') ok = false; for (let k = 1; k <= 5 && ok; k++) if (at(x + dx, gy - k) !== ' ') ok = false; }
+      if (!ok) continue;
+      const x0 = (x - 1) * T, x1 = (x + 5) * T, y0 = (gy - 6) * T, y1 = (gy - 2) * T;          // sin monedas donde va el portal o la caja (las del suelo dan igual)
+      if (l.chips.some(c => c.x > x0 && c.x < x1 && c.y > y0 && c.y < y1)) continue;
+      const lone = !l.chips.some(c => Math.abs(c.x - (x * T + T / 2)) < 4 * T && c.y > (gy - 7) * T && c.y < gy * T);
+      if (l.water && l.theme !== 'ocean' && l.water.y < gy * T) continue;
+      out.push({ x, gy, lone });
+    }
+  }
+  return out;
+}
+// añade una sala secreta al final del mapa (separada por un muro): devuelve la sala
+function psRoom(l, kind, back, theme) {
+  const H = l.H, x0 = l.W, x1 = x0 + PS_RW - 1, top = Math.max(0, H - 16), xi = x0 + 2;
+  for (let y = 0; y < H; y++) { if (!Array.isArray(l.g[y])) l.g[y] = l.g[y].split(''); for (let i = 0; i < PS_RW; i++) l.g[y].push((i < 2 || i >= PS_RW - 2 || y <= top || y >= H - 2) ? '#' : ' '); }
+  l.W += PS_RW;
+  const r = { x0, x1, kind, sala: kind !== 'chips', back, img: PS_SALA[theme || 'station'] || 'sala-estacion', st: 0, t: 0 };
+  const set = (x, y, c) => { l.g[y][x] = c; }, chip = (x, y, o) => l.chips.push(Object.assign({ x: x * T + T / 2, y: y * T + T / 2, t: Math.random() * 6 }, o || {}));
+  const G = H - 2;          // fila del suelo
+  if (kind === 'chips') {          // sala del tesoro: lluvia de monedas
+    for (let x = xi + 3; x <= xi + 24; x++) chip(x, G - 1);
+    for (const a of [xi + 5, xi + 17]) { for (let x = a; x <= a + 4; x++) { set(x, G - 4, '='); chip(x, G - 5); } }
+    for (let x = xi + 10; x <= xi + 14; x++) chip(x, G - 6 - Math.round(Math.sin((x - xi - 10) / 4 * Math.PI) * 2));
+    set(xi + 12, G - 4, '?'); l.boxes[(xi + 12) + ',' + (G - 4)] = Math.random() < 0.5 ? 'vida' : 'chip';
+  } else if (kind === 'cofres') {          // elige una de las 3 cajas
+    for (const d of [8, 13, 18]) { set(xi + d, G - 4, '?'); l.boxes[(xi + d) + ',' + (G - 4)] = 'cofre'; }
+    r.msg = '¡ELIGE UNA CAJA!';
+  } else if (kind === 'ruleta') {          // ruleta de premios: para el dibujo dándole con la cabeza
+    set(xi + 13, G - 4, '?'); l.boxes[(xi + 13) + ',' + (G - 4)] = 'ruleta'; r.box = { x: xi + 13, y: G - 4 };
+    r.msg = '¡PARA LA RULETA!';
+  } else if (kind === 'reloj') {          // contrarreloj: coge todas las monedas
+    const pl = [[xi + 3, G - 3, 3], [xi + 8, G - 5, 3], [xi + 13, G - 3, 3], [xi + 18, G - 5, 3], [xi + 22, G - 3, 2]];
+    r.rc = [];
+    for (const [a, y, n] of pl) for (let x = a; x < a + n; x++) { set(x, y, '='); const c = { x: x * T + T / 2, y: (y - 1) * T + T / 2, t: Math.random() * 6, got: true, nog: true, rc: 1 }; l.chips.push(c); r.rc.push(c); }
+    for (let x = xi + 2; x <= xi + 24; x += 3) { const c = { x: x * T + T / 2, y: (G - 1) * T + T / 2, t: Math.random() * 6, got: true, nog: true, rc: 1 }; l.chips.push(c); r.rc.push(c); }
+    r.msg = '¡COGE TODAS LAS MONEDAS!';
+  }
+  r.arr = { x: (xi + 2) * T + T / 2, y: G * T };
+  l.portals.push({ x: (x1 - 5) * T + T / 2, y: G * T - 2 * T - 46, tox: back.x, toy: back.y, exit: true, room: r });
+  (l.rooms = l.rooms || []).push(r);
+  return r;
+}
+function psAdd(id, l) {
+  const pl = psPlan(id, l); if (!pl) return;
+  const sp = psSpots(l); if (!sp.length) return;
+  l.mainW = l.mainW || l.W; l.boxes = l.boxes || {};
+  const used = [], th = l.theme || 'station';
+  pl.f.forEach((f, j) => {
+    const tgt = l.W * f.at, free = s => used.every(u => Math.abs(u - s.x) > 30);
+    const cand = sp.filter(free).filter((s, i, a) => f.t !== 'h' || s.lone || !a.some(q => q.lone)).sort((a, b) => (Math.abs(a.x - tgt / T) + (a.gy === l.H - 2 ? 0 : 6)) - (Math.abs(b.x - tgt / T) + (b.gy === l.H - 2 ? 0 : 6)));
+    const s = cand[0]; if (!s) return; used.push(s.x);
+    const vis = f.t === 'v', px = (s.x + (vis ? 1 : 3)) * T + T / 2, py = s.gy * T - 2 * T - 46, back = { x: px, y: s.gy * T };
+    const po = { x: px, y: py, tox: 0, toy: 0, hi: true };
+    // destino: atajo dentro de la fase (solo los de la vista, una de cada dos) o sala secreta
+    let dst = null;
+    if (vis && (pl.k + j) % 2 === 0) { dst = sp.filter(d => d.x > s.x + 25 && d.x < s.x + 75 && free(d)).sort((a, b) => Math.abs(a.x - s.x - 42) - Math.abs(b.x - s.x - 42))[0]; }
+    if (dst) {
+      used.push(dst.x); const qx = (dst.x + 1) * T + T / 2;
+      po.tox = qx; po.toy = dst.gy * T; l.portals.push(po);
+      l.portals.push({ x: qx, y: dst.gy * T - 2 * T - 46, tox: px, toy: s.gy * T, hi: true });
+      return;
+    }
+    const kinds = f.t === 'v' ? ['chips'] : f.t === 'b' ? ['chips', 'cofres', 'ruleta'] : ['reloj', 'cofres', 'ruleta'];
+    let hh = 7; for (const ch of id + '#' + j) hh = (hh * 131 + ch.charCodeAt(0)) % 1000003;
+    const r = psRoom(l, kinds[(pl.n + pl.w + j + (hh & 1)) % kinds.length], back, th);
+    po.tox = r.arr.x; po.toy = r.arr.y; po.to = r;
+    if (!vis) {
+      const key = s.x + ',' + (s.gy - 4);
+      l.g[s.gy - 4][s.x] = f.t === 'b' ? '?' : 'I'; l.boxes[key] = 'portal'; po.off = true; po.box = key;
+      if (f.t === 'h') l.chips.push({ x: s.x * T + T / 2, y: (s.gy - 1) * T + T / 2, t: Math.random() * 6, nog: true });          // la moneda solitaria que nadie coge… justo encima está la caja invisible
+    }
+    l.portals.push(po);
+  });
+  if (l.rooms) l.rooms.forEach(r => { if (r.sala) xi(r.img); });
+  if (l.plats) l.plats = calcPlats(l.g, l.W, l.H);
+}
+const psRoomAt = px => L && L.rooms ? L.rooms.find(r => px >= r.x0 * T && px < (r.x1 + 1) * T) : null;
+function psCam() {
+  const r = psRoomAt(P.x + P.w / 2);
+  if (r) { const a = r.x0 * T, b = (r.x1 + 1) * T; cam.x = VW >= b - a - 4 * T - 60 ? (a + b) / 2 - VW / 2 : Math.max(a, Math.min(b - VW, cam.x)); cam.y = L.H * T - VHv; }
+  else cam.x = Math.max(0, Math.min(L.mainW * T - VW, cam.x));
+}
+function psPrize(k, x, y) {
+  const m = /^vidas(\d)$/.exec(k);
+  if (m) { const n = +m[1]; for (let i = 0; i < n; i++) items.push({ kind: 'vida', x: x - 20 + (i - (n - 1) / 2) * 50, y, w: 40, h: 40, rise: 0, t: -i * 0.2 }); pop(x, y - 70, '¡+' + n + (n > 1 ? ' VIDAS!' : ' VIDA!'), '#35ff8a'); }
+  else items.push({ kind: k, x: x - 20, y, w: 40, h: 40, rise: 0, t: 0 });
+  SFX.appear(); [784, 988, 1175, 1568].forEach((f, i) => tone(f, f, 0.12, 'triangle', 0.09, i * 0.07));
+}
+// golpe a una caja especial (portal, cofre, ruleta)
+function psHit(what, tx, ty) {
+  const cx = tx * T + T / 2, cy = ty * T, key = tx + ',' + ty;
+  if (what === 'portal') {
+    const po = L.portals.find(p => p.box === key && p.off); if (!po) return;
+    po.off = false; po.rev = time; po.fx = cx; po.fy = cy - 10; shake = 0.25;
+    SFX.portal(); [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f * 1.01, 0.14, 'triangle', 0.1, 0.1 + i * 0.08));
+    burst(cx, cy, 30, '#c63cff', 300, 0.7, 0, 4); burst(cx, cy, 20, '#29e6ff', 220, 0.6, 0, 3);
+    pop(po.x, po.y - 70, '¡UN PORTAL SECRETO!', '#e0b0ff');
+    return;
+  }
+  if (what === 'cofre') {
+    const r = psRoomAt(cx); psPrize(PS_PREMIOS[Math.floor(Math.random() * PS_PREMIOS.length)], cx, cy);
+    if (r) for (let x = r.x0; x <= r.x1; x++) if (L.g[ty][x] === '?' && L.boxes[x + ',' + ty] === 'cofre') { L.g[ty][x] = 'U'; burst(x * T + T / 2, cy + T / 2, 14, '#9fb0e6', 160, 0.5, 0, 3); }
+    if (r) r.done = 1;
+    return;
+  }
+  if (what === 'ruleta') { const r = psRoomAt(cx); psPrize(PS_PREMIOS[Math.floor(time / 0.13) % PS_PREMIOS.length], cx, cy); if (r) r.done = 1; }
+}
+// contrarreloj de monedas
+function psUpdate(dt) {
+  const r = psRoomAt(P.x + P.w / 2); if (!r || r.kind !== 'reloj' || r.st === 3) return;
+  r.t += dt;
+  if (r.st === 0) { r.st = 1; r.t = 0; pop(P.x + P.w / 2, P.y - 50, r.msg, '#ffd23c'); }
+  else if (r.st === 1 && r.t > 2.6) { r.st = 2; r.t = 0; r.rc.forEach(c => { c.got = false; burst(c.x, c.y, 4, '#ffd23c', 90, 0.4, 0, 2); }); SFX.appear(); }
+  else if (r.st === 1) { const k = Math.ceil(2.6 - r.t); if (k !== r.lk && k <= 3 && r.t > 0.4) { r.lk = k; tone(660, 660, 0.12, 'square', 0.08); } }
+  else if (r.st === 2) {
+    const got = r.rc.filter(c => c.got).length, all = r.rc.length;
+    if (got === all || r.t > 14) {
+      r.st = 3; r.rc.forEach(c => c.got = true); const q = got / all, n = q >= 1 ? 3 : q >= 0.8 ? 2 : q >= 0.5 ? 1 : 0;
+      if (n) psPrize('vidas' + n, P.x + P.w / 2, P.y - 60); else { pop(P.x + P.w / 2, P.y - 50, '¡OTRA VEZ SERÁ!', '#ff9a7a'); tone(330, 160, 0.4, 'sawtooth', 0.08); }
+    }
+  }
+}
+function psIcon(k, x, y, s) {
+  const m = /^vidas(\d)$/.exec(k);
+  if (m) { ctx.strokeStyle = 'rgba(160,255,200,.9)'; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(20,60,40,.6)'; ctx.beginPath(); ctx.arc(x, y, s * 0.5, 0, 6.283); ctx.fill(); ctx.stroke(); spr(IMG['lucas-quieto'], x, y + s * 0.36, s * 0.75, 0.5, 1);
+    ctx.font = '900 ' + Math.round(s * 0.34) + 'px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#35ff8a'; ctx.fillText('x' + m[1], x + s * 0.45, y - s * 0.3); return; }
+  const PI2 = { laser: 'poder-laser', mini: 'poder-mini', vuelo: 'poder-turbo', estrella: 'poder-estrella5g' };
+  spr(IMG[PI2[k]], x, y, s, 0.5, 0.5);
+}
+// fondo de la cámara secreta (si ya tenemos la imagen); si no, el fondo del mundo
+function psBg() {
+  const r = psRoomAt(cam.x + VW / 2); if (!r || !r.sala) return false;
+  const im = IMG[r.img]; if (!okI(im)) return false;
+  const s = Math.max(VW / im.naturalWidth, VHv / im.naturalHeight), w = im.naturalWidth * s, h = im.naturalHeight * s;
+  ctx.drawImage(im, (VW - w) / 2, (VHv - h) / 2, w, h);
+  const v = ctx.createRadialGradient(VW / 2, VHv / 2, VHv * 0.3, VW / 2, VHv / 2, VW * 0.7); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.45)'); ctx.fillStyle = v; ctx.fillRect(0, 0, VW, VHv);
+  return true;
+}
+// dibujo de cada portal (con la aparición pro cuando sale de una caja)
+function psDrawPortal(po) {
+  if (po.off) return;
+  let x = po.x, y = po.y, s = 1, a = 0, k = 1;
+  if (po.rev != null) { k = Math.min(1, (time - po.rev) / 0.9); if (k < 1) {
+    const e = 1 - Math.pow(1 - k, 3); x = po.fx + (po.x - po.fx) * e; y = po.fy + (po.y - po.fy) * e - Math.sin(k * Math.PI) * 70;
+    s = k < 0.7 ? k / 0.7 * 1.25 : 1.25 - (k - 0.7) / 0.3 * 0.25; a = (1 - k) * 9;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(224,176,255,' + (1 - k) + ')'; ctx.lineWidth = 6 * (1 - k) + 1; ctx.beginPath(); ctx.arc(po.x, po.y, 30 + k * 150, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = 'rgba(41,230,255,' + (1 - k) * 0.8 + ')'; ctx.beginPath(); ctx.arc(po.x, po.y, 10 + k * 100, 0, 6.283); ctx.stroke(); ctx.restore();
+    for (let i = 0; i < 3; i++) { const aa = time * 12 + i * 2.094, d = 50 * (1 - k) + 10; parts.push({ x: x + Math.cos(aa) * d, y: y + Math.sin(aa) * d, vx: 0, vy: 0, life: 0.35, max: 0.35, col: i % 2 ? '#29e6ff' : '#e0b0ff', size: 3, grav: 0 }); }
+  } }
+  const pu = 0.5 + 0.5 * Math.sin(time * 5), rr = 70 * s;
+  const gg = ctx.createRadialGradient(x, y, 6, x, y, rr); gg.addColorStop(0, 'rgba(198,60,255,' + (0.5 + pu * 0.3) + ')'); gg.addColorStop(1, 'rgba(198,60,255,0)');
+  ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill();
+  spr(IMG.portal, x, y, 92 * s, 0.5, 0.5, false, a);
+  if (Math.random() < 0.3) parts.push({ x: x + (Math.random() - 0.5) * 60, y: y + (Math.random() - 0.5) * 60, vx: 0, vy: -40, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#c63cff' : '#29e6ff', size: 2.5, grav: 0 });
+  if (po.exit) { ctx.font = '900 16px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(53,255,138,' + (0.6 + pu * 0.4) + ')'; ctx.shadowColor = '#35ff8a'; ctx.shadowBlur = 12; ctx.fillText('SALIDA', x, y - 58); ctx.shadowBlur = 0; }
+}
+// carteles y ruleta dentro de las salas
+function psDrawRooms() {
+  for (const r of L.rooms) {
+    if (cam.x + VW < r.x0 * T || cam.x > (r.x1 + 1) * T) continue;
+    const mx = Math.max(r.x0 * T + 300, Math.min((r.x1 + 1) * T - 300, cam.x + VW / 2)), my = cam.y + 95;
+    if (r.msg && (r.kind === 'reloj' ? r.st < 2 : !r.done)) { ctx.font = '900 30px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(10,6,30,.85)'; ctx.fillStyle = '#ffd23c'; const sc = 1 + Math.sin(time * 4) * 0.04;
+      ctx.save(); ctx.translate(mx, my); ctx.scale(sc, sc); ctx.strokeText(r.msg, 0, 0); ctx.fillText(r.msg, 0, 0); ctx.restore(); }
+    if (r.kind === 'ruleta' && r.box && !r.done) { const k = PS_PREMIOS[Math.floor(time / 0.13) % PS_PREMIOS.length], bx = r.box.x * T + T / 2, by = r.box.y * T - 56;
+      ctx.fillStyle = 'rgba(20,10,50,.75)'; ctx.strokeStyle = '#ffd23c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx - 36, by - 36, 72, 72, 14) : ctx.rect(bx - 36, by - 36, 72, 72); ctx.fill(); ctx.stroke(); psIcon(k, bx, by, 52); }
+    if (r.kind === 'reloj') {
+      ctx.textAlign = 'center'; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(10,6,30,.85)';
+      if (r.st === 1 && r.t > 0.4) { const n = Math.ceil(2.6 - r.t); ctx.font = '900 90px system-ui,sans-serif'; ctx.fillStyle = '#fff'; ctx.strokeText(n, mx, my + 110); ctx.fillText(n, mx, my + 110); }
+      if (r.st === 2) { const left = Math.max(0, 14 - r.t), got = r.rc.filter(c => c.got).length; ctx.font = '900 40px system-ui,sans-serif'; ctx.fillStyle = left < 4 ? '#ff6a5a' : '#fff'; const tt = '⏱ ' + left.toFixed(1) + '   🪙 ' + got + '/' + r.rc.length; ctx.strokeText(tt, mx, my + 60); ctx.fillText(tt, mx, my + 60); }
+    }
+  }
+}
+
 function buildLevel() {
   const l = (LEVELS[curId] || LEVELS['1-1'])();
   { const pp = EDRAFT[curId] || PATCH[curId]; if (pp && !l.custom) try { applyPatch(l, pp); } catch (e) { console.warn('parche', e); } }
+  if (!l.custom && !l.adv && state !== 'edit') try { psAdd(curId, l); } catch (e) { console.warn('portales', e); }
   if (!l.custom && !l.adv) { const o = gotOf(curId), cs = new Set(o.c), gs = new Set(o.g);
-    l.chips.forEach((c, i) => { c.i = i; if (cs.has(i)) c.got = true; });
+    l.chips.forEach((c, i) => { if (c.nog) return; c.i = i; if (cs.has(i)) c.got = true; });
     l.gears.forEach((g, i) => { g.i = i; g.old = gs.has(i); });
     o.b.forEach(k => { const [x, y] = k.split(',').map(Number); if (l.g[y] && (l.g[y][x] === '?' || l.g[y][x] === 'I')) l.g[y][x] = l.g[y][x] === 'I' ? ' ' : 'U'; });
     if (o.r && l.rain) l.rain.st = 2; }
@@ -3493,6 +3701,7 @@ function hitBlock(tx, ty) {
   if (c === '?') {
     L.g[ty][tx] = 'U'; bumps.push({ tx, ty, t: 0 });
     const what = L.boxes[tx + ',' + ty] || 'chip';
+    if (what === 'portal' || what === 'cofre' || what === 'ruleta') { psHit(what, tx, ty); knockAbove(tx, ty); return; }
     if (what === 'chip' || what === 'vida') gotMark('b', tx + ',' + ty);
     if (what === 'chip') { addChip(cx, cy - 20); parts.push({ x: cx, y: cy - 10, vx: 0, vy: -420, life: 0.45, max: 0.45, coin: true, grav: 1200, size: 1 }); }
     else { items.push({ kind: what, x: cx - 20, y: cy, w: 40, h: 40, rise: 0, t: 0 }); SFX.appear(); }
@@ -3638,13 +3847,13 @@ function updatePlayer(dt) {
   // punto de control: se activa al pasarlo (aunque vayas saltando por encima o por debajo); siempre cuenta el más avanzado
   const feet = p.y + p.h, cpPass = cp => L.vert ? feet <= cp.y + 40 && Math.abs(cx - cp.x) < 7 * T : cx >= cp.x - 24 && Math.abs(feet - cp.y) < 7 * T;
   const cpAhead = cp => !L.lastCp || (L.vert ? cp.y < L.lastCp.y : cp.x > L.lastCp.x);
-  for (const cp of L.cps) if (!cp.on && !p.dead && cpPass(cp)) { cp.on = true; if (cpAhead(cp)) L.lastCp = cp; SFX.check(); pop(cp.x, cp.y - 90, 'PUNTO DE CONTROL', '#35ff8a'); burst(cp.x, cp.y - 60, 20, '#35ff8a', 200, 0.6, 0, 3); }
-  if (p.tele <= 0) for (const po of L.portals) if (Math.abs(cx - po.x) < 26 && Math.abs(cy - po.y) < 44) {
+  for (const cp of L.cps) if (!cp.on && !p.dead && !(L.mainW && cx > L.mainW * T) && cpPass(cp)) { cp.on = true; if (cpAhead(cp)) L.lastCp = cp; SFX.check(); pop(cp.x, cp.y - 90, 'PUNTO DE CONTROL', '#35ff8a'); burst(cp.x, cp.y - 60, 20, '#35ff8a', 200, 0.6, 0, 3); }
+  if (p.tele <= 0) for (const po of L.portals) if (!po.off && !(po.rev != null && time - po.rev < 0.9) && Math.abs(cx - po.x) < 26 && Math.abs(cy - po.y) < 44) {
     burst(po.x, po.y, 26, '#c63cff', 260, 0.6, 0, 4); SFX.portal();
     p.x = po.tox - p.w / 2; p.y = po.toy - p.h; p.vx = 0; p.vy = 0; p.tele = 1.2; p.inv = Math.max(p.inv, 0.8);
-    burst(po.tox, po.toy - 30, 26, '#29e6ff', 260, 0.6, 0, 4); break;
+    burst(po.tox, po.toy - 30, 26, '#29e6ff', 260, 0.6, 0, 4); if (po.hi || po.exit) { cam.x = p.x - VW * 0.4; cam.y = p.y - VHv * 0.6; if (L.rooms) psCam(); } if (po.to) pop(po.tox, po.toy - 120, po.to.sala ? '¡CÁMARA SECRETA!' : '¡SALA DEL TESORO!', '#e0b0ff'); break;
   }
-  if (cx > L.goal.x - 20 && cx < L.goal.x + (L.adv ? 120 : 240) && ((!L.vert && !L.adv) || Math.abs(p.y + p.h - L.goal.y) < 160)) { p.win = true; p.winT = 0; p.vx = 0; p.crouch = false; setSize(p); SFX.win(); for (let i = 0; i < 5; i++) burst(L.goal.x, L.goal.y - 60 - i * 40, 16, ['#29e6ff', '#35ff8a', '#ffd23c', '#c63cff'][i % 4], 300, 1, 300, 4); }
+  if ((!L.mainW || cx < L.mainW * T) && cx > L.goal.x - 20 && cx < L.goal.x + (L.adv ? 120 : 240) && ((!L.vert && !L.adv) || Math.abs(p.y + p.h - L.goal.y) < 160)) { p.win = true; p.winT = 0; p.vx = 0; p.crouch = false; setSize(p); SFX.win(); for (let i = 0; i < 5; i++) burst(L.goal.x, L.goal.y - 60 - i * 40, 16, ['#29e6ff', '#35ff8a', '#ffd23c', '#c63cff'][i % 4], 300, 1, 300, 4); }
 }
 function onOneWay(p) {
   const ty = Math.floor((p.y + p.h + 2) / T);
@@ -3795,8 +4004,8 @@ function liq(k, x0, w, y, dep, al) {
   ctx.restore(); return true;
 }
 // tira de fotogramas apilados (uno debajo de otro) repetida a lo ancho
-function tileRows(im, n, f, x0, w, top, h, flip, sp) { const fh = im.naturalHeight / n, fw = im.naturalWidth, tw = fw * h / fh, off = sp ? ((time * sp) % (tw * 2) + tw * 2) % (tw * 2) : 0;
-  ctx.save(); ctx.beginPath(); ctx.rect(x0, top - 4, w, h + 8); ctx.clip(); for (let i = Math.floor(-off / tw) - 1, xx; (xx = x0 + i * tw + off) < x0 + w; i++) { const m = (i & 1) !== (!!flip); if (m) { ctx.save(); ctx.translate(xx + tw, 0); ctx.scale(-1, 1); ctx.drawImage(im, 0, f * fh, fw, fh, 0, top, tw + 1, h); ctx.restore(); } else ctx.drawImage(im, 0, f * fh, fw, fh, xx, top, tw + 1, h); } ctx.restore(); }
+function tileRows(im, n, f, x0, w, top, h, flip, sp, nm) { const fh = im.naturalHeight / n, fw = im.naturalWidth, tw = fw * h / fh, off = sp ? ((time * sp) % (tw * 2) + tw * 2) % (tw * 2) : 0;
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, top - 4, w, h + 8); ctx.clip(); for (let i = Math.floor(-off / tw) - 1, xx; (xx = x0 + i * tw + off) < x0 + w; i++) { const m = nm ? !!flip : (i & 1) !== (!!flip); if (m) { ctx.save(); ctx.translate(xx + tw, 0); ctx.scale(-1, 1); ctx.drawImage(im, 0, f * fh, fw, fh, 0, top, tw + 1, h); ctx.restore(); } else ctx.drawImage(im, 0, f * fh, fw, fh, xx, top, tw + 1, h); } ctx.restore(); }
 function lavaBand(x0, ww, y, dep) {          // superficie de lava: ondas, costras oscuras y burbujas
   if (liq('lava', x0, ww, y, dep)) { if (Math.random() < 0.08) parts.push({ x: x0 + Math.random() * ww, y: y, vx: (Math.random() - 0.5) * 40, vy: -100 - Math.random() * 120, life: 0.7, max: 0.7, col: '#ffb040', size: 3, grav: 400 }); return; }
   const g2 = ctx.createLinearGradient(0, y - 6, 0, y + Math.min(dep, 240)); g2.addColorStop(0, '#fff2a0'); g2.addColorStop(0.06, '#ffb030'); g2.addColorStop(0.3, '#f05a12'); g2.addColorStop(1, '#7a1606'); ctx.fillStyle = g2;
@@ -4064,7 +4273,7 @@ function drawStageBack() {          // por detrás de los personajes
       x = e; }
   }
   for (const st of L.strips) { if (st.x1 < cam.x - 20 || st.x0 > cam.x + VW + 20) continue;      // cintas turbo
-    { const ti = xi('turbo'); if (okI(ti)) { tileRows(ti, 4, Math.floor(time * 10) % 4, st.x0, st.x1 - st.x0, st.y - 8, 22); continue; } }
+    { const ti = xi('turbo'); if (okI(ti)) { tileRows(ti, 4, Math.floor(time * 10) % 4, st.x0, st.x1 - st.x0, st.y - 8, 22, false, 0, true); continue; } }
     ctx.fillStyle = '#0b1230'; ctx.fillRect(st.x0, st.y - 1, st.x1 - st.x0, 9);
     ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(41,230,255,.28)'; ctx.fillRect(st.x0, st.y - 14, st.x1 - st.x0, 14);
     ctx.strokeStyle = '#7ff3ff'; ctx.lineWidth = 3; const off = (time * 150) % 28;
@@ -4220,7 +4429,7 @@ function drawDark() {
     if (L.rise && L.rise.on) for (let x = cam.x; x < cam.x + VW + 100; x += 160) light(x, L.rise.y, 220, 0.9); }
   if (L.theme === 'ocean') oceanLights(light); else if (L.theme === 'desert') desertLights(light); else if (L.theme === 'sky') skyLights(light); else if (L.theme === 'junk' || L.theme === 'fort') { junkLights(light); if (L.theme === 'fort') for (let x = Math.floor(cam.x / T); x < (cam.x + VW) / T + 1; x += 2) if (x >= 0 && x < L.W && !isSolid(L.g[L.H - 1][x])) light(x * T + T / 2, (L.H - 1) * T, 130, 0.75); }
   for (const pd of L.pads) if (pd.crystal) light(pd.x + 24, pd.y - 20, 90, 0.8);
-  for (const po of L.portals) light(po.x, po.y, 135, 0.9);
+  for (const po of L.portals) if (!po.off) light(po.x, po.y, 135, 0.9);
   light(L.goal.x, L.goal.y - 130, 230);
   for (const l of L.lasers) if (laserOn(l)) for (let y = l.y0 + 20; y < l.y1; y += 44) light(l.x, y, 62, 0.75);
   for (const pd of L.pads) light(pd.x + pd.w / 2, pd.y - 16, 66, 0.8);
@@ -4240,7 +4449,7 @@ function update(dt) {
   time += dt;
   if (state === 'map') mapUpdate(dt);
   if (state === 'warp') warpUpdate(dt);
-  if (state === 'title' || state === 'map') { cam.x = (Math.sin(time * 0.07) * 0.5 + 0.5) * Math.max(0, L.W * T - VW); cam.y = L.H * T - VHv; }
+  if (state === 'title' || state === 'map') { cam.x = (Math.sin(time * 0.07) * 0.5 + 0.5) * Math.max(0, (L.mainW || L.W) * T - VW); cam.y = L.H * T - VHv; }
   if (state === 'play') {
     G.clock += dt;
     if (!P.dead && !P.win && !CHEAT.time) {
@@ -4260,6 +4469,7 @@ function update(dt) {
     if (state !== 'play') return;
     updateEnemies(dt);
     updateStage(dt);
+    if (L.rooms) psUpdate(dt);
     if (L.adv) advUpdate(dt);
     if (L.boss) bossUpdate(dt);
     for (const it of items) { it.t += dt; if (it.mat > 0) { it.mat -= dt; for (let k = 0; k < 3; k++) { const aa = Math.random() * 6.283, d = 60 + Math.random() * 50; parts.push({ x: it.x + 20 + Math.cos(aa) * d, y: it.y + 20 + Math.sin(aa) * d, vx: -Math.cos(aa) * d * 2.2, vy: -Math.sin(aa) * d * 2.2, life: 0.45, max: 0.45, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffffff', size: 2.5, grav: 0 }); } continue; } if (it.stay) continue; if (it.rise < 1) { it.rise = Math.min(1, it.rise + dt * 2.5); it.y -= 46 * dt * 2.5; }
@@ -4267,7 +4477,7 @@ function update(dt) {
     const p = P;
     const tx = p.x + p.w / 2 - VW * 0.4 + p.face * 50, ty = p.y + p.h - VHv * (L.vert ? 0.62 : 0.7);
     cam.x += (tx - cam.x) * Math.min(1, dt * 5); cam.y += (ty - cam.y) * Math.min(1, dt * 4);
-    cam.x = Math.max(0, Math.min(L.W * T - VW, cam.x)); if (L.auto) cam.x = L.auto.x;
+    cam.x = Math.max(0, Math.min(L.W * T - VW, cam.x)); if (L.auto) cam.x = L.auto.x; if (L.rooms) psCam();
     if (L.boss && L.boss.fight) { const a = L.arena, lo = a.x0 - 2 * T, hi = a.x1 + 2 * T - VW; cam.x = hi < lo ? (a.x0 + a.x1) / 2 - VW / 2 : Math.max(lo, Math.min(hi, cam.x)); }
     cam.y = Math.max(Math.min(0, L.H * T - VHv), Math.min(L.H * T - VHv, cam.y));
   }
@@ -4398,6 +4608,7 @@ function drawLavaBg() {              // planeta volcánico: cielo rojizo, volcan
   ctx.globalCompositeOperation = 'lighter'; for (const f of FLAKES) { f.y -= f.v * 0.00025; f.x += Math.sin(time + f.ph) * 0.0003; if (f.y < 0) { f.y = 1; f.x = Math.random(); } ctx.globalAlpha = 0.3 + 0.4 * f.s / 2.4; ctx.fillStyle = f.s > 1.6 ? '#ffb040' : '#ff6a20'; ctx.fillRect(f.x * VW, f.y * VHv, f.s, f.s); } ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 function drawBackground() {
+  if (L.rooms && psBg()) return;
   if (L.theme === 'ice') { drawIceBg(); return; }
   if (L.theme === 'lava') { drawLavaBg(); return; }
   if (L.theme === 'jungle') { drawJungleBg(); return; }
@@ -4653,13 +4864,8 @@ function drawWorld() {
   ctx.translate(-Math.round(cam.x * SC) / SC + shx, -Math.round(cam.y * SC) / SC + shy);
   const vis = x => x > cam.x - 150 && x < cam.x + VW + 150;
   // portales
-  for (const po of L.portals) if (vis(po.x)) {
-    const pu = 0.5 + 0.5 * Math.sin(time * 5);
-    const g = ctx.createRadialGradient(po.x, po.y, 6, po.x, po.y, 70); g.addColorStop(0, 'rgba(198,60,255,' + (0.5 + pu * 0.3) + ')'); g.addColorStop(1, 'rgba(198,60,255,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(po.x, po.y, 70, 0, 6.283); ctx.fill();
-    spr(IMG.portal, po.x, po.y, 92, 0.5, 0.5);
-    if (Math.random() < 0.3) parts.push({ x: po.x + (Math.random() - 0.5) * 60, y: po.y + (Math.random() - 0.5) * 60, vx: 0, vy: -40, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#c63cff' : '#29e6ff', size: 2.5, grav: 0 });
-  }
+  for (const po of L.portals) if (vis(po.x)) psDrawPortal(po);
+  if (L.rooms) psDrawRooms();
   // punto de control y meta
   for (const cp of L.cps) if (vis(cp.x)) { if (cp.on) { ctx.fillStyle = 'rgba(53,255,138,' + (0.25 + 0.15 * Math.sin(time * 6)) + ')'; ctx.beginPath(); ctx.arc(cp.x, cp.y - 100, 22, 0, 6.283); ctx.fill(); } ctx.globalAlpha = cp.on ? 1 : 0.7; spr(IMG['obj-checkpoint'], cp.x, cp.y + 2, 118); ctx.globalAlpha = 1; }
   if (!L.adv && vis(L.goal.x)) { const g = ctx.createRadialGradient(L.goal.x, L.goal.y - 150, 4, L.goal.x, L.goal.y - 150, 90); g.addColorStop(0, 'rgba(41,230,255,.45)'); g.addColorStop(1, 'rgba(41,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.goal.x, L.goal.y - 150, 90, 0, 6.283); ctx.fill(); spr(IMG['obj-antena5g'], L.goal.x, L.goal.y + 2, 250); }
@@ -4671,7 +4877,7 @@ function drawWorld() {
   // chips y engranajes
   for (const c of L.chips) if (!c.got && vis(c.x)) { const s = Math.cos(time * 4 + c.t); spr(IMG['obj-chip'], c.x, c.y + Math.sin(time * 3 + c.t) * 3, 26, 0.5, 0.5, false, 0, Math.abs(s) * 0.85 + 0.15, 1); }
   for (const g of L.gears) if (!g.got && vis(g.x)) { ctx.globalAlpha = g.old ? 0.38 : 1; ctx.fillStyle = 'rgba(61,184,255,.22)'; ctx.beginPath(); ctx.arc(g.x, g.y, 30, 0, 6.283); ctx.fill(); spr(IMG['obj-engranaje'], g.x, g.y + Math.sin(time * 2.5) * 4, 40, 0.5, 0.5, false, time * 1.2); ctx.globalAlpha = 1; }
-  const PIMG = { laser: 'poder-laser', escudo: 'poder-escudo', turbo: 'poder-turbo', iman: 'poder-iman', mini: 'poder-mini', estrella: 'poder-estrella5g' };
+  const PIMG = { vuelo: 'poder-turbo', laser: 'poder-laser', escudo: 'poder-escudo', turbo: 'poder-turbo', iman: 'poder-iman', mini: 'poder-mini', estrella: 'poder-estrella5g' };
   if (L.kitP) for (const k of L.kitP) { if (!vis(k.x)) continue; const ic = k.kind === 'vuelo' ? 'poder-turbo' : PIMG[k.kind], bob = Math.sin(time * 3 + k.x) * 4;
     if (L.theme === 'jungle') { if (k.st) continue; const sy = k.y - 70 + Math.sin(time * 2 + k.x) * 6; ctx.strokeStyle = '#3a8a3a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(k.x, cam.y - 10); ctx.quadraticCurveTo(k.x + 10, sy - 60, k.x, sy - 26); ctx.stroke();
       ctx.globalCompositeOperation = 'lighter'; const g2 = ctx.createRadialGradient(k.x, sy, 4, k.x, sy, 52); g2.addColorStop(0, 'rgba(180,255,90,.55)'); g2.addColorStop(1, 'rgba(120,255,60,0)'); ctx.fillStyle = g2; ctx.fillRect(k.x - 52, sy - 52, 104, 104); ctx.globalCompositeOperation = 'source-over';
@@ -4791,7 +4997,7 @@ function render() {
   ctx.setTransform(SC, 0, 0, SC, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!L) { ctx.fillStyle = '#070a1e'; ctx.fillRect(0, 0, VW, VHv); return; }
-  if (state === 'warp') drawWarp(); else if (state === 'map') drawMap(); else if (state === 'edit') { cam.x = edCam = Math.max(0, Math.min(edCam, L.W * T - VW)); const yb = L.H * T - (VHv - 92); if (edCamY === null) edCamY = yb; cam.y = edCamY = Math.max(Math.min(-50, yb), Math.min(yb, edCamY)); drawBackground(); drawWorld(); drawEditorOverlay(); const sc = $('edScr'); if (sc && document.activeElement !== sc) sc.value = Math.round(edCam / Math.max(1, L.W * T - VW) * 1000); } else { drawBackground(); drawWorld(); if (L.theme === 'ocean') drawOceanFx(); else if (L.water) drawWater(); if (L.theme === 'desert') drawDesertFx(); else if (L.theme === 'sky') drawSkyFx(); else if (L.theme === 'toy') drawToyFx(); else if (L.theme === 'junk') drawJunkFx(); else if (L.theme === 'fort') drawFortFx(); if (L.dark && state !== 'title') drawDark(); drawSnow(); drawJungleFx(); }
+  if (state === 'warp') drawWarp(); else if (state === 'map') drawMap(); else if (state === 'edit') { cam.x = edCam = Math.max(0, Math.min(edCam, L.W * T - VW)); const yb = L.H * T - (VHv - 92); if (edCamY === null) edCamY = yb; cam.y = edCamY = Math.max(Math.min(-50, yb), Math.min(yb, edCamY)); drawBackground(); drawWorld(); drawEditorOverlay(); const sc = $('edScr'); if (sc && document.activeElement !== sc) sc.value = Math.round(edCam / Math.max(1, L.W * T - VW) * 1000); } else { drawBackground(); drawWorld(); if (L.theme === 'ocean') drawOceanFx(); else if (L.water) drawWater(); if (L.theme === 'desert') drawDesertFx(); else if (L.theme === 'sky') drawSkyFx(); else if (L.theme === 'toy') drawToyFx(); else if (L.theme === 'junk') drawJunkFx(); else if (L.theme === 'fort') drawFortFx(); if (L.dark && state !== 'title' && !(L.rooms && psRoomAt(cam.x + VW / 2))) drawDark(); drawSnow(); drawJungleFx(); }
   if (state === 'play' || state === 'done' || state === 'over') drawHUD();
   const vg = ctx.createRadialGradient(VW / 2, VHv / 2, VHv * 0.45, VW / 2, VHv / 2, Math.max(VW, VHv) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,10,.45)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VHv);
@@ -6881,7 +7087,7 @@ loadImages(() => {
   if (back && back.w !== undefined) setWorld(back.w);
   if (back && MAP[back.sel]) { mapSel = back.unl >= 0 ? back.unl : back.sel; openMap(); }      // tras actualizarse vuelve al mapa, no a la portada
 });
-window.__TL = { finale() { showTheEnd(); }, avPick() { avPicker(); }, avBuy() { avBuy(); }, tuto(i) { showTuto(i); }, con(c) { if (!CON.on) openConsole(); setTimeout(() => conRun(c), 1500); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
+window.__TL = { finale() { showTheEnd(); }, psWhy(id) { const c0 = curId; curId = id; const l = (LEVELS[id])(); curId = c0; const m = /^(\d+)-(\d+)$/.exec(id), n = +m[2]; const pp = psPlan(id, l), fl = ['vert','auto','chase','rise','boss','bossLvl','dark','meteors','bombs','rain','water'].filter(k => l[k]); return id + ' ' + l.theme + ' W' + l.W + ' H' + l.H + ' flags:' + fl.join(',') + ' spots:' + psSpots(l).length + ' SEL:' + (pp ? pp.f.map(q => q.t).join('') : '-') + ' chars:' + [...new Set(l.g[l.H - 1])].join(''); }, psInfo(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; return { W: l.W, mainW: l.mainW, H: l.H, theme: l.theme, portals: l.portals.filter(p => p.hi || p.exit).map(p => ({ x: p.x / T | 0, gy: (p.y + 46 + 2 * T) / T, off: !!p.off, box: p.box, exit: !!p.exit, to: p.to && p.to.kind, tox: p.tox / T | 0 })), rooms: (l.rooms || []).map(r => r.kind) }; }, avPick() { avPicker(); }, avBuy() { avBuy(); }, tuto(i) { showTuto(i); }, con(c) { if (!CON.on) openConsole(); setTimeout(() => conRun(c), 1500); }, noEnemies() { enemies = []; }, get E() { return enemies; }, get P() { return P; }, get G() { return G; }, get state() { return state; }, get L() { return L; }, K, press, get MAP() { return MAP; }, die, get DEV() { return DEV; }, warp(w) { startWarp(w); }, setWorld(w) { setWorld(w); }, get curW() { return curW; }, get mapSel() { return mapSel; }, set mapSel(v) { mapSel = v; mapAt = v; mapL = { x: MAP[v].x, y: MAP[v].y }; }, openMap() { openMap(); }, set cur(v) { curId = v; }, start() { startGame(); }, get time() { return time; }, get PROG() { return PROG; }, mapSelect(i) { mapSelect(i); }, mapPlay() { mapPlay(); }, mapOpen(i) { return mapOpen(i); }, setLic(l) { setLic(l); }, licOk() { return licOk(); }, admTexts(el) { admLicTexts(el); }, theEnd() { showTheEnd(); }, tcustom(fx) { const d = tlNew('t'); d.fx = fx; d.o.push({ k: 'portal', x: 10, y: 12 }, { k: 'portal', x: 40, y: 12 }, { k: 'plank', x: 20, y: 10 }); ED = d; return Object.keys(buildCustom(d)).filter(k => ['water', 'chase', 'meteors', 'dark', 'portals'].includes(k)).map(k => k + ':' + JSON.stringify(buildCustom(d)[k]).slice(0, 60)); }, editT(fx) { ED.fx = fx; openEditor(); }, ids() { return Object.keys(LEVELS).filter(k => k !== 'TALLER'); }, dumpLevel(id) { const c0 = curId; curId = id; const l = buildLevel(); curId = c0; const pick = (a, ks) => (a || []).map(o => { const r = {}; ks.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; });
     return { id, W: l.W, H: l.H, g: l.g.map(r => Array.isArray(r) ? r.join('') : r), gk: l.gk || 1, vert: !!l.vert, water: l.water || null, spawn: l.spawn, goal: l.goal, sw: !!l.sw,
       pads: pick(l.pads, ['x', 'y', 'w', 'mush', 'crystal']), movers: pick(l.movers, ['bx', 'by', 'w', 'ax', 'ay', 'fall', 'raft', 'plank']), lifts: pick((l.lifts || []).concat(l.mags || []), ['x0', 'x1', 'y0', 'y1']), vines: pick(l.vines, ['x', 'y0', 'y1']), spores: pick(l.spores, ['x', 'y', 'h']),
       pipes: pick(l.pipes, ['x', 'y', 'tox', 'toy', 'hid']), portals: pick(l.portals, ['x', 'y', 'tox', 'toy']), keys: pick(l.keys, ['x', 'y']), winds: pick(l.winds, ['x0', 'x1', 'y0', 'y1', 'f']), cps: pick(l.cps, ['x', 'y']), strips: pick(l.strips, ['x0', 'x1', 'y']), rise: !!l.rise, chase: !!l.chase, auto: !!l.auto, sky: !!l.sky }; },
