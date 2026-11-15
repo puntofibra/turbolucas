@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.81';
+const VERSION = '1.82';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -9236,8 +9236,9 @@ advQuest('A-70', { n: 'LA FIESTA DE TODOS LOS AMIGOS', img: 'deco-fiesta-1', s: 
 // Cada misión es una cadena: un objeto abre otro, un personaje pide algo y a cambio da una pista o un objeto, una máquina rota se arregla con la herramienta adecuada…
 // El niño elige qué objeto de la mochila usa en cada sitio (si se equivoca, el personaje o la máquina le contesta con gracia).
 const AV = {};          // las definiciones, para comprobar que todas se pueden terminar
-const avArt = id => { const n = ADV_IT[id].n; return (/a$|ión$/.test(n.split(' ')[0]) ? 'la ' : 'el ') + n; };
-const avUn = id => { const n = ADV_IT[id].n; return (/a$|ión$/.test(n.split(' ')[0]) ? 'una ' : 'un ') + n; };
+const avFem = n => /a$|ión$|^llave$|^nube$|^flor$/.test(n.split(' ')[0]);
+const avArt = id => { const n = ADV_IT[id].n; return (avFem(n) ? 'la ' : 'el ') + n; };
+const avUn = id => { const n = ADV_IT[id].n; return (avFem(n) ? 'una ' : 'un ') + n; };
 const AV_NO_NPC = [n => '¿' + n.charAt(0).toUpperCase() + n.slice(1) + '? Mmm… no, eso no es lo que necesito.', n => '¡Jajaja! ¿Y para qué quiero yo ' + n + '? Guárdalo, a lo mejor le sirve a otro.', n => 'Gracias, Lucas, pero ' + n + ' no me sirve. ¡Sigue buscando!', n => 'Uy, ' + n + '… es bonito, pero no es lo que me falta.'];
 const AV_NO_MACH = [n => 'Pruebas con ' + n + '… pero no pasa nada.', n => n.charAt(0).toUpperCase() + n.slice(1) + ' no encaja aquí. Habrá que probar con otra cosa.', n => 'Hmm… con ' + n + ' no funciona. ¿Qué otra cosa podría servir?'];
 function avPicker(A, w, q, okId, onOk, wrong) {          // elegir un objeto de la mochila
@@ -9378,7 +9379,7 @@ function advAv(id, q) {
       gates: [advLaser('salida', wallX, g - 4, g - 1, [q.laser || 'Una barrera de luz. Se apagará cuando termines la misión.'])] };
     return advMain(B, QTH[q.th || 'ST'], q.n, adv, wallX + 10, g, sea ? { depth: 0.4 } : {});
   };
-  ADV_LV.push({ id, n: q.n, img: q.img, s: q.s, age: 7 });
+  ADV_LV.push({ id, n: q.n, img: q.img, s: q.s, age: q.age || 7 });
 }
 const DPOS = {};
 
@@ -10180,6 +10181,128 @@ advAv('B-50', { n: 'LA GRAN AVENTURA FINAL', img: 'adv-cohete', th: 'LF', amb: [
       ['item', { it: 'eng', at: 'high', msg: ['¡El engranaje de oro!', 'Brilla como un pequeño sol.'] }], ['door', 'lab']] },
     lab: { name: 'EL LABORATORIO SECRETO', bg: 'laboratorio', lock: { need: 'llavem', txt: ['La puerta del laboratorio secreto está cerrada con llave.'], ok: ['¡CLAC! ¡La puerta se abre!'] }, list: [['deco', { img: 'deco-laboratorio-2', h: 90 }],
       ['mach', { name: 'FÁBRICA DE CHIPS', img: 'deco-laboratorio-0', h: 110, look: ['La máquina que fabrica chips. Tiene un hueco para un engranaje de oro.'], need: 'eng', fix: ['Colocas el engranaje de oro… ¡brrrum, bip, bip!', '¡Sale el chip de la luz! ¡Brilla como el sol!'], gives: 'chip', done: ['La máquina descansa.'] }]] } } });
+
+
+/* ======================= AVENTURAS DE 6 AÑOS: a medio camino (los personajes dicen qué necesitan, menos salas y menos pasos) ======================= */
+const Cn = n => n.charAt(0) + n.slice(1).toLowerCase();
+// KA(id, nombre, imagen, tema, protagonista, objeto final, problema, final feliz, pasos)
+// pasos: ['room', clave, nombre, fondo, llave?] · ['it', objeto, sitio, sala?] · ['npc', quién, quiere, da, motivo, sala?] · ['fix', nombre, imagen, necesita, da, descripción, sala?] · ['talk', quién, frases, sala?]
+function KA(id, n, img, th, hero, need, prob, fin, steps, s) {
+  const main = [], rooms = {}, put = (w, e) => (w ? rooms[w].list : main).push(e);
+  for (const st of steps) {
+    const k = st[0];
+    if (k === 'room') { rooms[st[1]] = { name: st[2], bg: st[3], list: [] }; if (st[4]) rooms[st[1]].lock = { need: st[4], txt: ['Está cerrado. Hace falta ' + avUn(st[4]) + '.'], ok: ['¡Se ha abierto!'] }; main.push(['door', st[1]]); }
+    else if (k === 'it') put(st[3], ['item', { it: st[1], at: st[2] }]);
+    else if (k === 'npc') { const [, who, wants, gives, why, w] = st; put(w, ['npc', { who, say: ['¡Hola, Lucas! Soy ' + Cn(who) + '.', why, 'Si me traes ' + avUn(wants) + ', te doy ' + avUn(gives) + '. ¡Trato hecho!'], hint: ['¿Me has traído ' + avUn(wants) + '? ¡Lo necesito!'], wants, gives, thanks: ['Toma ' + avUn(gives) + ', como te prometí.'] }]); }
+    else if (k === 'fix') { const [, name, im, nd, gives, desc, w] = st; put(w, ['mach', { name, img: im, h: im === 'adv-fuente' ? 110 : im === 'adv-baul' ? 70 : 100, look: [desc, 'Parece que hace falta ' + avUn(nd) + '.'], need: nd, fix: ['¡Funciona! ¡Muy bien, Lucas!'], gives, done: ['Ya está arreglado.'] }]); }
+    else if (k === 'talk') put(st[3], ['npc', { who: st[1], say: st[2] }]);
+  }
+  main.push(['hill', { h: 3 }]);
+  advAv(id, { age: 6, n, img, th, amb: { ST: ['estrellas'], LO: ['mar'], LJ: ['luces', 'mariposas'], LD: ['buitres'], LS: ['aviones'], ICE: ['nieve'] }[th] || [], s: s || prob,
+    intro: ['Lucas llega a una nueva aventura.'], hero, need, say: ['¡Hola, Lucas! Soy ' + Cn(hero) + '.', prob, '¿Me ayudas a conseguir ' + avUn(need) + '?'], hint: ['¿Ya tienes ' + avArt(need) + '? ¡Ánimo, que tú puedes!'],
+    thanks: ['¡' + avArt(need).charAt(0).toUpperCase() + avArt(need).slice(1) + '! ¡Lo has conseguido!', fin], goal0: 'Consigue ' + avUn(need), end: fin, main, rooms });
+}
+
+KA('C-1', 'LA MERIENDA DE RAYO', 'adv-tarta', 'ST', 'RAYO', 'tarta', 'Hoy es mi merienda de cumpleaños y no tengo tarta. ¡Qué desastre!', '¡Qué tarta tan rica! ¡Ya podemos celebrar mi cumpleaños!',
+  [['it', 'manzana', 'plats'], ['room', 'cocina', 'LA COCINA', 'tienda'], ['npc', 'BOLITA', 'manzana', 'tarta', 'Soy la cocinera y sé hacer tartas buenísimas, pero no me quedan manzanas.', 'cocina']]);
+KA('C-2', 'LA PILA DE CHISPAS', 'adv-fusible', 'ST', 'CHISPAS', 'linterna', 'Se ha ido la luz en mi taller y no veo nada. Necesito una linterna.', '¡Ya veo otra vez! ¡Gracias, Lucas!',
+  [['it', 'fusible', 'hill'], ['room', 'tienda', 'LA TIENDA', 'tienda'], ['npc', 'TUERCAS', 'fusible', 'linterna', 'Tengo una linterna preciosa, pero sin pila no sirve para nada.', 'tienda']]);
+KA('C-3', 'EL JARDÍN DE HOJA', 'deco-plantas-0', 'LJ', 'HOJA', 'semilla', 'Quiero plantar flores nuevas, pero se me han acabado las semillas.', '¡Mira cómo crecen las flores! ¡Mi jardín está precioso!',
+  [['it', 'valvula', 'rock'], ['fix', 'FUENTE', 'adv-fuente', 'valvula', 'gota', 'Una fuente seca, sin agua.'], ['room', 'cabana', 'LA CABAÑA', 'invernadero'], ['npc', 'SALTARÍN', 'gota', 'semilla', 'Tengo semillas mágicas, pero mi planta favorita tiene mucha sed.', 'cabana']]);
+KA('C-4', 'LA PERLA DE LA ABUELA', 'perla', 'LO', 'ABUELA CONCHA', 'perla', 'He perdido la perla de mi collar en el fondo del mar.', '¡Mi perla! ¡Mi collar vuelve a estar completo!',
+  [['talk', 'TINTA', ['¡Hola, Lucas! Vi caer una perla dentro del cofre del barco. Pero el cofre está cerrado con llave.']], ['it', 'llavem', 'plats'], ['room', 'barco', 'EL BARCO HUNDIDO', 'cueva'], ['fix', 'COFRE', 'adv-cofre', 'llavem', 'perla', 'Un cofre viejo cerrado con llave.', 'barco']]);
+KA('C-5', 'EL VOLCÁN FRÍO', 'cristal-lava-0', 'LV', 'BRASA', 'rubi', 'Mi casa del volcán se ha quedado fría. Necesito un cristal de fuego para calentarla.', '¡Qué calentito! ¡Ya no tengo frío!',
+  [['it', 'martillo', 'hill'], ['room', 'cueva', 'LA CUEVA DE CRISTALES', 'cueva', 'martillo'], ['it', 'rubi', 'high', 'cueva']]);
+KA('C-6', 'EL GLOBO DE PLUMITA', 'adv-burbuja-0', 'LS', 'PLUMITA', 'globo', 'Mi globo se ha escapado volando y se ha quedado enganchado en lo alto de la torre.', '¡Mi globo! ¡Ahora vuela atado a mi pata!',
+  [['talk', 'HÉLICE', ['¡Brrrum! Vi el globo en lo alto de la torre de las nubes. Giro tiene la llave.']], ['it', 'pelota', 'plats'], ['npc', 'GIRO', 'pelota', 'llavem', 'Guardo la llave de la torre, pero estoy muy aburrido. ¡Quiero jugar!'], ['room', 'torre', 'LA TORRE DE LAS NUBES', 'estacion', 'llavem'], ['it', 'globo', 'high', 'torre']]);
+KA('C-7', 'EL ESCARABAJO PERDIDO', 'deco-egipto-3', 'LD', 'GATO DE PIEDRA', 'escarabajo', 'He perdido mi escarabajo de la suerte en la pirámide pequeña.', '¡Mi escarabajo! ¡Miau, qué suerte tengo de tenerte!',
+  [['it', 'linterna', 'hill'], ['room', 'piramide', 'LA PIRÁMIDE PEQUEÑA', 'piramide', 'linterna'], ['talk', 'DOÑA VENDA', ['Uuuh… El escarabajo está ahí arriba, en la repisa.'], 'piramide'], ['it', 'escarabajo', 'high', 'piramide']]);
+KA('C-8', 'EL MUÑECO DE NIEVE', 'deco-hielo-1', 'ICE', 'COPITO', 'escoba', 'Estoy haciendo un muñeco de nieve y le falta la escoba para sus brazos.', '¡Mi muñeco de nieve ya está terminado! ¡Qué gracioso!',
+  [['it', 'manzana', 'plats'], ['room', 'casa', 'LA CASA DE BRISA', 'taller'], ['npc', 'BRISA', 'manzana', 'escoba', 'Tengo una escoba vieja que no uso. Pero me apetece mucho comer algo de fruta.', 'casa']]);
+KA('C-9', 'LA PELOTA DE BOTI', 'deco-circo-2', 'LT', 'BOTI', 'pelota', 'Mi pelota de rebotar se ha quedado en el cuarto de los juguetes y la puerta está cerrada.', '¡Bote, bote! ¡Mi pelota y yo volvemos a jugar!',
+  [['talk', 'MUELLE', ['¡Boing! La llave del cuarto de juguetes la tiene Tambor.']], ['it', 'fusible', 'hill'], ['npc', 'TAMBOR', 'fusible', 'llavem', 'Mi tambor de juguete no suena porque no tiene pilas.'], ['room', 'cuarto', 'EL CUARTO DE LOS JUGUETES', 'caja', 'llavem'], ['it', 'pelota', 'high', 'cuarto']]);
+KA('C-10', 'EL ROBOT SIN CABLE', 'robot-roto', 'LK', 'TUERCAS', 'cable', 'Mi amigo robot no se enciende. ¡Le falta un cable!', '¡Mi amigo robot se enciende! ¡Bip, bip!',
+  [['it', 'chatarra', 'rock'], ['npc', 'RECICLA', 'chatarra', 'destornillador', 'Reciclo chatarra para hacer cosas nuevas, pero hoy no he encontrado nada.'], ['room', 'taller', 'EL TALLER', 'taller'], ['fix', 'CAJA DE CABLES', 'deco-maquinas-0', 'destornillador', 'cable', 'Una caja cerrada con tornillos. Dentro se ven cables.', 'taller']]);
+KA('C-11', 'LA LLAVE DEL HANGAR', 'adv-cohete', 'ST', 'CAPITÁN ROJO', 'llavem', 'Mi cohete está encerrado en el hangar y he perdido la llave.', '¡Ya puedo sacar mi cohete! ¡Arrr, a volar!',
+  [['talk', 'BYTE', ['Vi una llave dentro del cajón del taller. Pero el cajón tiene el candado roto y está atascado.']], ['it', 'llavein', 'plats'], ['room', 'taller', 'EL TALLER', 'taller'], ['fix', 'CAJÓN ATASCADO', 'deco-taller-1', 'llavein', 'llavem', 'Un cajón atascado. Necesita una herramienta para abrirlo.', 'taller']]);
+KA('C-12', 'LAS ALGAS DE PINZAS', 'deco-mar-1', 'LO', 'PINZAS', 'semilla', 'Quiero plantar un jardín de algas en mi casa, pero no tengo semillas.', '¡Mi jardín de algas! ¡Clac, clac, qué bonito!',
+  [['it', 'caracola', 'plats'], ['room', 'cueva', 'LA CUEVA DE MEDI', 'cueva'], ['npc', 'MEDI', 'caracola', 'semilla', 'Tengo semillas de algas, pero me encantaría escuchar el mar en una caracola.', 'cueva']]);
+KA('C-13', 'EL NIDO DE SALTARÍN', 'adv-nido', 'LJ', 'SALTARÍN', 'nido', 'El viento tiró el nido de mis amigos los pájaros. ¡Ayúdame a encontrarlo!', '¡El nido! ¡Los pajaritos ya tienen casa!',
+  [['talk', 'HOJA', ['El nido cayó en el templo. Pero está muy oscuro. Musgo tiene una linterna.']], ['it', 'gota', 'hill'], ['npc', 'MUSGO', 'gota', 'linterna', 'Tengo una linterna, pero mis plantas necesitan agua mágica.'], ['room', 'templo', 'EL TEMPLO', 'templo', 'linterna'], ['it', 'nido', 'high', 'templo']]);
+KA('C-14', 'LA FUENTE DEL OASIS', 'adv-fuente', 'LD', 'ARENITA', 'gota', 'Tengo muchísima sed y la fuente del oasis no tiene agua.', '¡Glu, glu! ¡Qué agua tan fresquita!',
+  [['talk', 'PINCHO', ['A la fuente le falta la válvula. Se la llevó el viento a la pirámide.']], ['room', 'piramide', 'LA PIRÁMIDE', 'piramide'], ['it', 'valvula', 'high', 'piramide'], ['fix', 'FUENTE DEL OASIS', 'adv-fuente', 'valvula', 'gota', 'La fuente del oasis está seca.']]);
+KA('C-15', 'EL MOLINO DE GIRO', 'adv-poste', 'LS', 'GIRO', 'eng', 'Mi molino de viento se ha parado: le falta un engranaje.', '¡Mi molino vuelve a girar! ¡Fiuuu!',
+  [['it', 'tubo', 'cave'], ['room', 'taller', 'EL TALLER DE HÉLICE', 'taller'], ['npc', 'HÉLICE', 'tubo', 'eng', 'Tengo engranajes de sobra, pero mi motor necesita un tubo nuevo.', 'taller']]);
+KA('C-16', 'LA SOPA DE MAGMA', 'deco-tienda-2', 'LV', 'MAGMA', 'manzana', 'Quiero hacer una sopa de manzana asada y no me queda ni una manzana.', '¡Mmm, qué sopa tan rica! ¡Ñam, ñam!',
+  [['talk', 'BRASA', ['Las manzanas crecen en el invernadero caliente, pero está cerrado con llave.']], ['it', 'llavem', 'rock'], ['room', 'invernadero', 'EL INVERNADERO', 'invernadero', 'llavem'], ['it', 'manzana', 'high', 'invernadero']]);
+KA('C-17', 'EL CRISTAL DE ESCARCHA', 'cristal-0', 'ICE', 'ESCARCHA', 'cristal', 'Mi corona de hielo ha perdido su cristal más bonito.', '¡Mi corona brilla otra vez! ¡Brrrillante!',
+  [['it', 'martillo', 'plats'], ['fix', 'BLOQUE DE HIELO', 'deco-hielo-0', 'martillo', 'cristal', 'Un bloque de hielo enorme. Dentro brilla un cristal.']]);
+KA('C-18', 'EL CONCIERTO DE TAMBOR', 'deco-circo-3', 'LT', 'TAMBOR', 'caja', 'Esta noche toco en el concierto y he perdido mi caja de música.', '¡Tirorí, tirorá! ¡El concierto va a ser genial!',
+  [['it', 'eng', 'hill'], ['room', 'taller', 'EL TALLER DE JUGUETES', 'taller'], ['npc', 'PELUSÍN', 'eng', 'caja', 'Estoy arreglando una caja de música, pero le falta un engranaje.', 'taller']]);
+KA('C-19', 'LA RADIO DE CHISPAZO', 'obj-antena5g', 'LK', 'CHISPAZO', 'antena', 'Mi radio no suena. ¡Necesita una antena nueva!', '¡Mi radio suena! ¡Bzzzt, qué música más buena!',
+  [['talk', 'RECICLA', ['Hay una antena en la torre del desguace. Necesitas la tarjeta de Byte para entrar.']], ['it', 'consola', 'plats'], ['npc', 'BYTE', 'consola', 'tarjeta', 'Te dejo mi tarjeta, pero me he dejado mi consola por ahí y estoy triste.'], ['room', 'torre', 'LA TORRE', 'maquinas', 'tarjeta'], ['it', 'antena', 'high', 'torre']]);
+KA('C-20', 'EL RELOJ DE TIC-TAC', 'adv-reloj', 'ST', 'TIC-TAC', 'eng', 'Mi reloj se ha parado. ¡Le falta un engranaje!', '¡Tic, tac! ¡Mi reloj vuelve a funcionar!',
+  [['it', 'destornillador', 'hill'], ['room', 'relojeria', 'LA RELOJERÍA', 'maquinas'], ['fix', 'RELOJ VIEJO', 'deco-reloj-2', 'destornillador', 'eng', 'Un reloj viejo con la tapa atornillada. Dentro hay un engranaje.', 'relojeria']]);
+KA('C-21', 'EL CUMPLE DE CHISPITA', 'deco-fiesta-2', 'ST', 'CHISPITA', 'regalo', 'Hoy es el cumpleaños de mi mejor amigo y no tengo regalo.', '¡Qué regalo tan bonito! ¡Le va a encantar! ¡Guau!',
+  [['it', 'lazo', 'plats'], ['room', 'tienda', 'LA TIENDA DE REGALOS', 'tienda'], ['npc', 'CAMPANITA', 'lazo', 'regalo', 'Tengo un regalo precioso, pero no puedo envolverlo sin un lazo.', 'tienda']]);
+KA('C-22', 'LA CORONA DE LA REINA', 'jefe5', 'LO', 'REINA TENTÁCULA', 'collar', 'Mi collar real se ha perdido. ¡Sin él no puedo ir al baile!', '¡Mi collar! ¡Ya puedo ir al baile real!',
+  [['talk', 'GLOBITO', ['Doña Almeja sabe hacer collares. Pero necesita perlas.']], ['it', 'perla', 'rock'], ['room', 'joyeria', 'LA JOYERÍA', 'tienda'], ['npc', 'DOÑA ALMEJA', 'perla', 'collar', 'Hago collares preciosos, pero no me queda ni una perla.', 'joyeria']]);
+KA('C-23', 'LA ESTRELLA DEL TEMPLO', 'estrella-chip', 'LJ', 'MUSGO', 'estrella', 'La estrella de mi templo se ha caído en la cueva de cristales.', '¡La estrella brilla otra vez en mi templo!',
+  [['it', 'linterna', 'plats'], ['room', 'cueva', 'LA CUEVA DE CRISTALES', 'cueva', 'linterna'], ['it', 'estrella', 'high', 'cueva']]);
+KA('C-24', 'EL TESORO DE DOÑA VENDA', 'esfera-oro', 'LD', 'DOÑA VENDA', 'oro', 'Uuuh… Mi moneda de oro está en el cofre del faraón y he perdido la llave.', '¡Mi moneda de oro! ¡Uuuh, qué alegría!',
+  [['talk', 'GATO DE PIEDRA', ['Miau. Arenita encontró una llave en la arena.']], ['it', 'gota', 'cave'], ['npc', 'ARENITA', 'gota', 'llavem', 'Encontré una llave, pero tengo muchísima sed.'], ['room', 'camara', 'LA CÁMARA DEL FARAÓN', 'piramide'], ['fix', 'COFRE DEL FARAÓN', 'adv-baul', 'llavem', 'oro', 'Un cofre de oro cerrado con llave.', 'camara']]);
+KA('C-25', 'LA NUBE TRISTE', 'adv-burbuja-5', 'LS', 'ALGODÓN', 'burbuja', 'Estoy triste y no puedo llover. Dicen que una burbuja mágica me alegraría.', '¡Una burbuja mágica! ¡Ya estoy contenta! ¡Vamos a regar el jardín!',
+  [['it', 'fusible', 'hill'], ['room', 'casa', 'LA CASA DE GIRO', 'fiesta'], ['fix', 'MÁQUINA DE BURBUJAS', 'deco-maquinas-3', 'fusible', 'burbuja', 'La máquina de burbujas está apagada.', 'casa']]);
+KA('C-26', 'EL HORNO DE BRASA', 'deco-maquinas-2', 'LV', 'BRASA', 'tarta', 'Quiero hacer una tarta de lava, pero mi horno está frío.', '¡Qué tarta de lava más rica! ¡Ñam!',
+  [['it', 'rubi', 'rock'], ['room', 'cocina', 'LA COCINA', 'tienda'], ['fix', 'HORNO DE LAVA', 'deco-maquinas-2', 'rubi', 'tarta', 'Un horno con una tarta a medio hacer. Está frío.', 'cocina']]);
+KA('C-27', 'EL TRINEO DE BRISA', 'deco-hielo-2', 'ICE', 'BRISA', 'cable', 'Mi trineo no tiene cuerda para tirar de él. ¡Necesito un cable fuerte!', '¡Mi trineo ya corre por la nieve! ¡Yupi!',
+  [['talk', 'COPITO', ['Escarcha guarda cables en su almacén. Le encanta jugar con pelotas.']], ['it', 'pelota', 'plats'], ['npc', 'ESCARCHA', 'pelota', 'cable', 'Tengo cables en mi almacén, pero estoy aburridísimo.']]);
+KA('C-28', 'EL TELESCOPIO DE MUELLE', 'muneco-sorpresa', 'LT', 'MUELLE', 'tubo', 'Quiero hacer un telescopio para ver las estrellas, pero me falta un tubo.', '¡Boing! ¡Veo las estrellas! ¡Qué bonitas!',
+  [['room', 'almacen', 'EL ALMACÉN', 'sotano', 'tarjeta'], ['it', 'tubo', 'high', 'almacen'], ['it', 'tarta', 'hill'], ['npc', 'CASCABEL', 'tarta', 'tarjeta', 'Tengo la tarjeta del almacén, pero tengo mucha hambre de algo dulce.']]);
+KA('C-29', 'LA ASPIRADORA DE RECICLA', 'obj-aspiradora', 'LK', 'RECICLA', 'aspiradora', 'Quiero limpiar el desguace, pero mi aspiradora está en el taller de Chispazo.', '¡Fiuuu! ¡El desguace queda limpísimo!',
+  [['it', 'cable', 'cave'], ['room', 'taller', 'EL TALLER DE CHISPAZO', 'taller'], ['npc', 'CHISPAZO', 'cable', 'aspiradora', 'Tengo tu aspiradora, pero la desenchufé y perdí el cable. ¡Bzzzt!', 'taller']]);
+KA('C-30', 'LA ANTENA DE BYTE', 'obj-antena5g', 'LF', 'BYTE', 'antena', 'Quiero hablar con mis amigos de otros planetas, pero mi antena se perdió en la fortaleza.', '¡Hola, amigos! ¡Ya os oigo! ¡Gracias, Lucas!',
+  [['talk', 'CHISPAS', ['La antena está en la sala de control. La puerta se abre con una tarjeta.']], ['it', 'tarjeta', 'cave'], ['room', 'control', 'LA SALA DE CONTROL', 'laboratorio', 'tarjeta'], ['it', 'antena', 'high', 'control']]);
+KA('C-31', 'LA BOLSA DE BOLITA', 'pj-bolita', 'ST', 'BOLITA', 'oro', 'Quería comprar un regalo y se me ha caído la moneda de oro por una rejilla.', '¡Mi moneda! ¡Ya puedo comprar el regalo!',
+  [['it', 'iman', 'plats'], ['room', 'sotano', 'EL SÓTANO', 'sotano'], ['fix', 'REJILLA DEL SUELO', 'adv-cofre', 'iman', 'oro', 'Una rejilla estrecha. Al fondo brilla una moneda.', 'sotano']]);
+KA('C-32', 'LA PERLA DE MEDI', 'perla', 'LO', 'MEDI', 'perlab', 'Mi perla brillante se ha quedado en la gruta oscura.', '¡Mi perla! ¡Brilla como yo!',
+  [['it', 'linterna', 'plats'], ['room', 'gruta', 'LA GRUTA OSCURA', 'cueva', 'linterna'], ['talk', 'DIENTES', ['¡Grrr! Hola. La perla está ahí arriba, en la roca.'], 'gruta'], ['it', 'perlab', 'high', 'gruta']]);
+KA('C-33', 'LA RANA SALTARINA', 'deco-selva-2', 'LJ', 'HOJA', 'flecha', 'Me he perdido en la selva. ¡Necesito la bola de flechas para volver a casa!', '¡La bola de flechas señala mi casa! ¡Gracias, Lucas!',
+  [['it', 'manzana', 'hill'], ['npc', 'SALTARÍN', 'manzana', 'llavem', 'Tengo la llave de la cabaña del explorador, pero me muero de hambre.'], ['room', 'cabana', 'LA CABAÑA DEL EXPLORADOR', 'taller', 'llavem'], ['it', 'flecha', 'high', 'cabana']]);
+KA('C-34', 'EL CACTUS ELEGANTE', 'enemigo-cactus', 'LD', 'PINCHO', 'lazo', 'Hoy hay fiesta en el desierto y quiero ir elegantísimo con un lazo.', '¡Qué guapo estoy! ¡Me voy a la fiesta!',
+  [['it', 'globo', 'plats'], ['room', 'tienda', 'EL MERCADO', 'tienda'], ['npc', 'ARENITA', 'globo', 'lazo', 'Vendo lazos preciosos, pero hoy quiero un globo para la fiesta.', 'tienda']]);
+KA('C-35', 'EL AVIÓN DE HÉLICE', 'enemigo-avioneta', 'LS', 'HÉLICE', 'tubo', 'Mi motor hace ruidos raros. ¡Necesito un tubo nuevo!', '¡Brrrum! ¡Vuelo más rápido que nunca!',
+  [['talk', 'PLUMITA', ['Hay tubos en el almacén de las nubes. Algodón tiene la llave.']], ['it', 'burbuja', 'plats'], ['npc', 'ALGODÓN', 'burbuja', 'llavem', 'Tengo la llave del almacén, pero me encantan las burbujas mágicas.'], ['room', 'almacen', 'EL ALMACÉN DE LAS NUBES', 'sotano', 'llavem'], ['it', 'tubo', 'high', 'almacen']]);
+KA('C-36', 'LA FIESTA DEL VOLCÁN', 'deco-fiesta-0', 'LV', 'MAGMA', 'bola', 'Esta noche es la fiesta del volcán y la bola brillante está rota.', '¡La bola brilla! ¡Que empiece la fiesta!',
+  [['it', 'fusible', 'hill'], ['room', 'taller', 'EL TALLER', 'taller'], ['npc', 'CHISPAS', 'fusible', 'bola', 'He arreglado la bola brillante, pero sin pila no se enciende.', 'taller']]);
+KA('C-37', 'EL IGLÚ DE COPITO', 'deco-hielo-3', 'ICE', 'COPITO', 'estrella', 'Mi iglú está muy oscuro. ¡Quiero poner una estrella que brille dentro!', '¡Qué bonito brilla mi iglú!',
+  [['talk', 'ESCARCHA', ['Las estrellas caen en la cueva helada. La entrada está tapada por un bloque de hielo.']], ['it', 'martillo', 'plats'], ['fix', 'BLOQUE DE HIELO', 'deco-hielo-0', 'martillo', 'llavem', 'Un bloque de hielo enorme. Dentro hay una llave congelada.'], ['room', 'cueva', 'LA CUEVA HELADA', 'cueva', 'llavem'], ['it', 'estrella', 'high', 'cueva']]);
+KA('C-38', 'EL TREN DE PELUSÍN', 'vagon', 'LT', 'PELUSÍN', 'rueda', 'A mi tren de juguete se le ha caído una rueda.', '¡Chu-chuuu! ¡Mi tren vuelve a correr!',
+  [['it', 'regalo', 'plats'], ['room', 'casa', 'LA CASA DE BOTI', 'caja'], ['npc', 'BOTI', 'regalo', 'rueda', 'Encontré una rueda de tren, pero hoy es mi cumpleaños y nadie me ha regalado nada.', 'casa']]);
+KA('C-39', 'EL ORDENADOR DE TIC-TAC', 'deco-laboratorio-0', 'LK', 'TIC-TAC', 'pendrive', 'Perdí la memoria con todos mis planos de relojes.', '¡Mis planos! ¡Tic, tac, qué alegría!',
+  [['it', 'cable', 'rock'], ['room', 'oficina', 'LA OFICINA', 'laboratorio'], ['fix', 'ORDENADOR VIEJO', 'deco-laboratorio-0', 'cable', 'pendrive', 'Un ordenador apagado. Dentro hay una memoria.', 'oficina']]);
+KA('C-40', 'EL ESCAPE DE CHISPAS', 'jefe10', 'LF', 'CHISPAS', 'llavem', 'Mi amigo Tambor está encerrado en la celda. ¡Necesito la llave!', '¡Tambor está libre! ¡Gracias, Lucas!',
+  [['talk', 'CHISPAZO', ['¡Bzzzt! La llave de la celda está en el baúl del guardia. Se abre con el destornillador.']], ['it', 'destornillador', 'plats'], ['room', 'guardia', 'LA SALA DEL GUARDIA', 'maquinas'], ['fix', 'BAÚL DEL GUARDIA', 'adv-baul', 'destornillador', 'llavem', 'Un baúl con la tapa atornillada.', 'guardia']]);
+KA('C-41', 'EL PERRITO PERDIDO', 'pj-cachorro', 'ST', 'CAMPANITA', 'nido', 'Mi pajarito necesita un nido nuevo. ¡El suyo se ha roto!', '¡Pío, pío! ¡Mi pajarito está feliz!',
+  [['it', 'escoba', 'plats'], ['room', 'parque', 'EL PARQUE', 'invernadero'], ['npc', 'CHISPITA', 'escoba', 'nido', 'Tengo un nido de sobra, pero mi caseta está llena de hojas. ¡Necesito barrer!', 'parque']]);
+KA('C-42', 'LA MÚSICA DEL MAR', 'deco-mar-3', 'LO', 'TINTA', 'caracola', 'Quiero escuchar el mar en una caracola, pero no tengo ninguna.', '¡Shhh! ¡Se oye el mar! ¡Qué bonito!',
+  [['it', 'manzana', 'rock'], ['npc', 'DIENTES', 'manzana', 'llavem', 'Tengo la llave del arrecife, pero estoy a dieta y solo como fruta.'], ['room', 'arrecife', 'EL ARRECIFE', 'cueva', 'llavem'], ['it', 'caracola', 'high', 'arrecife']]);
+KA('C-43', 'LA FLOR DE MUSGO', 'adv-planta', 'LJ', 'MUSGO', 'gota', 'Mi flor favorita se está secando. ¡Necesita agua mágica!', '¡Mi flor vuelve a estar preciosa!',
+  [['it', 'valvula', 'plats'], ['room', 'jardin', 'EL JARDÍN SECRETO', 'invernadero'], ['fix', 'FUENTE DEL JARDÍN', 'adv-fuente', 'valvula', 'gota', 'Una fuente seca en el jardín secreto.', 'jardin']]);
+KA('C-44', 'EL MAPA DE LA MOMIA', 'adv-poster', 'LD', 'DOÑA VENDA', 'poster', 'Uuuh… He perdido el mapa de la pirámide y no encuentro la salida.', '¡Mi mapa! ¡Uuuh, ya sé por dónde ir!',
+  [['it', 'linterna', 'hill'], ['npc', 'GATO DE PIEDRA', 'linterna', 'escarabajo', 'Tengo el escarabajo que abre la sala de los mapas, pero allí está muy oscuro y quiero una linterna.'], ['room', 'sala', 'LA SALA DE LOS MAPAS', 'piramide', 'escarabajo'], ['it', 'poster', 'high', 'sala']]);
+KA('C-45', 'EL VIENTO DE GIRO', 'deco-fiesta-1', 'LS', 'GIRO', 'globo', 'Hoy es el día de los globos y yo no tengo ninguno.', '¡Mi globo vuela altísimo! ¡Qué feliz soy!',
+  [['it', 'oro', 'cave'], ['room', 'tienda', 'LA TIENDA DE GLOBOS', 'fiesta'], ['npc', 'PLUMITA', 'oro', 'globo', 'Vendo globos de todos los colores. Cada uno cuesta una moneda de oro.', 'tienda']]);
+KA('C-46', 'LA LLAVE DE LAVA', 'cristal-lava-1', 'LV', 'MAGMA', 'laser', 'Mi casa se protege con un escudo, pero se ha quedado sin pila de láser.', '¡Mi escudo brilla otra vez! ¡Qué seguro estoy!',
+  [['it', 'botas', 'plats'], ['room', 'camara', 'LA CÁMARA DE LAVA', 'cueva', 'botas'], ['it', 'laser', 'high', 'camara']]);
+KA('C-47', 'EL CASTILLO DE HIELO', 'jefe2', 'ICE', 'ESCARCHA', 'lazo', 'Mañana es mi fiesta de hielo y quiero decorar el castillo con un lazo.', '¡Mi castillo está precioso! ¡Brrrillante!',
+  [['it', 'fusible', 'hill'], ['room', 'taller', 'EL TALLER DE BRISA', 'taller'], ['fix', 'MÁQUINA DE LAZOS', 'deco-maquinas-1', 'fusible', 'lazo', 'Una máquina que hace lazos. Está apagada.', 'taller']]);
+KA('C-48', 'EL CIRCO DE CASCABEL', 'jefe8', 'LT', 'CASCABEL', 'pelota', 'El payaso del circo ha perdido su pelota para hacer malabares.', '¡Qué malabares! ¡El público aplaude!',
+  [['talk', 'MUELLE', ['¡Boing! La pelota está en la carpa grande. Tambor tiene la llave.']], ['it', 'caja', 'plats'], ['npc', 'TAMBOR', 'caja', 'llavem', 'Tengo la llave de la carpa, pero quiero una caja de música para el desfile.'], ['room', 'carpa', 'LA CARPA GRANDE', 'carpa', 'llavem'], ['it', 'pelota', 'high', 'carpa']]);
+KA('C-49', 'LA GRÚA DE RECICLA', 'deco-maquinas-3', 'LK', 'RECICLA', 'iman', 'Mi grúa ha perdido su imán y no puede levantar la chatarra.', '¡Mi grúa vuelve a funcionar! ¡A reciclar!',
+  [['it', 'chatarra', 'cave'], ['room', 'taller', 'EL TALLER DE TUERCAS', 'taller'], ['npc', 'TUERCAS', 'chatarra', 'iman', 'Tengo un imán enorme, pero necesito chatarra para fabricar cosas.', 'taller']]);
+KA('C-50', 'LA GRAN FIESTA DE LOS ROBOTS', 'deco-fiesta-3', 'LF', 'BYTE', 'bola', '¡Hoy es la gran fiesta de los robots! Pero falta la bola brillante para bailar.', '¡La bola brilla! ¡Que empiece la gran fiesta de los robots!',
+  [['talk', 'CHISPAS', ['La bola brillante está en la sala de fiestas. La puerta se abre con una tarjeta.']], ['it', 'manzana', 'plats'], ['npc', 'CHISPAZO', 'manzana', 'tarjeta', 'Te doy la tarjeta de la sala de fiestas, pero tengo hambre. ¡Bzzzt!'], ['room', 'fiesta', 'LA SALA DE FIESTAS', 'fiesta', 'tarjeta'], ['it', 'fusible', 'hill'], ['fix', 'BOLA APAGADA', 'deco-fiesta-3', 'fusible', 'bola', 'La bola brillante está apagada. No tiene pila.', 'fiesta']]);
 
 window.__TLA = { menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get lines() { return ADVT.lines; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), editHere: () => { CHEAT.test = true; openEditOff(); }, get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
