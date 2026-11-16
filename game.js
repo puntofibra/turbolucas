@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.92';
+const VERSION = '1.93';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -72,7 +72,7 @@ const JNK_SET = ['fondo-lejos-chatarra', 'fondo-cerca-chatarra', 'suelo-borde-ch
 function preJnk() { JNK_SET.forEach(n => xi(n)); for (const k in JNN) xi(JNN[k][0], JNN[k][1]); }
 const FRT_MAP = { 'caja-chatarra': 'caja-fortaleza', 'plataforma-propulsor': 'plataforma-propulsor-fortaleza', 'plancha-oxidada': 'plancha-fortaleza', 'prensa': 'prensa-fortaleza', 'iman': 'iman-fortaleza', 'baliza': 'baliza-fortaleza', 'cinta-chatarra': 'cinta-fortaleza', 'pieza-chatarra': 'pieza-fortaleza', 'bala-chatarra': 'bala-fortaleza' };          // la fortaleza usa las mismas piezas que la chatarra, con sus propias imágenes
 const JFN = { patrulla: ['enemigo-centinela-f', 4, 0, 724, 112], alien: ['enemigo-alien-f', 4, 0, 724, 80], erizo: ['enemigo-sierra-f', 4, 0, 724, 80], dron: ['enemigo-dron-f', 4, 0, 724, 96], torreta: ['enemigo-torreta-f', 3, 0, 724, 104] };
-const jnkI = n => { if (!L) return null; if (L.theme === 'junk') return okI(IMG[n]) ? IMG[n] : null; const f = L.theme === 'fort' && FRT_MAP[n]; return f && okI(xi(f)) ? IMG[f] : null; };
+const jnkI = n => { if (!L) return null; if (L.theme === 'junk' || L.adv) { const im = xi(n); return okI(im) ? im : null; } const f = L.theme === 'fort' && FRT_MAP[n]; return f && okI(xi(f)) ? IMG[f] : null; };
 // imágenes de la juguetería
 const TYN = { patrulla: ['enemigo-soldadito', 4, 0, 713, 96], alien: ['enemigo-osito', 4, 13, 718, 90], erizo: ['enemigo-pelota', 4, 71, 636, 72], dron: ['enemigo-avioneta', 4, 176, 554, 68], torreta: ['enemigo-canon-corcho', 3, 146, 648, 80] };
 const TOY_SET = ['fondo-lejos-jugueteria', 'fondo-cerca-jugueteria', 'suelo-borde-jugueteria', 'suelo-relleno-jugueteria', 'plataforma-galleta', 'caja-jugueteria', 'vagon', 'bloque-juguete', 'cinta', 'gelatina', 'muneco-sorpresa', 'corcho', 'muelle', 'jefe8', 'jefe8-roto'];
@@ -4087,7 +4087,7 @@ function updateStage(dt) {
     }
     L.mets = L.mets.filter(m => !m.dead);
   }
-  updExtras(dt, p); updJungle(dt, p); if (L.theme === 'ocean') updOcean(dt, p); else if (L.theme === 'desert') updDesert(dt, p); else if (L.theme === 'sky') updSky(dt, p); else if (L.theme === 'toy') updToy(dt, p); else if (L.theme === 'junk' || L.theme === 'fort') updJunk(dt, p);
+  updExtras(dt, p); updJungle(dt, p); if (L.theme === 'ocean') updOcean(dt, p); else if (L.theme === 'desert') updDesert(dt, p); else if (L.theme === 'sky') updSky(dt, p); else if (L.theme === 'toy') updToy(dt, p); else if (L.theme === 'junk' || L.theme === 'fort') updJunk(dt, p); if (L.adv && L.theme !== 'junk' && L.theme !== 'fort' && (L.mags || L.presses || L.belts)) updJunk(dt, p);
   for (const gz of L.geysers) {          // géiseres de fuego: avisan burbujeando y luego escupen
     const k = ((time + gz.ph) % gz.per), on = k > 0.9 && k < 2.0; gz.warn = k > 0.15 && k <= 0.9; if (on && !gz.on && Math.abs(gz.x - (p.x + p.w / 2)) < VW) { noise(0.9, 0.1, 300); tone(90, 60, 0.6, 'sawtooth', 0.04); } gz.on = on;
     if (on && !p.dead && !p.win && !CHEAT.ghost && Math.abs(p.x + p.w / 2 - gz.x) < 16 + p.w / 2 && p.y + p.h > gz.y - gz.h && p.y < gz.y) { if (p.tStar > 0) {} else hurt(); }
@@ -4397,7 +4397,7 @@ function drawCogs() {
     for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * 1.5708); ctx.fillRect(-c.r * 0.08, 0, c.r * 0.16, c.r * 0.6); ctx.restore(); } ctx.beginPath(); ctx.arc(0, 0, c.r * 0.16, 0, 6.283); ctx.fillStyle = '#ff7a24'; ctx.fill(); ctx.restore(); }
 }
 function drawStageBack() {          // por detrás de los personajes
-  drawLavaPits(); drawGeysers(); drawExtras(); if (L.theme === 'jungle') drawJungleWorld(); if (L.theme === 'ocean') drawOceanWorld(); else if (L.theme === 'desert') drawDesertWorld(); else if (L.theme === 'sky') drawSkyWorld(); else if (L.theme === 'toy') drawToyWorld(); else if (L.theme === 'junk' || L.theme === 'fort') { if (L.theme === 'fort') drawFortLava(); drawJunkWorld(); }
+  drawLavaPits(); drawGeysers(); drawExtras(); if (L.theme === 'jungle') drawJungleWorld(); if (L.theme === 'ocean') drawOceanWorld(); else if (L.theme === 'desert') drawDesertWorld(); else if (L.theme === 'sky') drawSkyWorld(); else if (L.theme === 'toy') drawToyWorld(); else if (L.theme === 'junk' || L.theme === 'fort') { if (L.theme === 'fort') drawFortLava(); drawJunkWorld(); } if (L.adv && L.theme !== 'junk' && L.theme !== 'fort' && (L.mags || L.presses || L.belts)) drawJunkWorld();
   if (CHEAT.floor) {                 // puentes láser sobre los huecos
     CHEAT.floorT += 1 / 60; const gy = (L.H - 2) * T, x0 = Math.max(0, Math.floor(cam.x / T) - 1), x1 = Math.min(L.W - 1, Math.floor((cam.x + VW) / T) + 1);
     const hole = x => !isSolid(L.g[L.H - 2][x]) && L.g[L.H - 2][x] !== '=' && !isSolid(L.g[L.H - 1][x]);
@@ -8643,6 +8643,9 @@ function advStd(o) {
     else if (k === 'cage') { B.block(x, x + 1, g - 3, g - 1); B.block(x + 3, x + 8, g - 5, g - 1); B.block(x + 4, x + 7, g - 4, g - 1, ' '); B.fake(x + 5, x + 6, g - 5, g - 5); B.row(x + 3, x + 8, g - 7); S[f[2]] = [x + 5, g - 1]; }
     else if (k === 'bridge') { P(x, x + 1, g - 3); P(x + 3, x + 13, g - 6); B.row(x + 3, x + 13, g - 8); S[f[2]] = [x + 10, g - 7]; }
     else if (k === 'mover') { B.mover(x + 1, g - 4, 3, 110, 0, 1.1, (x % 7) / 7); P(x + 9, x + 12, g - 8); B.arc(x + 8, x + 13, g - 11, 1); S[f[2]] = [x + 11, g - 9]; }
+    else if (k === 'magnet') { (B.mags = B.mags || []).push({ x0: (x + 1) * T, x1: (x + 4) * T, y0: (g - 11) * T, y1: g * T, per: 0, ph: 0, on: true, warn: false }); P(x + 6, x + 10, g - 10); B.row(x + 6, x + 10, g - 11); S[f[2]] = [x + 8, g - 11]; }
+    else if (k === 'press') { (B.presses = B.presses || []).push(...[2, 6].map((dx, i) => ({ x: (x + dx) * T, w: 2 * T, top: (g - 8) * T, gy: g * T, per: 2.4, ph: i * 1.2, hy: (g - 8) * T + 50, warn: false, down: false }))); B.arc(x + 1, x + 9, g - 10, 1); S[f[2]] = [x + 11, g - 1]; }
+    else if (k === 'belt') { (B.belts = B.belts || []).push({ x0: x * T, x1: (x + 10) * T, y: g * T, dir: 1 }); B.block(x + 11, x + 12, g - 2, g - 1); B.row(x + 2, x + 9, g - 3); S[f[2]] = [x + 12, g - 3]; }
     else if (k === 'trampo') { B.pad(x + 1, g - 1); P(x + 4, x + 8, g - 9); B.row(x + 4, x + 8, g - 10); B.arc(x, x + 3, g - 12, 1); S[f[2]] = [x + 6, g - 10]; }
     else if (k === 'lift') { B.lift(x + 1, x + 3, g - 11, g - 1); P(x + 5, x + 9, g - 11); B.row(x + 5, x + 9, g - 12); S[f[2]] = [x + 8, g - 12]; }
     // ---- adornos entre una cosa y otra (sin objetos) ----
@@ -9449,7 +9452,7 @@ function avPicker(A, w, q, okId, onOk, wrong) {          // elegir un objeto de 
 }
 // pistas solo si el niño está perdido de verdad: más de 4 minutos sin avanzar y hablando con unos y otros sin saber qué hacer
 const avProg = A => { A.flag('av_lp', G.clock); A.flag('av_tk', 0); A.flag('av_hl', 0); };
-const AV_AT = { trampo: 'en una plataforma alta (¡salta en el trampolín!)', lift: 'en una plataforma alta (súbete al ascensor)', tower: 'arriba del todo de una torre de plataformas', trench: 'en el fondo de un foso', mushjump: 'en una plataforma alta (¡la seta te ayuda a saltar!)', vinecliff: 'encima de un acantilado (trepa por la liana)', pillars: 'en lo alto de unos pilares', tunnel: 'dentro de un túnel secreto (sus paredes no son de verdad)', springup: 'muy arriba, saltando de plataforma en plataforma', stairs: 'en la cima de una escalera de piedra', cage: 'dentro de una jaula de piedra (entra por arriba)', bridge: 'encima de un puente', mover: 'en una plataforma alta (súbete a la plataforma que se mueve)', hill: 'en lo alto de una colina', plats: 'subiendo por unas plataformas', rock: 'dentro de una roca agrietada (¡dispárale con el láser!)', cave: 'en una cueva, detrás de una pared que no es de verdad', plat: 'encima de una plataforma', high: 'arriba del todo, subiendo por las plataformas', floor: 'en el suelo' };
+const AV_AT = { magnet: 'en una plataforma alta (el electroimán te sube)', press: 'después de unas prensas gigantes', belt: 'al final de una cinta transportadora', trampo: 'en una plataforma alta (¡salta en el trampolín!)', lift: 'en una plataforma alta (súbete al ascensor)', tower: 'arriba del todo de una torre de plataformas', trench: 'en el fondo de un foso', mushjump: 'en una plataforma alta (¡la seta te ayuda a saltar!)', vinecliff: 'encima de un acantilado (trepa por la liana)', pillars: 'en lo alto de unos pilares', tunnel: 'dentro de un túnel secreto (sus paredes no son de verdad)', springup: 'muy arriba, saltando de plataforma en plataforma', stairs: 'en la cima de una escalera de piedra', cage: 'dentro de una jaula de piedra (entra por arriba)', bridge: 'encima de un puente', mover: 'en una plataforma alta (súbete a la plataforma que se mueve)', hill: 'en lo alto de una colina', plats: 'subiendo por unas plataformas', rock: 'dentro de una roca agrietada (¡dispárale con el láser!)', cave: 'en una cueva, detrás de una pared que no es de verdad', plat: 'encima de una plataforma', high: 'arriba del todo, subiendo por las plataformas', floor: 'en el suelo' };
 function avNext(q, A) {          // el siguiente paso que el niño podría dar ahora mismo
   const R = q._rooms, cands = [], placeOf = w => w ? 'en ' + R[w].name.toLowerCase() : 'por el camino';
   if (A.has(q.need)) return { p: 0, t: 'hero' };
@@ -9523,7 +9526,7 @@ const avItem = (it, tx, ty, msg, key) => ({ id: it, tx, ty, msg: A => { if (key)
 
 
 /* ---------- 30 recorridos distintos para las aventuras (dónde se esconden las cosas, qué hay entre medias y dónde está el protagonista) ---------- */
-const AV_FW = { trampo: 12, lift: 13, tower: 13, trench: 12, mushjump: 14, vinecliff: 11, pillars: 17, tunnel: 14, springup: 15, stairs: 16, cage: 12, bridge: 17, mover: 16, hill: 11, plats: 17, rock: 11, cave: 28, plat: 9 };
+const AV_FW = { magnet: 13, press: 14, belt: 15, trampo: 12, lift: 13, tower: 13, trench: 12, mushjump: 14, vinecliff: 11, pillars: 17, tunnel: 14, springup: 15, stairs: 16, cage: 12, bridge: 17, mover: 16, hill: 11, plats: 17, rock: 11, cave: 28, plat: 9 };
 const AV_PAT = [
   ['tower', 'cave', 'bridge', 'rock'], ['trench', 'mushjump', 'tunnel', 'pillars'], ['vinecliff', 'stairs', 'cage', 'mover'], ['plats', 'springup', 'trench', 'bridge'],
   ['stairs', 'rock', 'tower', 'tunnel'], ['mover', 'pillars', 'cave', 'mushjump'], ['cage', 'bridge', 'springup', 'trench'], ['tunnel', 'vinecliff', 'plats', 'stairs'],
@@ -9534,7 +9537,7 @@ const AV_PAT = [
   ['plat', 'tunnel', 'mushjump', 'bridge'], ['pillars', 'cave', 'cage', 'springup'], ['rock', 'stairs', 'vinecliff', 'mover'], ['mushjump', 'trench', 'bridge', 'tunnel'],
   ['hill', 'tower', 'pillars', 'cage'], ['trench', 'vinecliff', 'springup', 'stairs']];
 const AV_FILL = [['fbox', 'farc'], ['fmush', 'fbump'], ['fpil', 'fplat'], ['fstep', 'fbox'], ['farc', 'fmush'], ['fplat', 'fstep'], ['fbump', 'fpil'], ['fbox', 'fmush', 'fplat']];
-AV_PAT.forEach((p, i) => { if (i % 5 === 0) p[3] = 'trampo'; else if (i % 5 === 2) p[3] = 'lift'; });
+AV_PAT.forEach((p, i) => { if (i % 5 === 0) p[3] = 'trampo'; else if (i % 5 === 2) p[3] = 'lift'; if (i % 5 === 1) p[2] = 'magnet'; else if (i % 5 === 3) p[2] = 'press'; else if (i % 5 === 4) p[1] = 'belt'; });
 function avPatOf(id) { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 100003; const n = +(id.split('-')[1] || 0); return { i: (n * 7 + (id[0] === 'C' ? 11 : 0)) % AV_PAT.length, h }; }
 function avLayout(id, q) {          // reparte los escondites y el orden según el recorrido de esta aventura
   if (q._lay) return; q._lay = 1; const pt = avPatOf(id), sp = AV_PAT[pt.i], r = GZr(id + 'lay'); let k = 0;
@@ -9620,7 +9623,8 @@ function advAv(id, q) {
     ents.push(...advTeles([['t1', 15, g, q.t1 || 'LA ENTRADA'], ['t2', wallX - 6, g, q.t2 || 'EL FINAL']]));
     const adv = { goal0: 'Habla con ' + hero.name.charAt(0) + hero.name.slice(1).toLowerCase(), amb: (q.amb || []).flatMap(a => QAMB[a](g)), intro: q.intro, endTxt: q.end, ents, items, fly: sea,
       gates: [advLaser('salida', wallX, g - 4, g - 1, [q.laser || 'Una barrera de luz. Se apagará cuando termines la misión.'])] };
-    return advMain(B, QTH[q.th || 'ST'], q.n, adv, wallX + 10, g, sea ? { depth: 0.4 } : {});
+    const pt = avPatOf(id), mt = !sea && /^(ST|LS|ICE|LV|LD)$/.test(q.th || 'ST') && pt.i % 3 === 0 ? { meteors: { zones: [[40 * T, (wallX - 10) * T]], every: 2.2, acc: 0, style: q.th === 'ICE' ? 'comet' : undefined } } : {};          // lluvia de meteoritos en algunos niveles
+    return advMain(B, QTH[q.th || 'ST'], q.n, adv, wallX + 10, g, Object.assign(sea ? { depth: 0.4 } : {}, mt));
   };
   ADV_LV.push({ id, n: q.n, img: q.img, s: q.s, age: q.age || 7 });
 }
