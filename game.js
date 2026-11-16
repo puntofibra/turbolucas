@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.90';
+const VERSION = '1.91';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4972,8 +4972,10 @@ function flame(x, y, len, w, seed) {
 const ANCH = { 'lucas-quieto': 0.5, 'lucas-avanzando': 0.47, 'lucas-saltando': 0.44, 'lucas-cayendo': 0.5, 'lucas-golpeado': 0.5, 'lucas-celebrando': 0.5, 'lucas-agachado': 0.5 };
 const ADV_WARP = { t: -9, inT: -9, x: 0 };
 function advTeleSnd(out) {          // sonido de teletransporte: carga supersónica, zumbido, ráfaga y chispazo final
-  if (!AC || !sndOn) return; try {
-    const t0 = AC.currentTime + 0.01, D = out ? 0.62 : 0.5, bus = AC.createGain(); bus.gain.value = 0.9; bus.connect(master);
+  audio(); if (!AC || !sndOn) return; try {
+    const t0 = AC.currentTime + 0.01, D = out ? 0.62 : 0.5, bus = AC.createGain(); bus.gain.value = 1.7; bus.connect(master);
+    { const sub = AC.createOscillator(), sg = AC.createGain(); sub.type = 'sine'; sub.frequency.setValueAtTime(out ? 55 : 160, t0); sub.frequency.exponentialRampToValueAtTime(out ? 160 : 45, t0 + D);          // rugido grave supersónico
+      sg.gain.setValueAtTime(0.0001, t0); sg.gain.exponentialRampToValueAtTime(0.35, t0 + 0.08); sg.gain.exponentialRampToValueAtTime(0.0001, t0 + D + 0.15); sub.connect(sg); sg.connect(bus); sub.start(t0); sub.stop(t0 + D + 0.2); }
     const dl = AC.createDelay(); dl.delayTime.value = 0.11; const fb = AC.createGain(); fb.gain.value = 0.32; dl.connect(fb); fb.connect(dl); const wet = AC.createGain(); wet.gain.value = 0.35; dl.connect(wet); wet.connect(master); bus.connect(dl);
     const env = (node, a, peak, end) => { const gg = AC.createGain(); gg.gain.setValueAtTime(0.0001, t0); gg.gain.exponentialRampToValueAtTime(peak, t0 + a); gg.gain.exponentialRampToValueAtTime(0.0001, t0 + end); node.connect(gg); gg.connect(bus); return gg; };
     // 1) barrido principal con filtro que se abre y temblor rápido
