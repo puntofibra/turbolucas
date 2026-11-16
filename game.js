@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.97';
+const VERSION = '1.98';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7685,10 +7685,10 @@ function advBuilding(e) {
     if (fi && okI(fi)) { const H = 330, W = H * fi.naturalWidth / fi.naturalHeight, db = ADV_FACDOOR[f] || [0.4, 0.75, 0.6, 0.97], x0 = e.x - W * (db[0] + db[2]) / 2, y0 = e.y + 4 - H * db[3]; e._nodoor = true;
       ctx.drawImage(fi, x0, y0, W, H);
       const nm = String(e.name || ''); ctx.font = '900 14px system-ui'; ctx.textAlign = 'center'; const tw = ctx.measureText(nm).width + 18, ty = y0 - 10;
-      ctx.fillStyle = 'rgba(10,16,40,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(e.x - tw / 2, ty - 15, tw, 22, 11) : ctx.rect(e.x - tw / 2, ty - 15, tw, 22); ctx.fill(); ctx.fillStyle = '#ffe27a'; ctx.fillText(nm, e.x, ty + 1); e._fac = 1; return; } }
+      ctx.fillStyle = 'rgba(10,16,40,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(e.x - tw / 2, ty - 15, tw, 22, 11) : ctx.rect(e.x - tw / 2, ty - 15, tw, 22); ctx.fill(); ctx.fillStyle = '#ffe27a'; ctx.fillText(nm, e.x, ty + 1); e._fac = 1; e._bx = e.x + tw / 2 + 18; e._by = ty - 4; return; } }
   const im = xi('adv-edificio', 3); if (!okI(im)) return; im._n = 3; let hsh = 0; for (const c of e.id) hsh = (hsh * 31 + c.charCodeAt(0)) % 997; im._f = hsh % 3;
   const H = e.h / 0.543, W = H * (im.naturalWidth / 3) / im.naturalHeight, x0 = e.x - W / 2, y0 = e.y + 4 - H * 0.985;
-  ctx.drawImage(im, im._f * im.naturalWidth / 3, 0, im.naturalWidth / 3, im.naturalHeight, x0, y0, W, H);
+  ctx.drawImage(im, im._f * im.naturalWidth / 3, 0, im.naturalWidth / 3, im.naturalHeight, x0, y0, W, H); e._bx = e.x; e._by = y0 - 4;
   const nm = String(e.name || '').replace(/^(EL|LA|LOS|LAS)\s+/, ''), sx = x0 + W * 0.5025, sy = y0 + H * 0.2965, sw = W * 0.56, sh = H * 0.15;
   let fs = 22; ctx.font = '900 ' + fs + 'px system-ui'; const words = nm.split(' '); let lines = [nm];
   if (ctx.measureText(nm).width > sw && words.length > 1) { let best = null; for (let i = 1; i < words.length; i++) { const a = words.slice(0, i).join(' '), b = words.slice(i).join(' '), m = Math.max(ctx.measureText(a).width, ctx.measureText(b).width); if (!best || m < best[0]) best = [m, [a, b]]; } lines = best[1]; }
@@ -7730,7 +7730,9 @@ function advDrawWorld() {
     const cb = advCB(im); if (!e._nodoor) spr(im, e.x, by, (e._dh || e.h) / (cb.b - cb.t), 0.5, cb.b, fl, e.id === 'huevo' ? Math.sin(e.ph * 7) * 0.025 * (1 + (A.f.st || 0)) : 0, 1, br);
     { const fx = e.fx && e.fx(A.api); if (fx) advFx(fx, e.x, by - e.h * (e.fxy || 0.6)); }
     if (e.kind === 'tele') { if (Math.random() < 0.4) parts.push({ x: e.x + (Math.random() - 0.5) * e.h * 0.4, y: by - 10, vx: 0, vy: -60 - Math.random() * 60, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#7fe9ff' : '#ffffff', size: 2.2, grav: 0 }); }
-    const mk = e.mark && e.mark(A.api); if (mk && A.tgt !== e) { const yy = by - e.h - 18 + Math.sin(time * 5) * 5; ctx.font = '900 30px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2350'; ctx.fillText('!', e.x + 2, yy + 2); ctx.fillStyle = '#ffd23c'; ctx.fillText('!', e.x, yy); }
+    const mk = e.mark && e.mark(A.api); if (!mk && e.st && A.tgt !== e && !(e.hide && e.hide(A.api))) { const sv = e.st(A.api), bxx = e._bx != null ? e._bx : e.x, yy = (e._by != null ? e._by + 9 : by - e.h - 22) + (sv === 'ok' ? 0 : Math.sin(time * 3) * 3); ctx.save(); ctx.translate(bxx - e.x, 0); ctx.beginPath(); ctx.arc(e.x, yy - 9, 14, 0, 6.283); ctx.fillStyle = sv === 'ok' ? '#18c25a' : 'rgba(30,40,90,.85)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = sv === 'ok' ? '#d9ffe6' : '#ffd23c'; ctx.stroke();
+      if (sv === 'ok') { ctx.beginPath(); ctx.moveTo(e.x - 6, yy - 9); ctx.lineTo(e.x - 1, yy - 4); ctx.lineTo(e.x + 7, yy - 14); ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#fff'; ctx.stroke(); } else { ctx.font = '900 19px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffd23c'; ctx.fillText('?', e.x, yy - 8); ctx.textBaseline = 'alphabetic'; } ctx.restore(); }
+    if (mk && A.tgt !== e) { const yy = by - e.h - 18 + Math.sin(time * 5) * 5; ctx.font = '900 30px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2350'; ctx.fillText('!', e.x + 2, yy + 2); ctx.fillStyle = '#ffd23c'; ctx.fillText('!', e.x, yy); }
     if (A.tgt === e) { const yy = by - e.h - 14 + Math.sin(time * 4) * 3; ctx.fillStyle = '#fffdf4'; ctx.strokeStyle = '#1b2350'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(e.x - 22, yy - 30, 44, 30, 10) : ctx.rect(e.x - 22, yy - 30, 44, 30); ctx.fill(); ctx.stroke();
       ctx.font = '20px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#1b2350'; ctx.fillText(e.kind === 'npc' ? '💬' : e.kind === 'tele' ? '✨' : e.kind === 'way' ? '🚪' : '✋', e.x, yy - 8);
       if (e.name) { ctx.font = '900 13px system-ui'; ctx.fillStyle = '#05071a'; ctx.fillText(e.name, e.x + 1, yy - 37); ctx.fillStyle = '#ffe27a'; ctx.fillText(e.name, e.x, yy - 38); } } }
@@ -9483,7 +9485,7 @@ function avReward(A, o, e, after) {          // lo que pasa al dar el objeto bue
 function avNpc(id, o) {
   const w = qw(o.who), k = 'av_' + (o._k || id), said = k + 's', hint = A => o._q ? avHint(A, o._q) : [];
   return { id, kind: 'npc', name: w.name, img: w.img, fr: w.fr, h: w.h, float: w.float, fy: w.float ? -20 : 0, noTurn: w.h > 135,
-    mark: A => !A.flag(said) || (o.wants && !A.flag(k) && (A.inv[o.wants] || 0) >= (o.n || 1)) || (!o.wants && o.gives && !A.flag(k)),
+    mark: A => !A.flag(said) || (o.wants && !A.flag(k) && (A.inv[o.wants] || 0) >= (o.n || 1)) || (!o.wants && o.gives && !A.flag(k)), st: A => (o.wants || o.gives ? A.flag(k) : (A.flag(said) || A.flag(k))) ? 'ok' : 'todo',
     use: (A, e) => {
       if (o.pre && !A.flag(o.pre)) return A.say(w, o.preTxt || ['Ahora estoy muy ocupado. Vuelve más tarde.']);
       if (A.flag(k)) return A.say(w, (o.after ? (typeof o.after === 'function' ? o.after(A) : o.after) : [advRnd(ADV_DONE)]).concat(hint(A)));
@@ -9500,7 +9502,7 @@ function avNpc(id, o) {
 function avMach(id, o) {
   o = avMQ(o); const k = 'av_' + (o._k || id), nm = o.name || 'MÁQUINA', me = { name: nm, img: o.img };
   return { id, kind: 'gate', name: nm, img: o.img, fr: o.fr, frame: o.f0 || 0, h: o.h || 100, lbl: o.lbl || '🔧 USAR', img2: o.img2, beams: o.beams, need: o.need, alt: A => A.flag(k), glowIf: A => A.flag(k) ? 'rgba(80,255,160,.35)' : null,
-    mark: A => !A.flag(k) && A.has(o.need),
+    mark: A => !A.flag(k) && A.has(o.need), st: A => A.flag(k) ? 'ok' : 'todo',
     use: (A, e) => {
       if (A.flag(k)) return A.say(me, o.done || ['Ya funciona perfectamente.']);
       if (o.pre && !A.flag(o.pre)) return A.say(NR, o.preTxt || o.look);
@@ -9509,8 +9511,17 @@ function avMach(id, o) {
     } };
 }
 // puerta a otra sala (si está cerrada, hace falta una llave o haber hablado con alguien)
+// ✔ verde: ahí ya no queda nada que hacer · ? : todavía queda algo pendiente
+function avEntDone(A, p, q, d) { const k = p[0], o = p[1];
+  if (k === 'item') return !!A.flag('it_' + o._k);
+  if (k === 'npc') return !!(o.wants || o.gives ? A.flag('av_' + o._k) : (A.flag('av_' + o._k + 's') || A.flag('av_' + o._k)));
+  if (k === 'mach' || k === 'shop') return !!A.flag('av_' + o._k);
+  if (k === 'door') { const key = typeof o === 'string' ? o : o.room, rr = q._rooms && q._rooms[key]; if (!rr) return true; return (!rr.lock || !!A.flag('dr_' + rr.rid)) && d < 6 && avRoomDone(A, rr, q, d + 1); }
+  return true; }
+function avRoomDone(A, r, q, d) { return !!r && (r.list || []).every(p => avEntDone(A, p, q, d)); }
 function avDoor(id, tx, ty, r, rx, ry) {
   const wy = advWay(id, tx, ty, r.rid, rx, ry, r.name, r.door === 'tele' ? 'tele' : undefined), go = wy.use, lk = r.lock;
+  wy.st = A => { const q = AV[r.rid.slice(0, r.rid.length - r.key.length - 1)]; return q && avRoomDone(A, q._rooms ? q._rooms[r.key] : r, q, 0) ? 'ok' : 'todo'; };
   if (!lk) return wy;
   wy.use = (A, e) => {
     if (A.flag('dr_' + r.rid)) return go(A, e);
@@ -9556,7 +9567,7 @@ const AV_DECOY = ['pizza', 'helado', 'zumo', 'magdalena', 'bocadillo', 'platano'
 function avShopM(id, o) {
   const w = qw(o.who), k = 'av_' + (o._k || id), list = [o.sells].concat(o.decoys || []);
   const pr = it => it === o.sells ? o.price || 8 : (o.price || 8) - 2 + (it.length % 4);
-  return { id, kind: 'npc', name: w.name, img: w.img, fr: w.fr, h: w.h, float: w.float, fy: w.float ? -20 : 0, lbl: '🛒 TIENDA', mark: A => !A.flag(k) && A.coins() >= pr(o.sells),
+  return { id, kind: 'npc', name: w.name, img: w.img, fr: w.fr, h: w.h, float: w.float, fy: w.float ? -20 : 0, lbl: '🛒 TIENDA', mark: A => !A.flag(k) && A.coins() >= pr(o.sells), st: A => A.flag(k) ? 'ok' : 'todo',
     use: A => { const items = list.filter(it => ADV_IT[it] && !A.flag(k + it)).sort();
       if (!items.length) return A.say(w, ['¡Me lo has comprado todo! ¡Gracias, Lucas!']);
       A.say(w, A.flag(k + 's') ? ['¿Vienes a comprar algo más?'] : (A.flag(k + 's', 1), o.hello || ['¡Bienvenido a mi tienda, Lucas!', 'Tengo cosas muy chulas. Mira bien lo que necesitas antes de comprar.']), () =>
