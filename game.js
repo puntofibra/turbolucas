@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.94';
+const VERSION = '1.95';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7439,9 +7439,9 @@ const advFem = w => !!w && (ADV_FEM.has(w.name) || w.fem);
 // texto para la voz: el que se ve en pantalla no cambia, pero el narrador lee una versión "hablable"
 const ADV_SAY_FIX = [[/\bUf+\b/gi, 'Uuuf'], [/\bUy\b/gi, 'Uuy'], [/\bAy\b/gi, 'Aay'], [/\bAr\b/g, 'Aar'], [/\bEh\b/gi, 'Eeh'], [/\bOh\b/gi, 'Ooh'], [/\bUps\b/gi, 'Uups'], [/\bOk\b/gi, 'vale'], [/\bkm\/h\b/gi, 'kilómetros por hora']];
 function advSpeech(t) {
-  let x = String(t).replace(/<[^>]+>/g, ' ').replace(/[«»"“”()]/g, ' ').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu, ' ');
+  let x = String(t).replace(/\bPC\b/g, 'pecé').replace(/\bTV\b/g, 'tele').replace(/\bQR\b/g, 'cu erre').replace(/\bNFC\b/g, 'ene efe ce').replace(/<[^>]+>/g, ' ').replace(/[«»"“”()]/g, ' ').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu, ' ');
   x = x.replace(/[A-ZÁÉÍÓÚÜÑ]{2,}[A-ZÁÉÍÓÚÜÑ\-]*/g, w => w.charAt(0) + w.slice(1).toLowerCase());          // las palabras en mayúsculas no se deletrean
-  x = x.replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+/g, w => /[aeiouáéíóúüAEIOUÁÉÍÓÚÜ]/.test(w) ? w : ' ');          // fuera ruidos sin vocales (brrr, grrr, bzzzt, shhh, mmm, hmpf, zzz…)
+  x = x.replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+/g, w => /[aeiouáéíóúüAEIOUÁÉÍÓÚÜ]/.test(w) || /^y$/i.test(w) ? w : ' ');          // fuera ruidos sin vocales (brrr, grrr, bzzzt, shhh, mmm, hmpf, zzz…)
   x = x.replace(/([a-záéíóúñ])\1{2,}/gi, '$1$1');          // «bieeeen» → «bieen»
   for (const [re, by] of ADV_SAY_FIX) x = x.replace(re, by);
   x = x.replace(/¡\s*[,.…!]*\s*!/g, ' ').replace(/\s+/g, ' ').trim();
