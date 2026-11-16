@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.91';
+const VERSION = '1.92';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7654,7 +7654,7 @@ function advExitPad(e) {          // plataforma de luz donde Lucas se coloca par
   if (Math.random() < 0.35) parts.push({ x: x + (Math.random() - 0.5) * 80, y: y - 2, vx: 0, vy: -50 - Math.random() * 60, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#8affc0' : '#9fefff', size: 2, grav: 0 });
 }
 function advExitSign(e) {
-  const pad = e.kind === 'way' && !!ADV_FAC[ADV_BG[curId]]; if (pad) advExitPad(e); else if (e.kind === 'way') { e._nodoor = false; e._fac = 0; e.lbl = '🚪 SALIR'; }
+  const pad = e.kind === 'way' && !!(ADV_FACR[curId] || ADV_FAC[ADV_BG[curId]] || avFacName(L.name, ADV_BG[curId])); if (pad) advExitPad(e); else if (e.kind === 'way') { e._nodoor = false; e._fac = 0; e.lbl = '🚪 SALIR'; }
   const im = xi('adv-salida'); if (!okI(im)) return; const w = 176, h = w * im.naturalHeight / im.naturalWidth, top = e.kind === 'tele' ? e.y - 2 * T - 46 - 56 : pad ? e.y - 182 : e.y - e.h - 46, x = e.x, y = top - h - 6 + Math.sin(time * 1.5) * 2;
   const on = 0.55 + 0.45 * Math.abs(Math.sin(time * 2.4)), fl = Math.random() < 0.015 ? 0.3 : 1, a = on * fl;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y + h * 0.55, 6, x, y + h * 0.55, w * 0.9); gg.addColorStop(0, 'rgba(80,255,120,' + 0.35 * a + ')'); gg.addColorStop(1, 'rgba(80,255,120,0)'); ctx.fillStyle = gg; ctx.fillRect(x - w, y - h * 0.4, w * 2, h * 2); ctx.restore();
@@ -7663,8 +7663,25 @@ function advExitSign(e) {
   ctx.fillText('SALIDA', x - h * 0.12, y + h * 0.57); ctx.beginPath(); const ax = x + w * 0.29, ay = y + h * 0.57, s = h * 0.13, k = (time * 2) % 1; ctx.moveTo(ax - s + k * 3, ay - s); ctx.lineTo(ax + s * 0.6 + k * 3, ay); ctx.lineTo(ax - s + k * 3, ay + s); ctx.fill(); ctx.restore(); ctx.textBaseline = 'alphabetic';
   if (Math.random() < 0.06) parts.push({ x: x + (Math.random() - 0.5) * w * 0.7, y: y + h * 0.6, vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 30, life: 0.6, max: 0.6, col: '#8aff9a', size: 1.8, grav: 0 });
 }
+const ADV_FACR = {};          // fachada elegida para cada sala (para salir igual que se entró)
+const ADV_FACN = [[/TIBUR|DIENTES/, 'cuevatiburon'], [/CASTILLO DE HIELO|CASTILLO DE ESCARCHA/, 'castillohielo'], [/PALACIO|ARRECIFE|CORAL|JOYERÍA DEL MAR|DOÑA ALMEJA|CASA DE TINTA/, 'palacio'], [/BARCO|CAMAROTE|BODEGA/, 'barco'],
+  [/PATINA|LAGO HELADO/, 'patinaje'], [/FÁBRICA DE HIELO|ALMACÉN DE HIELO|CONGELADOR/, 'fabricahielo'], [/INVERNADERO|JARDÍN|HUERTO/, 'invernadero'], [/POBLADO|CABAÑA DEL EXPLORADOR|SETAS/, 'poblado'],
+  [/CHATARR|DESGUACE|RECICLAJE|FÁBRICA ABANDONADA/, 'chatarreria'], [/MOLINO/, 'molino'], [/TESORO/, 'tesoro'], [/FARO/, 'faro'], [/OBSERVATORIO/, 'observatorio'], [/RELOJ|TIC-TAC/, 'reloj'],
+  [/NUBES|DEL VIENTO/, 'torrenubes'], [/TORRE|VIGILANCIA|GUARDIA|FORTALEZA/, 'torre'], [/FORJA/, 'forja'], [/MÁQUINAS|GENERADOR/, 'maquinas'], [/TALLER|HERRAMIENTAS/, 'taller'], [/LABORATORIO|SECRETO/, 'laboratorio'],
+  [/HANGAR|NAVE/, 'hangar'], [/CONTROL|ESTACIÓN/, 'control'], [/RESTAURANTE|CAFETER|COMEDOR|COCINA/, 'restaurante'], [/JUGUET|JUEGOS/, 'jugueteria'], [/JOYER/, 'joyeria'], [/GLOBO|REGALO|FIESTA/, 'globos'],
+  [/MERCADO|TIENDA|BAZAR|ALMACÉN/, 'mercadillo'], [/CABAÑA/, 'cabana'], [/IGLÚ|ALDEA/, 'iglu'], [/PÁJAROS|NIDO|URRACA/, 'pajaros'], [/CASETA|PERRERA|VETERINARIO|JAULA/, 'perrera'],
+  [/TEMPLO DEL SOL|PUERTA DEL SOL/, 'templosol'], [/LUNA|ESTRELLAS/, 'temploluna'], [/PIRÁMIDE/, 'piramide'], [/CÁMARA|FARAÓN|TUMBA/, 'camara'], [/TEMPLO/, 'templo?'],
+  [/CUEVA|GRUTA|CRÁTER|TÚNEL/, 'cueva?'], [/DORMITORIO|CASA|SALA DE ESPERA|DESCANSO/, 'casa']];
+function avFacName(nm, bg) {
+  if (ADV_FAC[bg]) return ADV_FAC[bg]; const th = (AV[String(curId).split('-').slice(0, 2).join('-')] || {}).th;
+  for (const [re, k] of ADV_FACN) if (re.test(nm || '')) {
+    if (k === 'templo?') return th === 'LD' || bg === 'piramide' ? 'templosol' : 'temploselva';
+    if (k === 'cueva?') return th === 'LO' || /oceano|cuevamar|acuario/.test(bg) ? 'cuevamar' : th === 'LV' || /volcan|forja/.test(bg) || /CALIENTE|LAVA|BRASA|FUEGO|MAGMA/.test(nm) ? 'cuevalava' : th === 'ICE' || /hielo/.test(bg) || /HIEL|HELAD|OSO/.test(nm) ? 'cuevahielo' : 'cueva';
+    return k; }
+  return null;
+}
 function advBuilding(e) {
-  { const bg = ADV_BG[e.room], f = bg && ADV_FAC[bg], fi = f && xi('fac-' + f);
+  { const bg = ADV_BG[e.room], f = ADV_FACR[e.room] || avFacName(e.name, bg), fi = f && xi('fac-' + f); if (f) ADV_FACR[e.room] = f;
     if (fi && okI(fi)) { const H = 330, W = H * fi.naturalWidth / fi.naturalHeight, db = ADV_FACDOOR[f] || [0.4, 0.75, 0.6, 0.97], x0 = e.x - W * (db[0] + db[2]) / 2, y0 = e.y + 4 - H * db[3]; e._nodoor = true;
       ctx.drawImage(fi, x0, y0, W, H);
       const nm = String(e.name || ''); ctx.font = '900 14px system-ui'; ctx.textAlign = 'center'; const tw = ctx.measureText(nm).width + 18, ty = y0 - 10;
@@ -7721,16 +7738,50 @@ function advDrawWorld() {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(o.x, y, 3, o.x, y, 44); gg.addColorStop(0, 'rgba(255,250,200,.75)'); gg.addColorStop(1, 'rgba(255,240,150,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(o.x, y, 44, 0, 6.283); ctx.fill(); ctx.restore();
     { const oi = xi(oimg); if (o.fr) { oi._n = o.fr; oi._f = o.frame || 0; } spr(oi, o.x, y, it.h, 0.5, 0.5, false, Math.sin(time * 2 + o.x) * 0.12); }
     if (Math.random() < 0.12) parts.push({ x: o.x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40, vx: 0, vy: -30, life: 0.7, max: 0.7, col: '#ffffff', size: 2, grav: 0 }); }
-  advFxPro(A);
+  advFxPro(A); advAmbLife(A);
 }
 /* ---------- efectos pro de la aventura: motas de luz, rayos de luz en las salas, rayos láser y luz al arreglar algo ---------- */
 // fondos de salas que aún no tienen dibujo propio: usan otro parecido hasta que lleguen los nuevos
 const ADV_BG_ALIAS = {};
 // salas que ya existían y ahora tienen su dibujo propio (según su nombre)
-const ADV_BG_NAME = [[/BIBLIOTECA|SALA DE LECTURA/, 'biblioteca'], [/HOSPITAL|CONSULTA|ENFERMER|FARMACIA/, 'hospital'], [/CORREOS/, 'correos'], [/COCINA/, 'cocina'], [/DORMITORIO/, 'dormitorio'], [/OBSERVATORIO/, 'observatorio'],
+const ADV_BG_NAME = [[/CÁMARA SECRETA|CÁMARA DEL FARAÓN|TUMBA/, 'camara'], [/TESORO/, 'tesoro'], [/MOLINO/, 'molino'], [/RELOJ/, 'relojeria'], [/OFICINA|DESPACHO/, 'oficina'], [/JOYER/, 'joyeria'], [/SALA DE CONTROL/, 'control'], [/HANGAR/, 'hangar'],
+  [/CUEVA SUBMARINA|CUEVA DE DIENTES|BARCO HUNDIDO/, 'cuevamar'], [/PATINA|LAGO HELADO/, 'patinaje'], [/CASTILLO DE HIELO|CASTILLO DE ESCARCHA/, 'castillohielo'], [/PALACIO DE CORAL|PALACIO DE LA REINA|ARRECIFE|JARDÍN DE CORALES/, 'palacio'],
+  [/BIBLIOTECA|SALA DE LECTURA/, 'biblioteca'], [/HOSPITAL|CONSULTA|ENFERMER|FARMACIA/, 'hospital'], [/CORREOS/, 'correos'], [/COCINA/, 'cocina'], [/DORMITORIO/, 'dormitorio'], [/OBSERVATORIO/, 'observatorio'],
   [/ESCUELA|LA CLASE|PROFESORES/, 'escuela'], [/CINE/, 'cine'], [/PASTELER|PANADER/, 'pasteleria'], [/FARO/, 'faro'], [/TEATRO|CAMERINO|ESCENARIO/, 'teatro'], [/GRANJA|GRANERO/, 'granja'], [/CASA DEL ÁRBOL/, 'casaarbol'],
   [/MUSEO|GALERÍA/, 'museo'], [/MERCADO|BAZAR/, 'mercado'], [/MINA/, 'mina'], [/TRONO/, 'trono'], [/MAZMORRA|CALABOZO/, 'mazmorra'], [/POCIONES/, 'pociones'], [/FORJA/, 'forja'], [/ACUARIO/, 'acuario'], [/BARCO PIRATA|CAMAROTE|BODEGA/, 'barco']];
 const advBgFix = (nm, bg) => { if (!bg) return bg; for (const [re, b] of ADV_BG_NAME) if (re.test(nm || '')) return b; return bg; };
+/* ---------- vida en los niveles: salas a oscuras, chispas de máquinas rotas y goteras ---------- */
+const AMB_SND = { t: 0 };
+function ambSpark(v) { audio(); if (!AC || !sndOn) return; try { const t0 = AC.currentTime, n = Math.floor(AC.sampleRate * 0.12), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (Math.random() < 0.08 ? 1 : 0.15) * (1 - i / n);
+  const s = AC.createBufferSource(), hp = AC.createBiquadFilter(), gg = AC.createGain(); s.buffer = b; hp.type = 'highpass'; hp.frequency.value = 2500; gg.gain.value = 0.5 * v; s.connect(hp); hp.connect(gg); gg.connect(master); s.start(t0);
+  tone(3200, 900, 0.05, 'square', 0.03 * v); } catch (e) {} }
+function ambDrip(v) { audio(); if (!AC || !sndOn) return; tone(900, 1900, 0.07, 'sine', 0.09 * v); tone(1900, 1300, 0.05, 'sine', 0.04 * v, 0.06); }
+function advAmbLife(A) {
+  const px = P.x + P.w / 2, py = P.y + P.h / 2, now = time; let dark = null;
+  for (const e of A.ents) { if (e.kind !== 'gate') continue; const nm = e.name || '', fixed = e.alt && e.alt(A.api), near = Math.abs(e.x - px) < 520, vol = Math.max(0, 1 - Math.abs(e.x - px) / 520);
+    if (!fixed && (e.need === 'bombilla' || /LUCES|LÁMPARA|SALA OSCURA|LUZ/.test(nm)) && ADV_BG[curId]) dark = dark || e;
+    if (!fixed && /TESLA|ALTA TENSIÓN/.test(nm) && near) {          // rayos de alta tensión
+      const top = e.y - e.h * 0.92; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 2; k++) { if (Math.random() < 0.5) continue; const ex = e.x + (Math.random() - 0.5) * 260, ey = e.y - 4; ctx.strokeStyle = 'rgba(150,230,255,.9)'; ctx.lineWidth = 2.5; ctx.shadowColor = '#7fe9ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.moveTo(e.x, top);
+        for (let i = 1; i <= 7; i++) ctx.lineTo(e.x + (ex - e.x) * i / 7 + (Math.random() - 0.5) * 30, top + (ey - top) * i / 7); ctx.stroke(); }
+      ctx.restore(); if (now - AMB_SND.t > 0.18) { AMB_SND.t = now; ambSpark(vol * 1.3); } }
+    if (!fixed && /GENERADOR|CUADRO|PANEL|ELÉCTRIC|CABLE|MÁQUINA|ORDENADOR|NAVE/.test(nm) && near) {          // chispas
+      if (Math.random() < 0.05) { const sx = e.x + (Math.random() - 0.5) * e.h * 0.6, sy = e.y - e.h * (0.3 + Math.random() * 0.5);
+        for (let i = 0; i < 14; i++) parts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 380, vy: -Math.random() * 320, life: 0.35 + Math.random() * 0.3, max: 0.6, col: Math.random() < 0.5 ? '#fff6a0' : '#7fe9ff', size: 2 + Math.random() * 1.5, grav: 900 });
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(sx, sy, 2, sx, sy, 60); gg.addColorStop(0, 'rgba(180,240,255,.8)'); gg.addColorStop(1, 'rgba(180,240,255,0)'); ctx.fillStyle = gg; ctx.fillRect(sx - 60, sy - 60, 120, 120); ctx.restore();
+        if (now - AMB_SND.t > 0.25) { AMB_SND.t = now; ambSpark(vol); } } }
+    if (!fixed && /TUBERÍA|FUGA|GOTERA|DEPÓSITO/.test(nm)) {          // gotas que caen
+      const dx = e.x + 10, dy = e.y - e.h * 0.55; if (Math.random() < 0.12) parts.push({ x: dx + (Math.random() - 0.5) * 16, y: dy, vx: 0, vy: 30, life: 0.9, max: 0.9, col: '#8fd8ff', size: 3, grav: 700 });
+      ctx.fillStyle = 'rgba(120,200,255,.35)'; ctx.beginPath(); ctx.ellipse(dx, e.y - 2, 26 + Math.sin(now * 3) * 3, 5, 0, 0, 6.283); ctx.fill();
+      if (near && (e._dr || 0) < now) { e._dr = now + 0.7 + Math.random() * 0.6; ambDrip(vol); } } }
+  if (dark) {          // sala a oscuras: solo se ve alrededor de Lucas (mucho más con la linterna)
+    const lin = A.api.has && A.api.has('linterna'), R0 = lin ? 210 : 55, gg = ctx.createRadialGradient(px, py, R0 * 0.55, px, py, R0 + (lin ? 110 : 70));
+    gg.addColorStop(0, 'rgba(2,3,12,0)'); gg.addColorStop(1, 'rgba(2,3,12,' + (lin ? 0.93 : 0.96) + ')'); ctx.save(); ctx.fillStyle = gg; ctx.fillRect(cam.x - 50, (cam.y || 0) - 50, VW + 100, VHv + 100);
+    if (lin) { ctx.globalCompositeOperation = 'lighter'; const f = P.face < 0 ? -1 : 1, cg = ctx.createRadialGradient(px + f * 140, py, 10, px + f * 140, py, 170); cg.addColorStop(0, 'rgba(255,240,180,.14)'); cg.addColorStop(1, 'rgba(255,240,180,0)'); ctx.fillStyle = cg; ctx.fillRect(px - 340, py - 200, 680, 400); }
+    ctx.restore();
+    if (!A._darkSaid) { A._darkSaid = 1; setTimeout(() => { try { if (!ADVT.on) A.api.say(NR, [lin ? '¡Qué oscuro! Menos mal que llevas la linterna.' : '¡Está todo oscurísimo! No se ve nada… Con una linterna sería más fácil.']); } catch (e) {} }, 900); } }
+}
 function advFxPro(A) {
   const x0 = cam.x - 40, y0 = cam.y || 0; ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < 22; i++) { const sp = 6 + (i % 5) * 4, px = x0 + ((i * 397.3 + time * sp) % (VW + 80)), py = y0 + ((i * 211.7 + time * (3 + i % 4)) % VHv) + Math.sin(time * 0.7 + i) * 18;
@@ -7756,7 +7807,7 @@ function advFxPro(A) {
 const ADV_BG = { 'A-1t': 'tienda', 'A-2a': 'laboratorio', 'A-2b': 'invernadero', 'A-3c': 'cueva', 'A-4p': 'piramide', 'A-5t': 'taller', 'A-6c': 'caja', 'A-7c': 'cueva', 'A-8m': 'maquinas', 'A-9t': 'templo',
   'A-10s': 'sotano', 'A-11b': 'laboratorio', 'A-12': 'estacion', 'A-14c': 'carpa', 'A-15': 'fiesta', 'A-15a': 'tienda', 'A-15b': 'taller', 'A-15c': 'invernadero', 'A-15d': 'piramide',
   'A-17c': 'caja', 'A-18t': 'taller', 'A-19i': 'invernadero', 'A-22b': 'laboratorio', 'A-23t': 'templo', 'A-25m': 'maquinas', 'A-26s': 'sotano', 'A-30': 'estacion', 'A-30a': 'tienda', 'A-30b': 'invernadero', 'A-30c': 'sotano', 'A-30d': 'carpa' };
-const ADV_BGF = { mercado: 0.86, casaarbol: 0.86, teatro: 0.86, granja: 0.86, faro: 0.86, pasteleria: 0.86, cine: 0.87, escuela: 0.85, observatorio: 0.88, dormitorio: 0.86, cocina: 0.87, correos: 0.84, biblioteca: 0.84, hospital: 0.80,
+const ADV_BGF = { control: 0.84, joyeria: 0.84, oficina: 0.85, hangar: 0.84, relojeria: 0.81, molino: 0.81, tesoro: 0.80, camara: 0.84, cuevamar: 0.86, patinaje: 0.86, castillohielo: 0.86, palacio: 0.86, mercado: 0.86, casaarbol: 0.86, teatro: 0.86, granja: 0.86, faro: 0.86, pasteleria: 0.86, cine: 0.87, escuela: 0.85, observatorio: 0.88, dormitorio: 0.86, cocina: 0.87, correos: 0.84, biblioteca: 0.84, hospital: 0.80,
   acuario: 0.86, barco: 0.87, forja: 0.855, pociones: 0.86, mazmorra: 0.85, trono: 0.87, museo: 0.86, mina: 0.85, fiesta: 0.84, estacion: 0.815, carpa: 0.875, sotano: 0.845, templo: 0.845, maquinas: 0.845, caja: 0.865, taller: 0.855, piramide: 0.86, cueva: 0.85, invernadero: 0.875, laboratorio: 0.80, tienda: 0.87 };
 function advRoomBg() {          // fondo dibujado de la sala (se repite por pisos y a lo ancho)
   const n0 = ADV_BG[curId], n = n0 && (ADV_BG_ALIAS[n0] || n0); if (!n) return false; const im = xi('sala-' + n); if (!okI(im)) return false;
@@ -8592,6 +8643,8 @@ function advStd(o) {
     else if (k === 'cage') { B.block(x, x + 1, g - 3, g - 1); B.block(x + 3, x + 8, g - 5, g - 1); B.block(x + 4, x + 7, g - 4, g - 1, ' '); B.fake(x + 5, x + 6, g - 5, g - 5); B.row(x + 3, x + 8, g - 7); S[f[2]] = [x + 5, g - 1]; }
     else if (k === 'bridge') { P(x, x + 1, g - 3); P(x + 3, x + 13, g - 6); B.row(x + 3, x + 13, g - 8); S[f[2]] = [x + 10, g - 7]; }
     else if (k === 'mover') { B.mover(x + 1, g - 4, 3, 110, 0, 1.1, (x % 7) / 7); P(x + 9, x + 12, g - 8); B.arc(x + 8, x + 13, g - 11, 1); S[f[2]] = [x + 11, g - 9]; }
+    else if (k === 'trampo') { B.pad(x + 1, g - 1); P(x + 4, x + 8, g - 9); B.row(x + 4, x + 8, g - 10); B.arc(x, x + 3, g - 12, 1); S[f[2]] = [x + 6, g - 10]; }
+    else if (k === 'lift') { B.lift(x + 1, x + 3, g - 11, g - 1); P(x + 5, x + 9, g - 11); B.row(x + 5, x + 9, g - 12); S[f[2]] = [x + 8, g - 12]; }
     // ---- adornos entre una cosa y otra (sin objetos) ----
     else if (k === 'fbump') { B.block(x, x + 3, g - 1, g - 1); B.block(x + 1, x + 2, g - 2, g - 2); }
     else if (k === 'fbox') { B.box(x + 1, g - 4, 'chip'); B.box(x + 2, g - 4, 'chip'); B.box(x + 3, g - 4, 'chip'); }
@@ -8983,6 +9036,7 @@ const QAMB = { cielo: () => AMB_SKY, mar: g => [{ k: 'pez', n: 18, y0: 2, y1: g 
   mariposas: g => [{ k: 'mariposa', n: 7, y0: 5, y1: g - 2, sp: 40 }], aviones: () => [{ img: 'enemigo-avioneta', fr: 4, n: 3, y0: 1, y1: 5, h: 42, sp: 90 }, { k: 'mariposa', n: 5, y0: 6, y1: 12, sp: 40 }],
   gaviotas: () => [{ img: 'enemigo-gaviota', fr: 4, n: 5, y0: 2, y1: 8, h: 34, sp: 60 }], buitres: () => [{ img: 'enemigo-buitre', fr: 4, n: 3, y0: 1, y1: 6, h: 40, sp: 50 }] };
 function advQuest(id, q) {
+  if (!q.plan.some(p => p[0] === 'shop')) { const pos = Math.max(1, q.plan.length - 2); q.plan.splice(pos, 0, ['shop', { who: q.boss === 'CHEF FOGÓN' ? 'BOLITA' : 'CHEF FOGÓN', price: 6, hello: ['¡Hola, Lucas! Vendo de todo.', 'Con las monedas que encuentres por el camino puedes comprarme cosas.'] }]); }
   const fem = q.g !== 'o', una = fem ? 'una' : 'un', otra = fem ? 'otra' : 'otro', las = fem ? 'las' : 'los', la = fem ? 'la' : 'lo';
   const Cap = t => t.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()), itn = () => ADV_IT[q.need].n;
   const ROOMS = []; q.plan.forEach(p => { if (p[0] === 'room') ROOMS.push(Object.assign({ rid: id + 'abcdefgh'[ROOMS.length] }, p[1])); });
@@ -9395,7 +9449,7 @@ function avPicker(A, w, q, okId, onOk, wrong) {          // elegir un objeto de 
 }
 // pistas solo si el niño está perdido de verdad: más de 4 minutos sin avanzar y hablando con unos y otros sin saber qué hacer
 const avProg = A => { A.flag('av_lp', G.clock); A.flag('av_tk', 0); A.flag('av_hl', 0); };
-const AV_AT = { tower: 'arriba del todo de una torre de plataformas', trench: 'en el fondo de un foso', mushjump: 'en una plataforma alta (¡la seta te ayuda a saltar!)', vinecliff: 'encima de un acantilado (trepa por la liana)', pillars: 'en lo alto de unos pilares', tunnel: 'dentro de un túnel secreto (sus paredes no son de verdad)', springup: 'muy arriba, saltando de plataforma en plataforma', stairs: 'en la cima de una escalera de piedra', cage: 'dentro de una jaula de piedra (entra por arriba)', bridge: 'encima de un puente', mover: 'en una plataforma alta (súbete a la plataforma que se mueve)', hill: 'en lo alto de una colina', plats: 'subiendo por unas plataformas', rock: 'dentro de una roca agrietada (¡dispárale con el láser!)', cave: 'en una cueva, detrás de una pared que no es de verdad', plat: 'encima de una plataforma', high: 'arriba del todo, subiendo por las plataformas', floor: 'en el suelo' };
+const AV_AT = { trampo: 'en una plataforma alta (¡salta en el trampolín!)', lift: 'en una plataforma alta (súbete al ascensor)', tower: 'arriba del todo de una torre de plataformas', trench: 'en el fondo de un foso', mushjump: 'en una plataforma alta (¡la seta te ayuda a saltar!)', vinecliff: 'encima de un acantilado (trepa por la liana)', pillars: 'en lo alto de unos pilares', tunnel: 'dentro de un túnel secreto (sus paredes no son de verdad)', springup: 'muy arriba, saltando de plataforma en plataforma', stairs: 'en la cima de una escalera de piedra', cage: 'dentro de una jaula de piedra (entra por arriba)', bridge: 'encima de un puente', mover: 'en una plataforma alta (súbete a la plataforma que se mueve)', hill: 'en lo alto de una colina', plats: 'subiendo por unas plataformas', rock: 'dentro de una roca agrietada (¡dispárale con el láser!)', cave: 'en una cueva, detrás de una pared que no es de verdad', plat: 'encima de una plataforma', high: 'arriba del todo, subiendo por las plataformas', floor: 'en el suelo' };
 function avNext(q, A) {          // el siguiente paso que el niño podría dar ahora mismo
   const R = q._rooms, cands = [], placeOf = w => w ? 'en ' + R[w].name.toLowerCase() : 'por el camino';
   if (A.has(q.need)) return { p: 0, t: 'hero' };
@@ -9442,7 +9496,7 @@ function avNpc(id, o) {
 // máquina, cofre cerrado, puerta atascada…: la miras, y si tienes la herramienta buena se arregla y a veces suelta algo
 function avMach(id, o) {
   o = avMQ(o); const k = 'av_' + (o._k || id), nm = o.name || 'MÁQUINA', me = { name: nm, img: o.img };
-  return { id, kind: 'gate', name: nm, img: o.img, fr: o.fr, frame: o.f0 || 0, h: o.h || 100, lbl: o.lbl || '🔧 USAR', img2: o.img2, beams: o.beams, alt: A => A.flag(k), glowIf: A => A.flag(k) ? 'rgba(80,255,160,.35)' : null,
+  return { id, kind: 'gate', name: nm, img: o.img, fr: o.fr, frame: o.f0 || 0, h: o.h || 100, lbl: o.lbl || '🔧 USAR', img2: o.img2, beams: o.beams, need: o.need, alt: A => A.flag(k), glowIf: A => A.flag(k) ? 'rgba(80,255,160,.35)' : null,
     mark: A => !A.flag(k) && A.has(o.need),
     use: (A, e) => {
       if (A.flag(k)) return A.say(me, o.done || ['Ya funciona perfectamente.']);
@@ -9469,7 +9523,7 @@ const avItem = (it, tx, ty, msg, key) => ({ id: it, tx, ty, msg: A => { if (key)
 
 
 /* ---------- 30 recorridos distintos para las aventuras (dónde se esconden las cosas, qué hay entre medias y dónde está el protagonista) ---------- */
-const AV_FW = { tower: 13, trench: 12, mushjump: 14, vinecliff: 11, pillars: 17, tunnel: 14, springup: 15, stairs: 16, cage: 12, bridge: 17, mover: 16, hill: 11, plats: 17, rock: 11, cave: 28, plat: 9 };
+const AV_FW = { trampo: 12, lift: 13, tower: 13, trench: 12, mushjump: 14, vinecliff: 11, pillars: 17, tunnel: 14, springup: 15, stairs: 16, cage: 12, bridge: 17, mover: 16, hill: 11, plats: 17, rock: 11, cave: 28, plat: 9 };
 const AV_PAT = [
   ['tower', 'cave', 'bridge', 'rock'], ['trench', 'mushjump', 'tunnel', 'pillars'], ['vinecliff', 'stairs', 'cage', 'mover'], ['plats', 'springup', 'trench', 'bridge'],
   ['stairs', 'rock', 'tower', 'tunnel'], ['mover', 'pillars', 'cave', 'mushjump'], ['cage', 'bridge', 'springup', 'trench'], ['tunnel', 'vinecliff', 'plats', 'stairs'],
@@ -9480,6 +9534,7 @@ const AV_PAT = [
   ['plat', 'tunnel', 'mushjump', 'bridge'], ['pillars', 'cave', 'cage', 'springup'], ['rock', 'stairs', 'vinecliff', 'mover'], ['mushjump', 'trench', 'bridge', 'tunnel'],
   ['hill', 'tower', 'pillars', 'cage'], ['trench', 'vinecliff', 'springup', 'stairs']];
 const AV_FILL = [['fbox', 'farc'], ['fmush', 'fbump'], ['fpil', 'fplat'], ['fstep', 'fbox'], ['farc', 'fmush'], ['fplat', 'fstep'], ['fbump', 'fpil'], ['fbox', 'fmush', 'fplat']];
+AV_PAT.forEach((p, i) => { if (i % 5 === 0) p[3] = 'trampo'; else if (i % 5 === 2) p[3] = 'lift'; });
 function avPatOf(id) { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 100003; const n = +(id.split('-')[1] || 0); return { i: (n * 7 + (id[0] === 'C' ? 11 : 0)) % AV_PAT.length, h }; }
 function avLayout(id, q) {          // reparte los escondites y el orden según el recorrido de esta aventura
   if (q._lay) return; q._lay = 1; const pt = avPatOf(id), sp = AV_PAT[pt.i], r = GZr(id + 'lay'); let k = 0;
@@ -9490,6 +9545,20 @@ function avLayout(id, q) {          // reparte los escondites y el orden según 
   q.main = lead.concat(rest, tail);
 }
 const GZr = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); let a = h >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+
+// tienda: vende lo que hace falta y otras cosas que no sirven; el niño tiene que elegir bien (si se equivoca, hay más monedas por el nivel)
+const AV_DECOY = ['pizza', 'helado', 'zumo', 'magdalena', 'bocadillo', 'platano', 'zanahoria', 'queso', 'miel', 'leche', 'espada', 'escudo', 'vela', 'campana', 'lapiz', 'regla', 'pincel', 'ceras', 'maracas', 'flauta', 'globo', 'pelota', 'caramelo', 'galleta', 'paraguas', 'tirita', 'osito', 'libro', 'cohete', 'planeta'];
+function avShopM(id, o) {
+  const w = qw(o.who), k = 'av_' + (o._k || id), list = [o.sells].concat(o.decoys || []);
+  const pr = it => it === o.sells ? o.price || 8 : (o.price || 8) - 2 + (it.length % 4);
+  return { id, kind: 'npc', name: w.name, img: w.img, fr: w.fr, h: w.h, float: w.float, fy: w.float ? -20 : 0, lbl: '🛒 TIENDA', mark: A => !A.flag(k) && A.coins() >= pr(o.sells),
+    use: A => { const items = list.filter(it => ADV_IT[it] && !A.flag(k + it)).sort();
+      if (!items.length) return A.say(w, ['¡Me lo has comprado todo! ¡Gracias, Lucas!']);
+      A.say(w, A.flag(k + 's') ? ['¿Vienes a comprar algo más?'] : (A.flag(k + 's', 1), o.hello || ['¡Bienvenido a mi tienda, Lucas!', 'Tengo cosas muy chulas. Mira bien lo que necesitas antes de comprar.']), () =>
+        A.ask(w, '¿Qué quieres comprar? Tienes ' + A.coins() + ' monedas.', items.map(it => ({ t: '🪙 ' + ADV_IT[it].n.toUpperCase() + ' (' + pr(it) + ')', f: () => {
+          if (!A.pay(pr(it))) return A.say(w, ['¡Uy! Te faltan monedas.', 'Busca más monedas por ahí: en cofres, cajas y sitios escondidos.']);
+          A.flag(k + it, 1); if (it === o.sells) A.flag(k, 1); avProg(A); advGot(A, it, ['¡Has comprado ' + avUn(it) + '!']); } })).concat([{ t: 'NADA, GRACIAS' }]))); } };
+}
 function advAv(id, q) {
   avLayout(id, q); AV[id] = q; const rooms = {};
   Object.keys(q.rooms || {}).forEach((key, i) => { rooms[key] = Object.assign({ rid: id + '-' + key, key }, q.rooms[key]); });
@@ -9508,6 +9577,7 @@ function advAv(id, q) {
       for (const [k, o, lx] of lay) {
         if (k === 'npc') ents.push(avNpc(r.rid + 'n' + lx, o)), ents[ents.length - 1].tx = lx + 2, ents[ents.length - 1].ty = fl;
         else if (k === 'mach') { const e = avMach(r.rid + 'm' + lx, o); e.tx = lx + 2; e.ty = fl; ents.push(e); }
+        else if (k === 'shop') { const e = avShopM(r.rid + 's' + lx, o); e.tx = lx + 2; e.ty = fl; ents.push(e); }
         else if (k === 'door') { const sr = rooms[p1(o)]; DPOS[id + '/' + sr.key] = lx + 2; ents.push(avDoor('d' + sr.rid, lx + 2, fl, sr, 4, 12)); }
         else if (k === 'item') { if (o.at === 'high') { P(lx, lx + 2, fl - 3); P(lx + 4, lx + 6, fl - 6); B.row(lx, lx + 2, fl - 4); items.push(avItem(o.it, lx + 5, fl - 7, o.msg, o._k)); } else if (o.at === 'rock') { B.block(lx, lx + 4, fl - 3, fl - 1); B.block(lx + 1, lx + 3, fl - 2, fl - 1, ' '); B.block(lx, lx, fl - 2, fl - 1, 'C'); items.push(avItem(o.it, lx + 2, fl - 1, o.msg, o._k)); } else items.push(avItem(o.it, lx + 1, fl - 1, o.msg, o._k)); }
         else if (k === 'deco') ents.push({ id: 'dc' + lx, kind: 'deco', tx: lx + 1, ty: fl, h: o.h || 90, img: o.img, fr: o.fr, frame: o.frame });
@@ -9537,6 +9607,7 @@ function advAv(id, q) {
       else if (k === 'plats') { feats.push(['plats', x, 'p' + x]); x += 17; }
       else if (k === 'npc') { const e = avNpc(id + 'n' + x, o); e.tx = x + 3; ents.push(e); x += 9; }
       else if (k === 'mach') { const e = avMach(id + 'm' + x, o); e.tx = x + 3; ents.push(e); x += 9; }
+      else if (k === 'shop') { const e = avShopM(id + 's' + x, o); e.tx = x + 3; ents.push(e); x += 9; }
       else if (k === 'chest') { ents.push(advChest('ch' + x, x + 2, 0, o.c || 8)); x += 6; }
       else if (k === 'deco') { ents.push({ id: 'dc' + x, kind: 'deco', tx: x + 2, ty: 0, h: o.h || 100, img: o.img, fr: o.fr, frame: o.frame, frameIf: o.frameIf }); x += o.w || 6; }
       else if (k === 'door') { const r = rooms[p[1]]; DPOS[id + '/' + r.key] = x + 3; ents.push(avDoor('w' + r.rid, x + 3, 0, r, 4, 12)); x += 9; }
@@ -10369,6 +10440,8 @@ function KA(id, n, img, th, hero, need, prob, fin, steps, s) {
     else if (k === 'fix') { const [, name, im, nd, gives, desc, w] = st; put(w, ['mach', { name, img: im, h: im === 'adv-fuente' ? 110 : im === 'adv-baul' ? 70 : 100, look: [desc, 'Parece que hace falta ' + avUn(nd) + '.'], need: nd, fix: ['¡Funciona! ¡Muy bien, Lucas!'], gives, done: ['Ya está arreglado.'] }]); }
     else if (k === 'talk') put(st[3], ['npc', { who: st[1], say: st[2] }]);
     else if (k === 'deco') put(st[2], ['deco', { img: st[1], h: st[3] || 90 }]);
+    else if (k === 'shop') { put(st[5], ['shop', { who: st[1], sells: st[2], decoys: st[3], price: st[4] }]); main.push(['chest', { c: 12 }]); }
+    else if (k === 'gift') put(st[3], ['npc', { who: st[1], say: ['¡Hola, Lucas! Soy ' + Cn(st[1]) + '.', '¡Toma, te regalo ' + avUn(st[2]) + '!'], gives: st[2] }]);
   }
   main.push(['hill', { h: 3 }]);
   advAv(id, { age: 6, n, img, th, amb: { ST: ['estrellas'], LO: ['mar'], LJ: ['luces', 'mariposas'], LD: ['buitres'], LS: ['aviones'], ICE: ['nieve'] }[th] || [], s: s || prob,
@@ -11224,6 +11297,7 @@ const GZ_M = [
   { name: 'CALDERO MÁGICO', img: 'deco-maquinas-2', need: 'pocion', look: 'Un caldero frío y vacío. Al lado hay un libro que dice: «Echa una poción y verás».', fix: '¡Glu, glu, plof! El caldero burbujea verde… ¡y de dentro sale algo flotando!', g: ['varita', 'libroh', 'estrella', 'pergamino'], th: ['LF', 'LJ', 'LS'] },
   { name: 'TELESCOPIO ROTO', img: 'deco-maquinas-2', need: 'cristalh', look: 'Un telescopio con la lente rota. Sin lente no se ve nada.', fix: 'Pones el cristal azul de lente… ¡ves algo brillante en el cielo y cae justo a tus pies!', g: ['estrella', 'meteorito', 'piedralunar', 'mapa'], th: ['ST', 'LS', 'ICE'] },
   { name: 'MÁQUINA DE HELADOS', img: 'deco-maquinas-2', need: 'cable', look: 'Una máquina de helados apagada. Tiene el cable de la luz roto.', fix: 'Cambias el cable… ¡rrrr! ¡Sale un cucurucho de fresa!', g: ['helado'] },
+  { name: 'TORRE TESLA DE ALTA TENSIÓN', img: 'enemigo-tesla', fr: 3, f0: 0, f1: 2, h: 120, need: 'alicate', look: '¡Una torre de alta tensión estropeada! Suelta rayos sin parar.', fix: 'Cortas el cable que daba chispazos… ¡la torre se calma y deja de echar rayos!', f: 1, pre: 'Hay un cortocircuito: la torre de alta tensión no para de echar rayos y no deja hacer nada.', door: '¡Una torre eléctrica suelta rayos delante de la puerta! Hay que arreglarla primero.' },
   { name: 'TUBERÍA ROTA', img: 'deco-maquinas-2', need: 'llavein', look: 'Una tubería que pierde agua por una tuerca floja.', fix: 'Aprietas la tuerca… ¡ya no gotea! El agua vuelve a correr.', f: 1, pre: 'No hay agua. Alguna tubería estará rota.', door: 'La compuerta está atascada: funciona con agua y no llega.' }
 ];
 // ---------- objetos finales: el problema del protagonista y el final feliz ----------
@@ -11282,6 +11356,9 @@ function gzChain(r, w, goal, depth, used, mUsed, out, allowF) {
   const ms = GZ_M.filter(m => !m.f && !mUsed.has(m.name) && !used.has(m.need) && (m.g === 'any' || m.g.includes(goal)) && (!m.th || m.th.includes(w)) && ADV_IT[m.need]);
   const ws = Object.keys(GZ_WANT).filter(k => !used.has(k) && ADV_IT[k] && k !== 'chip');
   const st = { gives: goal };
+  if (depth > 0 && depth <= 3 && !mUsed.has('§shop') && r() < 0.3) {          // se compra en una tienda (con cosas que no sirven para despistar)
+    mUsed.add('§shop'); st.k = 'shop'; st.sells = goal; st.price = 6 + Math.floor(r() * 4); st.decoys = GZ.mix(r, AV_DECOY.filter(d => !used.has(d) && d !== goal && ADV_IT[d])).slice(0, 2 + (r() < 0.5 ? 1 : 0)); out.push(st); return; }
+  if (depth > 0 && depth <= 2 && !mUsed.has('§gift') && r() < 0.2) { mUsed.add('§gift'); st.k = 'gift'; out.push(st); return; }          // alguien te lo regala
   if (allowF && depth <= 4 && r() < 0.6) {          // alguien que colecciona: hay que encontrarle varias cosas iguales
     const cs = Object.keys(GZ_COL).filter(k => !used.has(k) && ADV_IT[k] && GZ_COL[k][0]);
     if (cs.length) { const k = GZ.pick(r, cs), n = 3 + Math.floor(r() * 3); used.add(k); st.k = 'npc'; st.wants = k; st.n = n; out.push(st); for (let i = 0; i < n; i++) out.push({ k: 'item', it: k }); return; }
@@ -11298,6 +11375,8 @@ function gzChain(r, w, goal, depth, used, mUsed, out, allowF) {
     const k = GZ.pick(r, ws); st.k = 'npc'; st.wants = k; out.push(st); gzChain(r, w, k, depth - 1, used, mUsed, out, allowF);
   }
 }
+const gzSG = (r, st, nm) => st.k === 'shop' ? ['shop', { who: nm, sells: st.sells, decoys: st.decoys, price: st.price, hello: [GZ.pick(r, GZ_HI), '¡Bienvenido a mi tienda! Tengo de todo un poco.', 'Piensa bien qué te hace falta antes de gastar tus monedas.'] }]
+  : ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), GZ.pick(r, ['¡Qué bien que hayas venido! Tengo un regalo para ti.', 'Me has caído muy bien. Toma, te regalo esto.', 'Esto lo encontré hace tiempo y a mí no me sirve. ¡Para ti!'])], gives: st.gives, after: ['¡Espero que te sirva!'] }];
 function gzTitle(r, goal, hero) {
   const gen = [hero + ' Y ' + avArt(goal).toUpperCase(), 'EL GRAN LÍO DE {H}', '¡SOCORRO, {H}!', 'UN DÍA CON {H}', 'EL SECRETO DE {H}', 'LA MISIÓN DE {H}', 'EL MISTERIO DE {H}', 'LA SORPRESA DE {H}', 'EL DESPISTE DE {H}'];
   const opts = GZ.mix(r, GZ_GOAL[goal][2]).concat(GZ.mix(r, gen)).map(t => t.replace(' DE {H}', gzDe(hero)).replace('{H}', hero));
@@ -11321,6 +11400,7 @@ function gzBig(id, w, goal, hero, depth) {
   let pi = 0; const who = () => pool[pi++ % pool.length];
   const ent = st => {
     if (st.k === 'item') return ['item', { it: st.it }];
+    if (st.k === 'shop' || st.k === 'gift') { const nm = who(); st.who = nm; return gzSG(r, st, nm); }
     if (st.k === 'npc' && st.n) { const nm = who(); st.who = nm; const C = GZ_COL[st.wants]; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), C[2], 'Si me traes ' + st.n + ' ' + C[0] + ', te daré ' + avUn(st.gives) + '.', 'Están escondidos por todas partes: busca bien en cada sala.'],
       hint: ['Me faltan ' + C[0] + '. ¡Necesito ' + st.n + '!'], wants: st.wants, n: st.n, thanks: ['¡' + st.n + ' ' + C[0] + '! ¡Todos los que necesitaba!', 'Toma, ' + avUn(st.gives) + '. Te lo has ganado.'], gives: st.gives, after: ['¡Gracias, Lucas! Mi colección está completa.'] }]; }
     if (st.k === 'npc') { const nm = who(); st.who = nm; const W2 = GZ_WANT[st.wants]; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), W2[0], GZ.pick(r, ['Si alguien me ayudara, le daría algo que tengo guardado.', '¿Tú podrías ayudarme?', 'Tengo algo que a lo mejor te sirve… si me ayudas.'])],
@@ -11339,7 +11419,7 @@ function gzBig(id, w, goal, hero, depth) {
   for (const st of steps.slice(1)) place(st);
   for (const st of lockSteps) place(st);
   // pistas: alguien cuenta algo útil sin dar la solución
-  const hintAbout = GZ.mix(r, steps.concat(lockSteps).filter(s => s.k !== 'item')).slice(0, 2);
+  const hintAbout = GZ.mix(r, steps.concat(lockSteps).filter(s => s.k === 'mach' || (s.k === 'npc' && s.who))).slice(0, 2);
   for (const s of hintAbout) { const nm = who(); let t;
     if (s.k === 'npc') t = ['¿Conoces a ' + GZ.nm(s.who) + '? Dicen que anda buscando algo…', 'Si lo ayudas, seguro que te da algo a cambio.'];
     else t = ['¿Has visto ' + (/^(LA|EL) /.test(s.m.name) ? '' : avFem(s.m.name.toLowerCase()) ? 'la ' : 'el ') + s.m.name.toLowerCase() + '? No funciona desde hace días.', GZ.pick(r, s.gives ? ['Seguro que con la herramienta adecuada se arregla.', 'Quizá dentro haya algo interesante.', 'Hay que mirarlo bien de cerca.'] : ['Seguro que con la herramienta adecuada se arregla.', 'Dicen que cuando funcione, se abrirá algo importante.'])];
@@ -11347,6 +11427,7 @@ function gzBig(id, w, goal, hero, depth) {
   rooms[lockK].list.unshift(['deco', { img: (GZ_FURN[rooms[lockK].bg] || [GZ.pick(r, W.deco)])[0], h: 90 }]);
   for (const k of open) { const fu = GZ_FURN[rooms[k].bg]; if (fu) rooms[k].list.splice(Math.floor(r() * (rooms[k].list.length + 1)), 0, ['deco', { img: GZ.pick(r, fu), h: 90 }]); }
   // zona principal: mezclamos todo y metemos las puertas
+  if (steps.concat(lockSteps).some(s => s.k === 'shop')) main.push(['chest', { c: 14 }]);
   const mm = GZ.mix(r, main); keys.forEach(k => mm.splice(Math.floor(r() * (mm.length + 1)), 0, ['door', k]));
   mm.unshift(['deco', { img: GZ.pick(r, W.deco), h: 100 }]); mm.push(['hill', { h: 3 }]);
   const G = GZ_GOAL[goal], H = GZ.nm(hero);
@@ -11366,6 +11447,8 @@ function gzMid(id, w, goal, hero, depth) {
   steps.slice().reverse().forEach((st, idx, arr) => { const isLast = idx === arr.length - 1, w2 = isLast ? 'r1' : idx === arr.length - 2 ? 'r0' : roomOf(1);
     if (st.k === 'item') S.push(['it', st.it, w2 ? GZ.pick(r, ['high', 'rock', 'floor']) : GZ.pick(r, ['hill', 'plats', 'rock', 'cave']), w2]);
     else if (st.k === 'npc') { st.who = pool[pi++ % pool.length]; S.push(['npc', st.who, st.wants, st.gives, GZ_WANT[st.wants][0], w2]); }
+    else if (st.k === 'shop') { st.who = pool[pi++ % pool.length]; S.push(['shop', st.who, st.sells, st.decoys, st.price, w2]); }
+    else if (st.k === 'gift') { st.who = pool[pi++ % pool.length]; S.push(['gift', st.who, st.gives, w2]); }
     else S.push(['fix', st.m.name, st.m.img, st.m.need, st.gives, st.m.look, w2]); });
   out.push(['room', 'r0', rws[0][0], rws[0][1]]);
   if (lockIt) out.push(['it', 'llavem', GZ.pick(r, ['plats', 'cave', 'rock'])]);
@@ -11403,7 +11486,7 @@ function gzSmall(id, w, need, boss) {
   plan.push(['hill']); plan.push(['deco', { img: GZ.pick(r, W.deco), h: 100 }]);
   plan.push(roomE(rws[0])); plan.push([feats[0]]); plan.push([feats[1]]);
   plan.push(roomE(rws[1], GZ.pick(r, sea ? ['lake', 'climb'] : ['climb', 'lake', null]))); plan.push([feats[2]]);
-  if (r() < 0.5) plan.push(['shop', { who: pool[pi++ % pool.length], price: 6 + Math.floor(r() * 3) }]); else plan.push(roomE(rws[2]));
+  plan.push(['shop', { who: pool[pi++ % pool.length], price: 6 + Math.floor(r() * 3) }]); if (r() < 0.5) plan.push(roomE(rws[2]));
   plan.push([feats[3]]); plan.push(['hill', { h: 3 }]);
   const H = GZ.nm(boss), n = (() => { const t = 'LAS ' + C[0].toUpperCase() + gzDe(boss); const t2 = (g === 'o' ? 'LOS ' : 'LAS ') + C[0].toUpperCase() + gzDe(boss); const tt = g === 'o' ? t2 : t; if (!GZ_TAKEN.has(tt)) { GZ_TAKEN.add(tt); return tt; } const t3 = 'LA BÚSQUEDA DE ' + boss; GZ_TAKEN.add(t3); return t3; })();
   advQuest(id, { n, img: ADV_IT[need].img, s: H + ' necesita tu ayuda: ' + C[2].charAt(0).toLowerCase() + C[2].slice(1) + ' Busca ' + las + ' ' + C[0] + '.', th: w, amb: W.amb, boss, need, g: g === 'o' ? 'o' : undefined, pl: C[0],
@@ -11424,6 +11507,7 @@ function gzExtend(id, q, FL, NR) {
   const nr = GZ.mix(r, W.rooms.filter(x => !rnames.has(x[0]))).slice(0, NR), nk = []; nr.forEach((rw, i) => { const k = FL + i; q.rooms[k] = gzRoom(rw); nk.push(k); });
   const pool = GZ.mix(r, W.chars.filter(c => !names.has(c))).concat(GZ.mix(r, ['RAYO', 'BYTE', 'CHISPAS', 'TUERCAS', 'PELUSÍN', 'BOLITA', 'HOJA', 'TAMBOR', 'BOTI', 'CHEF FOGÓN', 'PROFE CHIP'].filter(c => !names.has(c)))); let pi = 0;
   const ent = st => { if (st.k === 'item') return ['item', { it: st.it }];
+    if (st.k === 'shop' || st.k === 'gift') { const nm = pool[pi++ % pool.length]; st.who = nm; return gzSG(r, st, nm); }
     if (st.k === 'npc' && st.n) { const nm = pool[pi++ % pool.length], C = GZ_COL[st.wants]; st.who = nm; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), C[2], 'Si me traes ' + st.n + ' ' + C[0] + ', te daré ' + avUn(st.gives) + '.'], hint: ['¡Necesito ' + st.n + ' ' + C[0] + '!'], wants: st.wants, n: st.n, thanks: ['¡Ya están todos!', 'Toma, ' + avUn(st.gives) + '.'], gives: st.gives, after: ['¡Gracias otra vez, Lucas!'] }]; }
     if (st.k === 'npc') { const nm = pool[pi++ % pool.length], W2 = GZ_WANT[st.wants]; st.who = nm; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), W2[0], GZ.pick(r, ['Si me ayudas, te daré algo que tengo guardado.', '¿Tú podrías ayudarme?'])], hint: [W2[1]], wants: st.wants, thanks: [W2[2], 'Toma, ' + avUn(st.gives) + '. A lo mejor te sirve.'], gives: st.gives, after: ['¡Gracias otra vez, Lucas!'] }]; }
     const m = st.m, o = { name: m.name, img: m.img, h: m.h, fr: m.fr, f0: m.f0, f1: m.f1, beams: m.beams, look: [m.look], need: m.need, fix: [m.fix] };
@@ -11432,6 +11516,7 @@ function gzExtend(id, q, FL, NR) {
   for (const st of steps) { const e = ent(st), tgt = st === steps[0] ? null : (nk.length && r() < 0.6 ? GZ.pick(r, nk) : null);
     if (e[0] === 'item') e[1].at = tgt ? GZ.pick(r, ['high', 'rock', 'floor']) : 'plats'; (tgt ? q.rooms[tgt].list : q.main).push(e); }
   const nm = pool[pi++ % pool.length]; q.main.push(['npc', { who: nm, say: [GZ.pick(r, GZ_HI), lk ? 'Oye, ¿has intentado entrar en ' + q.rooms[lk].name.toLowerCase() + '? Ahora no hay manera de pasar.' : 'Hay cosas en este sitio que no funcionan hasta que se arregle una cosa.', 'Dicen que ' + (avFem(f.name.toLowerCase()) ? 'la ' : 'el ') + f.name.toLowerCase() + ' tiene algo que ver. Habrá que arreglarlo.'] }]);
+  if (steps.some(s => s.k === 'shop')) q.main.push(['chest', { c: 14 }]);
   nk.forEach(k => { q.main.push(['door', k]); const fu = GZ_FURN[q.rooms[k].bg]; if (fu) q.rooms[k].list.unshift(['deco', { img: fu[0], h: 90 }]); });
   return true;
 }
