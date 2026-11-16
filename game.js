@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.95';
+const VERSION = '1.97';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4443,7 +4443,7 @@ function drawStageBack() {          // por detrás de los personajes
     ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(cx, y - 18, 2, cx, y - 18, 44); gg.addColorStop(0, 'rgba(230,120,255,' + (0.35 + 0.15 * Math.sin(time * 6) + k * 0.4) + ')'); gg.addColorStop(1, 'rgba(198,60,255,0)'); ctx.fillStyle = gg; ctx.fillRect(cx - 44, y - 62, 88, 70); ctx.globalCompositeOperation = 'source-over';
     { const ci = iceI('cristal-salto'); if (ci) { spr(ci, cx, y + 3, 50, 0.5, 1, false, 0, 1 + k * 0.12, sq); continue; } }
     for (const [dx, hh, w2] of [[-12, 24, 9], [12, 26, 9], [0, 38, 12]]) { const h2 = hh * sq; const cg = ctx.createLinearGradient(cx + dx - w2, 0, cx + dx + w2, 0); cg.addColorStop(0, '#7a2ad8'); cg.addColorStop(0.5, '#f0b8ff'); cg.addColorStop(1, '#a050ff'); ctx.fillStyle = cg; ctx.beginPath(); ctx.moveTo(cx + dx - w2, y); ctx.lineTo(cx + dx - w2 * 0.8, y - h2 * 0.7); ctx.lineTo(cx + dx, y - h2); ctx.lineTo(cx + dx + w2 * 0.8, y - h2 * 0.7); ctx.lineTo(cx + dx + w2, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,230,255,.8)'; ctx.lineWidth = 1.2; ctx.stroke(); } }
-  for (const pd of L.pads) if (!pd.crystal && !pd.mush && !pd.jelly) { const mn = MUELLE[L.theme || 'station'], mi = mn && xi('muelle-' + mn, 2); if (mi && okI(mi)) {          // trampolín con imagen: se aplasta al saltar
+  for (const pd of L.pads) if (!pd.crystal && !pd.mush && !pd.jelly) { const mn = MUELLE[L.theme || 'station'] || (L.adv ? 'estacion' : null), mi = mn && xi('muelle-' + mn, 2); if (mi && okI(mi)) {          // trampolín con imagen: se aplasta al saltar
       const k = Math.max(0, 1 - pd.t * 5); mi._n = 2; mi._f = k > 0.25 ? 1 : 0; const h = 62, cb = advCB(mi); spr(mi, pd.x + pd.w / 2, pd.y + 4, h / (cb.b - cb.t), 0.5, cb.b, false, 0, 1, 1 + k * 0.06); continue; }
     const k = Math.max(0, 1 - pd.t * 5), x = pd.x, y = pd.y - 9 + k * 6;
     ctx.fillStyle = '#10182e'; ctx.fillRect(x + 2, y, pd.w - 4, 10); ctx.fillStyle = '#3d4d7c'; ctx.fillRect(x + 2, y, pd.w - 4, 3);
@@ -7660,7 +7660,7 @@ function advExitSign(e) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y + h * 0.55, 6, x, y + h * 0.55, w * 0.9); gg.addColorStop(0, 'rgba(80,255,120,' + 0.35 * a + ')'); gg.addColorStop(1, 'rgba(80,255,120,0)'); ctx.fillStyle = gg; ctx.fillRect(x - w, y - h * 0.4, w * 2, h * 2); ctx.restore();
   ctx.drawImage(im, x - w / 2, y, w, h);
   ctx.save(); ctx.font = '900 ' + Math.round(h * 0.3) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(120,255,140,' + a + ')'; ctx.shadowBlur = 14 * a; ctx.fillStyle = 'rgba(200,255,200,' + (0.35 + 0.65 * a) + ')';
-  ctx.fillText('SALIDA', x - h * 0.12, y + h * 0.57); ctx.beginPath(); const ax = x + w * 0.29, ay = y + h * 0.57, s = h * 0.13, k = (time * 2) % 1; ctx.moveTo(ax - s + k * 3, ay - s); ctx.lineTo(ax + s * 0.6 + k * 3, ay); ctx.lineTo(ax - s + k * 3, ay + s); ctx.fill(); ctx.restore(); ctx.textBaseline = 'alphabetic';
+  ctx.textBaseline = 'alphabetic'; ctx.fillText('SALIDA', x - w * 0.07, y + h * 0.715); ctx.beginPath(); const s = h * 0.12, ax = x + w * 0.3, ay = y + h * 0.6 + Math.abs(Math.sin(time * 4)) * h * 0.05; ctx.moveTo(ax - s, ay - s * 0.6); ctx.lineTo(ax + s, ay - s * 0.6); ctx.lineTo(ax, ay + s * 0.8); ctx.closePath(); ctx.fill(); ctx.fillRect(ax - s * 0.35, ay - s * 1.3, s * 0.7, s * 0.75); ctx.restore(); ctx.textBaseline = 'alphabetic';
   if (Math.random() < 0.06) parts.push({ x: x + (Math.random() - 0.5) * w * 0.7, y: y + h * 0.6, vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 30, life: 0.6, max: 0.6, col: '#8aff9a', size: 1.8, grav: 0 });
 }
 const ADV_FACR = {};          // fachada elegida para cada sala (para salir igual que se entró)
@@ -7720,7 +7720,7 @@ function advDrawWorld() {
       const mk = e.name && e.name !== 'TELETRANSPORTE' ? e.name : ''; if (mk) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#05071a'; ctx.fillText(mk, e.x + 1, py - 55); ctx.fillStyle = '#e8c8ff'; ctx.fillText(mk, e.x, py - 56); }
       continue; }
     const glw = (e.glowIf && e.glowIf(A.api)) || e.glow; if (glw) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, by - e.h / 2, 4, e.x, by - e.h / 2, e.h * 0.8); gg.addColorStop(0, glw); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, by - e.h * 1.4, e.h * 2, e.h * 1.6); ctx.restore(); }
-    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.frameIf) e.frame = e.frameIf(A.api); if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2); { const fk = (e.img2 && e.alt && e.alt(A.api)) ? e.img2 : e.img; if (typeof ADV_FLK !== 'undefined' && ADV_FLK[fk] && ((time * 7 + (e.tx || 0)) | 0) % 2) im = xi(ADV_FLK[fk]); }
+    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.frameIf) e.frame = e.frameIf(A.api); if (e.img3 && e.glow) im = xi(e.img3); if (e.kind === 'chest' && /^adv-(cofre|baul)/.test(e.img || '') || e.img === 'adv-cofre') { if (e.opened) { if (!e._ot) e._ot = time; const ot = time - e._ot; im = xi(ot < 0.12 ? 'adv-cofre' : ot < 0.3 ? 'adv-cofre-a1' : ot < 0.55 ? 'adv-cofre-a2' : 'adv-cofre-abierto'); } else im = xi('adv-cofre'); } if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2); { const fk = (e.img2 && e.alt && e.alt(A.api)) ? e.img2 : e.img; if (typeof ADV_FLK !== 'undefined' && ADV_FLK[fk] && ((time * 7 + (e.tx || 0)) | 0) % 2) im = xi(ADV_FLK[fk]); } if (e.img2 === 'mq-cofre-1' && e.alt && e.alt(A.api)) { if (!e._ot) e._ot = time; const ot = time - e._ot; if (ot < 0.55) im = xi(ot < 0.12 ? 'mq-cofre-0' : ot < 0.3 ? 'adv-cofre-a1' : 'adv-cofre-a2'); }
     let an = e.anim; if (e.anim2 && e.alt && e.alt(A.api)) an = e.anim2; if (e.anim3 && e.glow) an = e.anim3; if (e.img3 && !e.glow && e.name === 'TUERCAS') an = null;
     if (an && okI(xi(an.img, 4))) { im = IMG[an.img]; im._n = 4; const talk = ADVT.on && ADVT.who && ADVT.who.name === e.name, mv = ADV_MOVE.has(an.img.slice(5)), cyc = (e.ph + e.x) % 6;
       im._f = an.frame != null ? an.frame : talk ? (Math.floor(time * 4) % 2 ? 1 : 2) : mv ? (Math.floor(time * 4 + e.x) % 2) : (e.happy > 0 ? 3 : cyc < 0.7 ? 3 : cyc > 3 && cyc < 3.5 ? 1 : 0); }
@@ -7969,7 +7969,7 @@ LEVELS['A-2'] = function () {
           e.glow = 'rgba(80,255,160,.45)'; A.say(tuercas, ['¡Funciona! ¡Ya puedo andar otra vez!', 'Muchas gracias, Lucas. Voy a apagar la barrera de luz del túnel para que puedas pasar.'], () => { A.open('tunel'); A.goal('Cruza el túnel y vuelve a tu cohete'); });
         } },
       { id: 'teleH', kind: 'tele', tx: 24, ty: 16, h: 120, img: 'adv-teleport', name: 'AL INVERNADERO', lbl: '✨ VIAJAR', use: A => A.go('A-2b', 4, 12) },
-      Object.assign({ id: 'chest', kind: 'chest', tx: 73, ty: 7, h: 62, img: 'adv-cofre', name: 'COFRE', use: (A, e) => { if (e.opened) return A.say(NAR, ['El cofre ya está vacío.']); e.opened = true; shake = 0.15; A.addCoins(6, e.x, e.y - 40); A.give('manzana'); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡Dentro había 6 monedas y una manzana muy roja!', 'A lo mejor alguien tiene hambre.']); } }),
+      Object.assign({ id: 'chest', kind: 'chest', tx: 73, ty: 7, h: 72, img: 'adv-cofre', name: 'COFRE', use: (A, e) => { if (e.opened) return A.say(NAR, ['El cofre ya está vacío.']); e.opened = true; shake = 0.15; A.addCoins(6, e.x, e.y - 40); A.give('manzana'); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡Dentro había 6 monedas y una manzana muy roja!', 'A lo mejor alguien tiene hambre.']); } }),
       { id: 'lab', kind: 'way', tx: 86, ty: 16, h: 110, img: 'adv-puerta', fr: 4, frame: 0, name: 'LABORATORIO DE BYTE', use: (A, e) => { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => A.go('A-2a', 4, 12), 450); } },
       Object.assign({ id: 'triste', kind: 'npc', tx: 94, ty: 16, h: 90, float: true, fy: -6, use: A => A.say(triste, ['Hola, soy Bolita. Estoy un poco triste porque Byte me asusta.', 'Le vi esconder algo en esa montaña de chatarra.', 'Dicen que una de sus paredes es de mentira. ¡Camina hacia ella!']) }, triste)],
     items: [
@@ -7996,7 +7996,7 @@ LEVELS['A-2a'] = function () {
           if (A.has('fusible')) { A.take('fusible'); return A.say(byte, ['¡Una pila para mi consola! ¡Qué bien!', 'Perdona por esconder las herramientas. Me aburría mucho y no lo pensé.', 'Toma el soldador. Es para Tuercas.'], () => { A.flag('byte', 1); A.give('soldador'); A.say({ name: '¡NUEVO OBJETO!', img: 'obj-soldador' }, ['¡Ya tienes el soldador!', 'Llévaselo a Tuercas.']); }); }
           A.flag('byte0', 1); A.say(byte, ['Hola. Soy Byte, el robot más listo del desguace.', 'Sí, fui yo quien escondió las herramientas. Es que me aburría.', 'Mi consola se ha quedado sin pila. Si me traes una pila, te devuelvo el soldador.']);
         } }, byte),
-      Object.assign({ id: 'chestL', kind: 'chest', tx: 22, ty: 12, h: 58, img: 'adv-cofre', name: 'COFRE', use: (A, e) => { if (e.opened) return A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['El cofre ya está vacío.']); e.opened = true; A.addCoins(8, e.x, e.y - 40); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡8 monedas para ti!']); } })],
+      Object.assign({ id: 'chestL', kind: 'chest', tx: 22, ty: 12, h: 72, img: 'adv-cofre', name: 'COFRE', use: (A, e) => { if (e.opened) return A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['El cofre ya está vacío.']); e.opened = true; A.addCoins(8, e.x, e.y - 40); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡8 monedas para ti!']); } })],
     items: [], gates: [] };
   return B.done({ name: 'LABORATORIO DE BYTE', adv, time: 99999, noLava: true, spawn: { x: 4 * T, y: 12 * T }, goal: { x: -9999, y: -9999 } });
 };
@@ -8121,7 +8121,7 @@ function advShop(o) {
     } }, o, { who: undefined });
 }
 function advChest(id, tx, ty, coins, extra, img) {
-  return { id, kind: 'chest', tx, ty, h: img === 'adv-baul' ? 70 : 60, img: img || 'adv-cofre', name: 'COFRE', lbl: '🔓 ABRIR',
+  return { id, kind: 'chest', tx, ty, h: 72, img: 'adv-cofre', name: 'COFRE', lbl: '🔓 ABRIR',
     use: (A, e) => { if (e.opened) return A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['El cofre ya está vacío.']); e.opened = true; shake = 0.15; burst(e.x, e.y - 40, 30, '#ffd23c', 260, 0.8, 300, 4);
       if (coins) A.addCoins(coins, e.x, e.y - 40); const fin = () => extra && extra(A, e); A.say({ name: 'COFRE', img: 'adv-cofre-abierto' }, ['¡Dentro había ' + coins + ' monedas!'], fin); } };
 }
@@ -8623,7 +8623,7 @@ function advStd(o) {
   for (const f of o.feats) { const [k, x] = f;
     if (k === 'hill') { const w = f[2], h = f[3]; B.block(x, x + w - 1, g - h, g - 1); B.arc(x, x + w - 1, g - h - 2, 1); S[f[4] || 'h' + x] = [x + (w >> 1), g - h - 1]; }
     else if (k === 'rock') { B.block(x, x + 6, g - 3, g - 1); B.block(x + 2, x + 5, g - 2, g - 1, ' '); B.block(x, x + 1, g - 2, g - 1, 'C'); B.arc(x, x + 6, g - 5, 1); S[f[2] || 'rock'] = [x + 4, g - 1]; }
-    else if (k === 'cave') { const w = f[2]; P(x - 5, x - 2, g - 4); B.block(x, x + w, g - 6, g - 1); B.block(x + 3, x + w - 3, g - 4, g - 1, ' '); B.fake(x, x + 2, g - 4, g - 1);
+    else if (k === 'cave') { const w = f[2]; P(x - 5, x - 2, g - 4); B.block(x, x + w, g - 6, g - 1); B.block(x + 3, x + w - 3, g - 4, g - 1, ' '); B.fake(x, x + 2, g - 4, g - 1); B.fake(x + w - 2, x + w, g - 4, g - 1);
       B.row(x + 4, x + w - 4, g - 1); B.arc(x - 3, x + w + 3, g - 9, 1); S[f[3] || 'cave'] = [x + w - 4, g - 1]; }
     else if (k === 'plats') { P(x, x + 3, g - 3); P(x + 5, x + 8, g - 6); P(x + 10, x + 13, g - 9); B.row(x, x + 3, g - 4); B.row(x + 5, x + 8, g - 7); S[f[2] || 'top'] = [x + 11, g - 10]; }
     else if (k === 'wall') B.block(x, x, 0, g - 5);
@@ -8634,13 +8634,13 @@ function advStd(o) {
     // ---- escondites nuevos para que cada aventura sea distinta ----
     else if (k === 'tower') { P(x, x + 3, g - 3); P(x + 5, x + 8, g - 6); P(x + 1, x + 4, g - 9); P(x + 6, x + 9, g - 12); B.row(x + 1, x + 4, g - 10); S[f[2]] = [x + 8, g - 13]; }
     else if (k === 'trench') { B.block(x, x + 8, g, g + 1, ' '); B.row(x + 1, x + 7, g - 2); S[f[2]] = [x + 4, g + 1]; }
-    else if (k === 'mushjump') { B.mush(x + 1, g); P(x + 4, x + 5, g - 4); P(x + 7, x + 11, g - 8); B.arc(x + 6, x + 12, g - 11, 1); S[f[2]] = [x + 9, g - 9]; }
-    else if (k === 'vinecliff') { B.block(x + 2, x + 6, g - 7, g - 1); B.vine(x + 1, g - 7, g - 1); B.block(x + 7, x + 8, g - 4, g - 1); B.row(x + 2, x + 6, g - 9); S[f[2]] = [x + 4, g - 8]; }
-    else if (k === 'pillars') { B.block(x, x + 1, g - 2, g - 1); B.block(x + 4, x + 5, g - 4, g - 1); B.block(x + 8, x + 9, g - 6, g - 1); B.block(x + 12, x + 13, g - 8, g - 1); B.row(x + 4, x + 9, g - 9); S[f[2]] = [x + 12, g - 9]; }
+    else if (k === 'mushjump') { B.pad(x + 1, g - 1); P(x + 4, x + 5, g - 4); P(x + 7, x + 11, g - 8); B.arc(x + 6, x + 12, g - 11, 1); S[f[2]] = [x + 9, g - 9]; }
+    else if (k === 'vinecliff') { B.block(x + 2, x + 6, g - 7, g - 1); B.vine(x + 1, g - 7, g - 1); B.block(x + 7, x + 8, g - 4, g - 1); B.block(x + 9, x + 10, g - 2, g - 1); B.row(x + 2, x + 6, g - 9); S[f[2]] = [x + 4, g - 8]; }
+    else if (k === 'pillars') { B.block(x, x + 1, g - 2, g - 1); B.block(x + 4, x + 5, g - 4, g - 1); B.block(x + 8, x + 9, g - 6, g - 1); B.block(x + 12, x + 13, g - 8, g - 1); B.block(x + 6, x + 7, g - 2, g - 1); B.block(x + 10, x + 11, g - 4, g - 1); B.block(x + 14, x + 14, g - 6, g - 1); B.block(x + 15, x + 15, g - 4, g - 1); B.block(x + 16, x + 16, g - 2, g - 1); B.row(x + 4, x + 9, g - 9); S[f[2]] = [x + 12, g - 9]; }
     else if (k === 'tunnel') { B.block(x, x + 10, g - 5, g - 1); B.block(x + 1, x + 9, g - 3, g - 1, ' '); B.fake(x, x, g - 3, g - 1); B.fake(x + 10, x + 10, g - 3, g - 1); B.row(x + 1, x + 9, g - 6); S[f[2]] = [x + 5, g - 1]; }
     else if (k === 'springup') { B.spring(x + 1, g - 1); P(x + 3, x + 4, g - 4); P(x + 6, x + 7, g - 8); P(x + 9, x + 12, g - 11); S[f[2]] = [x + 11, g - 12]; }
     else if (k === 'stairs') { for (let i = 0; i < 6; i++) B.block(x + i, x + i, g - 1 - i, g - 1); B.block(x + 6, x + 7, g - 7, g - 1); for (let i = 0; i < 6; i++) B.block(x + 8 + i, x + 8 + i, g - 6 + i, g - 1); S[f[2]] = [x + 6, g - 8]; }
-    else if (k === 'cage') { B.block(x, x + 1, g - 3, g - 1); B.block(x + 3, x + 8, g - 5, g - 1); B.block(x + 4, x + 7, g - 4, g - 1, ' '); B.fake(x + 5, x + 6, g - 5, g - 5); B.row(x + 3, x + 8, g - 7); S[f[2]] = [x + 5, g - 1]; }
+    else if (k === 'cage') { B.block(x, x + 1, g - 3, g - 1); B.block(x + 3, x + 8, g - 5, g - 1); B.block(x + 4, x + 7, g - 4, g - 1, ' '); B.fake(x + 5, x + 6, g - 5, g - 5); B.fake(x + 3, x + 3, g - 3, g - 1); B.fake(x + 8, x + 8, g - 3, g - 1); B.row(x + 3, x + 8, g - 7); S[f[2]] = [x + 5, g - 1]; }          // jaula: se entra por el techo falso y se sale por las paredes falsas de abajo
     else if (k === 'bridge') { P(x, x + 1, g - 3); P(x + 3, x + 13, g - 6); B.row(x + 3, x + 13, g - 8); S[f[2]] = [x + 10, g - 7]; }
     else if (k === 'mover') { B.mover(x + 1, g - 4, 3, 110, 0, 1.1, (x % 7) / 7); P(x + 9, x + 12, g - 8); B.arc(x + 8, x + 13, g - 11, 1); S[f[2]] = [x + 11, g - 9]; }
     else if (k === 'magnet') { (B.mags = B.mags || []).push({ x0: (x + 1) * T, x1: (x + 4) * T, y0: (g - 11) * T, y1: g * T, per: 0, ph: 0, on: true, warn: false }); P(x + 6, x + 10, g - 10); B.row(x + 6, x + 10, g - 11); S[f[2]] = [x + 8, g - 11]; }
@@ -8652,7 +8652,7 @@ function advStd(o) {
     else if (k === 'fbump') { B.block(x, x + 3, g - 1, g - 1); B.block(x + 1, x + 2, g - 2, g - 2); }
     else if (k === 'fbox') { B.box(x + 1, g - 4, 'chip'); B.box(x + 2, g - 4, 'chip'); B.box(x + 3, g - 4, 'chip'); }
     else if (k === 'farc') B.arc(x, x + 5, g - 4, 1);
-    else if (k === 'fmush') B.mush(x + 1, g);
+    else if (k === 'fmush') B.pad(x + 1, g - 1);
     else if (k === 'fpil') { B.block(x + 1, x + 2, g - 3, g - 1); B.row(x + 1, x + 2, g - 5); }
     else if (k === 'fstep') { B.block(x, x + 1, g - 2, g - 1); B.block(x + 2, x + 3, g - 4, g - 1); B.block(x + 4, x + 5, g - 2, g - 1); }
     else if (k === 'fplat') { P(x, x + 3, g - 4); B.row(x, x + 3, g - 5); } }
@@ -9522,7 +9522,9 @@ function avDoor(id, tx, ty, r, rx, ry) {
   return wy;
 }
 // objeto suelto en el suelo o escondido
-const avItem = (it, tx, ty, msg, key) => ({ id: it, tx, ty, msg: A => { if (key) A.flag('it_' + key, 1); avProg(A); return msg || ['¡Has encontrado ' + avUn(it) + '!', 'Lo guardas en la mochila. Seguro que sirve para algo…']; } });
+const avItem = (it, tx, ty, msg, key) => ({ id: it, tx, ty, msg: A => { if (key) A.flag('it_' + key, 1); avProg(A); if (!msg && key) { const q = AV[String(key).split('#')[0]]; let n = 0; if (q) for (const l of [q.main].concat(Object.values(q.rooms || {}).map(r => r.list))) for (const p of l) { const o = p[1]; if (o && typeof o === 'object' && o.wants === it && o.n) n = o.n; }
+      if (n) { const h = A.cnt ? A.cnt(it) : 0; return ['¡Has encontrado ' + avUn(it) + '!', h >= n ? '¡Ya tienes ' + n + ' de ' + n + '! Ya puedes llevárselo todo a quien lo buscaba.' : 'Llevas ' + h + ' de ' + n + '. Alguien necesita ' + n + '… ¡sigue buscando!']; } }
+    return msg || ['¡Has encontrado ' + avUn(it) + '!', 'Lo guardas en la mochila. Seguro que sirve para algo…']; } });
 
 
 /* ---------- 30 recorridos distintos para las aventuras (dónde se esconden las cosas, qué hay entre medias y dónde está el protagonista) ---------- */
@@ -11370,7 +11372,7 @@ function gzChain(r, w, goal, depth, used, mUsed, out, allowF) {
   if (ms.length && (r() < 0.5 || !ws.length)) {
     const m = GZ.pick(r, ms); mUsed.add(m.name); st.k = 'mach'; st.m = m; out.push(st);
     if (allowF && depth >= 2 && r() < 0.55) {          // a veces la máquina además necesita que antes funcione otra (generador, luces, altar…)
-      const fs = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need]);
+      const fs = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need] && gzPreOk(f, m));
       if (fs.length) { const f = GZ.pick(r, fs); mUsed.add(f.name); const fl = 'gz' + out.length; st.pre = fl; st.preTxt = f.pre; out.push({ k: 'mach', m: f, flag: fl });
         gzChain(r, w, f.need, depth - 2, used, mUsed, out, false); }
     }
@@ -11505,7 +11507,7 @@ function gzExtend(id, q, FL, NR) {
   const free = Object.keys(q.rooms || {}).filter(k => !q.rooms[k].lock && q.main.some(p => p[0] === 'door' && p[1] === k));
   const tgts = []; const sc2 = l => l.forEach(p => { if ((p[0] === 'mach' || (p[0] === 'npc' && p[1].wants)) && !p[1].pre) tgts.push(p[1]); }); sc2(q.main); Object.values(q.rooms).forEach(rm => sc2(rm.list));
   if (!free.length && !tgts.length) return false;
-  const lk = free.length ? GZ.pick(r, free) : null, tg = lk ? null : GZ.pick(r, tgts), fs = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need]); if (!fs.length) return false;
+  const lk = free.length ? GZ.pick(r, free) : null, tg = lk ? null : GZ.pick(r, tgts), fs = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need] && (!tg || gzPreOk(f, tg))); if (!fs.length) return false;
   const f = GZ.pick(r, fs); mUsed.add(f.name); if (lk) q.rooms[lk].lock = { flag: FL, txt: [f.door] }; else { tg.pre = FL; tg.preTxt = [f.pre]; }
   const steps = [{ k: 'mach', m: f, flag: FL }]; gzChain(r, w, f.need, 4 + (r() < 0.5 ? 1 : 0), used, mUsed, steps, true);
   const nr = GZ.mix(r, W.rooms.filter(x => !rnames.has(x[0]))).slice(0, NR), nk = []; nr.forEach((rw, i) => { const k = FL + i; q.rooms[k] = gzRoom(rw); nk.push(k); });
@@ -11566,7 +11568,7 @@ AV_DECOY.push('pociona', 'pocionv', 'pocionn', 'frasco', 'tuerca', 'lingotep', '
 AV_MQ.push([/^HOGUERA/, 'hoguera', 110], [/^CHIMENEA/, 'chimenea', 130], [/^ANTORCHA/, 'antorcha', 120], [/VAGONETA/, 'vagoneta', 100], [/^GRIFO/, 'grifo', 90],
   [/RECEPTOR LÁSER/, 'receptor', 110], [/BARRERA DE ENERGÍA/, 'energia', 130], [/CAÑÓN ARCOÍRIS/, 'laser', 100], [/^OLLA/, 'olla', 110], [/BATERÍA GIGANTE/, 'bateria', 130],
   [/CARGADOR/, 'bateriag', 110], [/INTERRUPTOR/, 'interruptor', 90], [/PUENTE DE CUERDA/, 'pcuerda', 100], [/PUENTE METÁLICO/, 'pmetal', 90], [/PUENTE DE HIELO/, 'phielo', 90],
-  [/TUBERÍA PARTIDA/, 'tuboroto', 60], [/COMPUERTA DEL CANAL/, 'compuerta', 100], [/LÁMPARA COLGANTE/, 'bombilla', 100], [/^VÍA ROTA/, 'riel', 60], [/TUBERÍA ROTA/, 'tuboroto', 60]);
+  [/TUBERÍA PARTIDA/, 'tuboroto', 60], [/COMPUERTA DEL CANAL/, 'compuerta', 100], [/LÁMPARA COLGANTE/, 'bombilla', 100], [/^VÍA ROTA/, 'riel', 60], [/TUBERÍA ROTA/, 'tuboroto', 60], [/^COFRE|^BAÚL|COFRE DE/, 'cofre', 72]);
 // el fuego de verdad baila: fotograma alterno cuando está encendido
 const ADV_FLK = { 'mq-hoguera-1': 'mq-hoguera-2', 'mq-antorcha-1': 'mq-antorcha-2', 'mq-chimenea-1': 'mq-chimenea-2' };
 const GZ_M2 = [
@@ -11640,6 +11642,38 @@ const GZ_GOALS2 = { ST: ['bateria', 'diamante', 'monedae', 'pociond'], LJ: ['esm
   }
   GZ_M.splice(0, GZ_M.length, ...OLD, ...GZ_M2);
 })();
+
+// ---------- sentido común: lo que hay que arreglar antes tiene que ver con la máquina, y cada máquina va en un sitio que pegue ----------
+function gzPreOk(f, m) {
+  const nm = (m && m.name) || '';
+  if (/TUBERÍA|COMPUERTA/.test(f.name)) return /FUENTE|GRIFO|MOLINO|POZO|MACETA|BURBUJAS|HELADOS|OLLA|CALDERO|CHARCA/.test(nm);
+  if (/GENERADOR|BATERÍA GIGANTE|INTERRUPTOR/.test(f.name)) return /ELÉCTRIC|ORDENADOR|NAVE|LÁSER|CARGADOR|CAÑÓN|PANEL|HORNO|MÁQUINA|GRÚA|RELOJ|VITRINA|TELESCOPIO|ARCOÍRIS|CAJA FUERTE/.test(nm);
+  return true;
+}
+const GZ_PLACE = [          // [máquina, salas donde pega, ¿puede estar fuera?]
+  [/^HOGUERA/, /selva|granja|cueva|hielo|casaarbol|mariposas|invernadero|playa/, 1], [/^CHIMENEA/, /cocina|dormitorio|casaarbol|granja|pasteleria|trono|fortaleza|biblioteca|museo|correos|escuela/, 0],
+  [/VAGONETA|VÍA ROTA/, /mina|cueva|chatarra|mazmorra|volcan|taller/, 1], [/RECEPTOR LÁSER|CAÑÓN ARCOÍRIS|BARRERA DE ENERGÍA|BARRERA LÁSER/, /laboratorio|maquinas|observatorio|taller|templo|piramide|cine|fortaleza|museo|mazmorra|hangar|control/, 1],
+  [/^OLLA|CALDERO/, /pociones|cocina|selva|cueva|mazmorra|casaarbol/, 1], [/CARGADOR|BATERÍA GIGANTE|INTERRUPTOR|GENERADOR|CUADRO DE LUCES/, /taller|maquinas|laboratorio|hospital|observatorio|correos|escuela|cine|chatarra|fortaleza|hangar|control|mina/, 1],
+  [/PUENTE|COMPUERTA/, /^$/, 1], [/^GRIFO/, /cocina|granja|invernadero|hospital|taller|mariposas|pasteleria/, 1], [/TUBERÍA/, /maquinas|taller|cocina|laboratorio|hospital|chatarra|mina|acuario|barco/, 1],
+  [/^ANTORCHA/, /cueva|templo|piramide|mazmorra|mina|fortaleza|trono|volcan/, 1], [/LÁMPARA COLGANTE/, /./, 0], [/^HORNO/, /cocina|pasteleria/, 0], [/GRÚA/, /chatarra|taller|maquinas|mina/, 1],
+  [/POLEA DEL POZO/, /granja|selva|cueva/, 1], [/TELESCOPIO/, /observatorio|faro|laboratorio/, 1], [/ORDENADOR/, /laboratorio|biblioteca|escuela|correos|hospital|control|oficina|taller/, 0] ];
+function gzFixPlaces(id) {
+  const q = AV[id]; if (!q || !q.rooms) return false; const W = GZ_W[q.th] || GZ_W.ST, used = new Set(Object.values(q.rooms).map(r => r.name)); let ch = false;
+  const ruleOf = p => p[0] === 'mach' && p[1] && p[1].name && GZ_PLACE.find(([re]) => re.test(p[1].name));
+  const fits = (rule, bg) => rule[1].test(bg || '');
+  for (const [k, rm] of Object.entries(q.rooms)) {
+    for (let i = rm.list.length - 1; i >= 0; i--) { const p = rm.list[i], rule = ruleOf(p); if (!rule || fits(rule, rm.bg)) continue;
+      const others = Object.entries(q.rooms).filter(([k2, r2]) => k2 !== k && !r2.lock && fits(rule, r2.bg) && q.main.some(x => x[0] === 'door' && x[1] === k2));
+      if (rm.lock && !rm.list.some((x, j) => j !== i && x[0] === 'mach' && ruleOf(x) && !fits(ruleOf(x), rm.bg))) {          // la sala cerrada: mejor cambiarla por una sala que pegue
+        const alt = W.rooms.find(x => fits(rule, x[1]) && !used.has(x[0])); if (alt && !rm.list.some((x, j) => j !== i && ruleOf(x) && !fits(ruleOf(x), alt[1]))) { used.add(alt[0]); rm.name = alt[0]; rm.bg = alt[1]; rm.list = rm.list.filter(x => x[0] !== 'deco'); ch = true; continue; } }
+      if (others.length) { rm.list.splice(i, 1); others[0][1].list.push(p); ch = true; }
+      else if (rule[2]) { rm.list.splice(i, 1); q.main.splice(Math.max(0, q.main.length - 1), 0, p); ch = true; } }
+  }
+  for (let i = q.main.length - 1; i >= 0; i--) { const p = q.main[i], rule = ruleOf(p); if (!rule || rule[2]) continue;
+    const ok = Object.entries(q.rooms).filter(([k2, r2]) => !r2.lock && fits(rule, r2.bg) && q.main.some(x => x[0] === 'door' && x[1] === k2)); if (ok.length) { q.main.splice(i, 1); ok[0][1].list.push(p); ch = true; } }
+  return ch;
+}
+(() => { for (const id of Object.keys(AV)) { if (!/^[BC]-/.test(id)) continue; try { if (gzFixPlaces(id)) { const q = AV[id], k = ADV_LV.findIndex(l => l.id === id); q._lay = 0; if (k >= 0) ADV_LV.splice(k, 1); advAv(id, q); const nl = ADV_LV.pop(); ADV_LV.splice(k >= 0 ? k : ADV_LV.length, 0, nl); } } catch (e) { console.warn('fix', id, e); } } })();
 // ---------- decorado nuevo en las salas de las aventuras de 7 años (tuberías, cables, vías, antorchas, chimeneas…) ----------
 const ADV_DECO19 = [
   [/taller|maquinas|chatarra|forja/, [['dc-tubox-codo', 70], ['dc-manometro', 50], ['mq-bateria-1', 80], ['dc-tubo-valvula', 55], ['dc-empalme', 50], ['dc-palanca', 60]]],
