@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.89';
+const VERSION = '1.90';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4994,6 +4994,7 @@ function advTeleSnd(out) {          // sonido de teletransporte: carga supersón
   } catch (e) {}
 }
 function advWarp() { ADV_WARP.t = performance.now() / 1000; ADV_WARP.x = P.x; advTeleSnd(true); }
+function advWarp0() { ADV_WARP.t = performance.now() / 1000; ADV_WARP.x = P.x; }
 function drawPlayer() {
   const now = performance.now() / 1000, ko = (now - ADV_WARP.t) / 0.6, ki = (now - ADV_WARP.inT) / 0.5;
   if (!L.adv || !P || (ko > 1.15 && (ki < 0 || ki > 1))) return drawPlayer0();
@@ -7651,8 +7652,8 @@ function advExitPad(e) {          // plataforma de luz donde Lucas se coloca par
   if (Math.random() < 0.35) parts.push({ x: x + (Math.random() - 0.5) * 80, y: y - 2, vx: 0, vy: -50 - Math.random() * 60, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#8affc0' : '#9fefff', size: 2, grav: 0 });
 }
 function advExitSign(e) {
-  if (e.kind === 'way') advExitPad(e);
-  const im = xi('adv-salida'); if (!okI(im)) return; const w = 176, h = w * im.naturalHeight / im.naturalWidth, top = e.kind === 'tele' ? e.y - 2 * T - 46 - 56 : e.y - 182, x = e.x, y = top - h - 6 + Math.sin(time * 1.5) * 2;
+  const pad = e.kind === 'way' && !!ADV_FAC[ADV_BG[curId]]; if (pad) advExitPad(e); else if (e.kind === 'way') { e._nodoor = false; e._fac = 0; e.lbl = '🚪 SALIR'; }
+  const im = xi('adv-salida'); if (!okI(im)) return; const w = 176, h = w * im.naturalHeight / im.naturalWidth, top = e.kind === 'tele' ? e.y - 2 * T - 46 - 56 : pad ? e.y - 182 : e.y - e.h - 46, x = e.x, y = top - h - 6 + Math.sin(time * 1.5) * 2;
   const on = 0.55 + 0.45 * Math.abs(Math.sin(time * 2.4)), fl = Math.random() < 0.015 ? 0.3 : 1, a = on * fl;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y + h * 0.55, 6, x, y + h * 0.55, w * 0.9); gg.addColorStop(0, 'rgba(80,255,120,' + 0.35 * a + ')'); gg.addColorStop(1, 'rgba(80,255,120,0)'); ctx.fillStyle = gg; ctx.fillRect(x - w, y - h * 0.4, w * 2, h * 2); ctx.restore();
   ctx.drawImage(im, x - w / 2, y, w, h);
@@ -8078,7 +8079,7 @@ function advTeles(list) {          // varios teletransportes que se conectan ent
 function advWay(id, tx, ty, room, rx, ry, name, img) {          // puerta o transportador a otra sala
   const tele = img === 'tele';
   return { id, room, kind: tele ? 'tele' : 'way', tx, ty, h: tele ? 120 : 110, img: tele ? 'adv-teleport' : 'adv-puerta', fr: tele ? undefined : 4, frame: 0, name, lbl: tele ? '✨ VIAJAR' : '🚪 ENTRAR',
-    use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => A.go(room, rx, ry) }, { t: 'QUEDARME AQUÍ' }]); if (!tele && e._fac) { advWarp(); return setTimeout(() => { ADV_WARP.inT = performance.now() / 1000; A.go(room, rx, ry); setTimeout(() => advTeleSnd(false), 60); }, 620); } if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
+    use: (A, e) => { if (tele && !A._noAsk) return A.ask({ name: name || 'PORTAL', img: 'portal' }, (/^(SALIR|VOLVER)/.test(name || '') ? '¿Quieres ' + name.toLowerCase() + '?' : '¿Quieres viajar a ' + String(name || 'otro lugar').toLowerCase() + '?'), [{ t: '✨ IR', f: () => { advTeleSnd(true); advWarp0(); setTimeout(() => { ADV_WARP.inT = performance.now() / 1000; A.go(room, rx, ry); setTimeout(() => advTeleSnd(false), 60); }, 560); } }, { t: 'QUEDARME AQUÍ' }]); if (!tele && e._fac) { advWarp(); return setTimeout(() => { ADV_WARP.inT = performance.now() / 1000; A.go(room, rx, ry); setTimeout(() => advTeleSnd(false), 60); }, 620); } if (!tele) { e.frame = 1; setTimeout(() => e.frame = 2, 120); setTimeout(() => e.frame = 3, 240); setTimeout(() => { e.frame = 0; }, 1400); } if (tele) advTeleSnd(true); setTimeout(() => A.go(room, rx, ry), tele ? 60 : 420); } };
 }
 function advLever(id, tx, ty, gate, txt) { return { id, kind: 'lever', tx, ty, h: 64, name: 'PALANCA', lbl: '✋ TIRAR', use: (A, e) => { if (e.on) return A.say(NR, ['La palanca ya está bajada.']); e.on = true; e.opened = true; A.say(NR, txt || ['¡Has bajado la palanca! La barrera de luz se apaga.'], () => A.open(gate)); } }; }
 function advLaser(id, tx, y0, y1, txt) { return { id, kind: 'laser', tx, y0, y1, use: A => A.say(NR, txt) }; }
@@ -8576,7 +8577,27 @@ function advStd(o) {
     else if (k === 'kelp') B.kelp(x, g, f[2] || 4);
     else if (k === 'row') B.row(x, f[2], g - 1);
     else if (k === 'plat') { P(x, x + f[2] - 1, f[3]); B.row(x, x + f[2] - 1, f[3] - 1); S[f[4] || 'p' + x] = [x + (f[2] >> 1), f[3] - 1]; }
-    else if (k === 'vine') B.vine(x, f[2], g - 1); }
+    else if (k === 'vine') B.vine(x, f[2], g - 1);
+    // ---- escondites nuevos para que cada aventura sea distinta ----
+    else if (k === 'tower') { P(x, x + 3, g - 3); P(x + 5, x + 8, g - 6); P(x + 1, x + 4, g - 9); P(x + 6, x + 9, g - 12); B.row(x + 1, x + 4, g - 10); S[f[2]] = [x + 8, g - 13]; }
+    else if (k === 'trench') { B.block(x, x + 8, g, g + 1, ' '); B.row(x + 1, x + 7, g - 2); S[f[2]] = [x + 4, g + 1]; }
+    else if (k === 'mushjump') { B.mush(x + 1, g); P(x + 4, x + 5, g - 4); P(x + 7, x + 11, g - 8); B.arc(x + 6, x + 12, g - 11, 1); S[f[2]] = [x + 9, g - 9]; }
+    else if (k === 'vinecliff') { B.block(x + 2, x + 6, g - 7, g - 1); B.vine(x + 1, g - 7, g - 1); B.block(x + 7, x + 8, g - 4, g - 1); B.row(x + 2, x + 6, g - 9); S[f[2]] = [x + 4, g - 8]; }
+    else if (k === 'pillars') { B.block(x, x + 1, g - 2, g - 1); B.block(x + 4, x + 5, g - 4, g - 1); B.block(x + 8, x + 9, g - 6, g - 1); B.block(x + 12, x + 13, g - 8, g - 1); B.row(x + 4, x + 9, g - 9); S[f[2]] = [x + 12, g - 9]; }
+    else if (k === 'tunnel') { B.block(x, x + 10, g - 5, g - 1); B.block(x + 1, x + 9, g - 3, g - 1, ' '); B.fake(x, x, g - 3, g - 1); B.fake(x + 10, x + 10, g - 3, g - 1); B.row(x + 1, x + 9, g - 6); S[f[2]] = [x + 5, g - 1]; }
+    else if (k === 'springup') { B.spring(x + 1, g - 1); P(x + 3, x + 4, g - 4); P(x + 6, x + 7, g - 8); P(x + 9, x + 12, g - 11); S[f[2]] = [x + 11, g - 12]; }
+    else if (k === 'stairs') { for (let i = 0; i < 6; i++) B.block(x + i, x + i, g - 1 - i, g - 1); B.block(x + 6, x + 7, g - 7, g - 1); for (let i = 0; i < 6; i++) B.block(x + 8 + i, x + 8 + i, g - 6 + i, g - 1); S[f[2]] = [x + 6, g - 8]; }
+    else if (k === 'cage') { B.block(x, x + 1, g - 3, g - 1); B.block(x + 3, x + 8, g - 5, g - 1); B.block(x + 4, x + 7, g - 4, g - 1, ' '); B.fake(x + 5, x + 6, g - 5, g - 5); B.row(x + 3, x + 8, g - 7); S[f[2]] = [x + 5, g - 1]; }
+    else if (k === 'bridge') { P(x, x + 1, g - 3); P(x + 3, x + 13, g - 6); B.row(x + 3, x + 13, g - 8); S[f[2]] = [x + 10, g - 7]; }
+    else if (k === 'mover') { B.mover(x + 1, g - 4, 3, 110, 0, 1.1, (x % 7) / 7); P(x + 9, x + 12, g - 8); B.arc(x + 8, x + 13, g - 11, 1); S[f[2]] = [x + 11, g - 9]; }
+    // ---- adornos entre una cosa y otra (sin objetos) ----
+    else if (k === 'fbump') { B.block(x, x + 3, g - 1, g - 1); B.block(x + 1, x + 2, g - 2, g - 2); }
+    else if (k === 'fbox') { B.box(x + 1, g - 4, 'chip'); B.box(x + 2, g - 4, 'chip'); B.box(x + 3, g - 4, 'chip'); }
+    else if (k === 'farc') B.arc(x, x + 5, g - 4, 1);
+    else if (k === 'fmush') B.mush(x + 1, g);
+    else if (k === 'fpil') { B.block(x + 1, x + 2, g - 3, g - 1); B.row(x + 1, x + 2, g - 5); }
+    else if (k === 'fstep') { B.block(x, x + 1, g - 2, g - 1); B.block(x + 2, x + 3, g - 4, g - 1); B.block(x + 4, x + 5, g - 2, g - 1); }
+    else if (k === 'fplat') { P(x, x + 3, g - 4); B.row(x, x + 3, g - 5); } }
   B.S = S; B.g0 = g; return B;
 }
 function advNpcList(o) {          // personaje que necesita varias cosas distintas
@@ -9345,6 +9366,8 @@ const AV_MQ = [[/^CAJA FUERTE|CAJA DE SEGURIDAD|CERRADURA DE NÚMEROS/, 'caja-fu
   [/PUERTA DEL CAMAROTE|PUERTA BLINDADA|PUERTA DE LA NAVE/, 'puerta', 120], [/PUERTA DE PIEDRA|PUERTA DEL TEMPLO/, 'templo', 120], [/REJA/, 'reja', 120]];
 function avMQ(o) {
   if (o._mq !== undefined) return o; o._mq = null; const nm = o.name || '';
+  const STR = { 'adv-fuente': [2, 0, 1], 'adv-planta': [3, 0, 2], 'adv-rejilla': [2, 0, 1], 'adv-palanca': [2, 0, 1] }, sv = STR[o.img];          // dibujos con varios estados: se ve uno y cambia al arreglarlo
+  if (sv && !o.fr) { o.fr = sv[0]; o.f0 = sv[1]; o.f1 = sv[2]; }
   if (/^MACETA/.test(nm) && o.img === 'adv-planta') { o.img = 'esc-flor'; o.fr = 4; o.f0 = 0; o.f1 = /flor|manzana|seta/.test(o.gives || '') ? 3 : 1; o.h = 90; return o; }
   if (/^BROTE/.test(nm) && o.img === 'adv-planta') { o.img = 'esc-flor'; o.fr = 4; o.f0 = 1; o.f1 = 3; o.h = 100; return o; }
   if (/^FARO/.test(nm)) { o.img = 'esc-faro'; o.fr = 3; o.f0 = 0; o.f1 = 2; o.h = 140; return o; }
@@ -9370,7 +9393,7 @@ function avPicker(A, w, q, okId, onOk, wrong) {          // elegir un objeto de 
 }
 // pistas solo si el niño está perdido de verdad: más de 4 minutos sin avanzar y hablando con unos y otros sin saber qué hacer
 const avProg = A => { A.flag('av_lp', G.clock); A.flag('av_tk', 0); A.flag('av_hl', 0); };
-const AV_AT = { hill: 'en lo alto de una colina', plats: 'subiendo por unas plataformas', rock: 'dentro de una roca agrietada (¡dispárale con el láser!)', cave: 'en una cueva, detrás de una pared que no es de verdad', plat: 'encima de una plataforma', high: 'arriba del todo, subiendo por las plataformas', floor: 'en el suelo' };
+const AV_AT = { tower: 'arriba del todo de una torre de plataformas', trench: 'en el fondo de un foso', mushjump: 'en una plataforma alta (¡la seta te ayuda a saltar!)', vinecliff: 'encima de un acantilado (trepa por la liana)', pillars: 'en lo alto de unos pilares', tunnel: 'dentro de un túnel secreto (sus paredes no son de verdad)', springup: 'muy arriba, saltando de plataforma en plataforma', stairs: 'en la cima de una escalera de piedra', cage: 'dentro de una jaula de piedra (entra por arriba)', bridge: 'encima de un puente', mover: 'en una plataforma alta (súbete a la plataforma que se mueve)', hill: 'en lo alto de una colina', plats: 'subiendo por unas plataformas', rock: 'dentro de una roca agrietada (¡dispárale con el láser!)', cave: 'en una cueva, detrás de una pared que no es de verdad', plat: 'encima de una plataforma', high: 'arriba del todo, subiendo por las plataformas', floor: 'en el suelo' };
 function avNext(q, A) {          // el siguiente paso que el niño podría dar ahora mismo
   const R = q._rooms, cands = [], placeOf = w => w ? 'en ' + R[w].name.toLowerCase() : 'por el camino';
   if (A.has(q.need)) return { p: 0, t: 'hero' };
@@ -9401,7 +9424,7 @@ function avReward(A, o, e, after) {          // lo que pasa al dar el objeto bue
 function avNpc(id, o) {
   const w = qw(o.who), k = 'av_' + (o._k || id), said = k + 's', hint = A => o._q ? avHint(A, o._q) : [];
   return { id, kind: 'npc', name: w.name, img: w.img, fr: w.fr, h: w.h, float: w.float, fy: w.float ? -20 : 0, noTurn: w.h > 135,
-    mark: A => !A.flag(said) || (o.wants && !A.flag(k) && A.has(o.wants)) || (!o.wants && o.gives && !A.flag(k)),
+    mark: A => !A.flag(said) || (o.wants && !A.flag(k) && (A.inv[o.wants] || 0) >= (o.n || 1)) || (!o.wants && o.gives && !A.flag(k)),
     use: (A, e) => {
       if (o.pre && !A.flag(o.pre)) return A.say(w, o.preTxt || ['Ahora estoy muy ocupado. Vuelve más tarde.']);
       if (A.flag(k)) return A.say(w, (o.after ? (typeof o.after === 'function' ? o.after(A) : o.after) : [advRnd(ADV_DONE)]).concat(hint(A)));
@@ -9410,7 +9433,7 @@ function avNpc(id, o) {
       if (!o.wants) return A.say(w, talk, () => { A.flag(k, 1); if (first && o.goal0) A.goal(o.goal0); avReward(A, o, e); });
       A.say(w, talk, () => { if (first && o.goal0) A.goal(o.goal0);
         if (!Object.keys(A.inv || {}).length) return;
-        avPicker(A, w, '¿Le das algo a ' + w.name.charAt(0) + w.name.slice(1).toLowerCase() + '?', o.wants, it => { A.take(it); A.flag(k, 1); A.say(w, advThx(w, o.thanks), () => avReward(A, o, e)); },
+        avPicker(A, w, '¿Le das algo a ' + w.name.charAt(0) + w.name.slice(1).toLowerCase() + '?', o.wants, it => { const hv = A.inv[it] || 0; if (o.n && hv < o.n) return A.say(w, ['¡Sí, eso es! Pero necesito ' + o.n + ' y solo tienes ' + hv + '.', '¡Sigue buscando, que hay más escondidos!']); for (let i = 0; i < (o.n || 1); i++) A.take(it); A.flag(k, 1); A.say(w, advThx(w, o.thanks), () => avReward(A, o, e)); },
           it => A.say(w, [advRnd(AV_NO_NPC)(avArt(it))])); });
     } };
 }
@@ -9442,8 +9465,31 @@ function avDoor(id, tx, ty, r, rx, ry) {
 // objeto suelto en el suelo o escondido
 const avItem = (it, tx, ty, msg, key) => ({ id: it, tx, ty, msg: A => { if (key) A.flag('it_' + key, 1); avProg(A); return msg || ['¡Has encontrado ' + avUn(it) + '!', 'Lo guardas en la mochila. Seguro que sirve para algo…']; } });
 
+
+/* ---------- 30 recorridos distintos para las aventuras (dónde se esconden las cosas, qué hay entre medias y dónde está el protagonista) ---------- */
+const AV_FW = { tower: 13, trench: 12, mushjump: 14, vinecliff: 11, pillars: 17, tunnel: 14, springup: 15, stairs: 16, cage: 12, bridge: 17, mover: 16, hill: 11, plats: 17, rock: 11, cave: 28, plat: 9 };
+const AV_PAT = [
+  ['tower', 'cave', 'bridge', 'rock'], ['trench', 'mushjump', 'tunnel', 'pillars'], ['vinecliff', 'stairs', 'cage', 'mover'], ['plats', 'springup', 'trench', 'bridge'],
+  ['stairs', 'rock', 'tower', 'tunnel'], ['mover', 'pillars', 'cave', 'mushjump'], ['cage', 'bridge', 'springup', 'trench'], ['tunnel', 'vinecliff', 'plats', 'stairs'],
+  ['bridge', 'tower', 'mushjump', 'cage'], ['rock', 'trench', 'mover', 'vinecliff'], ['springup', 'cage', 'pillars', 'cave'], ['pillars', 'tunnel', 'stairs', 'springup'],
+  ['mushjump', 'plats', 'vinecliff', 'trench'], ['cave', 'mover', 'tunnel', 'tower'], ['hill', 'bridge', 'cage', 'pillars'], ['trench', 'stairs', 'mover', 'rock'],
+  ['tower', 'springup', 'tunnel', 'hill'], ['vinecliff', 'cave', 'bridge', 'mushjump'], ['stairs', 'trench', 'springup', 'cage'], ['mover', 'rock', 'plats', 'tunnel'],
+  ['cage', 'mushjump', 'tower', 'trench'], ['bridge', 'pillars', 'rock', 'stairs'], ['tunnel', 'cage', 'mover', 'plats'], ['springup', 'vinecliff', 'trench', 'tower'],
+  ['plat', 'tunnel', 'mushjump', 'bridge'], ['pillars', 'cave', 'cage', 'springup'], ['rock', 'stairs', 'vinecliff', 'mover'], ['mushjump', 'trench', 'bridge', 'tunnel'],
+  ['hill', 'tower', 'pillars', 'cage'], ['trench', 'vinecliff', 'springup', 'stairs']];
+const AV_FILL = [['fbox', 'farc'], ['fmush', 'fbump'], ['fpil', 'fplat'], ['fstep', 'fbox'], ['farc', 'fmush'], ['fplat', 'fstep'], ['fbump', 'fpil'], ['fbox', 'fmush', 'fplat']];
+function avPatOf(id) { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 100003; const n = +(id.split('-')[1] || 0); return { i: (n * 7 + (id[0] === 'C' ? 11 : 0)) % AV_PAT.length, h }; }
+function avLayout(id, q) {          // reparte los escondites y el orden según el recorrido de esta aventura
+  if (q._lay) return; q._lay = 1; const pt = avPatOf(id), sp = AV_PAT[pt.i], r = GZr(id + 'lay'); let k = 0;
+  q._fill = AV_FILL[(pt.i + pt.h) % AV_FILL.length]; q._heroFar = pt.i % 3 === 1; q._fp = 0.35 + (pt.i % 4) * 0.12;
+  const lead = q.main.filter(p => p[0] === 'deco').slice(0, 1), rest = q.main.filter(p => !lead.includes(p) && p[0] !== 'hill'), tail = q.main.filter(p => p[0] === 'hill' && !lead.includes(p));
+  for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+  for (const p of rest) if (p[0] === 'item' && p[1] && /^(hill|plats|rock|cave|plat|floor)?$/.test(p[1].at || '')) p[1].at = sp[k++ % sp.length];
+  q.main = lead.concat(rest, tail);
+}
+const GZr = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); let a = h >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
 function advAv(id, q) {
-  AV[id] = q; const rooms = {};
+  avLayout(id, q); AV[id] = q; const rooms = {};
   Object.keys(q.rooms || {}).forEach((key, i) => { rooms[key] = Object.assign({ rid: id + '-' + key, key }, q.rooms[key]); });
   q._rooms = rooms; let nk = 0; const tag = list => list.forEach(p => { if (p[1] && typeof p[1] === 'object') { p[1]._k = id + '#' + (nk++); p[1]._q = q; } }); tag(q.main); Object.values(rooms).forEach(r => tag(r.list));
   const parentOf = {};          // en qué sala está la puerta de cada sala
@@ -9474,7 +9520,7 @@ function advAv(id, q) {
   function doorPosOf(key) { return DPOS[id + '/' + key] || 20; }
   // ---- zona principal ----
   LEVELS[id] = function () {
-    let x = 20; const feats = [], ents = [], spots = [];
+    let x = 20, ni = 0, heroX = 9; const feats = [], ents = [], spots = [], fr = GZr(id + 'fill');
     const hero = qw(q.hero);
     for (const p of q.main) { const k = p[0], o = p[1] || {};
       if (k === 'item') { const at = o.at || 'hill';
@@ -9483,6 +9529,7 @@ function advAv(id, q) {
         else if (at === 'rock') { feats.push(['rock', x, 'r' + x]); spots.push(['r' + x, o]); x += 11; }
         else if (at === 'cave') { x += 6; feats.push(['cave', x, 16, 'c' + x]); spots.push(['c' + x, o]); x += 22; }
         else if (at === 'plat') { feats.push(['plat', x, 5, (q.H || 18) - 8, 'f' + x]); spots.push(['f' + x, o]); x += 9; }
+        else if (AV_FW[at]) { feats.push([at, x, 'z' + x]); spots.push(['z' + x, o]); x += AV_FW[at]; }
         else { spots.push([null, o, x + 2]); x += 5; } }
       else if (k === 'hill') { feats.push(['hill', x, o.w || 6, o.h || 2, 'h' + x]); x += (o.w || 6) + 5; }
       else if (k === 'plats') { feats.push(['plats', x, 'p' + x]); x += 17; }
@@ -9490,12 +9537,13 @@ function advAv(id, q) {
       else if (k === 'mach') { const e = avMach(id + 'm' + x, o); e.tx = x + 3; ents.push(e); x += 9; }
       else if (k === 'chest') { ents.push(advChest('ch' + x, x + 2, 0, o.c || 8)); x += 6; }
       else if (k === 'deco') { ents.push({ id: 'dc' + x, kind: 'deco', tx: x + 2, ty: 0, h: o.h || 100, img: o.img, fr: o.fr, frame: o.frame, frameIf: o.frameIf }); x += o.w || 6; }
-      else if (k === 'door') { const r = rooms[p[1]]; DPOS[id + '/' + r.key] = x + 3; ents.push(avDoor('w' + r.rid, x + 3, 0, r, 4, 12)); x += 9; } }
+      else if (k === 'door') { const r = rooms[p[1]]; DPOS[id + '/' + r.key] = x + 3; ents.push(avDoor('w' + r.rid, x + 3, 0, r, 4, 12)); x += 9; }
+      if (q._fill) { ni++; if (ni === 2 && q._heroFar) { heroX = x + 2; x += 8; } if (fr() < q._fp) { const fk = q._fill[Math.floor(fr() * q._fill.length)]; feats.push([fk, x]); x += 7; } } }
     const wallX = x + 10, W = wallX + 16, sea = q.th === 'LO', B = advStd({ W, H: q.H || 18, sea, roof: sea, feats: feats.concat([['wall', wallX]]) }), S = B.S, g = B.g0;
     q._g = g; for (const e of ents) if (!e.ty) e.ty = g;
     const items = [];
     for (const [s, o, fx] of spots) { const xy = s ? S[s] : [fx, g - 1]; if (xy) items.push(avItem(o.it, xy[0], xy[1], o.msg, o._k)); }
-    ents.unshift(Object.assign(avNpc(id + 'hero', { who: q.hero, _q: q, _k: id + '#hero', say: q.say, hint: q.hint, wants: q.need, thanks: q.thanks, goal0: q.goal0, final: true, flag: 'av_fin', exitTxt: q.exitTxt, after: ['¡Gracias por todo, Lucas! Tu cohete te espera al final del camino.'] }), { tx: 9, ty: g }));
+    ents.unshift(Object.assign(avNpc(id + 'hero', { who: q.hero, _q: q, _k: id + '#hero', say: q.say, hint: q.hint, wants: q.need, thanks: q.thanks, goal0: q.goal0, final: true, flag: 'av_fin', exitTxt: q.exitTxt, after: ['¡Gracias por todo, Lucas! Tu cohete te espera al final del camino.'] }), { tx: heroX, ty: g }));
     ents.push(...advTeles([['t1', 15, g, q.t1 || 'LA ENTRADA'], ['t2', wallX - 6, g, q.t2 || 'EL FINAL']]));
     const adv = { goal0: 'Habla con ' + hero.name.charAt(0) + hero.name.slice(1).toLowerCase(), amb: (q.amb || []).flatMap(a => QAMB[a](g)), intro: q.intro, endTxt: q.end, ents, items, fly: sea,
       gates: [advLaser('salida', wallX, g - 4, g - 1, [q.laser || 'Una barrera de luz. Se apagará cuando termines la misión.'])] };
@@ -11232,6 +11280,10 @@ function gzChain(r, w, goal, depth, used, mUsed, out, allowF) {
   const ms = GZ_M.filter(m => !m.f && !mUsed.has(m.name) && !used.has(m.need) && (m.g === 'any' || m.g.includes(goal)) && (!m.th || m.th.includes(w)) && ADV_IT[m.need]);
   const ws = Object.keys(GZ_WANT).filter(k => !used.has(k) && ADV_IT[k] && k !== 'chip');
   const st = { gives: goal };
+  if (allowF && depth <= 4 && r() < 0.6) {          // alguien que colecciona: hay que encontrarle varias cosas iguales
+    const cs = Object.keys(GZ_COL).filter(k => !used.has(k) && ADV_IT[k] && GZ_COL[k][0]);
+    if (cs.length) { const k = GZ.pick(r, cs), n = 3 + Math.floor(r() * 3); used.add(k); st.k = 'npc'; st.wants = k; st.n = n; out.push(st); for (let i = 0; i < n; i++) out.push({ k: 'item', it: k }); return; }
+  }
   if (ms.length && (r() < 0.5 || !ws.length)) {
     const m = GZ.pick(r, ms); mUsed.add(m.name); st.k = 'mach'; st.m = m; out.push(st);
     if (allowF && depth >= 2 && r() < 0.55) {          // a veces la máquina además necesita que antes funcione otra (generador, luces, altar…)
@@ -11256,17 +11308,19 @@ function gzBig(id, w, goal, hero, depth) {
   const r = GZ.rng(id), W = GZ_W[w], used = new Set(), mUsed = new Set(), steps = [];
   gzChain(r, w, goal, depth, used, mUsed, steps, true);
   // la sala cerrada guarda el último paso; se abre con una llave/tarjeta o con una máquina (láser, palanca, altar…)
-  const rws = GZ.mix(r, W.rooms).slice(0, 3 + (r() < 0.4 ? 1 : 0)), rooms = {}, keys = [];
+  const rws = GZ.mix(r, W.rooms).slice(0, 4 + (r() < 0.5 ? 1 : 0)), rooms = {}, keys = [];
   rws.forEach((rw, i) => { const k = 's' + i; rooms[k] = gzRoom(rw); keys.push(k); });
   const lockK = keys[keys.length - 1], lockSteps = [];
   const lockF = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need]);
   if (lockF.length && r() < 0.5) { const f = GZ.pick(r, lockF); mUsed.add(f.name); rooms[lockK].lock = { flag: 'gzl', txt: [f.door] }; lockSteps.push({ k: 'mach', m: f, flag: 'gzl' }); gzChain(r, w, f.need, 1 + (r() < 0.5 ? 1 : 0), used, mUsed, lockSteps, false); }
-  else { const kk = GZ.pick(r, ['llavem', 'tarjeta', 'llavep'].filter(x => !used.has(x))) || 'llavem'; rooms[lockK].lock = { need: kk, txt: [kk === 'tarjeta' ? 'Una puerta con un lector de tarjetas.' : 'La puerta está cerrada con llave.'], ok: ['¡Se ha abierto!'] }; gzChain(r, w, kk, 1 + (r() < 0.6 ? 1 : 0), used, mUsed, lockSteps, false); }
+  else { const kk = GZ.pick(r, ['llavem', 'tarjeta', 'llavep'].filter(x => !used.has(x))) || 'llavem'; rooms[lockK].lock = { need: kk, txt: [kk === 'tarjeta' ? 'Una puerta con un lector de tarjetas.' : 'La puerta está cerrada con llave.'], ok: ['¡Se ha abierto!'] }; gzChain(r, w, kk, 2 + (r() < 0.6 ? 1 : 0), used, mUsed, lockSteps, true); }
   // personajes
   const pool = GZ.mix(r, W.chars.filter(c => c !== hero)).concat(GZ.mix(r, ['RAYO', 'BYTE', 'CHISPAS', 'TUERCAS', 'PELUSÍN', 'BOLITA', 'HOJA', 'TAMBOR'].filter(c => c !== hero && !W.chars.includes(c))));
   let pi = 0; const who = () => pool[pi++ % pool.length];
   const ent = st => {
     if (st.k === 'item') return ['item', { it: st.it }];
+    if (st.k === 'npc' && st.n) { const nm = who(); st.who = nm; const C = GZ_COL[st.wants]; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), C[2], 'Si me traes ' + st.n + ' ' + C[0] + ', te daré ' + avUn(st.gives) + '.', 'Están escondidos por todas partes: busca bien en cada sala.'],
+      hint: ['Me faltan ' + C[0] + '. ¡Necesito ' + st.n + '!'], wants: st.wants, n: st.n, thanks: ['¡' + st.n + ' ' + C[0] + '! ¡Todos los que necesitaba!', 'Toma, ' + avUn(st.gives) + '. Te lo has ganado.'], gives: st.gives, after: ['¡Gracias, Lucas! Mi colección está completa.'] }]; }
     if (st.k === 'npc') { const nm = who(); st.who = nm; const W2 = GZ_WANT[st.wants]; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), W2[0], GZ.pick(r, ['Si alguien me ayudara, le daría algo que tengo guardado.', '¿Tú podrías ayudarme?', 'Tengo algo que a lo mejor te sirve… si me ayudas.'])],
       hint: [W2[1]], wants: st.wants, thanks: [W2[2], 'Toma, ' + avUn(st.gives) + '. Seguro que te sirve para algo.'], gives: st.gives, after: [GZ.pick(r, ['¡Gracias otra vez, Lucas!', '¡Eres el mejor, Lucas!', 'Si necesitas algo, aquí estoy.'])] }]; }
     const m = st.m, o = { name: m.name, img: m.img, h: m.h, fr: m.fr, f0: m.f0, f1: m.f1, beams: m.beams, look: [m.look], need: m.need, fix: [m.fix] };
@@ -11354,13 +11408,39 @@ function gzSmall(id, w, need, boss) {
     intro: W.intro.slice(0, 1).concat([H + ' necesita ayuda.']), ask: [GZ.pick(r, GZ_HI) + ' Soy ' + H + '.', C[2], '¿Me ayudas a buscar ' + las + ' ' + C[0] + '?'],
     thanks: ['¡Ya están todas! ¡Muchísimas gracias, Lucas!'.replace('todas', g === 'o' ? 'todos' : 'todas')], end: H + ' consiguió ' + las + ' ' + C[0] + ' gracias a Lucas.<br>¡Qué gran aventura!', plan });
 }
+// ---------- las aventuras escritas a mano (7 años) se alargan con una segunda misión: una sala queda cerrada y hay que resolver otra cadena para abrirla ----------
+function gzExtend(id, q, FL, NR) {
+  const r = GZ.rng(id + 'ext'), w = GZ_W[q.th] ? q.th : 'ST', W = GZ_W[w], used = new Set([q.need]), mUsed = new Set(), names = new Set([q.hero]), rnames = new Set();
+  const scan = l => l.forEach(p => { const o = p[1]; if (!o || typeof o !== 'object') return; ['it', 'wants', 'need', 'gives'].forEach(k => o[k] && used.add(o[k])); if (o.who) names.add(o.who); if (o.name) mUsed.add(o.name); });
+  scan(q.main); for (const rm of Object.values(q.rooms || {})) { scan(rm.list); rnames.add(rm.name); if (rm.lock && rm.lock.need) used.add(rm.lock.need); }
+  const free = Object.keys(q.rooms || {}).filter(k => !q.rooms[k].lock && q.main.some(p => p[0] === 'door' && p[1] === k));
+  const tgts = []; const sc2 = l => l.forEach(p => { if ((p[0] === 'mach' || (p[0] === 'npc' && p[1].wants)) && !p[1].pre) tgts.push(p[1]); }); sc2(q.main); Object.values(q.rooms).forEach(rm => sc2(rm.list));
+  if (!free.length && !tgts.length) return false;
+  const lk = free.length ? GZ.pick(r, free) : null, tg = lk ? null : GZ.pick(r, tgts), fs = GZ_M.filter(f => f.f && !mUsed.has(f.name) && !used.has(f.need) && (!f.th || f.th.includes(w)) && ADV_IT[f.need]); if (!fs.length) return false;
+  const f = GZ.pick(r, fs); mUsed.add(f.name); if (lk) q.rooms[lk].lock = { flag: FL, txt: [f.door] }; else { tg.pre = FL; tg.preTxt = [f.pre]; }
+  const steps = [{ k: 'mach', m: f, flag: FL }]; gzChain(r, w, f.need, 4 + (r() < 0.5 ? 1 : 0), used, mUsed, steps, true);
+  const nr = GZ.mix(r, W.rooms.filter(x => !rnames.has(x[0]))).slice(0, NR), nk = []; nr.forEach((rw, i) => { const k = FL + i; q.rooms[k] = gzRoom(rw); nk.push(k); });
+  const pool = GZ.mix(r, W.chars.filter(c => !names.has(c))).concat(GZ.mix(r, ['RAYO', 'BYTE', 'CHISPAS', 'TUERCAS', 'PELUSÍN', 'BOLITA', 'HOJA', 'TAMBOR', 'BOTI', 'CHEF FOGÓN', 'PROFE CHIP'].filter(c => !names.has(c)))); let pi = 0;
+  const ent = st => { if (st.k === 'item') return ['item', { it: st.it }];
+    if (st.k === 'npc' && st.n) { const nm = pool[pi++ % pool.length], C = GZ_COL[st.wants]; st.who = nm; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), C[2], 'Si me traes ' + st.n + ' ' + C[0] + ', te daré ' + avUn(st.gives) + '.'], hint: ['¡Necesito ' + st.n + ' ' + C[0] + '!'], wants: st.wants, n: st.n, thanks: ['¡Ya están todos!', 'Toma, ' + avUn(st.gives) + '.'], gives: st.gives, after: ['¡Gracias otra vez, Lucas!'] }]; }
+    if (st.k === 'npc') { const nm = pool[pi++ % pool.length], W2 = GZ_WANT[st.wants]; st.who = nm; return ['npc', { who: nm, say: [GZ.pick(r, GZ_HI), W2[0], GZ.pick(r, ['Si me ayudas, te daré algo que tengo guardado.', '¿Tú podrías ayudarme?'])], hint: [W2[1]], wants: st.wants, thanks: [W2[2], 'Toma, ' + avUn(st.gives) + '. A lo mejor te sirve.'], gives: st.gives, after: ['¡Gracias otra vez, Lucas!'] }]; }
+    const m = st.m, o = { name: m.name, img: m.img, h: m.h, fr: m.fr, f0: m.f0, f1: m.f1, beams: m.beams, look: [m.look], need: m.need, fix: [m.fix] };
+    if (st.gives) { o.gives = st.gives; o.fix.push('¡Has conseguido ' + avUn(st.gives) + '!'); o.done = ['Ya no queda nada dentro.']; } else { o.flag = st.flag; o.done = ['Ya funciona perfectamente.']; }
+    if (st.pre) { o.pre = st.pre; o.preTxt = [st.preTxt]; } return ['mach', o]; };
+  for (const st of steps) { const e = ent(st), tgt = st === steps[0] ? null : (nk.length && r() < 0.6 ? GZ.pick(r, nk) : null);
+    if (e[0] === 'item') e[1].at = tgt ? GZ.pick(r, ['high', 'rock', 'floor']) : 'plats'; (tgt ? q.rooms[tgt].list : q.main).push(e); }
+  const nm = pool[pi++ % pool.length]; q.main.push(['npc', { who: nm, say: [GZ.pick(r, GZ_HI), lk ? 'Oye, ¿has intentado entrar en ' + q.rooms[lk].name.toLowerCase() + '? Ahora no hay manera de pasar.' : 'Hay cosas en este sitio que no funcionan hasta que se arregle una cosa.', 'Dicen que ' + (avFem(f.name.toLowerCase()) ? 'la ' : 'el ') + f.name.toLowerCase() + ' tiene algo que ver. Habrá que arreglarlo.'] }]);
+  nk.forEach(k => { q.main.push(['door', k]); const fu = GZ_FURN[q.rooms[k].bg]; if (fu) q.rooms[k].list.unshift(['deco', { img: fu[0], h: 90 }]); });
+  return true;
+}
+(() => { for (let i = 1; i <= 70; i++) { const id = 'B-' + i, q = AV[id]; if (!q) continue; const a = gzExtend(id, q, 'gzx', 2), b = gzExtend(id, q, 'gzy', 1); if (!a && !b) continue; q._lay = 0; const k = ADV_LV.findIndex(l => l.id === id), pos = k; if (k >= 0) ADV_LV.splice(k, 1); advAv(id, q); const nl = ADV_LV.pop(); ADV_LV.splice(pos, 0, nl); } })();
 // ---------- el reparto: qué aventuras se crean ----------
 (() => {
   for (const l of ADV_LV) GZ_TAKEN.add(l.n);
   const WS = ['ST', 'LJ', 'LO', 'LT', 'LF', 'LS', 'LD', 'ICE', 'LK', 'LV'];
   const heroFor = (r, w) => GZ.pick(r, GZ_W[w].chars);
   // 7 años: B-71 a B-120 (cadenas de 5 a 7 pasos)
-  for (let i = 71; i <= 150; i++) { const id = 'B-' + i, r = GZ.rng(id + 'x'), w = WS[i % WS.length], goal = GZ.pick(r, GZ_GOALS_BY[w]); gzBig(id, w, goal, heroFor(r, w), 3 + (i > 95 ? 1 : 0) + (i > 125 && r() < 0.5 ? 1 : 0) + (r() < 0.4 ? 1 : 0)); }
+  for (let i = 71; i <= 150; i++) { const id = 'B-' + i, r = GZ.rng(id + 'x'), w = WS[i % WS.length], goal = GZ.pick(r, GZ_GOALS_BY[w]); gzBig(id, w, goal, heroFor(r, w), 6 + (i > 110 ? 1 : 0) + (r() < 0.4 ? 1 : 0)); }
   // 6 años: C-71 a C-120 (2 o 3 pasos)
   for (let i = 71; i <= 150; i++) { const id = 'C-' + i, r = GZ.rng(id + 'x'), w = WS[(i + 3) % WS.length], goal = GZ.pick(r, GZ_GOALS_BY[w]); gzMid(id, w, goal, heroFor(r, w), 2 + (i > 95 && r() < 0.6 ? 1 : 0)); }
   // 5 años: A-91 a A-120
