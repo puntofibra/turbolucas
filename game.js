@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.93';
+const VERSION = '1.94';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7720,7 +7720,7 @@ function advDrawWorld() {
       const mk = e.name && e.name !== 'TELETRANSPORTE' ? e.name : ''; if (mk) { ctx.font = '900 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#05071a'; ctx.fillText(mk, e.x + 1, py - 55); ctx.fillStyle = '#e8c8ff'; ctx.fillText(mk, e.x, py - 56); }
       continue; }
     const glw = (e.glowIf && e.glowIf(A.api)) || e.glow; if (glw) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, by - e.h / 2, 4, e.x, by - e.h / 2, e.h * 0.8); gg.addColorStop(0, glw); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, by - e.h * 1.4, e.h * 2, e.h * 1.6); ctx.restore(); }
-    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.frameIf) e.frame = e.frameIf(A.api); if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2);
+    let im = xi(e.img, e.fr); if (e.fr && !im._n) im._n = e.fr; if (e.frameIf) e.frame = e.frameIf(A.api); if (e.img3 && e.glow) im = xi(e.img3); if (e.img === 'adv-cofre' && e.opened) im = xi('adv-cofre-abierto'); if (e.img2 && e.alt && e.alt(A.api)) im = xi(e.img2, e.fr2); { const fk = (e.img2 && e.alt && e.alt(A.api)) ? e.img2 : e.img; if (typeof ADV_FLK !== 'undefined' && ADV_FLK[fk] && ((time * 7 + (e.tx || 0)) | 0) % 2) im = xi(ADV_FLK[fk]); }
     let an = e.anim; if (e.anim2 && e.alt && e.alt(A.api)) an = e.anim2; if (e.anim3 && e.glow) an = e.anim3; if (e.img3 && !e.glow && e.name === 'TUERCAS') an = null;
     if (an && okI(xi(an.img, 4))) { im = IMG[an.img]; im._n = 4; const talk = ADVT.on && ADVT.who && ADVT.who.name === e.name, mv = ADV_MOVE.has(an.img.slice(5)), cyc = (e.ph + e.x) % 6;
       im._f = an.frame != null ? an.frame : talk ? (Math.floor(time * 4) % 2 ? 1 : 2) : mv ? (Math.floor(time * 4 + e.x) % 2) : (e.happy > 0 ? 3 : cyc < 0.7 ? 3 : cyc > 3 && cyc < 3.5 ? 1 : 0); }
@@ -7738,7 +7738,7 @@ function advDrawWorld() {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(o.x, y, 3, o.x, y, 44); gg.addColorStop(0, 'rgba(255,250,200,.75)'); gg.addColorStop(1, 'rgba(255,240,150,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(o.x, y, 44, 0, 6.283); ctx.fill(); ctx.restore();
     { const oi = xi(oimg); if (o.fr) { oi._n = o.fr; oi._f = o.frame || 0; } spr(oi, o.x, y, it.h, 0.5, 0.5, false, Math.sin(time * 2 + o.x) * 0.12); }
     if (Math.random() < 0.12) parts.push({ x: o.x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40, vx: 0, vy: -30, life: 0.7, max: 0.7, col: '#ffffff', size: 2, grav: 0 }); }
-  advFxPro(A); advAmbLife(A);
+  advFxPro(A); advAmbLife(A); if (typeof advAmb19 === 'function') advAmb19(A);
 }
 /* ---------- efectos pro de la aventura: motas de luz, rayos de luz en las salas, rayos láser y luz al arreglar algo ---------- */
 // fondos de salas que aún no tienen dibujo propio: usan otro parecido hasta que lleguen los nuevos
@@ -7760,7 +7760,7 @@ function ambDrip(v) { audio(); if (!AC || !sndOn) return; tone(900, 1900, 0.07, 
 function advAmbLife(A) {
   const px = P.x + P.w / 2, py = P.y + P.h / 2, now = time; let dark = null;
   for (const e of A.ents) { if (e.kind !== 'gate') continue; const nm = e.name || '', fixed = e.alt && e.alt(A.api), near = Math.abs(e.x - px) < 520, vol = Math.max(0, 1 - Math.abs(e.x - px) / 520);
-    if (!fixed && (e.need === 'bombilla' || /LUCES|LÁMPARA|SALA OSCURA|LUZ/.test(nm)) && ADV_BG[curId]) dark = dark || e;
+    if (!fixed && (e.need === 'bombilla' || /LUCES|LÁMPARA|SALA OSCURA|LUZ|ANTORCHA/.test(nm)) && ADV_BG[curId]) dark = dark || e;
     if (!fixed && /TESLA|ALTA TENSIÓN/.test(nm) && near) {          // rayos de alta tensión
       const top = e.y - e.h * 0.92; ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (let k = 0; k < 2; k++) { if (Math.random() < 0.5) continue; const ex = e.x + (Math.random() - 0.5) * 260, ey = e.y - 4; ctx.strokeStyle = 'rgba(150,230,255,.9)'; ctx.lineWidth = 2.5; ctx.shadowColor = '#7fe9ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.moveTo(e.x, top);
@@ -9439,7 +9439,7 @@ function avMQ(o) {
 // Cada misión es una cadena: un objeto abre otro, un personaje pide algo y a cambio da una pista o un objeto, una máquina rota se arregla con la herramienta adecuada…
 // El niño elige qué objeto de la mochila usa en cada sitio (si se equivoca, el personaje o la máquina le contesta con gracia).
 const AV = {};          // las definiciones, para comprobar que todas se pueden terminar
-const avFem = n => !/^(mapa|planeta|día)$/.test(n.split(' ')[0]) && /a$|ión$|^llave$|^nube$|^flor$/.test(n.split(' ')[0]);
+const avFem = n => !/^(mapa|planeta|día|prisma)$/.test(n.split(' ')[0]) && /a$|ión$|^llave$|^nube$|^flor$/.test(n.split(' ')[0]);
 const avPl = n => /^(maracas|tijeras)$/.test(n) ? 'f' : /^auriculares$/.test(n) ? 'm' : null;
 const avArt = id => { const n = ADV_IT[id].n, p = avPl(n); return (p ? (p === 'f' ? 'las ' : 'los ') : avFem(n) ? 'la ' : 'el ') + n; };
 const avUn = id => { const n = ADV_IT[id].n, p = avPl(n); return (p ? (p === 'f' ? 'unas ' : 'unos ') : avFem(n) ? 'una ' : 'un ') + n; };
@@ -11541,6 +11541,156 @@ function gzExtend(id, q, FL, NR) {
     LO: ['perla', 'caracola', 'estrellamar', 'oro', 'corona'], ICE: ['cristal', 'galleta', 'regalo', 'linterna', 'estrella', 'magdalena', 'vela'] };
   for (let i = 91; i <= 150; i++) { const id = 'A-' + i, r = GZ.rng(id + 'x'), w = WS[(i + 7) % WS.length], cs = COLS[w]; gzSmall(id, w, cs[Math.floor(i / WS.length) % cs.length], heroFor(r, w)); }
 })();
+
+/* ======================= v1.94 · RECURSOS NUEVOS: pilas, cables, vías, puentes, láser, engranajes, canales, tesoros, tuberías, fuego y pociones ======================= */
+Object.assign(ADV_IT, {
+  pilav: { n: 'pila verde', img: 'it-pila-verde', h: 46 }, pilaa: { n: 'pila azul', img: 'it-pila-azul', h: 46 }, pilam: { n: 'pila morada', img: 'it-pila-morada', h: 46 }, pilan: { n: 'pila naranja', img: 'it-pila-naranja', h: 46 },
+  bateria: { n: 'batería llena', img: 'it-bateria', h: 52 },
+  tronco: { n: 'tronco', img: 'it-tronco', h: 40 }, lena: { n: 'leña', img: 'it-lena', h: 44 }, carbon: { n: 'saco de carbón', img: 'it-carbon', h: 48 },
+  espejo: { n: 'espejo', img: 'it-espejo', h: 50 }, prisma: { n: 'prisma', img: 'it-prisma', h: 46 }, tabla: { n: 'tabla de madera', img: 'it-tabla', h: 48 },
+  volante: { n: 'rueda del grifo', img: 'it-volante', h: 44 }, tubor: { n: 'tubo nuevo', img: 'it-tubo-recto', h: 34 }, tuerca: { n: 'tuerca', img: 'it-tuerca', h: 34 },
+  manivela: { n: 'manivela', img: 'it-manivela', h: 46 }, engc: { n: 'engranaje de cobre', img: 'it-eng-cobre', h: 44 }, cadena: { n: 'cadena', img: 'it-cadena', h: 30 },
+  lingote: { n: 'lingote de oro', img: 'it-lingote-oro', h: 38 }, lingotep: { n: 'lingote de plata', img: 'it-lingote-plata', h: 38 }, lingotes: { n: 'montón de lingotes', img: 'it-lingotes', h: 44 },
+  sacom: { n: 'saco de monedas', img: 'it-saco-monedas', h: 50 }, esmeralda: { n: 'esmeralda', img: 'it-esmeralda', h: 46 }, diamante: { n: 'diamante', img: 'it-diamante', h: 44 },
+  rubig: { n: 'rubí', img: 'it-rubi', h: 44 }, zafiro: { n: 'zafiro', img: 'it-zafiro', h: 44 }, amatista: { n: 'amatista', img: 'it-amatista', h: 46 },
+  monedae: { n: 'moneda estrella', img: 'it-moneda-estrella', h: 42 }, gemac: { n: 'gema corazón', img: 'it-gema-corazon', h: 46 },
+  plumaf: { n: 'pluma de fénix', img: 'it-pluma-fenix', h: 52 }, florluna: { n: 'flor de luna', img: 'it-flor-luna', h: 48 }, setam: { n: 'seta mágica', img: 'it-seta-magica', h: 48 },
+  ojod: { n: 'ojo de dragón', img: 'it-ojo-dragon', h: 42 }, trebol: { n: 'trébol de la suerte', img: 'it-trebol', h: 46 }, sello: { n: 'sello de lacre', img: 'it-sello', h: 44 },
+  frasco: { n: 'frasco de agua pura', img: 'it-frasco', h: 48 }, pocionr: { n: 'poción roja', img: 'it-pocion-roja', h: 48 }, pociona: { n: 'poción azul', img: 'it-pocion-azul', h: 48 },
+  pocionv: { n: 'poción verde', img: 'it-pocion-verde', h: 50 }, pociond: { n: 'poción dorada', img: 'it-pocion-dorada', h: 48 }, pocionm: { n: 'poción morada', img: 'it-pocion-morada', h: 48 },
+  pocionn: { n: 'poción naranja', img: 'it-pocion-naranja', h: 50 }, pocionrosa: { n: 'poción rosa', img: 'it-pocion-rosa', h: 48 } });
+// dibujos nuevos para cosas de siempre
+(() => { const NEW = { fusible: 'it-pila-verde', eng: 'it-eng-oro', engp: 'it-eng-plata', pocion: 'it-pocion-morada' }; for (const k in NEW) if (ADV_IT[k]) ADV_IT[k].img = NEW[k]; })();
+AV_DECOY.push('pociona', 'pocionv', 'pocionn', 'frasco', 'tuerca', 'lingotep', 'amatista', 'trebol', 'sello');
+// máquinas con dibujo de «roto» y «arreglado»
+AV_MQ.push([/^HOGUERA/, 'hoguera', 110], [/^CHIMENEA/, 'chimenea', 130], [/^ANTORCHA/, 'antorcha', 120], [/VAGONETA/, 'vagoneta', 100], [/^GRIFO/, 'grifo', 90],
+  [/RECEPTOR LÁSER/, 'receptor', 110], [/BARRERA DE ENERGÍA/, 'energia', 130], [/CAÑÓN ARCOÍRIS/, 'laser', 100], [/^OLLA/, 'olla', 110], [/BATERÍA GIGANTE/, 'bateria', 130],
+  [/CARGADOR/, 'bateriag', 110], [/INTERRUPTOR/, 'interruptor', 90], [/PUENTE DE CUERDA/, 'pcuerda', 100], [/PUENTE METÁLICO/, 'pmetal', 90], [/PUENTE DE HIELO/, 'phielo', 90],
+  [/TUBERÍA PARTIDA/, 'tuboroto', 60], [/COMPUERTA DEL CANAL/, 'compuerta', 100], [/LÁMPARA COLGANTE/, 'bombilla', 100], [/^VÍA ROTA/, 'riel', 60], [/TUBERÍA ROTA/, 'tuboroto', 60]);
+// el fuego de verdad baila: fotograma alterno cuando está encendido
+const ADV_FLK = { 'mq-hoguera-1': 'mq-hoguera-2', 'mq-antorcha-1': 'mq-antorcha-2', 'mq-chimenea-1': 'mq-chimenea-2' };
+const GZ_M2 = [
+  { name: 'HOGUERA APAGADA', img: 'adv-poste', need: 'tronco', look: 'Una hoguera fría con piedras alrededor. Le faltan troncos.', fix: '¡Fuuush! ¡La hoguera se enciende y lo calienta todo! Con el calorcito se derrite el hielo que había entre las piedras… ¡y aparece algo!', g: 'any', th: ['LJ', 'ICE', 'LF', 'LD', 'LS', 'LO', 'LT'] },
+  { name: 'CHIMENEA FRÍA', img: 'adv-poste', need: 'lena', look: 'Una chimenea apagada. Hace un frío que pela.', fix: 'Echas la leña… ¡crac, crac! ¡El fuego calienta la sala! Con el calor se abre una trampilla secreta en la repisa.', g: 'any' },
+  { name: 'VAGONETA ATASCADA', img: 'adv-poste', need: 'engc', look: 'Una vagoneta de mina parada en la vía. Se le ha caído el engranaje de la rueda.', fix: 'Pones el engranaje de cobre… ¡ñiiic! La vagoneta se va por el túnel y vuelve cargada de cristales… ¡y algo más!', g: 'any', th: ['LD', 'LV', 'LK', 'ICE', 'LF', 'ST'] },
+  { name: 'GRIFO SIN RUEDA', img: 'adv-poste', need: 'volante', look: 'Un grifo enorme sin la rueda para abrirlo.', fix: 'Pones la rueda y la giras… ¡fsssh! ¡Sale agua a chorro!', g: ['gota', 'cubo', 'flor', 'seta', 'frasco'] },
+  { name: 'RECEPTOR LÁSER', img: 'adv-poste', need: 'espejo', look: 'Un cañón láser dispara contra la pared y el receptor está en la otra punta. Si el rayo rebotara…', fix: 'Colocas el espejo en su sitio… ¡el rayo rebota y da justo en el receptor! ¡Pip, pip! Se abre un cajón secreto.', g: 'any', th: ['ST', 'LK', 'LD', 'LF', 'LV', 'LS'] },
+  { name: 'CAÑÓN ARCOÍRIS', img: 'adv-poste', need: 'prisma', look: 'Un cañón de luz apagado con un soporte vacío delante.', fix: 'Pones el prisma delante… ¡el rayo se abre en un arcoíris enorme! Del arcoíris cae algo brillante.', g: 'any', th: ['ST', 'LS', 'LT', 'LK', 'ICE'] },
+  { name: 'OLLA DE LA BRUJA', img: 'adv-poste', need: 'ojod', look: 'Una olla negra sobre las brasas. Un cartel dice: «Para la poción, un ojo de dragón».', fix: '¡Plof! El ojo de dragón cae en la olla… ¡glu, glu, glu! Sale humo de colores y de dentro sube algo flotando.', g: ['pocionr', 'pociona', 'pocionv', 'pociond', 'pocionm', 'pocion', 'varita', 'libroh', 'pocionrosa'], th: ['LF', 'LJ', 'LS', 'LO', 'LD'] },
+  { name: 'CALDERO DE LAS SETAS', img: 'adv-poste', need: 'setam', look: 'Otra olla sobre las brasas. La receta dice: «Una seta mágica y remover».', fix: 'Echas la seta mágica y remueves… ¡pof! ¡Una nube morada! Cuando se va el humo, algo brilla dentro.', g: ['pocionr', 'pociona', 'pocionv', 'pociond', 'pocionm', 'pocion', 'pocionn'], th: ['LF', 'LJ', 'LS', 'LT'] },
+  { name: 'CARGADOR ROTO', img: 'adv-poste', need: 'pilav', look: 'Un cargador eléctrico negro y roto. Tiene un hueco para una pila verde.', fix: 'Pones la pila verde… ¡bzzzt! El cargador se enciende y suelta lo que tenía guardado.', g: 'any', th: ['ST', 'LK', 'LS', 'LT', 'LV'] },
+  // estas encienden o abren algo
+  { name: 'BATERÍA GIGANTE', img: 'adv-poste', need: 'pilaa', look: 'Una batería gigante rota que echa chispas y humo. Le falta su célula azul.', fix: 'Cambias la pila azul… ¡zzzum! ¡La batería se carga al máximo!', f: 1, pre: 'No hay energía: la batería gigante está rota y echa chispas.', door: 'La puerta eléctrica no tiene energía: la batería gigante está rota.', th: ['ST', 'LK', 'LV', 'LS', 'LT'] },
+  { name: 'INTERRUPTOR GENERAL', img: 'adv-poste', need: 'tuerca', look: 'El interruptor general está flojo y no se queda arriba. Le falta una tuerca.', fix: 'Aprietas la tuerca y subes el interruptor… ¡clac! ¡Se enciende todo!', f: 1, pre: 'Está todo desenchufado. Hay que subir el interruptor general.', door: 'La puerta automática no funciona: está todo desenchufado.' },
+  { name: 'BARRERA DE ENERGÍA', img: 'adv-poste', need: 'espejo', look: '¡Una barrera de energía roja! Al lado hay un cañón láser que apunta mal.', fix: 'Pones el espejo… ¡el rayo cambia de dirección y la barrera de energía se apaga!', f: 1, pre: 'Una barrera de energía no deja llegar. Habrá que apagarla.', door: '¡Una barrera de energía roja tapa la puerta!', th: ['ST', 'LK', 'LD', 'LF', 'LV'] },
+  { name: 'PUENTE DE CUERDA ROTO', img: 'adv-poste', need: 'cuerda', look: 'Un puente de cuerda con las cuerdas rotas.', fix: 'Atas la cuerda nueva bien fuerte… ¡el puente queda como nuevo!', f: 1, pre: 'Para llegar hay que cruzar el puente de cuerda, y está roto.', door: 'El puente de cuerda que lleva a la puerta está roto.', th: ['LJ', 'LO', 'LS', 'LT', 'LF', 'LD'] },
+  { name: 'PUENTE METÁLICO ROTO', img: 'adv-poste', need: 'tornillo', look: 'Un puente de metal doblado y suelto. Le falta un tornillo.', fix: 'Pones el tornillo y aprietas… ¡clonc! El puente queda recto y firme.', f: 1, pre: 'Para llegar hay que cruzar el puente de metal, y está roto.', door: 'El puente de metal que lleva a la puerta está roto.', th: ['ST', 'LK', 'LV', 'LS'] },
+  { name: 'PUENTE DE HIELO ROTO', img: 'adv-poste', need: 'tabla', look: 'Un puente de hielo con una grieta enorme en medio.', fix: 'Pones la tabla sobre la grieta… ¡ya se puede cruzar!', f: 1, pre: 'Para llegar hay que cruzar el puente de hielo, y está roto.', door: 'El puente de hielo que lleva a la puerta tiene una grieta.', th: ['ICE'] },
+  { name: 'TUBERÍA PARTIDA', img: 'adv-poste', need: 'tubor', look: 'Una tubería partida por la mitad. Se escapa el agua por todas partes.', fix: 'Encajas el tubo nuevo… ¡glu, glu! ¡El agua vuelve a correr!', f: 1, pre: 'No llega agua: hay una tubería partida.', door: 'La compuerta funciona con agua y no llega nada.' },
+  { name: 'COMPUERTA DEL CANAL', img: 'adv-poste', need: 'manivela', look: 'Un canal seco con una compuerta cerrada. Le falta la manivela.', fix: 'Giras la manivela… ¡la compuerta sube y el agua llena el canal!', f: 1, pre: 'El canal está seco. Hay que abrir la compuerta.', door: 'Para abrir la puerta hace falta que corra el agua del canal.', th: ['LJ', 'LD', 'LO', 'LF', 'LV', 'LT'] },
+  { name: 'ANTORCHA APAGADA', img: 'adv-poste', need: 'carbon', look: 'Una antorcha apagada en la pared. Sin luz no se ve nada.', fix: 'Pones un poco de carbón y la enciendes… ¡fuuush! ¡Ya se ve todo!', f: 1, pre: 'Está oscurísimo. Hay que encender la antorcha.', door: 'El pasillo está a oscuras. Sin la antorcha no se encuentra la puerta.', th: ['LD', 'LF', 'LJ', 'LV', 'ICE'] },
+  { name: 'LÁMPARA COLGANTE', img: 'adv-poste', need: 'bombilla', look: 'Una lámpara colgante sin bombilla. Está todo a oscuras.', fix: 'Enroscas la bombilla… ¡clic! ¡Luz!', f: 1, pre: 'Está todo a oscuras. Hay que arreglar la lámpara.', door: 'La sala de al lado está a oscuras.' } ];
+Object.assign(GZ_WANT, {
+  lena: ['Se me ha apagado la chimenea y tengo un frío que tiemblo.', 'Algo de madera para el fuego…', '¡Leña! ¡Ya tendré calorcito!'],
+  tronco: ['Quiero hacer una hoguera para contar cuentos, pero no tengo madera.', 'Algo de madera, redondo y largo…', '¡Un tronco! ¡Esta noche hay cuentos!'],
+  carbon: ['Mi locomotora se ha quedado sin carbón y no puede andar.', 'Algo negro que arde muy bien…', '¡Carbón! ¡Chu, chuuu!'],
+  trebol: ['Hoy todo me sale mal. Necesito un poco de suerte.', 'Algo verde de cuatro hojas…', '¡Un trébol de cuatro hojas! ¡Qué suerte!'],
+  plumaf: ['Quiero escribir una carta mágica, pero mi pluma se ha roto.', 'Algo rojo y dorado que arde sin quemarse…', '¡Una pluma de fénix! ¡Escribe sola!'],
+  florluna: ['Mi lámpara de noche se ha apagado y me da miedo la oscuridad.', 'Una flor azul que brilla de noche…', '¡Una flor de luna! ¡Ya no me da miedo!'],
+  espejo: ['¡Hoy tengo una fiesta y no puedo peinarme sin espejo!', 'Algo de cristal en el que te ves…', '¡Un espejo! ¡Qué guapo voy a ir!'],
+  tabla: ['Mi casita del árbol tiene un agujero en el suelo.', 'Algo de madera, plano y largo…', '¡Una tabla! ¡Arreglado!'],
+  tuerca: ['A mi bici se le ha caído una tuerca y la rueda baila.', 'Una pieza de metal con un agujero…', '¡Una tuerca! ¡Ya no baila la rueda!'],
+  pocionrosa: ['¡Me he dado un golpe y me ha salido un chichón enorme!', 'Una poción de color rosa que cura…', '¡Una poción rosa! ¡El chichón se va!'],
+  frasco: ['Tengo mucha sed y no encuentro agua limpia.', 'Algo transparente para beber…', '¡Agua pura! ¡Glu, glu, qué fresquita!'],
+  esmeralda: ['A mi corona le falta la piedra verde del centro.', 'Una piedra preciosa verde y brillante…', '¡Una esmeralda! ¡Mi corona está completa!'],
+  zafiro: ['Quiero regalarle algo azul y precioso a mi abuela.', 'Una piedra azul que brilla mucho…', '¡Un zafiro! ¡Qué bonito!'],
+  amatista: ['Colecciono piedras moradas y me falta la mejor.', 'Una piedra morada y brillante…', '¡Una amatista! ¡La joya de mi colección!'],
+  lingotep: ['Soy herrero y necesito plata para hacer una campana.', 'Algo de plata, pesado y brillante…', '¡Un lingote de plata! ¡Manos a la obra!'],
+  monedae: ['Colecciono monedas raras y me falta la de la estrella.', 'Una moneda dorada con una estrella…', '¡La moneda estrella! ¡Por fin!'],
+  pilam: ['Mi linterna mágica se ha quedado sin pila.', 'Una pila morada…', '¡Una pila morada! ¡Luz otra vez!'],
+  pilan: ['Mi robot de juguete no anda: le falta la pila.', 'Una pila naranja…', '¡Una pila naranja! ¡Mira cómo anda!'] });
+Object.assign(GZ_COL, {
+  lingote: ['lingotes de oro', 'o', 'Se ha roto el carro del banco y los lingotes han rodado por todas partes.'],
+  diamante: ['diamantes', 'o', 'Mis diamantes se han caído por un agujero del bolsillo.'],
+  trebol: ['tréboles de la suerte', 'o', 'Quiero regalar un trébol de la suerte a cada uno de mis amigos.'],
+  tronco: ['troncos', 'o', 'Quiero hacer una hoguera enorme para la fiesta de esta noche.'],
+  pilav: ['pilas verdes', 'f', 'Mis robots se han quedado sin energía. Necesito pilas para todos.'],
+  esmeralda: ['esmeraldas', 'f', 'Se me ha roto el cofre y las esmeraldas están por todas partes.'] });
+Object.assign(GZ_GOAL, {
+  lingotes: ['¡Han desaparecido los lingotes de oro del tesoro!', '¡El tesoro está completo otra vez!', ['EL TESORO DE {H}', 'EL ORO DESAPARECIDO', 'LA CÁMARA DEL TESORO']],
+  diamante: ['El diamante más grande del mundo ha desaparecido de su vitrina.', '¡El gran diamante! ¡Brilla muchísimo!', ['EL DIAMANTE DE {H}', 'EL GRAN DIAMANTE', 'EL ROBO DEL DIAMANTE']],
+  gemac: ['La gema corazón da alegría a todo el reino, y se ha perdido.', '¡La gema corazón! ¡Todo el mundo sonríe otra vez!', ['LA GEMA DE {H}', 'EL CORAZÓN DE RUBÍ', 'EL REINO TRISTE']],
+  pocionr: ['Me he quedado sin fuerzas. Solo la poción roja me puede ayudar.', '¡La poción roja! ¡Tengo fuerza para levantar una montaña!', ['LA POCIÓN DE {H}', 'LA POCIÓN ROJA', 'LA RECETA SECRETA']],
+  pociond: ['Mi varita ha perdido la magia. Necesito la poción dorada.', '¡La poción dorada! ¡Mira qué chispas!', ['LA POCIÓN DORADA', 'LA MAGIA PERDIDA DE {H}', 'EL LIBRO DE POCIONES']],
+  pociona: ['Hace un calor terrible. La poción azul enfría todo el pueblo.', '¡Qué fresquito! ¡Gracias, Lucas!', ['LA POCIÓN AZUL', 'EL GRAN CALOR DE {H}']],
+  bateria: ['Mi nave se ha quedado sin energía y no puedo volver a casa.', '¡Batería llena! ¡Ya puedo volver a casa!', ['LA BATERÍA DE {H}', 'SIN ENERGÍA', 'EL GRAN APAGÓN']],
+  monedae: ['Me han quitado mi moneda estrella, la más rara del mundo.', '¡Mi moneda estrella! ¡Qué brillo!', ['LA MONEDA DE {H}', 'LA MONEDA ESTRELLA']],
+  sacom: ['Los ahorros de todo el pueblo han desaparecido.', '¡El saco de monedas! ¡Todo el pueblo está contento!', ['LOS AHORROS DE {H}', 'EL SACO PERDIDO', 'EL MISTERIO DE LAS MONEDAS']],
+  plumaf: ['El fénix ha perdido su pluma mágica y no puede volar.', '¡La pluma de fénix! ¡Vuelve a volar!', ['LA PLUMA DE {H}', 'EL VUELO DEL FÉNIX']],
+  esmeralda: ['La esmeralda que hace crecer las plantas ha desaparecido.', '¡La esmeralda! ¡Mira cómo crece todo!', ['LA ESMERALDA DE {H}', 'LA PIEDRA VERDE']] });
+const GZ_GOALS2 = { ST: ['bateria', 'diamante', 'monedae', 'pociond'], LJ: ['esmeralda', 'pocionr', 'plumaf', 'gemac'], LO: ['zafiro' in GZ_GOAL ? 'zafiro' : 'sacom', 'monedae', 'pociona', 'diamante'], LT: ['sacom', 'monedae', 'pocionr', 'bateria'],
+  LF: ['gemac', 'pociond', 'lingotes', 'plumaf'], LS: ['pociona', 'plumaf', 'diamante', 'bateria'], LD: ['lingotes', 'esmeralda', 'diamante', 'gemac'], ICE: ['pocionr', 'diamante', 'pociona', 'sacom'], LK: ['bateria', 'lingotes', 'monedae', 'sacom'], LV: ['diamante', 'lingotes', 'pocionr', 'gemac'] };
+// ---------- 20 aventuras nuevas de 7 años (B-151 a B-170): usan sobre todo las máquinas nuevas ----------
+(() => {
+  const WS = ['ST', 'LJ', 'LO', 'LT', 'LF', 'LS', 'LD', 'ICE', 'LK', 'LV'], OLD = GZ_M.splice(0, GZ_M.length);
+  for (let i = 151; i <= 170; i++) {
+    const id = 'B-' + i, r = GZ.rng(id + 'pro'), w = WS[i % WS.length], goal = GZ.pick(r, GZ_GOALS2[w].filter(g => GZ_GOAL[g] && ADV_IT[g]));
+    GZ_M.splice(0, GZ_M.length, ...GZ_M2, ...OLD.filter(() => r() < 0.3));
+    try { gzBig(id, w, goal, GZ.pick(r, GZ_W[w].chars), 7 + (i > 160 ? 1 : 0) + (r() < 0.5 ? 1 : 0)); const q = AV[id]; if (q && gzExtend(id, q, 'gzx', 1)) { q._lay = 0; ADV_LV.pop(); advAv(id, q); } } catch (e) { console.warn(id, e); }
+  }
+  GZ_M.splice(0, GZ_M.length, ...OLD, ...GZ_M2);
+})();
+// ---------- decorado nuevo en las salas de las aventuras de 7 años (tuberías, cables, vías, antorchas, chimeneas…) ----------
+const ADV_DECO19 = [
+  [/taller|maquinas|chatarra|forja/, [['dc-tubox-codo', 70], ['dc-manometro', 50], ['mq-bateria-1', 80], ['dc-tubo-valvula', 55], ['dc-empalme', 50], ['dc-palanca', 60]]],
+  [/laboratorio|observatorio|nave|control|hangar/, [['dc-panel-luz', 60], ['dc-cablee-t', 60], ['mq-bateriag-1', 80], ['dc-cubo-cristal', 60], ['dc-manometro', 48]]],
+  [/mina|cueva|mazmorra|tesoro/, [['dc-tunel-mina', 130], ['mq-vagoneta-1', 80], ['mq-antorcha-1', 110], ['dc-riel-tope', 60], ['it-lingotes', 50]]],
+  [/cocina|casaarbol|granja|dormitorio|pasteleria/, [['mq-chimenea-1', 120], ['it-lena', 40], ['it-carbon', 46]]],
+  [/pociones/, [['mq-olla-1', 100], ['it-pocion-verde', 46], ['it-pocion-roja', 44], ['it-pocion-azul', 44], ['it-seta-magica', 44]]],
+  [/templo|piramide|trono|fortaleza|museo/, [['mq-antorcha-1', 110], ['dc-arco', 110], ['dc-bloque-piedra', 70], ['it-saco-monedas', 46]]],
+  [/hielo/, [['mq-phielo-1', 70], ['dc-cubo-cristal', 60], ['mq-hoguera-1', 90]]],
+  [/selva|invernadero|mariposas/, [['dc-poste', 90], ['mq-hoguera-1', 90], ['dc-canala-comp', 70]]],
+  [/volcan/, [['dc-canall-h', 50], ['dc-canall-comp', 70], ['dc-brasas', 40]]],
+  [/barco|acuario|faro/, [['dc-poste2', 90], ['dc-tubox-valvula', 55]]] ];
+(() => {
+  for (const id of Object.keys(AV)) { if (!/^B-/.test(id)) continue; const q = AV[id]; if (!q || !q.rooms) continue; const r = GZ.rng(id + 'deco19');
+    for (const rm of Object.values(q.rooms)) { const hit = ADV_DECO19.find(([re]) => re.test(rm.bg || '')); if (!hit || !rm.list || rm.list.some(p => p[0] === 'deco' && /^(dc-|mq-|it-)/.test((p[1] || {}).img || ''))) continue;
+      const pk = GZ.mix(r, hit[1]).slice(0, 1 + (r() < 0.6 ? 1 : 0)); for (const [img, h] of pk) rm.list.splice(Math.floor(r() * (rm.list.length + 1)), 0, ['deco', { img, h }]); } }
+})();
+// ---------- efectos: fuego que baila con humo y chisporroteo, pociones que burbujean, rayos láser, chispas de la batería rota, agua del grifo ----------
+const AMB_FIRE = { t: 0 };
+function ambFire(v) { audio(); if (!AC || !sndOn) return; try { const t0 = AC.currentTime, n = Math.floor(AC.sampleRate * 0.25), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (Math.random() < 0.02 ? 1 : 0.06);
+  const s = AC.createBufferSource(), bp = AC.createBiquadFilter(), gg = AC.createGain(); s.buffer = b; bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.7; gg.gain.value = 0.55 * v; s.connect(bp); bp.connect(gg); gg.connect(master); s.start(t0); } catch (e) {} }
+function ambBubble(v) { audio(); if (!AC || !sndOn) return; const f = 300 + Math.random() * 300; tone(f, f * 2.4, 0.08, 'sine', 0.07 * v); }
+function advAmb19(A) {
+  const px = P.x + P.w / 2, now = time;
+  for (const e of A.ents) { if (e.x < cam.x - 300 || e.x > cam.x + VW + 300) continue;
+    const fixed = e.kind === 'gate' ? !!(e.alt && e.alt(A.api)) : true, im = (e.kind === 'gate' && fixed && e.img2) ? e.img2 : e.img || '', vol = Math.max(0, 1 - Math.abs(e.x - px) / 560);
+    if (/^mq-(hoguera|antorcha|chimenea)-1$/.test(im) || (/^mq-olla-1$/.test(im))) {          // fuego: luz cálida que respira, chispitas y humo
+      const tor = /antorcha/.test(im), fy = e.y - e.h * (tor ? 0.86 : /chimenea/.test(im) ? 0.32 : 0.5), R = (tor ? 110 : 170) * (0.9 + 0.1 * Math.sin(now * 9 + e.x) + 0.05 * Math.random());
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, fy, 4, e.x, fy, R); gg.addColorStop(0, 'rgba(255,170,60,.32)'); gg.addColorStop(1, 'rgba(255,120,30,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - R, fy - R, R * 2, R * 2); ctx.restore();
+      if (Math.random() < 0.25) parts.push({ x: e.x + (Math.random() - 0.5) * (tor ? 10 : 40), y: fy, vx: (Math.random() - 0.5) * 40, vy: -60 - Math.random() * 80, life: 0.8, max: 0.8, col: Math.random() < 0.5 ? '#ffd166' : '#ff7b2e', size: 1.6 + Math.random() * 1.6, grav: -20 });
+      if (!tor && Math.random() < 0.08) parts.push({ x: e.x + (Math.random() - 0.5) * 20, y: fy - 40, vx: (Math.random() - 0.5) * 20, vy: -35, life: 2, max: 2, col: 'rgba(170,170,180,.45)', size: 7 + Math.random() * 5, grav: -8 });
+      if (/olla/.test(im)) { if (Math.random() < 0.12) parts.push({ x: e.x + (Math.random() - 0.5) * e.h * 0.5, y: e.y - e.h * 0.62, vx: 0, vy: -50, life: 1.1, max: 1.1, col: ['#b46cff', '#5cff9d', '#ff6ad5', '#6ad8ff'][Math.random() * 4 | 0], size: 3 + Math.random() * 3, grav: -10 });
+        if (vol > 0.3 && (e._bb || 0) < now) { e._bb = now + 0.35 + Math.random() * 0.5; ambBubble(vol); } }
+      if (vol > 0.25 && now - AMB_FIRE.t > 0.3) { AMB_FIRE.t = now + Math.random() * 0.3; ambFire(vol); } }
+    if (e.kind !== 'gate') continue;
+    if (!fixed && /^mq-bateria-0$/.test(e.img) && Math.random() < 0.06) {          // batería rota: chispazos y humo
+      const sx = e.x + (Math.random() - 0.5) * 40, sy = e.y - e.h * 0.75; for (let i = 0; i < 12; i++) parts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 360, vy: -Math.random() * 300, life: 0.4, max: 0.5, col: Math.random() < 0.5 ? '#fff6a0' : '#7fe9ff', size: 2, grav: 900 });
+      parts.push({ x: sx, y: sy - 20, vx: 0, vy: -30, life: 1.6, max: 1.6, col: 'rgba(120,120,130,.5)', size: 8, grav: -6 }); if (vol > 0.2 && now - AMB_SND.t > 0.25) { AMB_SND.t = now; ambSpark(vol); } }
+    if (!fixed && /^mq-energia-0$/.test(e.img)) { const a = 0.18 + 0.12 * Math.sin(now * 6); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(e.x, e.y - e.h * 0.5, 10, e.x, e.y - e.h * 0.5, e.h); gg.addColorStop(0, 'rgba(255,60,60,' + a.toFixed(3) + ')'); gg.addColorStop(1, 'rgba(255,60,60,0)'); ctx.fillStyle = gg; ctx.fillRect(e.x - e.h, e.y - e.h * 1.5, e.h * 2, e.h * 2); ctx.restore();
+      if (vol > 0.4 && (e._hm || 0) < now) { e._hm = now + 0.5; tone(110, 115, 0.45, 'sawtooth', 0.025 * vol); } }
+    if (fixed && /^mq-receptor-0$/.test(e.img)) {          // el rayo ya llega al receptor
+      const y = e.y - e.h * 0.62, x0 = e.x - 420, f = 0.75 + 0.25 * Math.sin(now * 30); ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,40,60,' + (0.25 * f).toFixed(3) + ')'; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(e.x, y); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,170,180,' + (0.95 * f).toFixed(3) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(e.x, y); ctx.stroke(); ctx.restore(); }
+    if (fixed && /^mq-laser-0$/.test(e.img)) {          // arcoíris
+      const y = e.y - e.h * 0.55, cols = ['#ff4d4d', '#ffa64d', '#ffe14d', '#5cff7a', '#4dc3ff', '#9a6bff']; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 6;
+      cols.forEach((c, j) => { ctx.strokeStyle = c; ctx.globalAlpha = 0.35 + 0.15 * Math.sin(now * 4 + j); ctx.beginPath(); ctx.moveTo(e.x + 40, y); ctx.lineTo(e.x + 380, y - 140 + j * 18); ctx.stroke(); }); ctx.restore(); }
+    if (fixed && /^mq-grifo-0$/.test(e.img) && Math.random() < 0.5) parts.push({ x: e.x + e.h * 0.32, y: e.y - e.h * 0.28, vx: (Math.random() - 0.5) * 12, vy: 60, life: 0.5, max: 0.5, col: '#8fd8ff', size: 3, grav: 900 });
+  }
+}
 
 window.__TLA = { get AV() { return AV; }, get LV() { return ADV_LV; }, menu: () => { ADV.done = {}; advMenu(); }, play: id => { curId = id; ADVS = null; startGame(); }, get P() { return P; }, get L() { return L; }, get G() { return G; }, get st() { return state; }, get dlg() { return ADVT.on; }, get lines() { return ADVT.lines; }, get opts() { return ADVT.opts; }, next: () => advNext(), pick: k => advPick(k), use: () => advUse(), lv: id => LEVELS[id](), ids: () => Object.keys(LEVELS).filter(k => /^A-/.test(k)), get id() { return curId; }, edit: id => { try { CHEAT.test = true; curId = id; startGame(); setTimeout(() => { try { openEditOff(); } catch (e) { console.log('EE ' + e.message + e.stack); } }, 700); } catch (e) { console.log('ES ' + e.message + e.stack); } }, grab: (x, y) => edGrabDown(x, y), editHere: () => { CHEAT.test = true; openEditOff(); }, get patch() { return EDO && EDO.p; }, tool: t => { edTool = t; } };
 /* ======================= NIVEL 1 · LAS TRES PERLAS (playa arriba, mar abierto abajo) ======================= */
