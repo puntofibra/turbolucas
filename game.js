@@ -1,7 +1,7 @@
 /* COSMOLUCAS - un juego de FuturMovil. Motor de plataformas + nivel 1-1 (Estación orbital). */
 (() => {
 'use strict';
-const VERSION = '1.98';
+const VERSION = '1.99';
 const T = 48, VH = 540;
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -7123,48 +7123,68 @@ function admAvatares(B) {
 }
 (() => { const st = document.createElement('style'); st.textContent = '.avg{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}.avw{position:relative}.avdel{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;border:2px solid #ff4a6a;background:#2a0812;color:#fff;font-size:14px;line-height:1;cursor:pointer;box-shadow:0 0 10px rgba(255,74,106,.5);padding:0}.avc{width:112px;min-height:150px;border-radius:14px;border:2px solid #2a3a7a;background:linear-gradient(#0c1640,#060b24);color:#fff;font:800 12px system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;cursor:pointer;position:relative}.avc img{height:92px;max-width:96px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}.avc.on{border-color:#35ff8a;box-shadow:0 0 18px rgba(53,255,138,.45)}.avc i{font-style:normal;color:#35ff8a;font-size:10px}.avplus{width:70px;height:70px;border-radius:50%;border:3px dashed #ffd23c;color:#ffd23c;font:900 44px/62px system-ui;text-align:center;animation:avp 1.6s ease-in-out infinite}@keyframes avp{50%{transform:scale(1.08);box-shadow:0 0 22px rgba(255,210,60,.5)}}.avpro{text-align:left;color:#dfe8ff;font-size:14px;line-height:1.45}.avpro ol{padding-left:20px;margin:10px 0}.avpro li{margin:6px 0}.avhero{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}.avhero img{height:80px}.avhero span{font:900 30px system-ui;color:#ffd23c}.avhero b{width:80px;height:80px;border-radius:50%;background:radial-gradient(#ffd23c,#ff8a3c);color:#1a0a00;font:900 22px/80px system-ui;text-align:center;box-shadow:0 0 24px rgba(255,190,60,.6)}.avprice{text-align:center;font:900 40px system-ui;color:#ffd23c;text-shadow:0 0 18px rgba(255,210,60,.5)}.avprice small{display:block;font:700 12px system-ui;color:#8ea3e6;text-shadow:none}.avup{display:flex;flex-wrap:wrap;gap:8px}.avslot{width:104px;height:140px;border:2px dashed #2a3a7a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px;cursor:pointer;font:800 11px system-ui;color:#8ea3e6}.avslot.ok{border-color:#35ff8a;border-style:solid}.avslot img{height:96px;max-width:92px;object-fit:contain;background:repeating-conic-gradient(#1a2450 0 25%,#0c1438 0 50%) 0 0/12px 12px;border-radius:6px}.avslot img:not([src]){visibility:hidden}.avslot input{width:92px;font-size:9px}'; document.head.appendChild(st); })();
 /* ======================= LICENCIA: pago único de 1,49 € con myPOS ======================= */
-// a partir de la fase 2 del planeta 3 hace falta la licencia; el pago lo valida a mano el administrador desde el panel (pestaña PAGOS)
+// a partir de la fase 2 del planeta 3 hace falta la licencia; el jugador escribe su código de compra en el motivo del pago
+// y el panel de LICENCIAS la valida sola en unos minutos (15 min de juego mientras tanto)
 const LIC_URL = 'https://mypos.com/@futurmovil/1.49', LIC_PRECIO = '1,49 €';
 let LIC = null; try { LIC = JSON.parse(localStorage.getItem('tl_lic') || 'null'); } catch (e) {}
 let licT = 0;
 const LT0 = {
+  cod: { t: 'TU CÓDIGO DE COMPRA', h: 'Para que tu compra se active <b>sola</b>, escribe este código en el <b>motivo del pago</b> de myPOS:' },
   main: { t: '¿TE ESTÁ GUSTANDO COSMOLUCAS?', h: '¡Lucas ha llegado al <b>Planeta Volcánico</b> y aún le quedan aventuras increíbles por delante!<br>Desbloquea el juego completo con un <b>pago único</b>, para siempre.' },
   guest: { t: '¿TE ESTÁ GUSTANDO COSMOLUCAS?', h: 'Has llegado muy lejos, ¡y lo mejor está por llegar! Para seguir la aventura de Lucas solo hace falta un <b>pago único de {PRECIO}</b>.<br><br>La licencia se guarda en tu cuenta, así que primero <b>entra o crea tu cuenta gratis</b>.' },
-  conf: { t: '¿HAS COMPLETADO EL PAGO?', h: 'Se ha abierto la página de pago de myPOS. Cuando hayas pagado <b>{PRECIO}</b>, vuelve aquí y confirma tu compra para activar tu licencia.' },
+  conf: { t: '¿HAS COMPLETADO EL PAGO?', h: 'Cuando hayas pagado <b>{PRECIO}</b> con tu <b>código en el motivo</b>, vuelve aquí y confirma tu compra.<br><br>El pago tarda unos <b>15 minutos</b> en comprobarse y, mientras tanto, tendrás el juego <b>desbloqueado</b>.' },
   ok0: { t: '¡GRACIAS POR TU COMPRA!', h: 'Tu licencia de <b>COSMOLUCAS</b> ya está guardada en tu cuenta: podrás jugar en todos tus dispositivos.<br><br>¡A por el Planeta Volcánico, Lucas te espera! 🚀' },
-  ok1: { t: '¡GRACIAS POR TU COMPRA!', h: 'Hemos recibido tu confirmación. Mientras verificamos el pago tienes el juego <b>desbloqueado durante 1 hora</b>.<br><br>¡A por el Planeta Volcánico, Lucas te espera! 🚀' },
-  ok2: { t: '¡GRACIAS POR TU COMPRA!', h: 'Después de dos intentos de pago fallidos, tu licencia se activará <b>en las próximas horas</b>, en cuanto verifiquemos el pago.<br><br>Cuando esté lista podrás seguir jugando desde aquí mismo.' },
-  rej1: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hubo un problema con tu pago y no se ha podido verificar, por eso se han vuelto a bloquear las fases desde el Planeta 3.<br><br>Vuelve a intentarlo: al confirmar tendrás el juego <b>desbloqueado 1 hora</b> mientras comprobamos el pago.<br><br>Pago único de <b>{PRECIO}</b>.' },
-  rej2: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hemos intentado verificar tu pago dos veces y no ha llegado, por eso se han vuelto a bloquear las fases desde el Planeta 3.<br><br>Si vuelves a pagar, esta vez la licencia se activará <b>cuando confirmemos el pago</b> (en las próximas horas).<br><br>Pago único de <b>{PRECIO}</b>.' },
-  pend1: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Tu hora de juego mientras comprobábamos el pago ha terminado. En cuanto verifiquemos tu pago se desbloqueará todo el juego automáticamente.' },
-  pend2: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Después de dos intentos de pago que no pudimos verificar, tu licencia se activará <b>en cuanto confirmemos que el pago ha llegado</b>. Suele tardar unas horas.<br><br>¡Gracias por tu paciencia!' },
+  ok1: { t: '¡GRACIAS POR TU COMPRA!', h: 'Hemos recibido tu confirmación. El pago tarda unos <b>15 minutos</b> en comprobarse y, mientras tanto, tienes el juego <b>desbloqueado</b>.<br><br>En cuanto llegue, tu licencia quedará activada <b>para siempre</b>. ¡A por el Planeta Volcánico, Lucas te espera! 🚀' },
+  ok2: { t: 'UN MOMENTO…', h: 'Has confirmado <b>{N} pagos</b> que no han llegado, así que hasta el <b>{HASTA}</b> no podrás volver a confirmar otro.<br><br>Si ya has pagado de verdad con tu código en el motivo, <b>no tienes que hacer nada</b>: el juego se desbloqueará solo en cuanto llegue el pago.' },
+  rej1: { t: 'TU PAGO NO HA LLEGADO', h: 'Han pasado 15 minutos y tu pago no ha llegado, por eso se han vuelto a bloquear las fases desde el Planeta 3.<br><br>Si ya pagaste, revisa que escribiste tu <b>código</b> en el motivo del pago: en cuanto llegue se desbloqueará solo. Si no, vuelve a intentarlo: pago único de <b>{PRECIO}</b>.' },
+  rej2: { t: 'TU PAGO SIGUE SIN LLEGAR', h: 'Ya van varias confirmaciones de pago que no han llegado. Si vuelves a confirmar sin pagar, tendrás que <b>esperar un tiempo</b> (cada vez más) antes de poder intentarlo otra vez.<br><br>Recuerda escribir tu <b>código</b> en el motivo del pago. Pago único de <b>{PRECIO}</b>.' },
+  pend1: { t: 'COMPROBANDO TU PAGO', h: 'Estamos comprobando tu pago: suele tardar unos <b>15 minutos</b>. En cuanto llegue se desbloqueará todo el juego automáticamente.' },
+  pend2: { t: 'COMPROBANDO TU PAGO', h: 'Tu pago todavía no ha llegado. En cuanto llegue (suele tardar unos <b>15 minutos</b>) se desbloqueará todo el juego automáticamente.' },
   xn: { t: '¿TAMBIÉN QUIERES EL MODO AVENTURA?', h: 'Este pago es para el <b>juego normal COSMOLUCAS</b>. El <b>MODO AVENTURA</b> para niños se compra aparte por solo <b>{PRECIO_AV}</b>: las 10 primeras aventuras son gratis. Puedes activar los dos modos o solo el que quieras.' },
   aintro: { t: 'MODO AVENTURA · PARA LOS MÁS PEQUEÑOS', h: 'COSMOLUCAS tiene <b>dos juegos</b>:<br><br>🚀 <b>JUGAR</b>: el juego de plataformas de siempre, con planetas, jefes y retos para toda la familia.<br><br>🗺️ <b>JUGAR AVENTURA</b>: un juego tranquilo pensado para <b>niños de 5 a 8 años</b>. Lucas habla con sus amigos, busca objetos escondidos y resuelve misiones. Aquí <b>nadie le hace daño</b> y un narrador lee todos los textos.<br><br>Si buscas acción y plataformas, vuelve y pulsa <b>JUGAR</b>.' },
   amain: { t: '¡ENHORABUENA, AVENTURERO!', h: '¡Has completado <b>10 aventuras</b>! 🏆<br>Para seguir jugando a <b>todas las aventuras</b> del modo aventura solo hace falta un <b>pago único de {PRECIO}</b>.' },
   aguest: { t: '¡ENHORABUENA, AVENTURERO!', h: '¡Has completado <b>10 aventuras gratis</b>! Para desbloquear todas las demás hace falta un <b>pago único de {PRECIO}</b>.<br><br>La compra se guarda en tu cuenta, así que primero <b>entra o crea tu cuenta gratis</b>.' },
-  aconf: { t: '¿HAS COMPLETADO EL PAGO?', h: 'Se ha abierto la página de pago de myPOS. Cuando hayas pagado <b>{PRECIO}</b>, vuelve aquí y confirma tu compra para activar el modo aventura completo.' },
+  aconf: { t: '¿HAS COMPLETADO EL PAGO?', h: 'Cuando hayas pagado <b>{PRECIO}</b> con tu <b>código en el motivo</b>, vuelve aquí y confirma tu compra.<br><br>El pago tarda unos <b>15 minutos</b> en comprobarse y, mientras tanto, podrás seguir jugando a las aventuras.' },
   aok0: { t: '¡GRACIAS POR TU COMPRA!', h: 'El <b>modo aventura completo</b> ya está guardado en tu cuenta. ¡A por todas las aventuras! 🗺️' },
-  aok1: { t: '¡GRACIAS POR TU COMPRA!', h: 'Hemos recibido tu confirmación. Mientras verificamos el pago puedes jugar <b>2 aventuras más</b>.<br><br>En cuanto el pago esté verificado se desbloquean todas automáticamente.' },
-  aok2: { t: '¡GRACIAS POR TU COMPRA!', h: 'Tu compra se activará <b>en las próximas horas</b>, en cuanto verifiquemos el pago.<br><br>Mientras tanto puedes repetir las aventuras que ya has completado.' },
-  arej1: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hubo un problema con tu pago del modo aventura y no se ha podido verificar.<br><br>Vuelve a intentarlo: al confirmar podrás jugar <b>2 aventuras más</b> mientras comprobamos el pago.<br><br>Pago único de <b>{PRECIO}</b>.' },
-  arej2: { t: 'NO PUDIMOS VERIFICAR TU PAGO', h: 'Hemos intentado verificar tu pago dos veces y no ha llegado.<br><br>Si vuelves a pagar, esta vez el modo aventura se activará <b>cuando confirmemos el pago</b> (en las próximas horas).<br><br>Pago único de <b>{PRECIO}</b>.' },
-  apend: { t: 'ESTAMOS VERIFICANDO TU PAGO', h: 'Ya has jugado las <b>2 aventuras</b> de cortesía. En cuanto verifiquemos tu pago se desbloquearán <b>todas las aventuras</b> automáticamente.<br><br>Mientras tanto puedes repetir las que ya has completado.' },
+  aok1: { t: '¡GRACIAS POR TU COMPRA!', h: 'Hemos recibido tu confirmación. El pago tarda unos <b>15 minutos</b> en comprobarse y, mientras tanto, puedes seguir jugando a las aventuras.<br><br>En cuanto llegue, el modo aventura quedará activado <b>para siempre</b>. 🗺️' },
+  aok2: { t: 'UN MOMENTO…', h: 'Has confirmado <b>{N} pagos</b> que no han llegado, así que hasta el <b>{HASTA}</b> no podrás volver a confirmar otro.<br><br>Si ya has pagado de verdad con tu código en el motivo, <b>no tienes que hacer nada</b>: el modo aventura se desbloqueará solo en cuanto llegue el pago.' },
+  arej1: { t: 'TU PAGO NO HA LLEGADO', h: 'Han pasado 15 minutos y tu pago del modo aventura no ha llegado.<br><br>Si ya pagaste, revisa que escribiste tu <b>código</b> en el motivo del pago: en cuanto llegue se desbloqueará solo. Si no, vuelve a intentarlo: pago único de <b>{PRECIO}</b>.' },
+  arej2: { t: 'TU PAGO SIGUE SIN LLEGAR', h: 'Ya van varias confirmaciones de pago que no han llegado. Si vuelves a confirmar sin pagar, tendrás que <b>esperar un tiempo</b> (cada vez más) antes de poder intentarlo otra vez.<br><br>Recuerda escribir tu <b>código</b> en el motivo del pago. Pago único de <b>{PRECIO}</b>.' },
+  apend: { t: 'COMPROBANDO TU PAGO', h: 'Estamos comprobando tu pago: suele tardar unos <b>15 minutos</b>. En cuanto llegue se desbloquearán <b>todas las aventuras</b> automáticamente.<br><br>Mientras tanto puedes repetir las que ya has completado.' },
   xa: { t: '¿TAMBIÉN QUIERES EL JUEGO NORMAL?', h: 'Este pago es solo para el <b>MODO AVENTURA</b>. El <b>juego normal COSMOLUCAS</b> (plataformas) se compra aparte por <b>{PRECIO_N}</b>: los planetas 1 y 2 y la primera fase del planeta 3 son gratis. Puedes activar los dos o solo el que quieras.' }
 };
-const LT_NOM = { xn: 'Juego normal: oferta del modo aventura (sale debajo del cartel)', aintro: 'AVENTURA · Al pulsar JUGAR AVENTURA', amain: 'AVENTURA · Cartel de pago (tras 10 aventuras)', aguest: 'AVENTURA · Sin cuenta', aconf: 'AVENTURA · Después de pulsar PAGAR', aok0: 'AVENTURA · Gracias (1ª compra)', aok1: 'AVENTURA · Gracias (2 aventuras de cortesía)', aok2: 'AVENTURA · Gracias (tras 2 rechazos: espera)', arej1: 'AVENTURA · Pago rechazado 1 vez', arej2: 'AVENTURA · Pago rechazado 2 veces', apend: 'AVENTURA · Pendiente: cortesía terminada', xa: 'AVENTURA: oferta del juego normal (sale debajo del cartel)', main: 'Cartel de pago (fase 3-2)', guest: 'Sin cuenta', conf: 'Después de pulsar PAGAR', ok0: 'Gracias (1ª compra)', ok1: 'Gracias (tras 1 rechazo: 1 hora)', ok2: 'Gracias (tras 2 rechazos: espera)', rej1: 'Pago rechazado 1 vez', rej2: 'Pago rechazado 2 veces', pend1: 'Pendiente: hora terminada', pend2: 'Pendiente (3er intento)' };
-const LT_IC = { xn: '🗺️', aintro: '🗺️', amain: '🏆', aguest: '🏆', aconf: '💳', aok0: '🎉', aok1: '🎉', aok2: '🙏', arej1: '⚠️', arej2: '⚠️', apend: '⏳', xa: '🚀', main: '🚀', guest: '🚀', conf: '💳', ok0: '🎉', ok1: '🎉', ok2: '🙏', rej1: '⚠️', rej2: '⚠️', pend1: '⏳', pend2: '⏳' };
+const LT_NOM = { cod: 'Código de compra (antes de abrir myPOS, en los dos juegos)', xn: 'Juego normal: oferta del modo aventura (sale debajo del cartel)', aintro: 'AVENTURA · Al pulsar JUGAR AVENTURA', amain: 'AVENTURA · Cartel de pago (tras 10 aventuras)', aguest: 'AVENTURA · Sin cuenta', aconf: 'AVENTURA · Después de pulsar PAGAR', aok0: 'AVENTURA · Gracias (1ª compra)', aok1: 'AVENTURA · Gracias (15 min mientras llega el pago)', aok2: 'AVENTURA · Espera por pagos que no llegaron ({N} y {HASTA})', arej1: 'AVENTURA · El pago no llegó (1 vez)', arej2: 'AVENTURA · El pago no llegó (2 o más veces)', apend: 'AVENTURA · Comprobando el pago', xa: 'AVENTURA: oferta del juego normal (sale debajo del cartel)', main: 'Cartel de pago (fase 3-2)', guest: 'Sin cuenta', conf: 'Después de pulsar PAGAR', ok0: 'Gracias (1ª compra)', ok1: 'Gracias (15 min mientras llega el pago)', ok2: 'Espera por pagos que no llegaron ({N} y {HASTA})', rej1: 'El pago no llegó (1 vez)', rej2: 'El pago no llegó (2 o más veces)', pend1: 'Comprobando el pago', pend2: 'Comprobando el pago (otra vez)' };
+const LT_IC = { cod: '🔑', xn: '🗺️', aintro: '🗺️', amain: '🏆', aguest: '🏆', aconf: '💳', aok0: '🎉', aok1: '🎉', aok2: '🙏', arej1: '⚠️', arej2: '⚠️', apend: '⏳', xa: '🚀', main: '🚀', guest: '🚀', conf: '💳', ok0: '🎉', ok1: '🎉', ok2: '🙏', rej1: '⚠️', rej2: '⚠️', pend1: '⏳', pend2: '⏳' };
 let LTX = {}; try { LTX = JSON.parse(localStorage.getItem('tl_ltx') || '{}') || {}; } catch (e) {}
-const ADV_PRECIO = '0,99 €', ADV_URL = 'https://mypos.com/@futurmovil/0.99', ADV_FREE = 10;
+const ADV_PRECIO = '1,49 €', ADV_URL = 'https://mypos.com/@futurmovil/1.49', ADV_FREE = 10;
 const lt = (k, f) => String(((LTX[k] && LTX[k][f]) || LT0[k][f])).replace(/\{PRECIO\}/g, /^a[a-z]/.test(k) ? ADV_PRECIO : LIC_PRECIO).replace(/\{PRECIO_AV\}/g, ADV_PRECIO).replace(/\{PRECIO_N\}/g, LIC_PRECIO);
 setTimeout(() => api({ a: 'cfg' }).then(r => { if (r.ok && typeof r.mapCodes === 'boolean') { MAPC.on = r.mapCodes; try { localStorage.setItem('tl_mapc', r.mapCodes ? '1' : '0'); } catch (e) {} if (!r.mapCodes && MAPC.all) { MAPC.all = false; try { localStorage.setItem('tl_mapall', '0'); } catch (e) {} } } }), 2500);
 setTimeout(() => api({ a: 'licTxt' }).then(r => { if (r.ok && r.txt) { LTX = r.txt; try { localStorage.setItem('tl_ltx', JSON.stringify(LTX)); } catch (e) {} } }), 3000);
 const licGated = id => { const w = +String(id).split('-')[0]; return w >= 4 || (w === 3 && id !== '3-1'); };
+const GRACIA_MS = 15 * 60e3;          // 15 minutos de juego mientras se comprueba el pago
 function licOk() {
   if (CHEAT.full) return true;
   if (!ACC || !LIC) return false; if (LIC.estado === 'activa') return true;
-  if (LIC.estado === 'pendiente') { if ((LIC.fallos || 0) === 0) return true; if (LIC.fallos === 1) return Date.now() - (LIC.pedido || 0) < 3600e3; }
-  return false;
+  return LIC.estado === 'pendiente' && Date.now() - (LIC.pedido || 0) < GRACIA_MS;
 }
+// cartel con el código de compra: se copia solo y se abre myPOS; devuelve null si cancela, 'ya' si ya estaba pagada
+async function licCodigoDlg(p) {
+  const r = await api({ a: 'licCodigo', ses: ACC.ses, p });
+  if (!r.ok) { uiAlert('UPS…', esc(r.error || 'Sin conexión') + '', '📡'); return null; }
+  if (r.pagada) { setLic(r.lic, r.licA); return 'ya'; }
+  const url = r.pago || (p ? ADV_URL : LIC_URL), cod = String(r.codigo || ''), precio = p ? ADV_PRECIO : LIC_PRECIO;
+  const copia = () => { try { navigator.clipboard.writeText(cod); } catch (e) {} };
+  const abre = () => { copia(); try { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { location.href = url; } };
+  const v = await uiDialog({ icon: LT_IC.cod, tone: 'gold', title: lt('cod', 't'), html: lt('cod', 'h') +
+    '<div style="margin:12px auto 8px;font:900 26px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;color:#ffd23c;background:rgba(255,210,60,.08);border:2px dashed rgba(255,210,60,.6);border-radius:14px;padding:14px 10px;user-select:all;-webkit-user-select:all">' + esc(cod) + '</div>' +
+    '<div style="font:700 13px/1.5 system-ui;color:#9fb0e6;text-align:left">1️⃣ Pulsa <b>COPIAR Y PAGAR</b>: el código se copia solo.<br>2️⃣ En myPOS, pega el código en <b>Motivo del pago</b> y paga ' + precio + '.<br>3️⃣ Vuelve aquí y confirma la compra.</div>',
+    buttons: [{ t: 'CANCELAR', v: 0 }, { t: '📋 COPIAR CÓDIGO', fn: () => { copia(); uiToastCod(); } }, { t: '💳 COPIAR Y PAGAR', cls: 'pay', v: 1 }], foot: 'Pago seguro con myPOS · ' + esc(ACC.email) });
+  if (!v) return null; abre(); return { abre };
+}
+function uiToastCod() { try { const d = document.createElement('div'); d.textContent = 'Código copiado'; d.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:99999;background:#101833;color:#fff;border:2px solid #ffd23c;border-radius:12px;padding:9px 16px;font:800 14px system-ui'; document.body.appendChild(d); setTimeout(() => d.remove(), 1600); } catch (e) {} }
+// cartel de espera tras varias confirmaciones de pago que no llegaron
+function licEspera(k, r) { const h = new Date(r.bloqueo), hasta = h.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) + ' a las ' + h.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  return uiDialog({ icon: '⏳', title: lt(k, 't'), html: lt(k, 'h').replace(/\{N\}/g, r.fallos || 3).replace(/\{HASTA\}/g, hasta), buttons: [{ t: 'ENTENDIDO', cls: 'ok', v: 1 }] }); }
 let LICA = null; try { LICA = JSON.parse(localStorage.getItem('tl_lica') || 'null'); } catch (e) {}
 function setLicA(l) { LICA = l || null; try { if (LICA) localStorage.setItem('tl_lica', JSON.stringify(LICA)); else localStorage.removeItem('tl_lica'); } catch (e) {} }
 function setLic(l, la) { if (la !== undefined || !l) setLicA(la); LIC = l || null; try { if (LIC) localStorage.setItem('tl_lic', JSON.stringify(LIC)); else localStorage.removeItem('tl_lic'); } catch (e) {} licWipe(); }
@@ -7196,28 +7216,26 @@ async function showPaywall(retry) {
   const v = await uiDialog({ icon: LT_IC[k], tone: k === 'main' ? 'gold' : 'red', title: lt(k, 't'), html: (k === 'main' ? licMainHtml(lt(k, 'h')) : lt(k, 'h')) + (xs ? licCross('xn') : ''), buttons: [{ t: 'AHORA NO', v: 0 }].concat(xs ? [{ t: '🗺️ VER MODO AVENTURA', v: 2 }] : []).concat([{ t: '💳 PAGAR ' + LIC_PRECIO, cls: 'pay', v: 1 }]), foot: 'Pago seguro con myPOS · ' + esc(ACC.email) });
   if (v === 2) return showAdvPaywall(null, true);
   if (!v) return;
-  licOpenPay();
-  const ok = await uiDialog({ icon: LT_IC.conf, title: lt('conf', 't'), html: lt('conf', 'h'), buttons: [{ t: 'CANCELAR', v: 0 }, { t: 'ABRIR EL PAGO OTRA VEZ', fn: licOpenPay }, { t: '✔ CONFIRMAR COMPRA', cls: 'ok', v: 1 }] });
+  const cd = await licCodigoDlg(''); if (!cd) return;
+  if (cd === 'ya') { if (licOk()) { await uiAlert('¡LICENCIA ACTIVADA!', 'Tu pago ya está verificado. ¡A disfrutar del juego completo!', '🎉'); if (retry) retry(); } return; }
+  const ok = await uiDialog({ icon: LT_IC.conf, title: lt('conf', 't'), html: lt('conf', 'h'), buttons: [{ t: 'CANCELAR', v: 0 }, { t: 'ABRIR EL PAGO OTRA VEZ', fn: cd.abre }, { t: '✔ CONFIRMAR COMPRA', cls: 'ok', v: 1 }] });
   if (!ok) return;
   const r = await api({ a: 'licPagar', ses: ACC.ses }); if (!r.ok) { uiAlert('UPS…', 'No hemos podido registrar tu compra: ' + esc(r.error || 'sin conexión') + '. Inténtalo de nuevo.', '📡'); return; }
-  setLic(r.lic, r.licA); SFX.win();
-  const kk = licOk() ? (LIC.fallos === 1 ? 'ok1' : 'ok0') : 'ok2';
-  await uiDialog({ icon: LT_IC[kk], tone: kk === 'ok2' ? '' : 'gold', title: lt(kk, 't'), html: lt(kk, 'h'), buttons: [{ t: kk === 'ok2' ? 'ENTENDIDO' : 'SEGUIR JUGANDO', cls: 'ok', v: 1 }] });
-  if (kk !== 'ok2' && retry) retry();
+  setLic(r.lic); if (r.bloqueo) return licEspera('ok2', r);
+  SFX.win();
+  const kk = LIC && LIC.estado === 'activa' ? 'ok0' : 'ok1';
+  await uiDialog({ icon: LT_IC[kk], tone: 'gold', title: lt(kk, 't'), html: lt(kk, 'h'), buttons: [{ t: 'SEGUIR JUGANDO', cls: 'ok', v: 1 }] });
+  if (retry) retry();
 }
 // cuadro de la otra compra (opcional), debajo del cartel de pago
 function licCross(k) { return '<div style="margin-top:14px;padding:10px 12px;border:2px dashed rgba(255,210,60,.55);border-radius:14px;background:rgba(255,210,60,.07);text-align:left"><div style="font:900 14px system-ui;color:#ffd23c;margin-bottom:4px">' + LT_IC[k] + ' ' + lt(k, 't') + ' <span style="font-size:11px;color:#9fb0e6">(OPCIONAL)</span></div><div style="font:600 13px/1.4 system-ui;color:#dfe7ff">' + lt(k, 'h') + '</div></div>'; }
 
-/* ======================= MODO AVENTURA: 10 aventuras gratis y luego pago único de 0,99 € ======================= */
+/* ======================= MODO AVENTURA: 10 aventuras gratis y luego pago único de 1,49 € ======================= */
 const advDoneN = () => ADV_LV.filter(l => ADV.done[l.id]).length;
 function licAOk() {
   if (CHEAT.full) return true;
   if (!ACC || !LICA) return false; if (LICA.estado === 'activa') return true;
-  if (LICA.estado === 'pendiente' && (LICA.fallos || 0) <= 1) {          // pagado y sin verificar: 2 aventuras nuevas de cortesía
-    if (ADV.pbk !== LICA.pedido) { ADV.pbk = LICA.pedido; ADV.pb = advDoneN(); advSave(); }
-    return advDoneN() < (ADV.pb || 0) + 2;
-  }
-  return false;
+  return LICA.estado === 'pendiente' && Date.now() - (LICA.pedido || 0) < GRACIA_MS;          // 15 minutos mientras llega el pago
 }
 const advNeedPay = id => !ADV.done[id] && advDoneN() >= ADV_FREE && !licAOk();
 async function licARefresh() { if (!ACC) return; const r = await api({ a: 'licEstado', ses: ACC.ses }); if (r.ok) setLic(r.lic, r.licA); }
@@ -7239,14 +7257,16 @@ async function showAdvPaywall(retry, fromOther) {
     buttons: [{ t: 'AHORA NO', v: 0 }].concat(xs && !fromOther ? [{ t: '🚀 VER JUEGO NORMAL', v: 2 }] : []).concat([{ t: '💳 PAGAR ' + ADV_PRECIO, cls: 'pay', v: 1 }]), foot: 'Pago seguro con myPOS · pago único · ' + esc(ACC.email) });
   if (v === 2) { await licRefresh(true); if (LIC && LIC.estado === 'activa') return uiAlert('YA LO TIENES', 'El <b>juego normal</b> ya está activado en tu cuenta.', '🚀'); return showPaywall(null); }
   if (!v) return;
-  advOpenPay();
-  const ok = await uiDialog({ icon: LT_IC.aconf, title: lt('aconf', 't'), html: lt('aconf', 'h'), buttons: [{ t: 'CANCELAR', v: 0 }, { t: 'ABRIR EL PAGO OTRA VEZ', fn: advOpenPay }, { t: '✔ CONFIRMAR COMPRA', cls: 'ok', v: 1 }] });
+  const cd = await licCodigoDlg('adv'); if (!cd) return;
+  if (cd === 'ya') { if (LICA && LICA.estado === 'activa') { await uiAlert('¡MODO AVENTURA ACTIVADO!', 'Tu pago ya está verificado. ¡A por todas las aventuras!', '🎉'); if (retry) retry(); } return; }
+  const ok = await uiDialog({ icon: LT_IC.aconf, title: lt('aconf', 't'), html: lt('aconf', 'h'), buttons: [{ t: 'CANCELAR', v: 0 }, { t: 'ABRIR EL PAGO OTRA VEZ', fn: cd.abre }, { t: '✔ CONFIRMAR COMPRA', cls: 'ok', v: 1 }] });
   if (!ok) return;
   const r = await api({ a: 'licPagar', ses: ACC.ses, p: 'adv' }); if (!r.ok) { uiAlert('UPS…', 'No hemos podido registrar tu compra: ' + esc(r.error || 'sin conexión') + '. Inténtalo de nuevo.', '📡'); return; }
-  setLicA(r.lic); if (LICA) { ADV.pbk = LICA.pedido; ADV.pb = advDoneN(); advSave(); } SFX.win();
-  const kk = LICA && LICA.estado === 'activa' ? 'aok0' : licAOk() ? 'aok1' : 'aok2';
-  await uiDialog({ icon: LT_IC[kk], tone: kk === 'aok2' ? '' : 'gold', title: lt(kk, 't'), html: lt(kk, 'h'), buttons: [{ t: kk === 'aok2' ? 'ENTENDIDO' : 'SEGUIR JUGANDO', cls: 'ok', v: 1 }] });
-  if (kk !== 'aok2' && retry) retry();
+  setLicA(r.lic); if (r.bloqueo) return licEspera('aok2', r);
+  SFX.win();
+  const kk = LICA && LICA.estado === 'activa' ? 'aok0' : 'aok1';
+  await uiDialog({ icon: LT_IC[kk], tone: 'gold', title: lt(kk, 't'), html: lt(kk, 'h'), buttons: [{ t: 'SEGUIR JUGANDO', cls: 'ok', v: 1 }] });
+  if (retry) retry();
 }
 // al pulsar JUGAR AVENTURA: cartel que explica que hay dos juegos y que la aventura es para niños
 async function advIntro() {
